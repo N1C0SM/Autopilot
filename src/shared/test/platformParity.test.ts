@@ -68,4 +68,17 @@ describe("paridad web ↔ apps nativas", () => {
     expect(app).toMatch(/if let url = photos\[Self\.dish\(meal\)\]/);
     expect(app).toMatch(/group\.addTask \{ \(dish, await AiCover\.ownMeal\(dish\)\) \}/);
   });
+
+  it("Nutrición: cada comida con sus macros, que suman el objetivo y se suman al marcarlas, en la web y en la app", () => {
+    const web = read("src/app/components/dashboard/MealsList.tsx");
+    const app = read("native/Autopilot/Features/Other/OtherViews.swift");
+    const note = "Al marcar una comida se suman sus macros del plan. Es una estimación: no se pesa lo que comes.";
+    expect(web).toContain(note);
+    expect(app).toContain(note);
+    expect(web).toMatch(/kcal · P \{own\.protein\} g · C \{own\.carbs\} g · G \{own\.fats\} g/);
+    expect(app).toMatch(/kcal · P \\\(own\.protein\) g · C \\\(own\.carbs\) g · G \\\(own\.fats\) g/);
+    // El reparto exacto vive en mealMacros.ts y la app lo replica.
+    expect(web).toMatch(/mealMacros\(meals, \{ kcal, protein: p, carbs: c, fats: f \}\)/);
+    expect(app).toMatch(/static func splitExact\(_ total: Double, _ weights: \[Double\]\) -> \[Int\]/);
+  });
 });

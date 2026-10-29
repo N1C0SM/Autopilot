@@ -24,11 +24,17 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("meal check-ins", () => {
-  it("does not turn an unweighed meal check-in into consumed calories", () => {
-    render(<MealsList meals={[{ name: "Comida", description: "Plato equilibrado" }]} macros={{ protein: 140, carbs: 220, fats: 65 }} />);
-    fireEvent.click(screen.getByRole("button", { name: /Comida Plato equilibrado/ }));
-    expect(screen.getByText(/Marcar comidas no mide las calorías consumidas/)).toBeVisible();
-    expect(screen.getByText("kcal de objetivo diario")).toBeVisible();
+  it("adds each checked meal's macros and all of them add up to the daily target", () => {
+    const meals = [{ name: "Desayuno", description: "Avena" }, { name: "Cena", description: "Pescado" }];
+    render(<MealsList meals={meals} macros={{ protein: 140, carbs: 220, fats: 65 }} />);
+    expect(screen.getByText(/^de 2\.?025 kcal$/)).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: /Desayuno Avena/ }));
+    expect(screen.getByRole("group", { name: "Proteína: 70 de 140 gramos" })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: /Cena Pescado/ }));
+    expect(screen.getByRole("group", { name: "Proteína: 140 de 140 gramos" })).toBeVisible();
+    expect(screen.getByRole("group", { name: "Carbos: 220 de 220 gramos" })).toBeVisible();
+    expect(screen.getByRole("group", { name: "Grasas: 65 de 65 gramos" })).toBeVisible();
+    expect(screen.getByText(/Es una estimación/)).toBeVisible();
   });
   it("flags existing invalid targets while preserving the saved meal", () => {
     render(<MealsList meals={[{ name: "Cena", description: "Guardada" }]} macros={{ protein: 50, carbs: 100, fats: 500 }} />);
@@ -90,8 +96,8 @@ describe("day summary", () => {
     expect(screen.getByText("Día completo")).toBeVisible();
   });
 
-  it("shows each macro target with its real share of the day's energy", () => {
-    render(<MealsList meals={meals} macros={{ protein: 140, carbs: 220, fats: 65 }} />);
+  it("without meals, shows each macro target with its real share of the day's energy", () => {
+    render(<MealsList meals={[]} macros={{ protein: 140, carbs: 220, fats: 65 }} />);
 
     expect(screen.getByText("2025")).toBeVisible();
     expect(screen.getByRole("group", { name: "Proteína: objetivo diario de 140 gramos, 28 % de las calorías" })).toBeVisible();

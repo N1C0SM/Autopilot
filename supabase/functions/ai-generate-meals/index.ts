@@ -50,7 +50,7 @@ Macros diarios objetivo: P=${macros?.protein}g, C=${macros?.carbs}g, F=${macros?
 Preferencias / qué le gusta comer: ${preferences || "sin preferencias específicas"}
 Alergias / intolerancias: ${allergies || "ninguna"}
 
-Diseña un plan de comidas REAL, sabroso y realista usando SOLO alimentos coherentes con sus preferencias. Cada comida debe tener nombre y descripción específica con cantidades aproximadas (gramos o medidas caseras). NO uses ningún alimento que el usuario haya marcado como alergia.`;
+Diseña un plan de comidas REAL, sabroso y realista usando SOLO alimentos coherentes con sus preferencias. Cada comida debe tener nombre y descripción específica con cantidades aproximadas (gramos o medidas caseras), y sus gramos de proteína, carbohidratos y grasas: la suma de todas las comidas debe dar exactamente los macros diarios objetivo. NO uses ningún alimento que el usuario haya marcado como alergia.`;
 
     const resp = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -77,8 +77,11 @@ Diseña un plan de comidas REAL, sabroso y realista usando SOLO alimentos cohere
                     properties: {
                       name: { type: "string", description: "Nombre del momento de la comida (Desayuno, Almuerzo, etc.)" },
                       description: { type: "string", description: "Descripción detallada de la comida con cantidades" },
+                      protein: { type: "number", description: "Gramos de proteína de esta comida" },
+                      carbs: { type: "number", description: "Gramos de carbohidratos de esta comida" },
+                      fats: { type: "number", description: "Gramos de grasas de esta comida" },
                     },
-                    required: ["name", "description"],
+                    required: ["name", "description", "protein", "carbs", "fats"],
                   },
                 },
               },

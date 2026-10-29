@@ -5,7 +5,11 @@ import { calcNutritionMacros, detectDiet, nutritionMacroError, type CalculatedMa
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-type Meal = { name: string; description: string };
+/** Gramos por comida si la IA los dio: la app los cuadra con el objetivo del día (`mealMacros.ts`). */
+type Meal = { name: string; description: string; protein?: number; carbs?: number; fats?: number };
+
+const grams = (value: unknown) =>
+  typeof value === "number" && Number.isFinite(value) && value >= 0 ? Math.round(value) : undefined;
 
 const parseMeals = (value: unknown): Meal[] | null => {
   if (!Array.isArray(value) || value.length < 3) return null;
@@ -15,7 +19,12 @@ const parseMeals = (value: unknown): Meal[] | null => {
     const record = item as Record<string, unknown>;
     if (typeof record.name !== "string" || !record.name.trim()) return null;
     if (typeof record.description !== "string" || !record.description.trim()) return null;
-    meals.push({ name: record.name, description: record.description });
+    const meal: Meal = { name: record.name, description: record.description };
+    for (const key of ["protein", "carbs", "fats"] as const) {
+      const value = grams(record[key]);
+      if (value !== undefined) meal[key] = value;
+    }
+    meals.push(meal);
   }
   return meals;
 };

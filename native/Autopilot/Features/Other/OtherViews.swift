@@ -35,7 +35,10 @@ struct NutritionView: View {
     /// Plus sin preferencias de comidas: se le preguntan antes de prepararlas (como la web).
     @State private var needsSetup = false
     struct Macros: Codable { let calories: Double?; let protein: Double?; let carbs: Double?; let fats: Double? }
-    struct Meal: Codable, Hashable { let name: String?; let description: String? }
+    /// Gramos de cada macro si la IA los dio; si no, la comida cuenta como una parte igual del día.
+    struct Meal: Codable, Hashable { let name: String?; let description: String?; var protein: Double? = nil; var carbs: Double? = nil; var fats: Double? = nil }
+    /// Macros de una comida ya cuadrados con el objetivo del día (enteros).
+    struct MealMacros: Equatable { var kcal = 0; var protein = 0; var carbs = 0; var fats = 0 }
     struct Row: Codable { let macros_json: Macros?; let meals_json: [Meal]? }
     static let defaultDish = "Pollo a la plancha con arroz integral y verduras asadas"
     /// Intentos totales al cargar el plan: el primero más dos reintentos automáticos.
@@ -142,7 +145,10 @@ struct NutritionView: View {
                 .font(.apFootnote.weight(.semibold)).tracking(0.6)
                 .foregroundStyle(Palette.muted)
             VStack(spacing: 0) {
-                ForEach(Array(meals.enumerated()), id: \.offset) { i, meal in mealRow(meal, last: i == meals.count - 1) }
+                let split = perMeal
+                ForEach(Array(meals.enumerated()), id: \.offset) { i, meal in
+                    mealRow(meal, own: split.indices.contains(i) ? split[i] : nil, last: i == meals.count - 1)
+                }
             }
             .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         }
@@ -175,28 +181,33 @@ struct NutritionView: View {
     /// Resumen del día: anillo de comidas hechas y objetivos. Con texto grande el anillo pasa
     /// encima del texto para que nada se comprima ni se salga de la tarjeta.
     private func summary(kcal: Double, p: Double, c: Double, f: Double, energy: Double, hasMeals: Bool, showTargets: Bool) -> some View {
-        let doneCount = meals.filter { done.contains($0.name ?? "") }.count
+        let doneCount = meals.filter { done.contains($0.name ?? "Comida") }.count
+        // Con comidas, lo marcado se suma al resumen; marcadas todas, da el objetivo exacto.
+        let split = hasMeals && showTargets ? perMeal : []
+        let eaten: MealMacros? = split.isEmpty ? nil : zip(meals, split)
+            .filter { done.contains($0.0.name ?? "Comida") }
+            .reduce(MealMacros()) { s, m in MealMacros(kcal: s.kcal + m.1.kcal, protein: s.protein + m.1.protein, carbs: s.carbs + m.1.carbs, fats: s.fats + m.1.fats) }
         return VStack(alignment: .leading, spacing: 0) {
             Group {
                 if dynamicTypeSize.isAccessibilitySize {
                     VStack(alignment: .leading, spacing: 16) {
                         if hasMeals { mealsRing(doneCount: doneCount) } else if showTargets { macroRing(kcal: kcal, p: p, c: c, f: f) }
                         // Con el anillo de macros las kcal ya van dentro: aquí solo el rótulo.
-                        if hasMeals || !showTargets { summaryNumbers(kcal: kcal, hasMeals: hasMeals, showTargets: showTargets, doneCount: doneCount) }
+                        if hasMeals || !showTargets { summaryNumbers(kcal: kcal, hasMeals: hasMeals, showTargets: showTargets, doneCount: doneCount, eatenKcal: eaten?.kcal) }
                         else { Text("Objetivo diario").font(.apTitle3) }
                     }
                 } else {
                     HStack(alignment: .center, spacing: 20) {
                         if hasMeals { mealsRing(doneCount: doneCount) } else if showTargets { macroRing(kcal: kcal, p: p, c: c, f: f) }
                         // Con el anillo de macros las kcal ya van dentro: aquí solo el rótulo.
-                        if hasMeals || !showTargets { summaryNumbers(kcal: kcal, hasMeals: hasMeals, showTargets: showTargets, doneCount: doneCount) }
+                        if hasMeals || !showTargets { summaryNumbers(kcal: kcal, hasMeals: hasMeals, showTargets: showTargets, doneCount: doneCount, eatenKcal: eaten?.kcal) }
                         else { Text("Objetivo diario").font(.apTitle3) }
                     }
                 }
             }
             if showTargets {
-                macroRow(p: p, c: c, f: f, energy: energy).padding(.top, 24)
-                Text("Objetivos de tu plan para hoy. Marcar comidas no mide las calorías consumidas.")
+                macroRow(p: p, c: c, f: f, energy: energy, eaten: eaten).padding(.top, 24)
+                Text(eaten != nil ? "Al marcar una comida se suman sus macros del plan. Es una estimación: no se pesa lo que comes." : "Objetivos de tu plan para hoy.")
                     .font(.apFootnote).foregroundStyle(Palette.muted)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 16)
@@ -253,14 +264,16 @@ struct NutritionView: View {
     }
 
     /// Objetivo en kcal o, sin macros todavía, cuántas comidas quedan.
-    private func summaryNumbers(kcal: Double, hasMeals: Bool, showTargets: Bool, doneCount: Int) -> some View {
+    private func summaryNumbers(kcal: Double, hasMeals: Bool, showTargets: Bool, doneCount: Int, eatenKcal: Int?) -> some View {
         let remaining = meals.count - doneCount
         return VStack(alignment: .leading, spacing: 6) {
             if showTargets {
-                Text(NumberText.integer(Int(kcal)))
+                Text(NumberText.integer(eatenKcal ?? Int(kcal.rounded())))
                     .font(.inter(size: hasMeals ? 34 : 48, weight: .bold).monospacedDigit())
                     .lineLimit(1).minimumScaleFactor(0.6)
-                Text("kcal de objetivo diario").font(.apSubhead).foregroundStyle(Palette.muted)
+                    .contentTransition(.numericText())
+                    .animation(reduceMotion ? nil : .snappy, value: eatenKcal)
+                Text(eatenKcal != nil ? "de \(NumberText.integer(Int(kcal.rounded()))) kcal" : "kcal de objetivo diario").font(.apSubhead).foregroundStyle(Palette.muted)
                     .fixedSize(horizontal: false, vertical: true)
             } else {
                 Text(remaining == 0 ? "Día completo" : "Te \(remaining == 1 ? "queda" : "quedan") \(remaining) \(remaining == 1 ? "comida" : "comidas")")
@@ -275,23 +288,23 @@ struct NutritionView: View {
 
     /// Los tres macros: tres columnas en horizontal y apilados con texto grande (cada fila
     /// conserva su barra a todo el ancho, así el porcentaje y los gramos no se parten).
-    @ViewBuilder private func macroRow(p: Double, c: Double, f: Double, energy: Double) -> some View {
+    @ViewBuilder private func macroRow(p: Double, c: Double, f: Double, energy: Double, eaten: MealMacros?) -> some View {
         if dynamicTypeSize.isAccessibilitySize {
             VStack(alignment: .leading, spacing: 16) {
-                macro("Proteína", p, energy > 0 ? p * 4 / energy : 0)
-                macro("Carbos", c, energy > 0 ? c * 4 / energy : 0)
-                macro("Grasas", f, energy > 0 ? f * 9 / energy : 0)
+                macro("Proteína", p, energy > 0 ? p * 4 / energy : 0, eaten: eaten?.protein)
+                macro("Carbos", c, energy > 0 ? c * 4 / energy : 0, eaten: eaten?.carbs)
+                macro("Grasas", f, energy > 0 ? f * 9 / energy : 0, eaten: eaten?.fats)
             }
         } else {
             HStack(alignment: .top, spacing: 16) {
-                macro("Proteína", p, energy > 0 ? p * 4 / energy : 0)
-                macro("Carbos", c, energy > 0 ? c * 4 / energy : 0)
-                macro("Grasas", f, energy > 0 ? f * 9 / energy : 0)
+                macro("Proteína", p, energy > 0 ? p * 4 / energy : 0, eaten: eaten?.protein)
+                macro("Carbos", c, energy > 0 ? c * 4 / energy : 0, eaten: eaten?.carbs)
+                macro("Grasas", f, energy > 0 ? f * 9 / energy : 0, eaten: eaten?.fats)
             }
         }
     }
 
-    private func mealRow(_ meal: Meal, last: Bool) -> some View {
+    private func mealRow(_ meal: Meal, own: MealMacros?, last: Bool) -> some View {
         let name = meal.name ?? "Comida"
         let isDone = done.contains(name)
         return Button { toggle(name) } label: {
@@ -306,6 +319,11 @@ struct NutritionView: View {
                         Text(name).font(.apHeadline).foregroundStyle(isDone ? Palette.muted : Palette.foreground)
                             .fixedSize(horizontal: false, vertical: true)
                         if let d = meal.description { Text(d).font(.apSubhead).foregroundStyle(Palette.muted.opacity(isDone ? 0.6 : 1)).lineLimit(2) }
+                        if let own {
+                            Text("\(NumberText.integer(own.kcal)) kcal · P \(own.protein) g · C \(own.carbs) g · G \(own.fats) g")
+                                .font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted.opacity(isDone ? 0.6 : 1))
+                                .padding(.top, 2)
+                        }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     // Solo la foto propia del plato (56 · radio 12); sin ella, ninguna: nunca la misma repetida.
@@ -477,29 +495,80 @@ struct NutritionView: View {
         if !Task.isCancelled { photos.merge(found) { _, new in new } }
     }
 
-    private func macro(_ label: String, _ grams: Double, _ share: Double) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
+    /// Macro del día. Con comidas (`eaten`), lo marcado sobre el objetivo; sin ellas, el objetivo
+    /// y qué parte de la energía aporta.
+    private func macro(_ label: String, _ grams: Double, _ share: Double, eaten: Int?) -> some View {
+        let target = Int(grams.rounded())
+        let fill = eaten.map { grams > 0 ? Double($0) / Double(max(1, target)) : 0 } ?? share
+        return VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
                 Text(label).font(.apFootnote).foregroundStyle(Palette.muted)
                     .lineLimit(1).minimumScaleFactor(0.7)
                 Spacer(minLength: 4)
-                Text("\(Int((share * 100).rounded())) %").font(.apFootnote.monospacedDigit())
-                    .foregroundStyle(Palette.muted).lineLimit(1)
+                if eaten == nil {
+                    Text("\(Int((share * 100).rounded())) %").font(.apFootnote.monospacedDigit())
+                        .foregroundStyle(Palette.muted).lineLimit(1)
+                }
             }
-            (Text(NumberText.integer(Int(grams.rounded()))).font(.inter(size: 22, weight: .bold).monospacedDigit()) + Text("g").font(.apSubhead.weight(.semibold)).foregroundColor(Palette.muted))
+            (Text(NumberText.integer(eaten ?? target)).font(.inter(size: 22, weight: .bold).monospacedDigit()) + Text(eaten != nil ? "/\(NumberText.integer(target)) g" : "g").font(.apSubhead.weight(.semibold)).foregroundColor(Palette.muted))
                 .lineLimit(1).minimumScaleFactor(0.7)
                 .padding(.top, 2)
             GeometryReader { geo in
                 Capsule().fill(Palette.gold.opacity(0.2))
                     .overlay(alignment: .leading) {
-                        Capsule().fill(Palette.gold).frame(width: geo.size.width * max(0, min(1, share)))
+                        Capsule().fill(Palette.gold).frame(width: geo.size.width * max(0, min(1, fill)))
+                            .animation(reduceMotion ? nil : .snappy, value: fill)
                     }
             }
             .frame(height: 6).padding(.top, 8)
         }
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(label): objetivo diario de \(Int(grams)) gramos, \(Int(share * 100)) % de las calorías")
+        .accessibilityLabel(eaten.map { "\(label): \($0) de \(target) gramos" } ?? "\(label): objetivo diario de \(Int(grams)) gramos, \(Int(share * 100)) % de las calorías")
+    }
+
+    /// Macros de cada comida cuadrados con el objetivo (como `mealMacros.ts`); vacío sin objetivo.
+    private var perMeal: [MealMacros] {
+        guard !meals.isEmpty, let m = macros else { return [] }
+        let p = m.protein ?? 0, c = m.carbs ?? 0, f = m.fats ?? 0
+        let kcal = (m.calories ?? 0) > 0 ? m.calories! : (p * 4 + c * 4 + f * 9).rounded()
+        guard kcal > 0 else { return [] }
+        return Self.mealMacros(meals, kcal: kcal, protein: p, carbs: c, fats: f)
+    }
+
+    /// Reparte proteína, carbos y grasas entre las comidas (en la proporción de la IA o a partes
+    /// iguales) y las kcal según su energía: todo suma exactamente el objetivo del día.
+    static func mealMacros(_ meals: [Meal], kcal: Double, protein: Double, carbs: Double, fats: Double) -> [MealMacros] {
+        let p = splitExact(protein, weights(meals) { $0.protein })
+        let c = splitExact(carbs, weights(meals) { $0.carbs })
+        let f = splitExact(fats, weights(meals) { $0.fats })
+        let k = splitExact(kcal, meals.indices.map { Double(p[$0] * 4 + c[$0] * 4 + f[$0] * 9) })
+        return meals.indices.map { MealMacros(kcal: k[$0], protein: p[$0], carbs: c[$0], fats: f[$0]) }
+    }
+
+    private static func weights(_ meals: [Meal], _ value: (Meal) -> Double?) -> [Double] {
+        let own = meals.allSatisfy { value($0).map { $0.isFinite && $0 >= 0 } ?? false }
+        return meals.map { own ? value($0) ?? 1 : 1 }
+    }
+
+    /// Reparte `total` (redondeado) en enteros proporcionales a `weights` que suman exactamente `total`.
+    static func splitExact(_ total: Double, _ weights: [Double]) -> [Int] {
+        guard !weights.isEmpty else { return [] }
+        let target = max(0, Int(total.rounded()))
+        let sum = weights.reduce(0, +)
+        let ws = sum > 0 ? weights : weights.map { _ in 1 }
+        let wsum = sum > 0 ? sum : Double(ws.count)
+        let raw = ws.map { Double(target) * $0 / wsum }
+        var out = raw.map { Int($0.rounded(.down)) }
+        var rest = target - out.reduce(0, +)
+        // Mayor resto primero; a igualdad, la comida anterior (igual que la web).
+        let order = raw.indices.sorted { a, b in
+            let fa = raw[a] - raw[a].rounded(.down), fb = raw[b] - raw[b].rounded(.down)
+            return fa != fb ? fa > fb : a < b
+        }
+        var k = 0
+        while rest > 0 { out[order[k % order.count]] += 1; k += 1; rest -= 1 }
+        return out
     }
 }
 
