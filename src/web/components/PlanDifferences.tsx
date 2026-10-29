@@ -14,17 +14,16 @@ const PlanDifferences = () => {
     { text: "Registro de series, repeticiones y kg", free: true, plus: true, coach: true },
     { text: "Historial, peso y récords", free: true, plus: true, coach: true },
     { text: "Calorías y macros para tu objetivo", free: true, plus: true, coach: true },
-    { text: "Scan corporal con IA", free: "Básico", plus: "Completo", coach: "Completo" },
-    { text: "Composición, músculos, postura y protocolo del scan", free: false, plus: true, coach: true },
-    { text: "Tu yo futuro y comparativa de scans", free: false, plus: true, coach: true },
+    { text: "Scan básico: nota de tu físico, resumen y 2 mejoras", free: true, plus: true, coach: true },
+    { text: "Scan avanzado: composición, músculos, postura, protocolo y tu yo futuro", free: false, plus: true, coach: true },
     { text: "Comidas de cada día según tus gustos", free: false, plus: true, coach: true },
     { text: "Progresión de cargas automática", free: false, plus: true, coach: true },
     { text: "Estadísticas avanzadas", free: false, plus: true, coach: true },
     { text: "Revisión humana de tu plan", free: false, plus: false, coach: true },
   ];
   const plans = [
-    { key: "free" as const, name: "Free", price: 0, tagline: "Tu rutina, tu registro y tus macros." },
-    p.plus && { key: "plus" as const, name: p.plusName, price: p.plusPrice, tagline: "Tu scan completo y tus comidas." },
+    { key: "free" as const, name: "Free", price: 0, tagline: "Tu rutina, tus macros y un scan básico." },
+    p.plus && { key: "plus" as const, name: p.plusName, price: p.plusPrice, tagline: "Tu scan avanzado y tus comidas." },
     p.coach && { key: "coach" as const, name: p.coachName, price: p.coachPrice, tagline: "Plus con revisión humana." },
   ].filter(Boolean) as { key: "free" | "plus" | "coach"; name: string; price: number; tagline: string }[];
   // Una fila que ningún plan visible incluye es de un plan oculto: no se anuncia.
@@ -42,7 +41,7 @@ const PlanDifferences = () => {
           <p className="type-subhead text-primary">Así se diferencian los planes</p>
           <h2 className="mt-2 type-title1 sm:text-[40px] sm:leading-[44px]">Elige según lo que necesitas</h2>
           <p className="mt-4 type-body text-muted-foreground">
-            Empieza gratis con tu rutina, tus macros y un scan básico. Con Plus ves tu scan completo y tus comidas de cada día.
+            Empieza gratis con tu rutina, tus macros y un scan básico: nota de tu físico y 2 mejoras. Con Plus se desbloquea el scan avanzado —composición, músculos, postura, protocolo y tu yo futuro— y las comidas de cada día.
           </p>
         </div>
 
