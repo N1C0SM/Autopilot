@@ -47,6 +47,7 @@ import ImpersonationBanner from "@/shared/components/ImpersonationBanner";
 import ErrorBoundary from "@/shared/components/ErrorBoundary";
 import OfflineBanner from "@/shared/components/OfflineBanner";
 import NativeDeepLinks from "@/shared/components/native/NativeDeepLinks";
+import AcquisitionCapture from "@/shared/components/AcquisitionCapture";
 import { Helmet } from "react-helmet-async";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/shared/contexts/AuthContext";
@@ -112,6 +113,7 @@ const App = () => (
         <Suspense fallback={null}><PlanShieldDialog /></Suspense>
         <BrowserRouter>
           <NativeDeepLinks />
+          <AcquisitionCapture />
           <WhoIsTraining />
           <ImpersonationBanner />
           <OfflineBanner />

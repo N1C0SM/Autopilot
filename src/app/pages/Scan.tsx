@@ -11,6 +11,7 @@ import UserSidebar from "@/app/components/UserSidebar";
 import MobileAppShell from "@/app/components/mobile/MobileAppShell";
 import { useIsMobile } from "@/shared/hooks/use-mobile";
 import { SidebarProvider, SidebarTrigger } from "@/shared/components/ui/sidebar";
+import { recordAcquisitionEvent } from "@/shared/lib/acquisition";
 import {
   Upload,
   Sparkles,
@@ -698,6 +699,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
         );
       } catch { /* Best-effort browser feature; the primary flow remains available. */ }
       setPendingResult(r);
+      void recordAcquisitionEvent("scan");
       // Si está logueado saltamos el formulario de lead (ya tenemos su email)
       if (user && isPaid) {
         setTimeout(() => {

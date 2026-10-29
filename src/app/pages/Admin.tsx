@@ -35,6 +35,7 @@ const ProductsAdmin = lazy(() => import("@/app/components/admin/ProductsAdmin"))
 const LibraryDrive = lazy(() => import("@/app/components/admin/LibraryDrive"));
 const SettingsPanel = lazy(() => import("@/app/components/SettingsPanel"));
 const RoadmapAdmin = lazy(() => import("@/app/components/admin/RoadmapAdmin"));
+const AcquisitionPanel = lazy(() => import("@/app/components/admin/AcquisitionPanel"));
 
 // Precarga en segundo plano las secciones más usadas para que abran sin espera.
 if (typeof window !== "undefined") {
@@ -67,11 +68,12 @@ export interface Profile {
   renewal_decision?: string | null;
 }
 
-export type AdminSection = "dashboard" | "metrics" | "users" | "trainers" | "reminders" | "exercises" | "drive" | "rules" | "landing" | "blog" | "physiques" | "payments" | "emails" | "products" | "account" | "roadmap";
+export type AdminSection = "dashboard" | "metrics" | "acquisition" | "users" | "trainers" | "reminders" | "exercises" | "drive" | "rules" | "landing" | "blog" | "physiques" | "payments" | "emails" | "products" | "account" | "roadmap";
 
 const SECTION_TITLES: Record<AdminSection, string> = {
   dashboard: "Dashboard",
   metrics: "Métricas",
+  acquisition: "Captación",
   users: "Usuarios",
   trainers: "Entrenadores",
   reminders: "Recordatorios",
@@ -417,6 +419,12 @@ const Admin = () => {
             {section === "emails" && (
               <div className="w-full">
                 <EmailTemplatesEditor />
+              </div>
+            )}
+
+            {section === "acquisition" && (
+              <div className="w-full">
+                <AcquisitionPanel />
               </div>
             )}
 
