@@ -7,7 +7,7 @@ export type AdminNavItem = { title: string; section: AdminSection; icon: typeof 
 export const ADMIN_NAV_GROUPS: { label: string; items: AdminNavItem[] }[] = [
   { label: "General", items: [
     { title: "Dashboard", section: "dashboard", icon: LayoutDashboard },
-    { title: "Métricas", section: "metrics", icon: BarChart3 },
+    { title: "Negocio", section: "metrics", icon: BarChart3 },
     { title: "Captación", section: "acquisition", icon: Megaphone },
     { title: "Roadmap", section: "roadmap", icon: Route },
   ] },

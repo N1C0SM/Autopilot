@@ -41,7 +41,7 @@ interface MetricsData extends ReturnType<typeof summarizeClientPlans> {
 const fmtEur = (n: number) => n.toLocaleString("es-ES") + " €";
 const pct = (a: number, b: number) => (b > 0 ? Math.round((a / b) * 100) : 0);
 
-const AdminMetrics = ({ users, onRefresh }: { users: Profile[]; onRefresh: () => Promise<Profile[]> }) => {
+const AdminMetrics = ({ users, onRefresh, onOpenAcquisition }: { users: Profile[]; onRefresh: () => Promise<Profile[]>; onOpenAcquisition?: () => void }) => {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<MetricsData | null>(null);
   const [loadError, setLoadError] = useState(false);
@@ -156,20 +156,23 @@ const AdminMetrics = ({ users, onRefresh }: { users: Profile[]; onRefresh: () =>
     { label: "Récords 7 días", value: data.prs7 },
   ];
 
-  const funnel = [
-    { label: "Registrados", value: data.total },
-    { label: "Plan listo", value: data.onboarded },
-    { label: "Activos 30 días", value: data.active30 },
-    { label: "Plus y Coach", value: data.activePlans },
-  ];
-
   const hasDailyActivity = data.daily.some((day) => day.entrenos > 0 || day.registros > 0);
 
   return (
     <div className="space-y-5">
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-3">
-          <p className="type-subhead text-muted-foreground">Planes y actividad de los clientes.</p>
+          <p className="type-subhead text-muted-foreground">
+            Cómo va el negocio: planes, ingresos y actividad.
+            {onOpenAcquisition && (
+              <>
+                {" "}
+                <button type="button" onClick={() => { void hapticTap(); onOpenAcquisition(); }} className="text-primary active:opacity-60">
+                  De dónde vienen → Captación
+                </button>
+              </>
+            )}
+          </p>
           <div className="-mr-3 flex shrink-0 items-center">
             <Button variant="ghost" size="icon" onClick={() => { void hapticTap(); void refresh(); }} aria-label="Actualizar" className="text-primary [&_svg]:size-5">
               <RefreshCw />
@@ -221,11 +224,6 @@ const AdminMetrics = ({ users, onRefresh }: { users: Profile[]; onRefresh: () =>
               tone: p.tone,
             }))}
           />
-        </Card>
-
-        <Card>
-          <SectionHeader title="Embudo" size="sm" className="mb-4" />
-          <BarList rows={funnel.map((f) => ({ label: f.label, value: f.value, percent: pct(f.value, data.total) }))} />
         </Card>
 
         <Card>

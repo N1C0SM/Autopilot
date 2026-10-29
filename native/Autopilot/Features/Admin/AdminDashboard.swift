@@ -604,13 +604,6 @@ struct AdminMetricsWebView: View {
                 BarRowView(label: "Coach · \(Euro.format(AdminData.price.coach))", value: data.counts.coach, percent: pct(data.counts.coach, total))
             }
             Card {
-                SectionTitle(title: "Embudo")
-                BarRowView(label: "Registrados", value: total, percent: pct(total, total))
-                BarRowView(label: "Plan listo", value: onboarded, percent: pct(onboarded, total))
-                BarRowView(label: "Activos 30 días", value: active30, percent: pct(active30, total))
-                BarRowView(label: "Plus y Coach", value: data.activePlans, percent: pct(data.activePlans, total))
-            }
-            Card {
                 SectionTitle(title: "Actividad")
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], alignment: .leading, spacing: 18) {
                     mini("Entrenos hoy", workoutsToday); mini("Entrenos 7 días", workouts7)

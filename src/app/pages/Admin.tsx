@@ -72,7 +72,7 @@ export type AdminSection = "dashboard" | "metrics" | "acquisition" | "users" | "
 
 const SECTION_TITLES: Record<AdminSection, string> = {
   dashboard: "Dashboard",
-  metrics: "Métricas",
+  metrics: "Negocio",
   acquisition: "Captación",
   users: "Usuarios",
   trainers: "Entrenadores",
@@ -430,7 +430,7 @@ const Admin = () => {
 
             {section === "metrics" && (
               <div className="w-full">
-                <AdminMetrics users={clients} onRefresh={refreshUsers} />
+                <AdminMetrics users={clients} onRefresh={refreshUsers} onOpenAcquisition={() => handleNavigate("acquisition")} />
               </div>
             )}
             </Suspense>

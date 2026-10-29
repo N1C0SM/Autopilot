@@ -9,7 +9,7 @@ interface Props {
 
 const TABS: { label: string; section: AdminSection; icon: typeof LayoutDashboard }[] = [
   { label: "Dashboard", section: "dashboard", icon: LayoutDashboard },
-  { label: "Métricas", section: "metrics", icon: BarChart3 },
+  { label: "Negocio", section: "metrics", icon: BarChart3 },
   { label: "Ejercicios", section: "exercises", icon: Dumbbell },
   { label: "Reglas", section: "rules", icon: SlidersHorizontal },
   { label: "Físicos", section: "physiques", icon: Target },

@@ -50,7 +50,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
         case .trainerClients: "Clientes"
         case .trainerProfile: "Mi perfil"
         case .adminDashboard: "Dashboard"
-        case .adminMetrics: "Métricas"
+        case .adminMetrics: "Negocio"
         case .adminAcquisition: "Captación"
         case .adminRoadmap: "Roadmap"
         case .adminUsers: "Usuarios"
