@@ -101,6 +101,10 @@ describe("paridad web ↔ apps nativas", () => {
     // La foto se sube como archivo en la web y en el Mac (allí la fototeca puede no existir).
     expect(web).toMatch(/type="file"\s+accept="image\/\*"/);
     expect(app).toMatch(/\.fileImporter\(isPresented: \$importingFile, allowedContentTypes: \[\.image\]\)/);
+    // Las dos mandan la foto reducida a 1600 px en JPEG: el servidor reconoce la misma foto
+    // venga del dispositivo que venga y da el mismo resultado.
+    expect(web).toMatch(/compressImage\(await toBrowserFriendlyImage\(input\), \{ maxDimension: 1600/);
+    expect(app).toMatch(/PlatformImage\.downscaled\(from: data, maxSide: 1600\)/);
     expect(web).not.toMatch(/toast\.error\(msg\)|toast\.error\(`[^`]*\$\{msg\}/);
   });
 });

@@ -1,6 +1,6 @@
 import { errorMessage, errorStatus, functionErrorMessage } from "@/shared/lib/runtimeValues";
 import { formatDecimal } from "@/shared/lib/numberFormat";
-import { toBrowserFriendlyImage } from "@/shared/lib/imageCompression";
+import { compressImage, toBrowserFriendlyImage } from "@/shared/lib/imageCompression";
 import { IconTile } from "@/shared/components/ui/icon-tile";
 import React, { useState, useRef, useEffect } from "react";
 import { toPng } from "html-to-image";
@@ -190,8 +190,10 @@ type GoalPhysique = {
 };
 
 // HEIC (cámara del iPhone) se pasa antes a JPEG: si no, la foto guardada no se ve luego.
+// Luego se reduce a 1600 px como en la app: el servidor reconoce la misma foto venga del
+// dispositivo que venga (mismo resultado) y la subida pesa mucho menos.
 const fileToDataUrl = async (input: File): Promise<string> => {
-  const file = await toBrowserFriendlyImage(input);
+  const file = await compressImage(await toBrowserFriendlyImage(input), { maxDimension: 1600, quality: 0.85 });
   return new Promise((resolve, reject) => {
     const r = new FileReader();
     r.onload = () => resolve(r.result as string);

@@ -7,6 +7,7 @@ import { getAiConfig } from "../_shared/ai-provider.ts";
 import { hasFullScan, toBasicScan } from "../_shared/scan-access.ts";
 import { z } from "npm:zod";
 import { jsonrepair } from "npm:jsonrepair@3";
+import jpeg from "npm:jpeg-js@0.4.4";
 
 // El modelo a veces devuelve "12-15%", "~14", "no estimable" o null.
 // Extraemos el primer número válido; si no hay ninguno → undefined.
@@ -258,9 +259,59 @@ const INCOMPLETE = "El análisis llegó incompleto. Vuelve a intentarlo.";
 // Súbelo al cambiar el prompt o el esquema: los análisis guardados dejan de reutilizarse.
 const SCAN_CACHE_VERSION = "v2";
 
-const sha256Hex = async (text: string) =>
-  Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text))))
-    .map((b) => b.toString(16).padStart(2, "0")).join("");
+// ===== Misma foto = mismo resultado, venga del dispositivo que venga =====
+// Cada dispositivo reduce y comprime la foto a su manera (bytes distintos), así que la foto
+// se reconoce por su contenido: miniatura 32×32 en grises. Probado con la misma foto
+// reducida/recomprimida/con otro perfil de color (correlación ≥ 0,997) frente a fotos
+// distintas (≤ 0,6) y retoques de la misma foto (~0,97, cuentan como distintas).
+type PhotoPrint = { aspect: number; mean: number; thumb: string };
+const PRINT_SIDE = 32;
+const SAME_PHOTO = 0.99;
+
+const photoPrint = (dataUrl: unknown): PhotoPrint | null => {
+  if (typeof dataUrl !== "string") return null;
+  const b64 = dataUrl.match(/^data:image\/jpe?g;base64,(.+)$/)?.[1];
+  // Solo las fotos ya reducidas por la app (~1600 px): una de 12 Mpx costaría demasiada CPU.
+  if (!b64 || b64.length > 3_000_000) return null;
+  try {
+    const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+    const { width, height, data } = jpeg.decode(bytes, { useTArray: true, formatAsRGBA: false, maxMemoryUsageInMB: 128 });
+    const sums = new Float64Array(PRINT_SIDE * PRINT_SIDE);
+    const counts = new Uint32Array(PRINT_SIDE * PRINT_SIDE);
+    for (let y = 0; y < height; y++) {
+      const row = Math.min(PRINT_SIDE - 1, Math.floor((y * PRINT_SIDE) / height)) * PRINT_SIDE;
+      for (let x = 0; x < width; x++) {
+        const i = (y * width + x) * 3;
+        const cell = row + Math.min(PRINT_SIDE - 1, Math.floor((x * PRINT_SIDE) / width));
+        sums[cell] += 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+        counts[cell]++;
+      }
+    }
+    const thumb = Uint8Array.from(sums, (sum, cell) => Math.round(sum / Math.max(1, counts[cell])));
+    return {
+      aspect: Math.round((width / height) * 1000) / 1000,
+      mean: thumb.reduce((a, b) => a + b, 0) / thumb.length,
+      thumb: btoa(String.fromCharCode(...thumb)),
+    };
+  } catch {
+    return null;
+  }
+};
+
+const thumbValues = (b64: unknown) =>
+  typeof b64 === "string" ? Array.from(atob(b64), (c) => c.charCodeAt(0)) : [];
+
+const correlation = (a: number[], b: number[]) => {
+  if (!a.length || a.length !== b.length) return 0;
+  const ma = a.reduce((x, y) => x + y, 0) / a.length;
+  const mb = b.reduce((x, y) => x + y, 0) / b.length;
+  let num = 0, da = 0, db = 0;
+  for (let i = 0; i < a.length; i++) {
+    const x = a[i] - ma, y = b[i] - mb;
+    num += x * y; da += x * x; db += y * y;
+  }
+  return da && db ? num / Math.sqrt(da * db) : 0;
+};
 
 const CORE_KEYS = new Set(["attractiveness", "potential", "physique", "style", "similarity", "summary"]);
 
@@ -320,10 +371,18 @@ Deno.serve(async (req) => {
       );
     }
 
-    // La IA varía entre lecturas aunque la foto sea idéntica: el primer análisis se guarda por
-    // huella (fotos + datos) y se reutiliza, así la misma foto da siempre las mismas cifras.
-    const cacheKey = await sha256Hex(JSON.stringify([SCAN_CACHE_VERSION, currentImage ?? null, backImage ?? null,
-      objectiveImage ?? null, gender ?? null, height_cm ?? null, weight_kg ?? null, age ?? null]));
+    // La IA varía entre lecturas aunque la foto sea idéntica: el primer análisis de cada foto se
+    // guarda con su huella visual y se reutiliza, así la misma foto da siempre las mismas cifras.
+    const sent = { front: currentImage, back: backImage, objective: objectiveImage };
+    const prints: Record<string, PhotoPrint> = {};
+    for (const [view, image] of Object.entries(sent)) {
+      const print = image ? photoPrint(image) : null;
+      if (print) prints[view] = print;
+    }
+    const views = Object.keys(sent).filter((v) => sent[v as keyof typeof sent]).join(",");
+    const primary = prints.front ?? prints.back;
+    // Solo si se reconocen todas las fotos enviadas (p. ej. no un PNG de una versión antigua).
+    const cacheable = !!primary && Object.keys(prints).length === views.split(",").length;
     const respond = async (analysis: Record<string, unknown>) => {
       // Free y visitantes: scan básico (el detalle es de Plus). Se recorta aquí, no en la app.
       const full = await hasFullScan(req, sb);
@@ -331,8 +390,18 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     };
-    const { data: cached } = await sb.from("scan_cache").select("result").eq("key", cacheKey).maybeSingle();
-    if (cached?.result) return await respond(cached.result as Record<string, unknown>);
+    if (cacheable && primary) {
+      const { data: rows } = await sb.from("scan_cache").select("prints, result")
+        .eq("version", SCAN_CACHE_VERSION).eq("views", views)
+        .gte("aspect", primary.aspect - 0.02).lte("aspect", primary.aspect + 0.02)
+        .gte("mean", primary.mean - 12).lte("mean", primary.mean + 12)
+        .order("created_at", { ascending: true }).limit(200);
+      // El análisis más antiguo de esa foto es el que vale.
+      const mine = Object.entries(prints).map(([view, p]) => [view, thumbValues(p.thumb)] as const);
+      const hit = (rows ?? []).find((row: { prints?: Record<string, { thumb?: string }> }) =>
+        mine.every(([view, values]) => correlation(values, thumbValues(row.prints?.[view]?.thumb)) >= SAME_PHOTO));
+      if (hit?.result) return await respond(hit.result as Record<string, unknown>);
+    }
 
     // Cadena de visión: créditos de Lovable primero, luego ChatGPT y por último Claude.
     const aiCfg = await getAiConfig();
@@ -490,7 +559,11 @@ Deno.serve(async (req) => {
     }
 
     // Sin la tabla (migración aún sin aplicar) el scan funciona igual, solo sin reutilizar.
-    await sb.from("scan_cache").upsert({ key: cacheKey, result: parsed });
+    if (cacheable && primary) {
+      await sb.from("scan_cache").insert({
+        version: SCAN_CACHE_VERSION, views, aspect: primary.aspect, mean: primary.mean, prints, result: parsed,
+      });
+    }
     return await respond(parsed as Record<string, unknown>);
   } catch (e: unknown) {
     console.error("analyze-physique error:", e);
