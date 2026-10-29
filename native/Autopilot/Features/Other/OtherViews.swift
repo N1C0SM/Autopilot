@@ -31,9 +31,9 @@ struct NutritionView: View {
     @State private var hasAccess: Bool?
     @State private var generating = false
     @State private var generateFailed = false
-    struct Macros: Decodable { let calories: Double?; let protein: Double?; let carbs: Double?; let fats: Double? }
-    struct Meal: Decodable, Hashable { let name: String?; let description: String? }
-    struct Row: Decodable { let macros_json: Macros?; let meals_json: [Meal]? }
+    struct Macros: Codable { let calories: Double?; let protein: Double?; let carbs: Double?; let fats: Double? }
+    struct Meal: Codable, Hashable { let name: String?; let description: String? }
+    struct Row: Codable { let macros_json: Macros?; let meals_json: [Meal]? }
     static let defaultDish = "Pollo a la plancha con arroz integral y verduras asadas"
     /// Intentos totales al cargar el plan: el primero más dos reintentos automáticos.
     private static let loadAttempts = 3
@@ -351,8 +351,17 @@ struct NutritionView: View {
         if let data = UserDefaults.standard.data(forKey: doneKey), let arr = try? JSONDecoder().decode([String].self, from: data) { done = Set(arr) }
         guard let id = session.userId else { loaded = true; failed = false; return }
 
+        // La última copia del plan se pinta al instante; la red la sustituye después.
+        if !loaded, let cached = Snapshots.load(Row.self, Self.cacheKey(id)) {
+            macros = cached.macros_json
+            meals = cached.meals_json ?? []
+            if let dish = meals.first?.description { cover = AiCover.cachedMeal(dish) ?? AiCover.mealFallback }
+            loaded = true
+        }
+
         do {
             let row = try await fetchPlan(id)
+            if let row { Snapshots.save(row, Self.cacheKey(id)) }
             // Sin Plus la RLS no deja leer el plan: los macros se calculan con el onboarding
             // (misma fórmula que `resolveNutritionPreview` de la web). Los macros son siempre gratis.
             macros = row?.macros_json
@@ -380,6 +389,9 @@ struct NutritionView: View {
             if macros == nil && meals.isEmpty { failed = true } else { loaded = true }
         }
     }
+
+    /// Copia en disco del plan por usuario (macros y comidas).
+    static func cacheKey(_ id: UUID) -> String { "nutrition|\(id.uuidString.lowercased())" }
 
     /// Comidas del día con las preferencias del onboarding (`sync-nutrition-macros`, igual que la web).
     private func generateMeals() async {

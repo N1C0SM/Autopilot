@@ -7,6 +7,7 @@ import { authRedirect, verifyEmailRedirect } from "@/shared/lib/authRedirect";
 import { clearAnonScanId } from "@/shared/lib/scanAttribution";
 import { clearPendingScanContext } from "@/shared/lib/pendingScan";
 import { clearConfiguratorDraft } from "@/shared/lib/configuratorDraft";
+import { clearScreenCache } from "@/shared/lib/screenCache";
 import { toast } from "sonner";
 
 interface AuthContextType {
@@ -89,7 +90,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearConfiguratorDraft();
     // Cerrar sesión revoca la sesión: esta cuenta deja de estar guardada en el dispositivo.
     const { data } = await supabase.auth.getSession();
-    if (data.session) forgetAccount(data.session.user.id);
+    if (data.session) {
+      // Nada de lo cacheado de esta cuenta queda en un navegador compartido.
+      clearScreenCache(data.session.user.id);
+      forgetAccount(data.session.user.id);
+    }
     await supabase.auth.signOut();
   };
 

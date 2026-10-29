@@ -2,6 +2,7 @@ import { Play, PencilLine } from "lucide-react";
 import { generatePlanGuarded, isManualPlan } from "@/shared/lib/planShield";
 import { DASHBOARD_CHAT_ENABLED } from "@/shared/lib/releaseScope";
 import { readActiveWorkout } from "@/shared/lib/activeWorkout";
+import { readScreen, writeScreen } from "@/shared/lib/screenCache";
 import { hasCoaching, hasNutrition, getConsumerPlan, type ConsumerPlan } from "@/shared/lib/entitlements";
 import { PlanPaywall, CoachPendingAssignment } from "@/app/components/dashboard/PlanPaywall";
 import { parseMacroTargets } from "@/shared/lib/nutrition";
@@ -89,28 +90,53 @@ interface Meal {
   description: string;
 }
 
+/** Lo que se pinta del panel, tal cual se guarda para la próxima visita. */
+interface DashboardSnapshot {
+  profileName: string;
+  profileAvatar: string;
+  planStatus: string;
+  paymentStatus: string;
+  coaching: boolean;
+  consumerPlan: ConsumerPlan;
+  coachAssigned: boolean;
+  nutrition: boolean;
+  subscriptionTier: string;
+  dayPlans: DayPlan[];
+  macros: Macros | null;
+  meals: Meal[];
+  completedThisWeek: number;
+  completedToday: boolean;
+}
+
 
 const Dashboard = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const [profileName, setProfileName] = useState("");
-  const [profileAvatar, setProfileAvatar] = useState("");
-  const [planStatus, setPlanStatus] = useState<string>("onboarding");
-  const [paymentStatus, setPaymentStatus] = useState<string>("unpaid");
-  const [coaching, setCoaching] = useState(false);
-  const [consumerPlan, setConsumerPlan] = useState<ConsumerPlan>("free");
+  /**
+   * Copia de la última visita: el panel se abre al instante con ella y la red
+   * refresca por detrás. Sin copia, el esqueleto de siempre.
+   */
+  const [cached] = useState<DashboardSnapshot | null>(
+    () => (user ? readScreen<DashboardSnapshot>(user.id, "dashboard") : null),
+  );
+  const [profileName, setProfileName] = useState(cached?.profileName ?? "");
+  const [profileAvatar, setProfileAvatar] = useState(cached?.profileAvatar ?? "");
+  const [planStatus, setPlanStatus] = useState<string>(cached?.planStatus ?? "onboarding");
+  const [paymentStatus, setPaymentStatus] = useState<string>(cached?.paymentStatus ?? "unpaid");
+  const [coaching, setCoaching] = useState(cached?.coaching ?? false);
+  const [consumerPlan, setConsumerPlan] = useState<ConsumerPlan>(cached?.consumerPlan ?? "free");
   const plans = usePlanAvailability();
   const campaign = useFreeCampaign();
   // La asignación de entrenador se conserva aunque el chat no forme parte del lanzamiento.
-  const [coachAssigned, setCoachAssigned] = useState(true);
-  const [nutrition, setNutrition] = useState(false);
+  const [coachAssigned, setCoachAssigned] = useState(cached?.coachAssigned ?? true);
+  const [nutrition, setNutrition] = useState(cached?.nutrition ?? false);
   const [preparingRoutine, setPreparingRoutine] = useState(false);
-  const [subscriptionTier, setSubscriptionTier] = useState<string>("full");
-  const [dayPlans, setDayPlans] = useState<DayPlan[]>([]);
-  const [macros, setMacros] = useState<Macros | null>(null);
-  const [meals, setMeals] = useState<Meal[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [subscriptionTier, setSubscriptionTier] = useState<string>(cached?.subscriptionTier ?? "full");
+  const [dayPlans, setDayPlans] = useState<DayPlan[]>(cached?.dayPlans ?? []);
+  const [macros, setMacros] = useState<Macros | null>(cached?.macros ?? null);
+  const [meals, setMeals] = useState<Meal[]>(cached?.meals ?? []);
+  const [loading, setLoading] = useState(!cached);
   const [loadError, setLoadError] = useState(false);
   const lastFetchRef = useRef(0);
   const [landingPlan] = useState<"training" | "full" | undefined>(readLandingPlan);
@@ -147,8 +173,8 @@ const Dashboard = () => {
     if (section !== "training") setPlanFocusDay(undefined);
   }, [section]);
   const [progressTab, setProgressTab] = useState<"evolution" | "photos" | "records" | "scan">("evolution");
-  const [completedThisWeek, setCompletedThisWeek] = useState(0);
-  const [completedToday, setCompletedToday] = useState(false);
+  const [completedThisWeek, setCompletedThisWeek] = useState(cached?.completedThisWeek ?? 0);
+  const [completedToday, setCompletedToday] = useState(cached?.completedToday ?? false);
   const [workoutMode, setWorkoutMode] = useState(false);
   const [autoStartWorkout, setAutoStartWorkout] = useState(false);
   const [resumeWorkout, setResumeWorkout] = useState(false);
@@ -304,6 +330,20 @@ const Dashboard = () => {
     setLoadError(false);
     setLoading(false);
   }, [user, navigate, campaign]);
+
+  // Lo bueno del panel se guarda para abrirlo al instante la próxima vez.
+  useEffect(() => {
+    if (!user || loading || loadError || planStatus !== "plan_ready") return;
+    writeScreen<DashboardSnapshot>(user.id, "dashboard", {
+      profileName, profileAvatar, planStatus, paymentStatus, coaching, consumerPlan,
+      coachAssigned, nutrition, subscriptionTier, dayPlans, macros, meals,
+      completedThisWeek, completedToday,
+    });
+  }, [
+    user, loading, loadError, planStatus, paymentStatus, profileName, profileAvatar, coaching,
+    consumerPlan, coachAssigned, nutrition, subscriptionTier, dayPlans, macros, meals,
+    completedThisWeek, completedToday,
+  ]);
 
   useEffect(() => {
     if (!user) return;

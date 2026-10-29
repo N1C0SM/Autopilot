@@ -1,6 +1,8 @@
 // Offline shell: pages network-first (copia guardada si no hay cobertura),
-// hashed /assets/ cache-first. Solo mismo origen; nunca /~oauth.
-const CACHE = "autopilot-shell-v2";
+// hashed /assets/ y medios públicos cache-first. Nunca /~oauth.
+const CACHE = "autopilot-shell-v3";
+// Fotos y vídeos públicos de Supabase: se guardan y se sirven al instante la próxima vez.
+const SUPABASE_ORIGIN = "https://enebrcdrdnfkyduzyrzm.supabase.co";
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (event) =>
   event.waitUntil(
@@ -12,7 +14,26 @@ self.addEventListener("activate", (event) =>
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   const url = new URL(req.url);
-  if (req.method !== "GET" || url.origin !== self.location.origin || url.pathname.startsWith("/~oauth")) return;
+  if (req.method !== "GET" || url.pathname.startsWith("/~oauth")) return;
+  const sameOrigin = url.origin === self.location.origin;
+  // Solo imágenes públicas: los vídeos son grandes y no se cachean.
+  const publicMedia = url.origin === SUPABASE_ORIGIN
+    && url.pathname.startsWith("/storage/v1/object/public/")
+    && /\.(jpe?g|png|webp|avif|gif)$/i.test(url.pathname);
+  if (!sameOrigin && !publicMedia) return;
+  if (publicMedia) {
+    // Cache-first: la foto ya vista no vuelve a esperar a la red (se refresca por detrás).
+    event.respondWith(
+      caches.open(CACHE).then(async (cache) => {
+        const hit = await cache.match(req);
+        const fresh = fetch(req)
+          .then((res) => { if (res.ok) cache.put(req, res.clone()); return res; })
+          .catch(() => null);
+        return hit || (await fresh) || Response.error();
+      }),
+    );
+    return;
+  }
   if (url.pathname.startsWith("/assets/")) {
     event.respondWith(
       caches.match(req).then((hit) => hit || fetch(req).then((res) => {

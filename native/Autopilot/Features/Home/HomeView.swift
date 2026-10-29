@@ -229,7 +229,7 @@ struct HomeView: View {
 
     /// Widget compacto (Semana, Récord): icono arriba, cifra grande, título y una línea gris.
     private func widgetTile(symbol: String, ring: Double?, value: String?, unit: String?, title: String,
-                            detail: String, macros: (p: Double, c: Double, f: Double)? = nil, action: @escaping () -> Void) -> some View {
+                            detail: String, macros: MacroSum? = nil, action: @escaping () -> Void) -> some View {
         Button { Haptics.tap(); action() } label: {
             VStack(alignment: .leading, spacing: 0) {
                 Group {
@@ -593,6 +593,8 @@ struct HomeView: View {
 
     private func load() async {
         guard let id = session.userId else { return }
+        // Lo de la última visita se pinta al instante y la red lo sustituye sin parpadeo.
+        if todayState == nil { todayState = Snapshots.load(TodaySnapshot.self, Self.cacheKey(id)) }
         // Plan (sesiones y días hechos), perfil, nutrición y resultado de hoy, todo a la vez.
         async let planLoad: Void = model.load(userId: id)
         async let name = fetchFirstName(userId: id)
@@ -607,6 +609,7 @@ struct HomeView: View {
         snap.lastPr = lastPr
         todayState = snap
         TodayCache.shared.save(snap, userId: id)
+        Snapshots.save(snap, Self.cacheKey(id))
     }
 
     private func makeSnapshot(firstName: String, calories: Int?) -> TodaySnapshot {
@@ -622,6 +625,11 @@ struct HomeView: View {
                              calories: calories)
     }
 
+    /// Clave de la copia en disco: por usuario y día (lo de hoy caduca al cambiar el día).
+    static func cacheKey(_ id: UUID) -> String {
+        "home|\(id.uuidString.lowercased())|\(LocalDate.string())"
+    }
+
     private func fetchFirstName(userId: UUID) async -> String {
         struct P: Decodable { let name: String? }
         guard let p: P = try? await Backend.client.from("profiles").select("name").eq("user_id", value: userId).single().execute().value else {
@@ -630,17 +638,17 @@ struct HomeView: View {
         return (p.name ?? "").components(separatedBy: " ").first ?? ""
     }
 
-    private func fetchCalories(userId: UUID) async -> (kcal: Int?, macros: (p: Double, c: Double, f: Double)?, meals: Int) {
+    private func fetchCalories(userId: UUID) async -> (kcal: Int?, macros: MacroSum?, meals: Int) {
         struct M: Decodable { let calories: Double?; let protein: Double?; let carbs: Double?; let fats: Double? }
         struct N: Decodable { let macros_json: M?; let meals_json: [Meal]? ; struct Meal: Decodable { let name: String? } }
         let rows: [N] = (try? await Backend.client.from("nutrition_plan").select("macros_json, meals_json").eq("user_id", value: userId).limit(1).execute().value) ?? []
         guard let m = rows.first?.macros_json, m.protein != nil || m.calories != nil else {
             // Sin Plus no se puede leer el plan: los macros se estiman con el onboarding (siempre gratis).
-            if let e = await MacroEstimate.load(userId: userId) { return (Int(e.kcal), (p: e.p, c: e.c, f: e.f), 0) }
+            if let e = await MacroEstimate.load(userId: userId) { return (Int(e.kcal), MacroSum(p: e.p, c: e.c, f: e.f), 0) }
             return (snapshot?.calories, snapshot?.macros, snapshot?.mealCount ?? 0)
         }
         let kcal = Int((m.calories ?? ((m.protein ?? 0) * 4 + (m.carbs ?? 0) * 4 + (m.fats ?? 0) * 9)).rounded())
-        let macros = m.protein.map { (p: $0, c: m.carbs ?? 0, f: m.fats ?? 0) }
+        let macros = m.protein.map { MacroSum(p: $0, c: m.carbs ?? 0, f: m.fats ?? 0) }
         return (kcal, macros, rows.first?.meals_json?.count ?? 0)
     }
 
@@ -660,7 +668,14 @@ struct HomeView: View {
 // MARK: - Estado y caché de «hoy»
 
 /// Lo de hoy, en un único valor: se publica de golpe y se cachea por usuario y día.
-private struct TodaySnapshot {
+/// Gramos de proteína, carbos y grasas del plan (Codable para poder guardarlos en disco).
+struct MacroSum: Codable, Equatable {
+    var p: Double
+    var c: Double
+    var f: Double
+}
+
+private struct TodaySnapshot: Codable {
     /// Sesión de hoy (entreno o actividad); nil si hoy toca descansar.
     var plan: DayPlan?
     /// Sesiones de la semana (para contar la próxima sesión).
@@ -671,14 +686,14 @@ private struct TodaySnapshot {
     var firstName = ""
     var calories: Int?
     /// Gramos de proteína, carbos y grasas del plan (widget de Nutrición).
-    var macros: (p: Double, c: Double, f: Double)?
+    var macros: MacroSum?
     /// Última mejor marca (widget de Récord).
     var lastPr: LastPR?
     /// Número de comidas del plan (anillo del widget de Nutrición).
     var mealCount = 0
 }
 
-struct LastPR {
+struct LastPR: Codable {
     let exercise: String
     let weight: Double
     let reps: Int

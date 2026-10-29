@@ -132,6 +132,8 @@ final class SessionModel: ObservableObject {
     func signOut() async {
         try? await Backend.client.auth.signOut(scope: .local)
         if let id = userIdString { accounts.forget(id) }
+        // Nada de la persona que sale se queda en el disco del aparato.
+        Snapshots.clear()
         session = nil
     }
 

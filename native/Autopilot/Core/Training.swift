@@ -303,13 +303,22 @@ enum TrainingRepo {
             prefetchCompletions(userId: userId)
             return cached
         }
+        // Copia en disco de la sesión anterior: la rutina se pinta al abrir la app, sin esperar.
+        if !force, let disk = Snapshots.load([DayPlan].self, planKey(userId)) {
+            TrainingCache.shared.storePlan(disk, userId: userId)
+            prefetchCompletions(userId: userId)
+            return disk
+        }
         let days = await withImages(try await fetchPlan(userId: userId))
         TrainingCache.shared.storePlan(days, userId: userId)
+        Snapshots.save(days, planKey(userId))
         // PlanModel pide el plan y *después* las completions, en serie: se adelanta la segunda
         // consulta aquí para que esa espera ya la encuentre hecha (o comparta la petición en vuelo).
         prefetchCompletions(userId: userId)
         return days
     }
+
+    private static func planKey(_ userId: UUID) -> String { "plan|\(userId.uuidString.lowercased())" }
 
     /// Rellena la foto de los ejercicios que no la traen en el plan (p. ej. rutinas creadas a
     /// mano o generadas antes de tener imagen) con la de la biblioteca, buscando por nombre.

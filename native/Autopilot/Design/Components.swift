@@ -262,16 +262,64 @@ final class ImageCache {
     }
 
     private func download(_ url: URL, maxSide: CGFloat) async -> PlatformImage? {
+        // Ya descargada en otra sesión: no se vuelve a pedir a la red.
+        if let disk = await Self.fromDisk(url, maxSide: maxSide) { return disk }
         // 3 intentos con espera corta: una red mala no debe dejar el hueco para siempre.
         for attempt in 0..<3 {
             if let (data, response) = try? await session.data(from: url),
                (response as? HTTPURLResponse)?.statusCode ?? 200 < 400,
                let image = await Self.decode(data, maxSide: maxSide) {
+                Self.toDisk(image, url, maxSide: maxSide)
                 return image
             }
             if attempt < 2 { try? await Task.sleep(nanoseconds: 250_000_000) }
         }
         return nil
+    }
+
+    /// Copia en disco de la miniatura ya reducida: al reabrir la app las fotos salen de aquí,
+    /// no de la red (y ocupa poco: se guarda en JPEG, no el original).
+    private static func diskURL(_ url: URL, maxSide: CGFloat) -> URL? {
+        guard let base = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else { return nil }
+        let dir = base.appendingPathComponent("images", isDirectory: true)
+        if !FileManager.default.fileExists(atPath: dir.path) {
+            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        }
+        var hash: UInt64 = 0xcbf2_9ce4_8422_2325
+        for byte in "\(url.absoluteString)|#\(Int(maxSide))".utf8 {
+            hash ^= UInt64(byte)
+            hash = hash &* 0x0000_0100_0000_01b3
+        }
+        return dir.appendingPathComponent("\(String(hash, radix: 16)).jpg")
+    }
+
+    private static func fromDisk(_ url: URL, maxSide: CGFloat) async -> PlatformImage? {
+        guard let file = diskURL(url, maxSide: maxSide) else { return nil }
+        return await Task.detached(priority: .userInitiated) { () -> PlatformImage? in
+            guard let data = try? Data(contentsOf: file) else { return nil }
+            guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+                  let cg = CGImageSourceCreateImageAtIndex(source, 0, nil) else { return nil }
+            #if os(iOS)
+            return UIImage(cgImage: cg)
+            #else
+            return NSImage(cgImage: cg, size: .zero)
+            #endif
+        }.value
+    }
+
+    private static func toDisk(_ image: PlatformImage, _ url: URL, maxSide: CGFloat) {
+        guard let file = diskURL(url, maxSide: maxSide) else { return }
+        Task.detached(priority: .utility) {
+            #if os(iOS)
+            guard let data = image.jpegData(compressionQuality: 0.82) else { return }
+            #else
+            var rect = CGRect(origin: .zero, size: image.size)
+            guard let cg = image.cgImage(forProposedRect: &rect, context: nil, hints: nil) else { return }
+            let rep = NSBitmapImageRep(cgImage: cg)
+            guard let data = rep.representation(using: .jpeg, properties: [.compressionFactor: 0.82]) else { return }
+            #endif
+            try? data.write(to: file, options: .atomic)
+        }
     }
 
     /// Reduce fuera del hilo principal: las fotos originales son muy grandes.
