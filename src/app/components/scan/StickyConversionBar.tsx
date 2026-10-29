@@ -26,7 +26,8 @@ function StickyBar({ onCta }: { onCta: () => void }) {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 80, opacity: 0 }}
           transition={{ type: "spring", stiffness: 380, damping: 36 }}
-          className="fixed left-1/2 -translate-x-1/2 z-40 w-[calc(100%-2rem)] max-w-xl"
+          // Centrada con inset + mx-auto: framer-motion escribe su propio transform y anularía un -translate-x-1/2.
+          className="fixed inset-x-4 mx-auto z-40 max-w-xl"
           style={{ bottom: "calc(var(--safe-bottom, 0px) + 12px)" }}
         >
           <div className="material rounded-2xl shadow-2xl p-2 pl-4 flex items-center gap-3">
