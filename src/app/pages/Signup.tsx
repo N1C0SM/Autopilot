@@ -21,6 +21,7 @@ import { readAnonScanId } from "@/shared/lib/scanAttribution";
 import { appleSignInEnabled } from "@/shared/lib/platform";
 import { hapticNotify, hapticSelection, hapticTap } from "@/shared/lib/native";
 import { cn } from "@/shared/lib/utils";
+import { acquisitionMetadata } from "@/shared/lib/acquisition";
 
 const Signup = () => {
   const [searchParams] = useSearchParams();
@@ -146,6 +147,8 @@ const Signup = () => {
         // Atribuye a la cuenta las tarjetas de escaneo subidas sin sesión desde
         // esta pestaña, para poder borrarlas al eliminar la cuenta (RGPD art. 17).
         ...(anonScanId ? { anon_scan_id: anonScanId } : {}),
+        // Red social de primer contacto (Admin → Captación).
+        ...acquisitionMetadata(),
       }, { next: nextAfterVerify });
       if (error) {
         fail(error.message);

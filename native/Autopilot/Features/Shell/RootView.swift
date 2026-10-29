@@ -8,7 +8,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
     // Entrenador
     case trainerClients, trainerProfile
     // Admin
-    case adminDashboard, adminMetrics, adminRoadmap, adminUsers, adminTrainers, adminReminders,
+    case adminDashboard, adminMetrics, adminAcquisition, adminRoadmap, adminUsers, adminTrainers, adminReminders,
          adminExercises, adminRules, adminPhysiques, adminDrive, adminLanding, adminBlog, adminEmails,
          adminProducts, adminPayments, account
 
@@ -21,7 +21,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
     static let trainerSections: [AppSection] = [.trainerClients, .trainerProfile, .settings]
 
     static let adminGroups: [(label: String, items: [AppSection])] = [
-        ("General", [.adminDashboard, .adminMetrics, .adminRoadmap]),
+        ("General", [.adminDashboard, .adminMetrics, .adminAcquisition, .adminRoadmap]),
         ("Personas", [.adminUsers, .adminTrainers, .adminReminders]),
         ("Entrenamiento", [.adminExercises, .adminRules, .adminPhysiques, .adminDrive]),
         ("Contenido", [.adminLanding, .adminBlog, .adminEmails]),
@@ -51,6 +51,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
         case .trainerProfile: "Mi perfil"
         case .adminDashboard: "Dashboard"
         case .adminMetrics: "Métricas"
+        case .adminAcquisition: "Captación"
         case .adminRoadmap: "Roadmap"
         case .adminUsers: "Usuarios"
         case .adminTrainers: "Entrenadores"
@@ -80,6 +81,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
         case .trainerProfile: "person.crop.circle"
         case .adminDashboard: "square.grid.2x2"
         case .adminMetrics: "chart.bar.xaxis"
+        case .adminAcquisition: "megaphone"
         case .adminRoadmap: "point.topleft.down.to.point.bottomright.curvepath"
         case .adminUsers: "person.2"
         case .adminTrainers: "person.badge.key"
@@ -442,6 +444,7 @@ struct SectionView: View {
             case .trainerProfile: TrainerProfileView()
             case .adminDashboard: AdminDashboardView(onNavigate: onNavigate)
             case .adminMetrics: AdminMetricsWebView()
+            case .adminAcquisition: AdminAcquisitionView()
             case .adminUsers: AdminUsersView()
             case .adminRoadmap: RoadmapView()
             case .adminReminders: AdminRemindersView()
