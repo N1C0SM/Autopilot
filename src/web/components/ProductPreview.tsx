@@ -45,18 +45,26 @@ const exercises = [
   { name: "Press con mancuernas", sets: 3, reps: 9, load: "14 kg", last: "Última vez: 14 kg × 8", image: "https://enebrcdrdnfkyduzyrzm.supabase.co/storage/v1/object/public/site-assets/exercise-images/a31c7206-d2a4-4b31-856a-f5dec09b890e-1791475829849.png" },
 ];
 
+const DEMO_SHOTS: Record<View, string> = {
+  home: "/app-shots/hoy.jpg",
+  training: "/app-shots/registro.jpg",
+  nutrition: "/app-shots/nutricion.jpg",
+  chat: "/app-shots/hoy.jpg",
+  progress: "/app-shots/progreso.jpg",
+};
+
 const baseSide: Record<View, { title: string; points: string[] }> = {
   home: {
     title: "Abres la app y sabes qué toca hoy.",
-    points: ["Tu rutina y el progreso de tus sesiones están a mano.", "Empieza gratis y registra tus entrenamientos sin tarjeta.", "La nutrición y la progresión automática dependen del plan elegido."],
+    points: ["Tu sesión de hoy, tus macros y tu último récord en una pantalla.", "Empieza gratis y registra tus entrenamientos sin tarjeta.", "Con Plus, tus comidas de cada día y tu scan completo."],
   },
   training: {
-    title: "Sabes qué hacer al entrar al gimnasio.",
-    points: ["Registra por separado el peso y las repeticiones de cada serie.", "Ves lo que levantaste la última vez para progresar.", "El tracker y el progreso están incluidos en el plan Gratis."],
+    title: "Cada serie, un toque.",
+    points: ["Peso y repeticiones de cada serie, con foto de cada ejercicio.", "Supersets, calentamiento, bajadas, fallo y RPE.", "El tracker y el progreso están incluidos en el plan Gratis."],
   },
   nutrition: {
-    title: "Tu plan de nutrición, incluido desde Plus.",
-    points: ["Calorías y macros del día de un vistazo.", "Comidas ajustadas a tus gustos y a lo que registras.", "Esta sección no está incluida en el plan Gratis."],
+    title: "Tus macros, siempre gratis.",
+    points: ["Calorías, proteína, carbohidratos y grasas para tu objetivo.", "Con Plus, tus comidas de cada día según tus gustos y alergias.", "Los macros están incluidos en el plan Gratis."],
   },
   chat: {
     title: "Una persona real al otro lado.",
@@ -132,7 +140,7 @@ function ProductPreviewContent({ onPlans, onFree }: { onPlans: () => void; onFre
   const side: Record<View, { title: string; points: string[] }> = {
     ...baseSide,
     home: { ...baseSide.home, points: [baseSide.home.points[0], baseSide.home.points[1], plans.campaign ? "Sobrecarga progresiva y objetivos nutricionales básicos, sin tarjeta." : baseSide.home.points[2]] },
-    nutrition: plans.campaign ? { title: "Tus objetivos de nutrición básica.", points: ["Estimación inicial de calorías según tus datos.", "Objetivo diario de proteína.", "Disponible sin tarjeta durante la campaña gratuita."] } : { ...baseSide.nutrition, title: `Tu plan de nutrición, incluido desde ${plans.plus ? plans.plusName : plans.coachName}.` },
+    nutrition: baseSide.nutrition,
     chat: aiChat
       ? { title: "Pregunta lo que quieras de tu plan.", points: ["Dudas de técnica, alternativas de ejercicios o comidas.", "Responde un asistente con IA que conoce tu rutina y tus macros.", `Incluido en ${plans.plusName}; no forma parte de Gratis.`] }
       : { ...baseSide.chat, points: [baseSide.chat.points[0], baseSide.chat.points[1], `El chat personal es exclusivo del plan ${plans.coachName}.`] },
@@ -215,9 +223,9 @@ function ProductPreviewContent({ onPlans, onFree }: { onPlans: () => void; onFre
           <div className="max-w-xl">
             <p className="type-subhead text-primary">Antes de decidir</p>
             <h2 id="preview-heading" className="mt-1 type-title1 sm:text-[40px] sm:leading-[44px]"><ScrollWords text="Prueba cómo sería tu día." /></h2>
-            <p className="mt-3 type-body text-muted-foreground">Explora una simulación del plan, el registro por series y la evolución con gráficos.{plans.plus ? ` La nutrición está incluida desde ${plans.plusName}.` : ""}{plans.coach ? ` El chat con Nicolás, en ${plans.coachName}.` : ""} Free incluye rutina inicial, registro y progreso. Sin cuenta ni tarjeta.</p>
+            <p className="mt-3 type-body text-muted-foreground">Así se ve la app por dentro: tu día, cada serie, tus macros y tu progreso. Toca las pestañas del teléfono para cambiar de pantalla.</p>
           </div>
-          <span className="type-footnote text-muted-foreground">Demo con datos ficticios · no es un plan personal</span>
+          <span className="type-footnote text-muted-foreground">Capturas reales de la app</span>
         </div>
 
         <div className="grid items-center gap-10 md:grid-cols-[1fr_22rem] md:gap-16">
@@ -228,309 +236,25 @@ function ProductPreviewContent({ onPlans, onFree }: { onPlans: () => void; onFre
                 <li key={p} className="flex items-start gap-3 type-body text-muted-foreground"><Check className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />{p}</li>
               ))}
             </ul>
-            <p className="mt-6 max-w-md type-footnote text-muted-foreground">{plans.campaign ? "Ejemplo con datos ficticios. Entrenamiento, progreso y objetivos de nutrición básica sin tarjeta." : view === "nutrition" ? `El plan de nutrición está incluido desde ${plans.plus ? plans.plusName : plans.coachName} · ${euro(plans.plus ? plans.plusPrice : plans.coachPrice)}/mes tras la prueba. No forma parte del plan Free.` : view === "chat" && aiChat ? `El asistente IA está incluido en ${plans.plusName} · ${euro(plans.plusPrice)}/mes tras la prueba. No forma parte del plan Free.` : view === "chat" ? `El chat con Nicolás es exclusivo del plan ${plans.coachName} · ${euro(plans.coachPrice)}/mes tras la prueba. No está incluido en Free${plans.plus ? ` ni en ${plans.plusName}` : ""}.` : "La demo usa datos ficticios. Gratis incluye rutina inicial, registro y progreso; la nutrición llega con Plus y el entrenador real con Coach."}</p>
+            <p className="mt-6 max-w-md type-footnote text-muted-foreground">{`Capturas reales de la app. Gratis incluye rutina, registro, progreso, macros y scan básico${plans.plus ? `; ${plans.plusName} añade tus comidas y el scan completo por ${euro(plans.plusPrice)}/mes tras la prueba` : ""}.`}</p>
           </div>
 
           <div className="order-1 mx-auto w-full max-w-[22rem] md:order-2">
-            <PhoneFrame screenClassName="h-[44rem]">
-              <PhoneAppBar avatar={<OwnerAvatar photo={owner.photo} initial={ownerInitial} />} />
-
-              <div className="flex-1 overflow-y-auto px-4 pb-28 pt-2">
-                {view === "home" && (
-                  <>
-                    <h1 className="sr-only">Hoy</h1>
-                    <PhoneHome name={ownerFirst} plans={plans} heading onSession={() => changeView("training")} onNutrition={() => changeView("nutrition")} onProgress={() => changeView("progress")} />
-                  </>
-                )}
-
-                {view === "training" && (
-                  <div>
-                    <h1 className="type-large-title">{titles.training}</h1>
-                    <div className="mt-4 flex items-end justify-between gap-3">
-                      <h4 className="type-title3">Fuerza cuerpo completo</h4>
-                      <p role="status" className="shrink-0 type-subhead tabular-nums text-muted-foreground">{completed.length} de {totalSets} series</p>
-                    </div>
-                    <div className="mt-2 h-1 overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-primary transition-[width] duration-500 ease-ios" style={{ width: `${pct}%` }} /></div>
-
-                    {!started ? (
-                      <>
-                        <ListGroup className="mt-5" header="Ejercicios">
-                          {exercises.map((ex, i) => (
-                            <ListRow
-                              key={ex.name}
-                              leading={<DemoImage src={ex.image} alt="" className="h-12 w-12 shrink-0 rounded-[10px]" />}
-                              title={ex.name}
-                              subtitle={`${ex.sets} × ${ex.reps} · ${ex.load}`}
-                              chevron
-                              onClick={() => { void hapticTap(); setStarted(true); setActiveIdx(i); }}
-                            />
-                          ))}
-                        </ListGroup>
-                        <Button type="button" variant="hero" size="lg" className="mt-5 w-full" onClick={() => { void hapticTap(); setStarted(true); setActiveIdx(0); }}>
-                          Empezar entrenamiento
-                        </Button>
-                      </>
-                    ) : (() => {
-                      const ex = exercises[activeIdx];
-                      return (
-                        <div className="mt-5 space-y-4">
-                          <motion.div
-                            key={ex.name}
-                            drag="x"
-                            dragConstraints={{ left: 0, right: 0 }}
-                            dragElastic={0.35}
-                            onDragEnd={(_, info) => {
-                              const swipe = info.offset.x + info.velocity.x * 0.2;
-                              if (swipe < -60 && activeIdx < exercises.length - 1) setActiveIdx(activeIdx + 1);
-                              else if (swipe > 60 && activeIdx > 0) setActiveIdx(activeIdx - 1);
-                            }}
-                            style={{ touchAction: "pan-y" }}
-                            aria-label="Desliza para cambiar de ejercicio"
-                            className="relative flex aspect-[4/3] max-h-40 w-full cursor-grab items-center justify-center overflow-hidden rounded-2xl bg-card active:cursor-grabbing"
-                          >
-                            <DemoImage src={ex.image} alt={ex.name} draggable={false} className="pointer-events-none h-full w-full bg-card" />
-                            <span className="absolute bottom-2 right-3 type-caption1 tabular-nums text-muted-foreground">{activeIdx + 1}/{exercises.length}</span>
-                          </motion.div>
-                          <div role="tablist" aria-label="Ejercicios de la sesión" className="flex gap-2">
-                            {exercises.map((item, idx) => {
-                              const done = Array.from({ length: item.sets }, (_, s) => completed.includes(`${item.name}::${s}`)).every(Boolean);
-                              return (
-                                <button key={item.name} type="button" role="tab" aria-selected={idx === activeIdx} aria-label={`${idx + 1}. ${item.name}${done ? " · hecho" : ""}`} onClick={() => { void hapticSelection(); setActiveIdx(idx); }}
-                                  className={`relative rounded-2xl p-0.5 transition-opacity active:opacity-60 ${idx === activeIdx ? "ring-2 ring-primary" : "opacity-60"}`}>
-                                  <DemoImage src={item.image} alt="" className="h-11 w-11 rounded-[14px]" />
-                                  {done && <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground"><Check className="h-3 w-3" strokeWidth={3} /></span>}
-                                </button>
-                              );
-                            })}
-                          </div>
-                          <div>
-                            <p className="type-title3">{ex.name}</p>
-                            <p className="type-footnote text-muted-foreground">{ex.last}</p>
-                          </div>
-                          <div className="space-y-1">
-                            <div className="grid grid-cols-[24px_52px_minmax(0,1fr)_minmax(0,1fr)_44px] gap-2 px-1.5 type-group-header">
-                              <span className="text-center">#</span><span className="text-center">Anterior</span><span className="text-center">kg</span><span className="text-center">Reps</span><span />
-                            </div>
-                            {Array.from({ length: ex.sets }, (_, setIndex) => {
-                              const setKey = `${ex.name}::${setIndex}`;
-                              const isDone = completed.includes(setKey);
-                              const currentSet = setValues[setKey];
-                              return (
-                                <div key={setKey} className={`grid grid-cols-[24px_52px_minmax(0,1fr)_minmax(0,1fr)_44px] items-center gap-2 rounded-xl p-1.5 transition-colors duration-200 ${isDone ? "bg-primary/15" : ""}`}>
-                                  <span className="text-center type-subhead font-semibold tabular-nums text-muted-foreground">{setIndex + 1}</span>
-                                  <span className="text-center type-caption2 tabular-nums text-muted-foreground">{ex.last.replace("Última vez: ", "").replace(" kg", "")}</span>
-                                  <Input type="text" inputMode="decimal" enterKeyHint="next" placeholder={ex.load.replace(/\s*kg$/, "")} value={currentSet?.weight ?? ""} onChange={(e) => updateSetValue(setKey, "weight", e.target.value)} aria-label={`Peso de la serie ${setIndex + 1} de ${ex.name}`} className="rounded-full px-1 text-center tabular-nums" />
-                                  <Input type="number" inputMode="numeric" pattern="[0-9]*" enterKeyHint="done" min="0" placeholder={String(ex.reps)} value={currentSet?.reps ?? ""} onChange={(e) => updateSetValue(setKey, "reps", e.target.value)} aria-label={`Repeticiones de la serie ${setIndex + 1} de ${ex.name}`} className="rounded-full px-1 text-center tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" />
-                                  <button type="button" aria-pressed={isDone} aria-label={`${isDone ? "Desmarcar" : "Marcar"} serie ${setIndex + 1} de ${ex.name}`}
-                                    onClick={() => { const wasDone = isDone; void (wasDone ? hapticTap() : hapticImpact("medium")); toggleSet(ex.name, setIndex); if (!wasDone) setRest(90); }}
-                                    className="flex h-11 w-11 items-center justify-center transition-transform duration-150 active:scale-90">
-                                    <span className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors duration-150 ${isDone ? "bg-primary text-primary-foreground" : "border-2 border-muted-foreground/50"}`}>
-                                      {isDone && <Check className="h-4 w-4" strokeWidth={3} />}
-                                    </span>
-                                  </button>
-                                </div>
-                              );
-                            })}
-                          </div>
-                          {completed.length === totalSets && (
-                            <p className="flex items-center justify-center gap-2 type-subhead font-semibold text-primary"><CheckCircle2 className="h-5 w-5 shrink-0" aria-hidden="true" />Sesión de ejemplo completada · {totalSets} series</p>
-                          )}
-                          <div className="text-center">
-                            <Button type="button" variant="plain" onClick={() => { void hapticTap(); resetWorkout(); }}>Reiniciar demo</Button>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                )}
-
-                {view === "nutrition" && (
-                  <div>
-                    <h1 className="type-large-title">{titles.nutrition}</h1>
-                    <p className="mt-1 type-subhead text-muted-foreground">Hoy · {plans.campaign ? "nutrición básica" : `plan ${plans.plus ? plans.plusName : plans.coachName}`}</p>
-                    {plans.campaign ? <PublicBasicNutrition /> : <>
-                    <div className="mt-5 flex items-center gap-5">
-                      <ProgressRing value={62} size={116} stroke={12} label="Calorías del día">
-                        <div className="text-center">
-                          <p className="type-figure text-[28px] font-bold leading-none tabular-nums">1.420</p>
-                          <p className="mt-1 type-caption1 text-muted-foreground">de 2.300 kcal</p>
-                        </div>
-                      </ProgressRing>
-                      <div className="min-w-0">
-                        <p className="type-headline">Quedan 880 kcal</p>
-                        <p className="mt-1 type-subhead text-muted-foreground">Marca cada comida al hacerla.</p>
-                      </div>
-                    </div>
-                    {!plans.campaign && <div className="mt-6 flex gap-3">
-                      <Lock className="mt-0.5 h-6 w-6 shrink-0 text-primary" strokeWidth={1.75} aria-hidden="true" />
-                      <div className="min-w-0">
-                        <p className="type-headline">{paidLabel}</p>
-                        <p className="type-subhead text-muted-foreground">Función de pago</p>
-                      </div>
-                    </div>}
-                    <div className="mt-6 grid grid-cols-3 gap-4">
-                      {[["Proteína", 96, 150], ["Carbos", 150, 240], ["Grasas", 45, 75]].map(([l, v, t]) => (
-                        <div key={l as string}>
-                          <p className="type-footnote text-muted-foreground">{l}</p>
-                          <p className="font-rounded type-title3 font-bold tabular-nums">{v}<span className="type-caption1 font-normal text-muted-foreground">/{t} g</span></p>
-                          <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-primary" style={{ width: `${((v as number) / (t as number)) * 100}%` }} /></div>
-                        </div>
-                      ))}
-                    </div>
-                    <ListGroup className="mt-6" header="Comidas de hoy">
-                      {[["Desayuno", "Yogur, avena y fruta", true], ["Comida", "Arroz, pollo y verduras", true], ["Cena", "Tortilla, patata y ensalada", false]].map(([m, t, d]) => (
-                        <ListRow
-                          key={m as string}
-                          leading={<span aria-hidden className={`flex h-7 w-7 items-center justify-center rounded-full ${d ? "bg-primary text-primary-foreground" : "border-2 border-muted-foreground/50"}`}>{d && <Check className="h-4 w-4" strokeWidth={3} />}</span>}
-                          title={<span className="font-semibold">{m as string}</span>}
-                          subtitle={t as string}
-                        />
-                      ))}
-                    </ListGroup>
-                    </>}
-                    <p className="mt-4 type-footnote text-muted-foreground">{plans.campaign ? "Ejemplo ilustrativo. Tus objetivos se calculan con tus datos." : "Comidas ilustrativas, sin recomendaciones para tu caso."}</p>
-                  </div>
-                )}
-
-                {view === "chat" && aiChat && (
-                  <div>
-                    <h1 className="type-large-title">Chat</h1>
-                    <div className="mt-3 flex items-center justify-between gap-3">
-                      <span className="flex items-center gap-1.5 type-subhead font-semibold"><Lock className="h-4 w-4 text-primary" aria-hidden="true" />Plan {plans.plusName}</span>
-                      <span className="type-footnote text-muted-foreground">No incluido en Gratis</span>
-                    </div>
-                    <div className="mt-5 space-y-2">
-                      {aiMessages.map((m, i) => (
-                        <div key={i} className={`flex ${m.from === "me" ? "justify-end" : "justify-start"}`}>
-                          <div className={`max-w-[85%] rounded-[18px] px-3.5 py-2 type-subhead ${m.from === "me" ? "rounded-br-md bg-primary text-primary-foreground" : "rounded-bl-md bg-secondary"}`}>
-                            <p>{m.text}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    <div aria-hidden className="mt-5 flex items-center gap-2 rounded-full bg-secondary py-1.5 pl-4 pr-1.5">
-                      <span className="flex-1 type-subhead text-muted-foreground">Pregunta sobre tu plan…</span>
-                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground"><Send className="h-4 w-4" /></span>
-                    </div>
-                    <p className="mt-4 type-footnote text-muted-foreground">Conversación de ejemplo con el asistente IA de {plans.plusName}.</p>
-                  </div>
-                )}
-
-                {view === "chat" && !aiChat && (
-                  <div>
-                    <h1 className="type-large-title">{titles.chat}</h1>
-                    <div className="mt-3 flex items-center justify-between gap-3">
-                      <span className="flex items-center gap-1.5 type-subhead font-semibold"><Lock className="h-4 w-4 text-primary" aria-hidden="true" />Plan {plans.coachName}</span>
-                      <span className="type-footnote text-muted-foreground">No incluido en Gratis</span>
-                    </div>
-                    <div className="mt-5 flex items-center gap-3">
-                      <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-secondary type-subhead font-semibold text-primary">
-                        <OwnerAvatar photo={owner.photo} initial={ownerInitial} />
-                      </span>
-                      <div className="min-w-0">
-                        <p className="type-headline">{ownerFirst} · fundador</p>
-                        <p className="type-footnote text-muted-foreground">Chat directo · plan {plans.coachName}</p>
-                      </div>
-                    </div>
-                    <div className="mt-5 space-y-2">
-                      {chatMessages.map((m, i) => (
-                        <div key={i} className={`flex ${m.from === "me" ? "justify-end" : "justify-start"}`}>
-                          <div className={`max-w-[80%] rounded-[18px] px-3.5 py-2 type-subhead ${m.from === "me" ? "rounded-br-md bg-primary text-primary-foreground" : "rounded-bl-md bg-secondary"}`}>
-                            <p>{m.text}</p>
-                            <p className={`mt-0.5 text-right type-caption2 tabular-nums ${m.from === "me" ? "opacity-70" : "text-muted-foreground"}`}>{m.time}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    <div aria-hidden className="mt-5 flex items-center gap-2 rounded-full bg-secondary py-1.5 pl-4 pr-1.5">
-                      <span className="flex-1 type-subhead text-muted-foreground">Escribe a tu entrenador…</span>
-                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground"><Send className="h-4 w-4" /></span>
-                    </div>
-                    <p className="mt-4 type-footnote text-muted-foreground">Conversación de ejemplo; en la app real hablas con tu entrenador.</p>
-                  </div>
-                )}
-
-                {view === "progress" && (
-                  <div>
-                    <h1 className="type-large-title">{titles.progress}</h1>
-                    <Tabs value={progressTab} onValueChange={setProgressTab} className="mt-4"><TabsList className="w-full"><TabsTrigger value="evolution">Fuerza</TabsTrigger><TabsTrigger value="photos">Físico</TabsTrigger><TabsTrigger value="records">Récords</TabsTrigger><TabsTrigger value="scan">Scan</TabsTrigger></TabsList></Tabs>
-                    <p className="mt-1 type-subhead text-muted-foreground">Tu progreso · muestra ficticia</p>
-                    {progressTab === "evolution" && <>
-                    <div className="relative mt-6">
-                      <select
-                        aria-label="Ejercicio para ver progresión en demo"
-                        value={progressExercise}
-                        onChange={(event) => setProgressExercise(event.target.value)}
-                        className="min-h-11 w-full appearance-none truncate bg-transparent py-2 pr-8 type-title3 text-foreground"
-                      >
-                        {demoProgressExercises.map((name) => <option key={name} value={name}>{name}</option>)}
-                      </select>
-                      <ChevronsUpDown className="pointer-events-none absolute right-0 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" aria-hidden="true" />
-                    </div>
-                    <div className="mt-2 h-64">
-                      <Suspense fallback={<Skeleton className="h-36 w-full rounded-2xl" aria-label="Cargando gráfica" />}>
-                        <ExerciseProgressChart
-                          exerciseName={progressExercise}
-                          history={demoHistory[progressExercise]}
-                          metric={progressMetric}
-                          onMetricChange={(m) => { if (m !== "reps") setProgressMetric(m); }}
-                          compact
-                        />
-                      </Suspense>
-                    </div>
-                    {lastEntry && (
-                      <div className="mt-6 grid grid-cols-2 gap-y-5">
-                        {[
-                          ["Series", lastEntry.completedSets],
-                          ["Repeticiones", lastEntry.reps],
-                          ["Volumen", `${Math.round(lastEntry.volumeKg)} kg`],
-                          ["1RM estimado", `${lastEntry.bestEstimated1RmKg ?? "—"} kg`],
-                        ].map(([label, value], i) => (
-                          <div key={label} className={cn("min-w-0", i % 2 === 1 && "sep-l pl-4")}>
-                            <p className="font-rounded type-headline font-bold tabular-nums">{value}</p>
-                            <p className="type-caption1 text-muted-foreground">{label}</p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    </>}
-                    {progressTab === "records" && <ListGroup className="mt-6" header="Récords personales">
-                      {demoBestRecords.map(({ name, best }) => (
-                        <ListRow key={name} title={<span className="font-semibold">{name}</span>} subtitle={`${best.bestSetLabel} · ~${best.bestEstimated1RmKg} kg`} />
-                      ))}
-                    </ListGroup>}
-                    {progressTab === "photos" && <div className="mt-6 flex gap-3">
-                      <Camera className="mt-0.5 h-6 w-6 shrink-0 text-primary" strokeWidth={1.75} aria-hidden="true" />
-                      <div className="min-w-0">
-                        <p className="type-headline">Fotos de progreso</p>
-                        <p className="type-subhead text-muted-foreground">Documenta tu evolución con fotos de frente, lateral y espalda.</p>
-                        {onFree && (
-                          <Button type="button" variant="plain" onClick={() => { void hapticTap(); onFree(); }} className="-ml-4">
-                            Crear cuenta para subir fotos
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                    }
-                    {progressTab === "scan" && <div className="mt-6 rounded-2xl bg-card p-5"><Camera className="h-6 w-6 text-primary" /><p className="mt-3 type-title3">Scan corporal</p><p className="mt-2 type-subhead text-muted-foreground">No hay fotos personales en esta demo.</p>{onFree && <Button variant="tinted" className="mt-4" onClick={onFree}>Crear mi cuenta</Button>}</div>}
-                    <p className="mt-4 type-footnote text-muted-foreground">Datos ficticios de ejemplo. En tu cuenta, las gráficas se construyen con tus propias series completadas.</p>
-                  </div>
-                )}
-              </div>
-
-              {view === "training" && started && (
-                <div className="absolute inset-x-0 bottom-0 z-10 bg-background px-4 pb-6 pt-3">
-                  {rest !== null && <div role="timer" aria-label="Descanso" className="mb-3 flex items-center justify-between gap-2">
-                    <span className="font-rounded type-title1 tabular-nums">{Math.floor(rest / 60)}:{String(rest % 60).padStart(2, "0")}</span>
-                    <Button variant="plain" onClick={() => setRest(r => Math.max(5, (r ?? 0) - 30))}>−30</Button>
-                    <Button variant="plain" onClick={() => setRest(r => (r ?? 0) + 30)}>+30</Button>
-                    <Button variant="tinted" onClick={() => setRest(null)}>Omitir</Button>
-                  </div>}
-                  <Button variant="secondary" className="w-full" onClick={() => { setStarted(false); setRest(null); }}>Terminar entreno</Button>
-                </div>
-              )}
-
-              {!(view === "training" && started) && <PhoneTabBar tabs={shownViews} active={view} onSelect={(key) => changeView(key as View)} />}
+            {/* Capturas REALES de la app (public/app-shots); las pestañas de abajo cambian de pantalla. */}
+            <PhoneFrame screenClassName="h-[44rem]" chrome={false}>
+              <img
+                key={view}
+                src={DEMO_SHOTS[view]}
+                alt={`Pantalla ${view === "home" ? "Hoy" : titles[view as Exclude<View, "home">]} de la app Autopilot`}
+                className="h-full w-full object-cover object-top motion-safe:animate-fade-in"
+                decoding="async"
+              />
+              <nav aria-label="Secciones de la demo" className="absolute inset-x-3 bottom-4 z-10 grid h-16 grid-cols-4">
+                {shownViews.map((v) => (
+                  <button key={v.key} type="button" aria-pressed={view === v.key} aria-label={v.label} onClick={() => changeView(v.key as View)}
+                    className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+                ))}
+              </nav>
             </PhoneFrame>
           </div>
         </div>

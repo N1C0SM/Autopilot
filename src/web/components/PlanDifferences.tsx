@@ -6,50 +6,34 @@ import { euro } from "@/shared/lib/planCatalogCore";
 const PlanDifferences = () => {
   const p = usePlanAvailability();
   
+  type Value = boolean | string;
+  /** Una fila por característica y el valor de cada plan en la MISMA fila (antes se emparejaban
+   *  por posición y, como las listas no iban en el mismo orden, la tabla mezclaba cosas). */
+  const rows: { text: string; free: Value; plus: Value; coach: Value }[] = [
+    { text: "Rutina según tu objetivo, días y material", free: true, plus: true, coach: true },
+    { text: "Registro de series, repeticiones y kg", free: true, plus: true, coach: true },
+    { text: "Historial, peso y récords", free: true, plus: true, coach: true },
+    { text: "Calorías y macros para tu objetivo", free: true, plus: true, coach: true },
+    { text: "Scan corporal con IA", free: "Básico", plus: "Completo", coach: "Completo" },
+    { text: "Composición, músculos, postura y protocolo del scan", free: false, plus: true, coach: true },
+    { text: "Tu yo futuro y comparativa de scans", free: false, plus: true, coach: true },
+    { text: "Comidas de cada día según tus gustos", free: false, plus: true, coach: true },
+    { text: "Progresión de cargas automática", free: false, plus: true, coach: true },
+    { text: "Estadísticas avanzadas", free: false, plus: true, coach: true },
+    { text: "Revisión humana de tu plan", free: false, plus: false, coach: true },
+  ];
   const plans = [
-    {
-      name: "Free",
-      price: 0,
-      tagline: "Tu rutina y tu registro.",
-      features: [
-        { text: "Rutina inicial según tu objetivo, días y material", included: true },
-        { text: "Registro de series, repeticiones y kg", included: true },
-        { text: "Historial, peso y récords", included: true },
-        { text: "Calorías y macros para tu objetivo", included: true },
-        { text: "Scan básico: nota de tu físico, resumen y 2 mejoras", included: true },
-        { text: "Scan completo: composición, músculos, postura, protocolo y tu yo futuro", included: false },
-        { text: "Comidas de cada día según tus gustos", included: false },
-        { text: "Progresión de cargas automática", included: false },
-      ],
-    },
-    p.plus && {
-      name: p.plusName,
-      price: p.plusPrice,
-      tagline: "Te dice qué comer y cuánto subir.",
-      features: [
-        { text: "Todo lo de Free", included: true },
-        { text: "Scan completo: composición, músculos, postura, protocolo y tu yo futuro", included: true },
-        { text: "Comparativa de scans antes y después", included: true },
-        { text: "Comidas de cada día según tus gustos y alergias", included: true },
-        { text: "Progresión de cargas con tus registros", included: true },
-        { text: "Estadísticas avanzadas", included: true },
-      ],
-    },
-    p.coach && {
-      name: p.coachName,
-      price: p.coachPrice,
-      tagline: "Plus + Nicolás revisando tu plan.",
-      features: [
-        { text: "Todo lo de Plus", included: true },
-        { text: "Nicolás revisa tu plan", included: true },
-        { text: "Chat directo con él dentro de la app", included: true },
-        { text: "Ajustes si cambian tus horarios o material", included: true },
-        { text: "Seguimiento humano tu progreso", included: true },
-      ],
-    },
-  ].filter(Boolean) as typeof plans;
-
-  const maxFeatures = Math.max(...plans.map((pl) => pl.features.length));
+    { key: "free" as const, name: "Free", price: 0, tagline: "Tu rutina, tu registro y tus macros." },
+    p.plus && { key: "plus" as const, name: p.plusName, price: p.plusPrice, tagline: "Tu scan completo y tus comidas." },
+    p.coach && { key: "coach" as const, name: p.coachName, price: p.coachPrice, tagline: "Plus con revisión humana." },
+  ].filter(Boolean) as { key: "free" | "plus" | "coach"; name: string; price: number; tagline: string }[];
+  // Una fila que ningún plan visible incluye es de un plan oculto: no se anuncia.
+  const visibleRows = rows.filter((r) => plans.some((pl) => r[pl.key] !== false));
+  const cell = (v: Value, compact = false) => typeof v === "string"
+    ? <span className={`type-subhead font-semibold ${v === "Básico" ? "text-foreground" : "text-primary"}`}>{v}</span>
+    : v
+      ? <><Check className={`${compact ? "h-4 w-4" : "h-5 w-5"} shrink-0 text-primary`} aria-hidden="true" /><span className={compact ? "sr-only" : "type-subhead font-medium"}>Sí</span></>
+      : <><X className={`${compact ? "h-4 w-4" : "h-5 w-5"} shrink-0 text-muted-foreground/50`} aria-hidden="true" /><span className={compact ? "sr-only" : "type-subhead text-muted-foreground/60"}>No</span></>;
 
   return (
     <section className="py-12 sm:py-16 bg-card">
@@ -64,17 +48,15 @@ const PlanDifferences = () => {
 
         {/* Móvil: una fila por característica, con cada plan debajo; sin tabla que se salga de la pantalla. */}
         <ul className="mt-10 overflow-hidden rounded-2xl bg-card md:hidden">
-          {plans[0].features.map((feature, i) => !plans.some((pl) => pl.features[i]?.included) ? null : (
-            <li key={feature.text} className="px-4 py-4 [&:not(:last-child)]:border-b [&:not(:last-child)]:border-border/60">
-              <p className="type-subhead text-foreground">{feature.text}</p>
-              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
-                {plans.map((pl) => {
-                  const has = pl.features[i]?.included ?? false;
-                  return <span key={pl.name} className={`inline-flex items-center gap-1.5 type-footnote ${has ? "font-semibold text-foreground" : "text-muted-foreground/60"}`}>
-                    {has ? <Check className="h-4 w-4 text-primary" aria-hidden="true" /> : <X className="h-4 w-4" aria-hidden="true" />}
-                    {pl.name}<span className="sr-only">{has ? ": incluido" : ": no incluido"}</span>
-                  </span>;
-                })}
+          {visibleRows.map((row) => (
+            <li key={row.text} className="px-4 py-4 [&:not(:last-child)]:border-b [&:not(:last-child)]:border-border/60">
+              <p className="type-subhead text-foreground">{row.text}</p>
+              <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1">
+                {plans.map((pl) => (
+                  <span key={pl.key} className="inline-flex items-center gap-1.5 type-footnote">
+                    <span className="text-muted-foreground">{pl.name}</span>{cell(row[pl.key], true)}
+                  </span>
+                ))}
               </div>
             </li>
           ))}
@@ -103,38 +85,16 @@ const PlanDifferences = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {Array.from({ length: maxFeatures }).map((_, i) => {
-                  const feature = plans[0].features[i];
-                  // Una característica que ningún plan visible incluye es de un plan oculto: no se anuncia.
-                  if (!feature || !plans.some((pl) => pl.features[i]?.included)) return null;
-                  return (
-                    <tr key={i} className="group hover:bg-accent/20 transition-colors">
-                      <td className="py-4 pr-6 type-subhead text-foreground">
-                        {feature.text}
+                {visibleRows.map((row) => (
+                  <tr key={row.text} className="group hover:bg-accent/20 transition-colors">
+                    <td className="py-4 pr-6 type-subhead text-foreground">{row.text}</td>
+                    {plans.map((pl) => (
+                      <td key={pl.key} className="py-4 text-center">
+                        <div className="flex items-center justify-center gap-2">{cell(row[pl.key])}</div>
                       </td>
-                      {plans.map((pl) => {
-                        const hasFeature = pl.features[i]?.included ?? false;
-                        return (
-                          <td key={pl.name} className="py-4 text-center">
-                            <div className="flex items-center justify-center gap-2">
-                              {hasFeature ? (
-                                <>
-                                  <Check className="h-5 w-5 text-success shrink-0" aria-hidden="true" />
-                                  <span className="type-subhead text-success font-medium">Sí</span>
-                                </>
-                              ) : (
-                                <>
-                                  <X className="h-5 w-5 text-muted-foreground/50 shrink-0" aria-hidden="true" />
-                                  <span className="type-subhead text-muted-foreground/60">No</span>
-                                </>
-                              )}
-                            </div>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  );
-                })}
+                    ))}
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -154,7 +114,7 @@ const PlanDifferences = () => {
               <p className="mt-2 type-footnote text-muted-foreground">
                 {pl.price === 0 
                   ? "Sin tarjeta ni prueba que cancelar" 
-                  : `${pl.price === p.plusPrice ? "7" : "7"} días de prueba. Tras eso: ${euro(pl.price)}/mes. Sin permanencia.`}
+                  : `7 días de prueba. Tras eso: ${euro(pl.price)}/mes. Sin permanencia.`}
               </p>
             </div>
           ))}

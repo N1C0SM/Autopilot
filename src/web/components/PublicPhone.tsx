@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { Apple, Bell, BookOpen, Sparkles, type LucideIcon } from "lucide-react";
+import { Apple, Sparkles, type LucideIcon } from "lucide-react";
 import { ProgressRing } from "@/shared/components/ui/progress-ring";
 import { OverviewRow } from "@/app/components/dashboard/HomeOverview";
 import type { PlanAvailability } from "@/shared/lib/planCatalogCore";
@@ -36,12 +36,10 @@ export function PhoneFrame({ children, className, screenClassName, chrome = true
   );
 }
 
-/** Bell and avatar, top right, as in the app's root screens. */
+/** Avatar arriba a la derecha, como en la app (la campana y la guía ya no están). */
 export function PhoneAppBar({ avatar }: { avatar: ReactNode }) {
   return (
     <div aria-hidden className="flex h-11 shrink-0 items-center justify-end gap-2 px-3">
-      <span className="flex h-11 w-11 items-center justify-center"><BookOpen className="h-[22px] w-[22px]" /></span>
-      <span className="flex h-11 w-11 items-center justify-center"><Bell className="h-[22px] w-[22px]" /></span>
       <span className="flex h-11 w-11 items-center justify-center">
         <span className="flex h-[30px] w-[30px] items-center justify-center overflow-hidden rounded-full bg-secondary type-footnote font-semibold">{avatar}</span>
       </span>

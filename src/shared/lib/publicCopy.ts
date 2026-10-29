@@ -47,7 +47,7 @@ export function publicFaqs(p: PlanFlags): Faq[] {
         p.coach && `${p.coachName} (${euro(p.coachPrice)}/mes) añade además a Nicolás, el fundador, que revisa tu plan y te responde ${COACH_CONTACT_CHANNEL}.`,
       ].filter(Boolean).join(" "),
     },
-    { q: "¿La demo me crea una cuenta o me cobra?", a: "No. La demo es un ejemplo interactivo con datos ficticios. Puedes explorarla sin registrarte. Para guardar tus propios entrenamientos, crea una cuenta gratis." },
+    { q: "¿La demo me crea una cuenta o me cobra?", a: "No. La demo muestra capturas reales de la app y puedes explorarla sin registrarte. Para guardar tus propios entrenamientos, crea una cuenta gratis." },
     (p.plus || p.coach) && {
       q: "¿Qué ocurre al terminar los 7 días de prueba?",
       a: `Los planes de pago empiezan con 7 días de prueba: se pide tarjeta al contratar, no se cobra nada hasta el día 8 y puedes cancelar antes desde Ajustes → Suscripción para evitar el primer cobro. Si no cancelas, la suscripción se renueva a ${[p.plus && `${euro(p.plusPrice)}/mes (${p.plusName})`, p.coach && `${euro(p.coachPrice)}/mes (${p.coachName})`].filter(Boolean).join(" o ")}. El plan Free no tiene prueba ni tarjeta.`,

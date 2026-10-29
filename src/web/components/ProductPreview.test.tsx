@@ -35,73 +35,20 @@ vi.mock("@/shared/lib/planCatalog", async () => {
 afterEach(cleanup);
 
 describe("public product preview", () => {
-  it("records, undoes and resets sample exercises", async () => {
+  it("shows real app screenshots and switches them from the phone tabs", () => {
     render(<ProductPreview onPlans={() => {}} />);
-    fireEvent.click(screen.getByRole("button", { name: "Entrenar" }));
-    fireEvent.click(await screen.findByRole("button", { name: "Empezar entrenamiento" }));
-    fireEvent.click(screen.getByRole("button", { name: "Marcar serie 1 de Sentadilla goblet" }));
-    fireEvent.click(screen.getByRole("button", { name: "Marcar serie 2 de Sentadilla goblet" }));
-    expect(await screen.findByRole("status")).toHaveTextContent("2 de 9 series");
-    fireEvent.click(screen.getByRole("button", { name: "Desmarcar serie 1 de Sentadilla goblet" }));
-    expect(await screen.findByRole("status")).toHaveTextContent("1 de 9 series");
-    fireEvent.click(screen.getByRole("button", { name: "Reiniciar demo" }));
-    expect(await screen.findByRole("status")).toHaveTextContent("0 de 9 series");
-  });
-
-  it("retains the demo session across views and labels illustrative data", async () => {
-    render(<ProductPreview onPlans={() => {}} />);
-    fireEvent.click(screen.getByRole("button", { name: "Entrenar" }));
-    fireEvent.click(await screen.findByRole("button", { name: "Empezar entrenamiento" }));
-    fireEvent.click(screen.getByRole("tab", { name: /Remo con mancuerna/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Marcar serie 1 de Remo con mancuerna" }));
-    fireEvent.click(screen.getByRole("button", { name: "Terminar entreno" }));
+    expect(screen.getByRole("img", { name: /Pantalla Hoy/ })).toHaveAttribute("src", "/app-shots/hoy.jpg");
     fireEvent.click(screen.getByRole("button", { name: "Nutrición" }));
-    await waitFor(() => expect(screen.getByText(/Comidas ilustrativas/)).toBeVisible());
-    fireEvent.click(screen.getByRole("button", { name: "Progreso" }));
-    await waitFor(() => expect(screen.getByText(/gráficas se construyen con tus propias series completadas/)).toBeVisible());
+    expect(screen.getByRole("img", { name: /Pantalla Nutrición/ })).toHaveAttribute("src", "/app-shots/nutricion.jpg");
+    expect(screen.getByRole("button", { name: "Nutrición" })).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(screen.getByRole("button", { name: "Entrenar" }));
-    expect(await screen.findByRole("status")).toHaveTextContent("1 de 9 series");
-    expect(screen.getByText(/Demo con datos ficticios/)).toBeVisible();
+    expect(screen.getByRole("img", { name: /Pantalla Entrenar/ })).toHaveAttribute("src", "/app-shots/registro.jpg");
   });
 
-  it("uses the same exercise progression chart as the real progress screen", async () => {
-    render(<ProductPreview onPlans={() => {}} />);
-    fireEvent.click(screen.getByRole("button", { name: "Progreso" }));
-
-    await waitFor(() => expect(screen.getByRole("img", { name: "Gráfica de volumen para Sentadilla goblet" })).toBeVisible());
-    fireEvent.click(screen.getByRole("button", { name: "Fuerza estimada" }));
-    await waitFor(() => expect(screen.getByRole("img", { name: "Gráfica de fuerza estimada para Sentadilla goblet" })).toBeVisible());
-    fireEvent.click(screen.getByRole("tab", { name: "Récords" }));
-    expect(screen.getByText("Récords personales")).toBeVisible();
-    expect(screen.queryByText("Cintura")).not.toBeInTheDocument();
-  });
-
-  it("marks nutrition as paid-only and has no chat tab in v1.0", async () => {
+  it("presents macros as free and has no chat tab", () => {
     render(<ProductPreview onPlans={() => {}} />);
     fireEvent.click(screen.getByRole("button", { name: "Nutrición" }));
-    await waitFor(() => expect(screen.getByText(/Función de pago/)).toBeVisible());
-    expect(screen.queryByRole("button", { name: "Chat" })).not.toBeInTheDocument();
+    expect(screen.getByText("Tus macros, siempre gratis.")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Chat" })).toBeNull();
   });
-
-  it("opens nutrition from the summary row on the home screen", async () => {
-    render(<ProductPreview onPlans={() => {}} />);
-    fireEvent.click(screen.getByRole("button", { name: /Nutrición 2 de 3 comidas/ }));
-    await waitFor(() => expect(screen.getByText(/Comidas ilustrativas/)).toBeVisible());
-  });
-
-  it("lets a visitor move to pricing without registering", () => {
-    const onPlans = vi.fn();
-    render(<ProductPreview onPlans={onPlans} />);
-    fireEvent.click(screen.getByRole("button", { name: /Ver qué incluye cada plan/ }));
-    expect(onPlans).toHaveBeenCalledOnce();
-  });
-  it("offers free signup separately from paid plans", () => {
-    const onFree = vi.fn();
-    const onPlans = vi.fn();
-    render(<ProductPreview onPlans={onPlans} onFree={onFree} />);
-    fireEvent.click(screen.getByRole("button", { name: "Crear mi propia rutina gratis" }));
-    expect(onFree).toHaveBeenCalledOnce();
-    expect(onPlans).not.toHaveBeenCalled();
-  });
-
 });
