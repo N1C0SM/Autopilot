@@ -32,6 +32,8 @@ struct NutritionView: View {
     @State private var hasAccess: Bool?
     @State private var generating = false
     @State private var generateFailed = false
+    /// Confirmación de «Regenerar comidas» (como en la web).
+    @State private var confirmingNew = false
     /// Plus sin preferencias de comidas: se le preguntan antes de prepararlas (como la web).
     @State private var needsSetup = false
     struct Macros: Codable { let calories: Double?; let protein: Double?; let carbs: Double?; let fats: Double? }
@@ -165,6 +167,19 @@ struct NutritionView: View {
                 }
             }
             .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            // Comidas nuevas cuando quieras, como en la web: solo cambian las comidas, no el entreno.
+            Button(generating ? "Regenerando comidas…" : "Regenerar comidas") { Haptics.tap(); confirmingNew = true }
+                .buttonStyle(.pillSecondary).disabled(generating).padding(.top, 4)
+            if generateFailed && !generating {
+                Text("No se pudieron regenerar las comidas. Inténtalo de nuevo en unos minutos.")
+                    .font(.apFootnote).foregroundStyle(Palette.muted)
+            }
+        }
+        .alert("¿Regenerar tus comidas?", isPresented: $confirmingNew) {
+            Button("Ahora no", role: .cancel) {}
+            Button("Regenerar comidas") { Task { await generateMeals() } }
+        } message: {
+            Text("Recalcularemos el plan de comidas con tus datos actuales y sustituirá a las comidas guardadas cuando termine. El plan de entrenamiento no cambia.")
         }
     }
 

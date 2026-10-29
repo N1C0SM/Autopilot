@@ -180,6 +180,22 @@ describe("meal photos follow the current dish", () => {
   });
 });
 
+describe("regenerate meals", () => {
+  it("asks first and then regenerates only the meals", async () => {
+    const onMealsGenerated = vi.fn();
+    mocks.invoke.mockImplementation((name: string) => Promise.resolve(
+      name === "sync-nutrition-macros" ? { data: { updated: true, meals_updated: true }, error: null } : { data: { url: null }, error: null },
+    ));
+    render(<MealsList meals={[{ name: "Comida", description: "Plato" }]} onMealsGenerated={onMealsGenerated} />);
+    fireEvent.click(screen.getByRole("button", { name: "Regenerar comidas" }));
+    expect(screen.getByText("¿Regenerar tus comidas?")).toBeVisible();
+    expect(mocks.invoke).not.toHaveBeenCalledWith("sync-nutrition-macros", expect.anything());
+    fireEvent.click(screen.getByRole("button", { name: "Regenerar comidas" }));
+    await waitFor(() => expect(onMealsGenerated).toHaveBeenCalled());
+    expect(mocks.invoke).toHaveBeenCalledWith("sync-nutrition-macros", { body: { regenerate_meals: true } });
+  });
+});
+
 describe("meal rows", () => {
   it("remounts the row when the dish changes so it cannot inherit the old photo", () => {
     localStorage.setItem("autopilot.aiCovers.v1", JSON.stringify({ "m:plato a": OLD_PHOTO, "m:plato b": NEW_PHOTO }));
