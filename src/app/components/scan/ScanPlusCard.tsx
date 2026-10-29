@@ -16,7 +16,7 @@ export default function ScanPlusCard({ sections, onUpgrade }: { sections?: strin
         <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/15 text-primary">
           <LockKeyhole className="h-5 w-5" strokeWidth={2.25} aria-hidden="true" />
         </span>
-        <p className="mt-4 font-rounded text-[28px] font-bold leading-tight tracking-tight">Tu scan completo, con Plus</p>
+        <p className="mt-4 font-rounded text-[28px] font-bold leading-tight tracking-tight">Tu scan avanzado, con Plus</p>
         <p className="mt-1 type-subhead text-muted-foreground">Este es tu scan básico. Con Plus ves el análisis entero de tu físico:</p>
         <ul className="mt-4 space-y-2.5">
           {items.map((item) => (
@@ -27,7 +27,7 @@ export default function ScanPlusCard({ sections, onUpgrade }: { sections?: strin
           ))}
         </ul>
         {onUpgrade && !isIOSNative()
-          ? <Button size="lg" className="mt-5 w-full" onClick={() => { void hapticTap(); onUpgrade(); }}>Ver mi scan completo con Plus</Button>
+          ? <Button size="lg" className="mt-5 w-full" onClick={() => { void hapticTap(); onUpgrade(); }}>Ver mi scan avanzado con Plus</Button>
           : <p className="mt-5 type-footnote font-semibold text-primary">Incluido en Plus</p>}
       </div>
     </section>
