@@ -255,6 +255,13 @@ const extractJson = (text: string) => {
 };
 
 const INCOMPLETE = "El análisis llegó incompleto. Vuelve a intentarlo.";
+// Súbelo al cambiar el prompt o el esquema: los análisis guardados dejan de reutilizarse.
+const SCAN_CACHE_VERSION = "v2";
+
+const sha256Hex = async (text: string) =>
+  Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text))))
+    .map((b) => b.toString(16).padStart(2, "0")).join("");
+
 const CORE_KEYS = new Set(["attractiveness", "potential", "physique", "style", "similarity", "summary"]);
 
 // Un campo raro de la IA en una sección opcional (grupos, postura, protocolo…) no tumba el
@@ -313,6 +320,20 @@ Deno.serve(async (req) => {
       );
     }
 
+    // La IA varía entre lecturas aunque la foto sea idéntica: el primer análisis se guarda por
+    // huella (fotos + datos) y se reutiliza, así la misma foto da siempre las mismas cifras.
+    const cacheKey = await sha256Hex(JSON.stringify([SCAN_CACHE_VERSION, currentImage ?? null, backImage ?? null,
+      objectiveImage ?? null, gender ?? null, height_cm ?? null, weight_kg ?? null, age ?? null]));
+    const respond = async (analysis: Record<string, unknown>) => {
+      // Free y visitantes: scan básico (el detalle es de Plus). Se recorta aquí, no en la app.
+      const full = await hasFullScan(req, sb);
+      return new Response(JSON.stringify(full ? analysis : toBasicScan(analysis)), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    };
+    const { data: cached } = await sb.from("scan_cache").select("result").eq("key", cacheKey).maybeSingle();
+    if (cached?.result) return await respond(cached.result as Record<string, unknown>);
+
     // Cadena de visión: créditos de Lovable primero, luego ChatGPT y por último Claude.
     const aiCfg = await getAiConfig();
     const visionProviders: VisionProvider[] = [];
@@ -370,7 +391,7 @@ Deno.serve(async (req) => {
     if (objectiveImage) userContent.push({ type: "image", image: objectiveImage });
 
     const text = await generateVision(visionProviders, {
-      temperature: 0.1,
+      temperature: 0,
       maxOutputTokens: 4000,
       system:
         [
@@ -468,11 +489,9 @@ Deno.serve(async (req) => {
       parsed.similarity = 0;
     }
 
-    // Free y visitantes: scan básico (el detalle es de Plus). Se recorta aquí, no en la app.
-    const full = await hasFullScan(req, sb);
-    return new Response(JSON.stringify(full ? parsed : toBasicScan(parsed as Record<string, unknown>)), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    // Sin la tabla (migración aún sin aplicar) el scan funciona igual, solo sin reutilizar.
+    await sb.from("scan_cache").upsert({ key: cacheKey, result: parsed });
+    return await respond(parsed as Record<string, unknown>);
   } catch (e: unknown) {
     console.error("analyze-physique error:", e);
     // Nunca un volcado técnico (JSON de validación, trazas) hacia la app.
