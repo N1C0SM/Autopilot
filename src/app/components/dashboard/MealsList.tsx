@@ -13,6 +13,7 @@ import { nutritionMacroError } from "@/shared/lib/nutritionValidation";
 import { useMealPhoto } from "@/shared/hooks/useSessionCover";
 import { BRAND_PHOTOS } from "@/shared/lib/brandPhotos";
 import MealsPlusCard from "@/app/components/dashboard/MealsPlusCard";
+import NutritionSetup from "@/app/components/dashboard/NutritionSetup";
 
 /** Foto del plato generada con IA, con el mismo estilo oscuro y dorado que las sesiones. */
 const MealPhoto = ({ dish, dim }: { dish: string; dim: boolean }) => {
@@ -112,8 +113,19 @@ const MealsList = ({ meals, macros, onOpenProfile, userId, onMealsGenerated }: P
     window.dispatchEvent(new Event("autopilot:nutrition-plan-updated"));
     onMealsGenerated?.();
   };
+  // Las comidas son de Plus: si nunca dijo qué le gusta comer, se le pregunta antes de prepararlas.
+  const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
   useEffect(() => {
-    if (!meals.length && onMealsGenerated && !asked.current) void generate();
+    if (meals.length || !onMealsGenerated || asked.current) return;
+    if (!userId) { void generate(); return; }
+    let alive = true;
+    void supabase.from("onboarding").select("nutrition_preferences").eq("user_id", userId).maybeSingle().then(({ data }) => {
+      if (!alive) return;
+      const missing = !data?.nutrition_preferences?.trim();
+      setNeedsSetup(missing);
+      if (!missing) void generate();
+    });
+    return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [meals.length]);
 
@@ -123,6 +135,10 @@ const MealsList = ({ meals, macros, onOpenProfile, userId, onMealsGenerated }: P
   const f = Number(macros?.fats) || 0;
   const kcal = Number(macros?.calories) || Math.round(p * 4 + c * 4 + f * 9);
   const targetError = macros ? nutritionMacroError(macros) : null;
+
+  if (!meals.length && needsSetup && userId && !generating) {
+    return <NutritionSetup userId={userId} onDone={() => { setNeedsSetup(false); void generate(); }} />;
+  }
 
   // Sin comidas ni objetivos: avisamos con calma en vez de mostrar una pantalla vacía.
   if (!meals.length && kcal <= 0) {

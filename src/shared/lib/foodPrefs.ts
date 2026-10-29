@@ -4,6 +4,13 @@
  * `onboarding.nutrition_preferences` y lo que no come en `onboarding.allergies` (lista con comas).
  * `ai-generate-meals` ya lee ambos campos al preparar las comidas.
  */
+/** Cuánto le gusta cocinar (preferencias de comidas de Plus). */
+export const COOKING = [
+  { v: "quick", l: "Rápido, sin complicarme", d: "Recetas de menos de 15 min" },
+  { v: "normal", l: "Algo de cocina", d: "Platos sencillos y variados" },
+  { v: "loves", l: "Me gusta cocinar", d: "Recetas más elaboradas" },
+] as const;
+
 export const FOOD_LIKES = [
   "Pollo", "Ternera", "Pescado", "Huevos", "Arroz", "Pasta", "Patata", "Legumbres",
   "Verduras", "Fruta", "Yogur", "Avena", "Pan", "Frutos secos", "Tofu",

@@ -15,6 +15,7 @@
 		30C1A16D10C334C0D2EFB9D1 /* PlanEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F040E4F2B840DC88A30CD7D /* PlanEditorView.swift */; };
 		3538D36D10996732BE4FF0C5 /* Snapshots.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87BC260CE2642615E55007E6 /* Snapshots.swift */; };
 		37AB3736DA2D27767EF5091A /* AdminPhysiques.swift in Sources */ = {isa = PBXBuildFile; fileRef = C67655E7437E327953D3487E /* AdminPhysiques.swift */; };
+		38108789AEF99008A7016FDA /* NutritionSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94FDE3BFE671B103E0039E96 /* NutritionSetupView.swift */; };
 		39012991BB9D556B10C68E0C /* AdminViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 215885F8A59B676130290EEB /* AdminViews.swift */; };
 		3CD2ECE76B612C811CF540BA /* Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9E053FD3BBE7DBA136AACF9 /* Session.swift */; };
 		42B37E40810ED706D583D9A5 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2087F6E61B3A0D2AD7B75E7A /* LoginView.swift */; };
@@ -85,6 +86,7 @@
 		8A8C9FF8A9F9707540345088 /* OtherViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OtherViews.swift; sourceTree = "<group>"; };
 		922D1242F803ABF9EC7B42D3 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		92E329249B146C8FEF5E45AF /* TrainView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainView.swift; sourceTree = "<group>"; };
+		94FDE3BFE671B103E0039E96 /* NutritionSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NutritionSetupView.swift; sourceTree = "<group>"; };
 		9FD92FC3A4FA899A9AF2A41F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A57E68C8EAB6DFD893FAFDF5 /* HealthKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitManager.swift; sourceTree = "<group>"; };
 		ABDC5FBCB982DC18600B15B1 /* AdminLanding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminLanding.swift; sourceTree = "<group>"; };
@@ -289,6 +291,7 @@
 		CEB9CAA1C0564A5F6759E98A /* Other */ = {
 			isa = PBXGroup;
 			children = (
+				94FDE3BFE671B103E0039E96 /* NutritionSetupView.swift */,
 				8A8C9FF8A9F9707540345088 /* OtherViews.swift */,
 			);
 			path = Other;
@@ -408,6 +411,7 @@
 				1D236648E7FF2EC8FE627E00 /* HomeView.swift in Sources */,
 				5FDD42D966E843635893C724 /* InterFont.swift in Sources */,
 				42B37E40810ED706D583D9A5 /* LoginView.swift in Sources */,
+				38108789AEF99008A7016FDA /* NutritionSetupView.swift in Sources */,
 				4A4158E5A447BF480BE6C342 /* OtherViews.swift in Sources */,
 				30C1A16D10C334C0D2EFB9D1 /* PlanEditorView.swift in Sources */,
 				642DC69615ED6F9C9C49CE51 /* ProgressScreen.swift in Sources */,

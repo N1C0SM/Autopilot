@@ -80,7 +80,7 @@ export default function OnboardingChoice() {
                 onClick: handleForm,
                 icon: FileText,
                 title: "Responder preguntas",
-                desc: "Objetivo, días disponibles y comidas.",
+                desc: "Objetivo, días disponibles y material.",
                 time: "≈ 1 min",
                 points: ["Sin fotos", "Lo más rápido"],
                 badge: "Recomendado",

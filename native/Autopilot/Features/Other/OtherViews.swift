@@ -31,6 +31,8 @@ struct NutritionView: View {
     @State private var hasAccess: Bool?
     @State private var generating = false
     @State private var generateFailed = false
+    /// Plus sin preferencias de comidas: se le preguntan antes de prepararlas (como la web).
+    @State private var needsSetup = false
     struct Macros: Codable { let calories: Double?; let protein: Double?; let carbs: Double?; let fats: Double? }
     struct Meal: Codable, Hashable { let name: String?; let description: String? }
     struct Row: Codable { let macros_json: Macros?; let meals_json: [Meal]? }
@@ -94,13 +96,18 @@ struct NutritionView: View {
                 if hasMeals {
                     mealsSection
                 } else {
-                    if hasAccess == false {
+                    if needsSetup, let id = session.userId {
+                        NutritionSetupView(userId: id) {
+                            needsSetup = false
+                            Task { await generateMeals() }
+                        }
+                    } else if hasAccess == false {
                         // Como `MealsPlusCard` de la web; en iOS sin enlace a pagos externos.
                         EmptyCard(photo: Self.defaultDish, title: "Tus comidas, hechas para ti",
-                                  message: "Con Plus, Autopilot te prepara las comidas de cada día con tus gustos, alergias y objetivo del onboarding, ajustadas a tus macros. Incluido en Plus.")
+                                  message: "Con Plus te preguntamos qué te gusta y qué no comes, y Autopilot te prepara las comidas de cada día ajustadas a tus macros. Incluido en Plus.")
                     } else if generating || hasAccess == nil {
                         EmptyCard(photo: Self.defaultDish, title: "Preparando tus comidas…",
-                                  message: "Autopilot está creando tus comidas con tus gustos y alergias del onboarding.")
+                                  message: "Autopilot está creando tus comidas con tus gustos y lo que no comes.")
                     } else {
                         VStack(alignment: .leading, spacing: 12) {
                             EmptyCard(photo: Self.defaultDish, title: "Sin comidas todavía",
@@ -380,7 +387,7 @@ struct NutritionView: View {
             } else if hasAccess == nil {
                 // Sin comidas: con Plus se generan solas (el servidor vuelve a comprobar el acceso).
                 // Lo decide el servidor: si responde «no_access», toca el aviso de Plus.
-                await generateMeals()
+                await prepareMeals(id)
             }
         } catch {
             // Si la vista se cerró a mitad de la carga no hay error que enseñar.
@@ -392,6 +399,23 @@ struct NutritionView: View {
 
     /// Copia en disco del plan por usuario (macros y comidas).
     static func cacheKey(_ id: UUID) -> String { "nutrition|\(id.uuidString.lowercased())" }
+
+    /// Si nunca dijo qué le gusta comer, primero se comprueba el acceso (sin generar nada) y,
+    /// con Plus, se le pregunta; si ya lo dijo, se preparan las comidas directamente.
+    private func prepareMeals(_ id: UUID) async {
+        struct Prefs: Decodable { let nutrition_preferences: String? }
+        let prefs: Prefs? = try? await Backend.client.from("onboarding").select("nutrition_preferences")
+            .eq("user_id", value: id).single().execute().value
+        if let p = prefs?.nutrition_preferences, !p.trimmingCharacters(in: .whitespaces).isEmpty {
+            await generateMeals()
+            return
+        }
+        struct Result: Decodable { let reason: String? }
+        let result: Result? = try? await Backend.client.functions.invoke("sync-nutrition-macros", options: FunctionInvokeOptions(body: [String: String]()))
+        if result?.reason == "no_access" { hasAccess = false; return }
+        hasAccess = true
+        needsSetup = true
+    }
 
     /// Comidas del día con las preferencias del onboarding (`sync-nutrition-macros`, igual que la web).
     private func generateMeals() async {

@@ -1,5 +1,3 @@
-import { ChipGroup } from "@/shared/components/ui/chip-group";
-import { FOOD_AVOID, FOOD_LIKES, splitList, toggleInList, writeLikes } from "@/shared/lib/foodPrefs";
 import { generatePlanGuarded } from "@/shared/lib/planShield";
 import { clearConfiguratorDraft, readConfiguratorDraft, saveConfiguratorDraft } from "@/shared/lib/configuratorDraft";
 import { useEffect, useRef, useState } from "react";
@@ -40,11 +38,6 @@ const STRUCTURE = [
   { v: "full_body", l: "Full Body" }, { v: "torso_pierna", l: "Torso / Pierna" },
   { v: "ppl", l: "Empuje / Tirón / Pierna" }, { v: "coach", l: "No lo sé, que Autopilot elija" },
 ];
-const COOKING = [
-  { v: "quick", l: "Rápido, sin complicarme", d: "Recetas de menos de 15 min" },
-  { v: "normal", l: "Algo de cocina", d: "Platos sencillos y variados" },
-  { v: "loves", l: "Me gusta cocinar", d: "Recetas más elaboradas" },
-];
 const STYLE = [
   { v: "direct", l: "Directo y exigente" }, { v: "flexible", l: "Flexible y realista" }, { v: "technical", l: "Técnico y analítico" },
 ];
@@ -72,7 +65,7 @@ const label = (arr: { v: string | number; l: string }[], v: string | number) => 
 const draftResumeStep = (cfg: Cfg): number => {
   if (!cfg.goal || !cfg.focus || (cfg.mode !== "individual" && !/\S+@\S+\.\S+/.test(cfg.partner_email))) return 0;
   if (!Array.isArray(cfg.days) || cfg.days.length < 2) return 1;
-  return 3;
+  return 2;
 };
 
 type Option = { v: string | number; l: string; d?: string };
@@ -198,7 +191,6 @@ const Configurator = () => {
   const valid = [
     !!c.goal && !!c.focus && (c.mode === "individual" || /\S+@\S+\.\S+/.test(c.partner_email)),
     c.days.length >= 2,
-    true,
     accept,
   ];
 
@@ -266,24 +258,18 @@ const Configurator = () => {
       return;
     }
     setSaving(true);
-    const likes = c.likes ?? [];
-    const dislikes = c.dislikes ?? [];
-    const nutrition = writeLikes([`${c.meals} comidas al día`, `Cocina: ${label(COOKING, c.cooking)}`, c.avoid && `Evitar: ${c.avoid}`]
-      .filter(Boolean).join(" · "), likes);
     const { error } = await supabase.from("onboarding").upsert({
       user_id: user.id,
       goal: c.goal,
       primary_focus: c.focus,
       equipment_type: c.focus === "gimnasio" ? "Gimnasio" : c.focus === "calistenia" ? "Calistenia" : "Mixto",
       intensity_level: 7,
-      nutrition_preferences: nutrition,
-      allergies: [...dislikes, ...splitList(c.avoid)].join(", "),
+      // Las comidas son de Plus: se preguntan en Nutrición al tener Plus, no aquí.
       // Acepta «72,5» y nunca borra un peso ya guardado si el campo se deja vacío.
       ...(Number(String(c.weight).replace(",", ".")) > 30 ? { weight: Number(String(c.weight).replace(",", ".")) } : {}),
       availability: {
         days: String(c.days.length), hours: String(+(c.minutes / 60).toFixed(2)),
         training_days: c.days, session_minutes: c.minutes, structure: c.structure,
-        meals_per_day: c.meals, avoid_foods: c.avoid, cooking: c.cooking,
         checkin_dow: c.checkin_dow, checkin_time: c.checkin_time, coach_style: c.style,
         training_mode: c.mode, partner_email: c.mode === "pareja" ? c.partner_email : null,
       },
@@ -315,13 +301,11 @@ const Configurator = () => {
   const titles = [
     t("¿Qué quieres conseguir?", "¿Qué queréis conseguir?"),
     t("Tu semana", "Vuestra semana juntos"),
-    t("Tu nutrición", "Vuestras comidas"),
     t("Tu plan Autopilot", "Vuestro plan conjunto"),
   ];
   const leads = [
     t("Cuéntanos tu objetivo y dónde entrenas.", "Un mismo calendario, con cargas adaptadas a cada uno."),
     t("Elige al menos dos días. Ajustamos el plan a tu semana.", "Elegid al menos dos días que os vengan bien a los dos."),
-    t("Para que las comidas encajen con tu día.", "Recetas sencillas que os gusten a los dos."),
     user
       ? t("Así queda con tus respuestas. Confirma para guardar tu plan completo.", "Así queda vuestro plan. Confirma para guardarlo.")
       : t("Así queda con tus respuestas. Crea tu cuenta para guardar tu plan completo.", "Así queda vuestro plan. Crea tu cuenta para guardarlo."),
@@ -381,27 +365,13 @@ const Configurator = () => {
               onToggle={(v) => set("days", c.days.includes(v) ? c.days.filter((x) => x !== v) : [...c.days, v])} />
             <Choices header="Tiempo por sesión" options={DURATION} value={c.minutes} onChange={(v) => set("minutes", Number(v))} />
             <Choices header="Estructura" options={STRUCTURE} value={c.structure} onChange={(v) => set("structure", String(v))} />
-          </>
-        )}
-
-        {step === 2 && (
-          <>
-            <Choices header={t("Comidas al día", "Comidas al día que hacéis juntos")} options={[2, 3, 4, 5].map((n) => ({ v: n, l: `${n} comidas` }))} value={c.meals} onChange={(v) => set("meals", Number(v))} />
-            <Choices header={t("¿Te gusta cocinar?", "¿Os gusta cocinar?")} options={COOKING} value={c.cooking} onChange={(v) => set("cooking", String(v))} />
-            <ChipGroup header={t("¿Qué te gusta comer?", "¿Qué os gusta comer?")} options={FOOD_LIKES}
-              isOn={(v) => (c.likes ?? []).includes(v)} onToggle={(v) => set("likes", toggleInList(c.likes ?? [], v))} />
-            <ChipGroup header={t("¿Qué no comes?", "¿Qué no coméis?")} options={FOOD_AVOID}
-              isOn={(v) => (c.dislikes ?? []).includes(v)} onToggle={(v) => set("dislikes", toggleInList(c.dislikes ?? [], v))} />
-            <Field header="¿Algo más que evitar? (opcional)">
-              <Input autoComplete="off" enterKeyHint="next" aria-label="Otros alimentos que no quieres ver" placeholder="Ej. avena, champiñones…" value={c.avoid} onChange={(e) => set("avoid", e.target.value)} />
-            </Field>
             <Field header="Tu peso en kg (opcional)">
               <Input type="text" inputMode="decimal" enterKeyHint="done" autoComplete="off" aria-label="Tu peso en kg" placeholder="Ej. 72 kg" value={c.weight} onChange={(e) => set("weight", e.target.value.replace(/[^\d.,]/g, ""))} />
             </Field>
           </>
         )}
 
-        {step === 3 && (
+        {step === 2 && (
           <>
             <section className="relative overflow-hidden rounded-3xl bg-card p-5 sm:p-6 animate-fade-in">
               <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full bg-primary/15 blur-3xl" />
@@ -423,7 +393,7 @@ const Configurator = () => {
                 {[
                   { k: "Días", v: String(c.days.length) },
                   { k: "Sesión", v: label(DURATION, c.minutes) },
-                  { k: "Comidas", v: String(c.meals) },
+                  { k: "Peso", v: c.weight ? `${c.weight} kg` : "—" },
                 ].map((s) => (
                   <div key={s.k} className="rounded-2xl bg-secondary px-3 py-3 text-center">
                     <p className="type-headline">{s.v}</p>
