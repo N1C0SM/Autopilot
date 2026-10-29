@@ -84,4 +84,20 @@ describe("paridad web ↔ apps nativas", () => {
     expect(web).toMatch(/const ingredients = mealIngredients\(meal\);/);
     expect(app).toMatch(/let weighed = meal\.weighed/);
   });
+
+  it("Scan: mismos avisos de error en la web y en la app, nunca el mensaje técnico del servidor", () => {
+    const web = read("src/app/pages/Scan.tsx");
+    const app = read("native/Autopilot/Features/Scan/ScanView.swift");
+    for (const msg of [
+      "Has hecho muchos análisis seguidos. Espera un rato y vuelve a intentarlo.",
+      "El análisis con IA está pausado: el servicio no tiene saldo. Estamos en ello; inténtalo más tarde.",
+      "Sin conexión. Comprueba tu internet e inténtalo de nuevo.",
+      "No hemos podido analizar las fotos. Inténtalo de nuevo en unos segundos.",
+    ]) {
+      expect(web).toContain(msg);
+      expect(app).toContain(msg);
+    }
+    expect(app).not.toMatch(/self\.error = "[^"]*\\\(serverMessage\)/);
+    expect(web).not.toMatch(/toast\.error\(msg\)|toast\.error\(`[^`]*\$\{msg\}/);
+  });
 });

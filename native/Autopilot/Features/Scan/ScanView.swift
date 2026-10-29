@@ -441,21 +441,23 @@ struct ScanView: View {
             }
             #endif
             Haptics.error()
-            // El servidor manda el motivo real: «Payment Required» es el proveedor de IA sin saldo;
-            // no tiene sentido culpar a la conexión del usuario.
-            var serverMessage: String?
-            if case let FunctionsError.httpError(_, data) = error {
+            // Mismos mensajes que la web. El motivo técnico del servidor nunca se enseña tal cual:
+            // solo decide el aviso («Payment Required» es el proveedor de IA sin saldo).
+            var status: Int?
+            var serverMessage = ""
+            if case let FunctionsError.httpError(code, data) = error {
                 struct E: Decodable { let error: String? }
-                serverMessage = (try? JSONDecoder().decode(E.self, from: data))?.error
+                status = code
+                serverMessage = ((try? JSONDecoder().decode(E.self, from: data))?.error ?? "").lowercased()
             }
-            if let serverMessage, serverMessage.lowercased().contains("payment") {
+            if status == 429 || serverMessage.contains("too many") {
+                self.error = "Has hecho muchos análisis seguidos. Espera un rato y vuelve a intentarlo."
+            } else if serverMessage.contains("payment") {
                 self.error = "El análisis con IA está pausado: el servicio no tiene saldo. Estamos en ello; inténtalo más tarde."
-            } else if let serverMessage, !serverMessage.isEmpty {
-                self.error = "No se pudo analizar: \(serverMessage)"
-            } else if (error as? URLError) != nil || error is URLError {
+            } else if error is URLError {
                 self.error = "Sin conexión. Comprueba tu internet e inténtalo de nuevo."
             } else {
-                self.error = "No se pudo analizar ahora mismo. Inténtalo más tarde."
+                self.error = "No hemos podido analizar las fotos. Inténtalo de nuevo en unos segundos."
             }
         }
     }

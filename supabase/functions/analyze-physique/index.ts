@@ -96,9 +96,12 @@ const AnalysisSchema = z.object({
       if (Array.isArray(val)) {
         return val.flatMap((item) => {
           const o = jsonObject(item);
-          const group = [o.group, o.name, o.muscle, o.muscle_group, o.grupo, o.label].find((g) => typeof g === "string" && g.trim());
+          const group = [o.group, o.name, o.muscle, o.muscle_group, o.grupo, o.grupo_muscular, o.musculo, o["músculo"], o.zona, o.area, o.label]
+            .find((g) => typeof g === "string" && g.trim());
           if (!group) return [];
-          return [{ ...o, group, score: toNum(o.score) ?? 5, verdict: String(o.verdict ?? o.note ?? o.comment ?? "") }];
+          const score = toNum(o.score ?? o.puntuacion ?? o["puntuación"] ?? o.nota ?? o.rating) ?? 5;
+          const verdict = [o.verdict, o.veredicto, o.lectura, o.note, o.comment, o.comentario].find((v) => typeof v === "string") ?? "";
+          return [{ group, score, verdict }];
         });
       }
       if (typeof val === "object") {
@@ -251,6 +254,25 @@ const extractJson = (text: string) => {
   throw lastErr;
 };
 
+const INCOMPLETE = "El análisis llegó incompleto. Vuelve a intentarlo.";
+const CORE_KEYS = new Set(["attractiveness", "potential", "physique", "style", "similarity", "summary"]);
+
+// Un campo raro de la IA en una sección opcional (grupos, postura, protocolo…) no tumba el
+// scan entero: se quita esa sección y se valida otra vez. Solo falla si falta lo básico.
+const parseAnalysis = (raw: Record<string, unknown>) => {
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const res = AnalysisSchema.safeParse(raw);
+    if (res.success) return res.data;
+    for (const issue of res.error.issues) {
+      const key = issue.path[0];
+      if (typeof key !== "string" || CORE_KEYS.has(key)) throw new Error(INCOMPLETE);
+      console.warn(`[analyze-physique] sección descartada «${key}»: ${issue.message}`);
+      delete raw[key];
+    }
+  }
+  throw new Error(INCOMPLETE);
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   // El Scan es la puerta de entrada para visitantes sin cuenta: no exige sesión.
@@ -365,7 +387,7 @@ Deno.serve(async (req) => {
           'inferred_goal: "lose_weight"|"gain_muscle"|"recomp"|"improve_endurance"|"general_health". inferred_focus: "gimnasio"|"calistenia"|"mixto". inferred_intensity 1-10. inferred_specific_goals: 2-3 metas concretas. locked_insights: GENERA EXACTAMENTE 8 insights premium SIEMPRE, con label corto (3-5 palabras) y teaser intrigante de 1 frase que abra un loop de curiosidad SIN revelar el valor. Cubre estas 8 categorías obligatoriamente: 1) Ratio calórico exacto, 2) Volumen prioritario semanal, 3) Frecuencia óptima del músculo más débil, 4) Orden de ejercicios, 5) % grasa objetivo realista, 6) Semanas hasta primer hito visible, 7) Predicción de plateau, 8) Cardio mínimo efectivo. Cada item incluye category con uno de: "calorias"|"volumen"|"frecuencia"|"orden"|"grasa"|"hito"|"plateau"|"cardio".',
           '— CAPA CLÍNICA OBLIGATORIA (esto es lo que nos diferencia de ChatGPT, RELLÉNALA SIEMPRE): ',
           'body_composition: { body_fat_pct (rango realista 6-30 hombres, 14-38 mujeres), lean_mass_kg, weight_kg, somatotype ("ectomorfo"/"meso"/"endo" o híbridos), frame_size ("pequeño"/"medio"/"grande" según muñeca/clavícula), fat_distribution ("abdominal","uniforme","tren inferior","cara/cuello"…) }. Estima por proporción visual y sombras musculares; no digas que no puedes estimar.',
-          'muscle_breakdown: 4-8 grupos, SOLO los visibles en las vistas recibidas, y SIEMPRE cubriendo todos los grupos de cada vista recibida — SOLO frontal: los 5 "Pecho", "Deltoides", "Brazos", "Core/abdomen", "Cuádriceps"; SOLO trasera: "Espalda alta", "Dorsales", "Deltoides posterior", "Tríceps", "Cadena posterior (glúteo+isquio)", "Gemelos"; ambas vistas: 6-8 combinando anteriores y posteriores. PROHIBIDO devolver un único grupo (p. ej. solo "Pecho") cuando la vista recibida permite leer más: cada grupo visible debe aparecer con su score 0-10 y verdict de 1 frase específica ("Deltoide medio plano, falta de redondeo lateral evidente desde la frontal").',
+          'muscle_breakdown: array de objetos con EXACTAMENTE estas claves: [{ "group": "Pecho", "score": 6, "verdict": "…" }]; 4-8 grupos, SOLO los visibles en las vistas recibidas, y SIEMPRE cubriendo todos los grupos de cada vista recibida — SOLO frontal: los 5 "Pecho", "Deltoides", "Brazos", "Core/abdomen", "Cuádriceps"; SOLO trasera: "Espalda alta", "Dorsales", "Deltoides posterior", "Tríceps", "Cadena posterior (glúteo+isquio)", "Gemelos"; ambas vistas: 6-8 combinando anteriores y posteriores. PROHIBIDO devolver un único grupo (p. ej. solo "Pecho") cuando la vista recibida permite leer más: cada grupo visible debe aparecer con su score 0-10 y verdict de 1 frase específica ("Deltoide medio plano, falta de redondeo lateral evidente desde la frontal").',
           'posture: { issues (lista corta: "hombros adelantados", "cabeza adelantada", "anteversión pélvica", "asimetría hombro D-I", "cifosis dorsal"…), severity ("leve"/"moderada"/"severa"), note (1 frase) }.',
           'proportions: { shoulder_to_waist_ratio (1.0-1.9, ideal estético ~1.6), v_taper_score 0-10, symmetry_score 0-10, upper_lower_balance ("tren superior dominante"/"equilibrado"/"tren inferior dominante"), weakest_link (grupo concreto) }.',
           'genetic_markers: 2-4 strings sobre lo que la genética le DA o le QUITA ("clavículas anchas — ventaja para anchura de espalda", "inserción alta de bíceps — pico difícil de conseguir", "gemelo de inserción corta — limitará tamaño"). Sé honesto.',
@@ -404,9 +426,12 @@ Deno.serve(async (req) => {
       if (toNum(r.attractiveness) == null && avg != null) r.attractiveness = avg;
       if (toNum(r.style) == null && avg != null) r.style = avg;
       if (toNum(r.potential) == null && avg != null) r.potential = Math.min(10, Math.round((avg + 1) * 10) / 10);
-      if (toNum(r.physique) == null) throw new Error("El análisis llegó incompleto. Vuelve a intentarlo.");
+      if (toNum(r.physique) == null) throw new Error(INCOMPLETE);
+      if (typeof r.summary !== "string" || !r.summary.trim()) {
+        r.summary = [r.headline_diagnosis, r.bottleneck].find((t) => typeof t === "string" && t.trim()) ?? "";
+      }
     }
-    const parsed = AnalysisSchema.parse(raw);
+    const parsed = parseAnalysis(raw as Record<string, unknown>);
 
     // Si el modelo no devuelve prioridades usables, derivamos una del diagnóstico.
     if (!parsed.improvements?.length) {
@@ -450,7 +475,10 @@ Deno.serve(async (req) => {
     });
   } catch (e: unknown) {
     console.error("analyze-physique error:", e);
-    return new Response(JSON.stringify({ error: errorMessage(e) || "Error desconocido" }), {
+    // Nunca un volcado técnico (JSON de validación, trazas) hacia la app.
+    const message = errorMessage(e).trim();
+    const safe = message && !/^[[{]/.test(message) ? message : "No se pudo analizar la foto";
+    return new Response(JSON.stringify({ error: safe }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
