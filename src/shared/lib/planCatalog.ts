@@ -58,7 +58,7 @@ export function usePlanCatalog() {
     void refresh();
     return () => { listeners.delete(setPlans); };
   }, []);
-  return campaign ? plans.filter((p) => p.key === "free").map((p) => ({ ...p, features: ["Rutina inicial personalizada", "Registro de series y progreso", "Sobrecarga progresiva", "Scan corporal", "Objetivos de nutrición básica"], notIncluded: [] })) : plans;
+  return campaign ? plans.filter((p) => p.key === "free").map((p) => ({ ...p, features: ["Rutina inicial personalizada", "Registro de series y progreso", "Sobrecarga progresiva", "Scan básico: nota de tu físico, resumen y 2 mejoras", "Objetivos de nutrición básica"], notIncluded: [] })) : plans;
 }
 
 /**
