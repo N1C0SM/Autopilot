@@ -965,7 +965,6 @@ const Dashboard = () => {
         lockedTabs={!campaign && !coaching ? ["nutrition"] : []}
         hiddenTabs={hideChat ? ["chat"] : []}
         onSettings={() => setSection("settings")}
-        onResources={() => setSection("resources")}
         pushedTabs={PUSHED_TABS}
         onRefresh={() => fetchData()}
         workoutMode={workoutMode}

@@ -7,7 +7,7 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/shared/components/ui/sidebar";
-import { Home, Dumbbell, Apple, MessageCircle, Settings, LogOut, Sparkles, Lock, BookOpen, ArrowLeftRight } from "lucide-react";
+import { Home, Dumbbell, Apple, MessageCircle, Settings, LogOut, Sparkles, Lock, ArrowLeftRight } from "lucide-react";
 import { openAccountPicker } from "@/shared/lib/accounts";
 import { supportsMultipleAccounts } from "@/shared/lib/platform";
 import autopilotLogo from "@/shared/assets/autopilot-logo.png";
@@ -43,7 +43,6 @@ const NAV_ITEMS: { title: string; section: UserSection; icon: typeof Home }[] = 
   { title: "Mi progreso",   section: "progress",   icon: Sparkles },
   { title: "Chat",          section: "chat",       icon: MessageCircle },
   { title: "Ajustes",       section: "settings",   icon: Settings },
-  { title: "Recursos",      section: "resources",  icon: BookOpen },
 ];
 
 const UserSidebar = ({

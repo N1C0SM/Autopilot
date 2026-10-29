@@ -96,7 +96,7 @@ struct AccountView: View {
                     actionRow("Guardar perfil") { await saveProfile() }
                 }
 
-                group("Privacidad", footer: "Tu entrenador siempre te ve. Esto decide qué pueden ver los demás.") {
+                group("Privacidad", footer: "Esto decide qué pueden ver los demás.") {
                     toggleRow("Nombre público", "Si está apagado, se muestran solo tus iniciales.", namePublicBinding)
                     toggleRow("Foto de perfil pública", "Si está apagado, se muestra un icono genérico.", avatarPublicBinding)
                 }

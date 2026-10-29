@@ -149,32 +149,6 @@ describe("settings account deletion", () => {
   });
 });
 
-describe("settings travel mode", () => {
-  it("asks for an end date before activating and does not write anything", async () => {
-    show();
-    fireEvent.click(await screen.findByRole("switch", { name: "Modo viaje" }));
-    fireEvent.click(await screen.findByRole("button", { name: "Activar" }));
-    expect(mocks.toast.error).toHaveBeenCalledWith("Indica hasta cuándo estarás de viaje");
-    expect(mocks.updates).toHaveLength(0);
-  });
-  it("closes the form without saving when the switch is turned back off", async () => {
-    show();
-    const toggle = await screen.findByRole("switch", { name: "Modo viaje" });
-    fireEvent.click(toggle);
-    expect(await screen.findByLabelText("Equipamiento disponible")).toBeVisible();
-    fireEvent.click(toggle);
-    await waitFor(() => expect(screen.queryByLabelText("Equipamiento disponible")).not.toBeInTheDocument());
-    expect(mocks.updates).toHaveLength(0);
-  });
-  it("turns an active travel mode off from its switch and clears the stored trip", async () => {
-    mocks.travelUntil = "2999-01-01"; show();
-    const toggle = await screen.findByRole("switch", { name: "Modo viaje" });
-    await waitFor(() => expect(toggle).toBeChecked());
-    fireEvent.click(toggle);
-    await waitFor(() => expect(mocks.updates).toContainEqual({ table: "profiles", row: { travel_mode_until: null, travel_equipment: null } }));
-  });
-});
-
 describe("settings purchase surfaces", () => {
   const showWithUpgrade = () => render(<MemoryRouter><SettingsPanel onUpgrade={vi.fn()} /></MemoryRouter>);
   it("shows prices, the offer and the billing portal outside iOS", async () => {

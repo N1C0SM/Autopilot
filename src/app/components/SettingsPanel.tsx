@@ -35,7 +35,6 @@ import { euro, usePlanAvailability } from "@/shared/lib/planCatalog";
 import { hapticNotify, hapticSelection, hapticTap } from "@/shared/lib/native";
 import { isIOSNative, isNativeApp } from "@/shared/lib/platform";
 import { compressImage } from "@/shared/lib/imageCompression";
-import TravelModeCard from "@/app/components/dashboard/TravelModeCard";
 import type { Json } from "@/shared/integrations/supabase/types";
 
 import { useFreeCampaign } from "@/shared/lib/freeCampaign";
@@ -775,12 +774,11 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
         <ListGroup
           className={hideForAdmin.trim()}
           header="Privacidad"
-          footer="Tu entrenador siempre te ve. Esto decide qué pueden ver los demás."
+          footer="Esto decide qué pueden ver los demás."
         >
           {([
             ["name_public", "Nombre público", "Si está apagado, se muestran solo tus iniciales."],
             ["avatar_public", "Foto de perfil pública", "Si está apagado, se muestra un icono genérico."],
-            ["progress_public", "Progreso público", "Permite mostrar tu evolución (fotos, logros) fuera de tu cuenta."],
           ] as const).map(([key, label, hint]) => (
             <ListRow
               key={key}
@@ -1149,11 +1147,6 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
           <ListRow title="Disclaimer médico" chevron to="/legal/disclaimer-medico" />
           <ListRow title="Aviso legal" chevron to="/legal/aviso-legal" />
         </ListGroup>
-      </div>
-
-      {/* Travel mode */}
-      <div className={`order-[7]${hideForAdmin}`}>
-        <TravelModeCard userId={user.id} />
       </div>
 
       {/* Cuentas en este dispositivo (solo apps nativas) */}
