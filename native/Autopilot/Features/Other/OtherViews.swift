@@ -7,7 +7,7 @@ struct NutritionView: View {
     @EnvironmentObject private var session: SessionModel
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    /// Ancho de la ventana: el iPhone sigue en una columna y iPad/Mac pasan a la rejilla de escritorio.
+    /// Ancho de la ventana: márgenes de móvil en el iPhone y de escritorio en iPad.
     @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var macros: Macros?
     @State private var meals: [Meal] = []
@@ -67,8 +67,7 @@ struct NutritionView: View {
         return "meals_done_\(session.userIdString ?? "")_\(c.year!)-\(c.month!)-\(c.day!)"
     }
 
-    /// iPhone: una columna. iPad/Mac: rejilla de escritorio (ver `NutritionGrid`). Con texto
-    /// muy grande también una columna, para que las cifras y las comidas no se compriman.
+    /// iPhone (o texto muy grande): márgenes de móvil. Nutrición va siempre en una columna.
     private var singleColumn: Bool { sizeClass == .compact || dynamicTypeSize.isAccessibilitySize }
 
     var body: some View {
@@ -84,8 +83,8 @@ struct NutritionView: View {
                 }
             }
             .padding(.horizontal, pagePadding).padding(.top, 8).padding(.bottom, 24)
-            // Móvil: la misma columna de siempre; iPad/Mac: el ancho de la rejilla de escritorio.
-            .frame(maxWidth: NutritionGrid.contentWidth(singleColumn: singleColumn))
+            // Una columna en todas partes, como la web: en iPad/Mac no se estira de lado a lado.
+            .frame(maxWidth: 720)
             .frame(maxWidth: .infinity)
         }
         .screenBackground()
@@ -105,10 +104,9 @@ struct NutritionView: View {
         } else if !hasMeals && kcal <= 0 {
             EmptyCard(photo: Self.defaultDish, title: "Aún no hay plan de comidas", message: "En cuanto tengamos tus macros, verás aquí tus calorías y las comidas del día.")
         } else {
-            // Escritorio (md/lg de la web): el resumen (portada, objetivos/macros y avisos) y las
-            // comidas en dos columnas. En el iPhone la rejilla se queda en una y conserva el orden.
-            LazyVGrid(columns: NutritionGrid.columns(singleColumn: singleColumn || !hasMeals), alignment: .leading, spacing: singleColumn ? 32 : 24) {
-                VStack(alignment: .leading, spacing: singleColumn ? 32 : 24) {
+            // Una sola columna, como la web (también en Mac): el resumen arriba y las comidas debajo.
+            VStack(alignment: .leading, spacing: 32) {
+                VStack(alignment: .leading, spacing: 32) {
                     if hasMeals || showTargets { summary(kcal: kcal, p: p, c: c, f: f, energy: energy, hasMeals: hasMeals, showTargets: showTargets) }
                     if hasMeals && macros == nil { macroNotice }
                 }
@@ -616,19 +614,15 @@ struct NutritionView: View {
     }
 }
 
-/// Esqueleto de Nutrición mientras llega la red: portada, resumen y comidas como bloques
-/// que laten suavemente, para que la pantalla no aparezca vacía ni dé un salto al cargar.
+/// Esqueleto de Nutrición mientras llega la red: resumen y comidas como bloques que laten
+/// suavemente, para que la pantalla no aparezca vacía ni dé un salto al cargar.
 private struct NutritionSkeleton: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.horizontalSizeClass) private var sizeClass
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var pulsing = false
 
     var body: some View {
-        let singleColumn = sizeClass == .compact || dynamicTypeSize.isAccessibilitySize
-        // La misma rejilla que el contenido real: esqueleto de resumen y de comidas en dos
-        // columnas en iPad/Mac y en una en el iPhone, para que al llegar los datos nada salte.
-        LazyVGrid(columns: NutritionGrid.columns(singleColumn: singleColumn), alignment: .leading, spacing: singleColumn ? 32 : 24) {
+        // La misma columna que el contenido real (resumen arriba, comidas debajo): nada salta al cargar.
+        VStack(alignment: .leading, spacing: 32) {
             summarySkeleton
             mealsSkeleton
         }
@@ -701,19 +695,6 @@ private struct NutritionSkeleton: View {
             .frame(width: width, height: height)
             .frame(maxWidth: width == nil ? .infinity : nil, alignment: .leading)
     }
-}
-
-/// Rejilla de Nutrición: una columna en el iPhone y rejilla adaptativa en iPad/Mac, como el paso
-/// a varias columnas (`md:`/`lg:`) de la web. El tope de 1000 pt evita tres columnas en una Mac
-/// muy ancha y el máximo de 560 pt que las columnas se estiren feas.
-private enum NutritionGrid {
-    static func columns(singleColumn: Bool) -> [GridItem] {
-        if singleColumn { return [GridItem(.flexible(), spacing: 24, alignment: .top)] }
-        return [GridItem(.adaptive(minimum: 320, maximum: 560), spacing: 24, alignment: .top)]
-    }
-
-    /// Ancho máximo del contenido: la columna de siempre en el iPhone y hasta 1000 pt en iPad/Mac.
-    static func contentWidth(singleColumn: Bool) -> CGFloat { singleColumn ? 720 : 1000 }
 }
 
 /// Foto de la tarjeta vacía: el plato del propio paquete debajo y, cuando llega, la foto
