@@ -57,4 +57,15 @@ describe("paridad web ↔ apps nativas", () => {
     expect(groups.length).toBeGreaterThan(4);
     expect(ADMIN_NAV_GROUPS.map((g) => ({ label: g.label, items: g.items.map((i) => i.title) }))).toEqual(groups);
   });
+
+  it("Nutrición: sin portada y cada comida con su foto propia o ninguna, en la web y en la app", () => {
+    const web = read("src/app/components/dashboard/MealsList.tsx");
+    const app = read("native/Autopilot/Features/Other/OtherViews.swift");
+    expect(web).not.toMatch(/coverPhoto/);
+    expect(app).not.toMatch(/coverCard/);
+    // La foto de respaldo solo vale para las tarjetas vacías, nunca repetida en las filas.
+    expect(web).toMatch(/const src = useMealPhoto\(dish\);\s*if \(!src\) return null;/);
+    expect(app).toMatch(/if let url = photos\[Self\.dish\(meal\)\]/);
+    expect(app).toMatch(/group\.addTask \{ \(dish, await AiCover\.ownMeal\(dish\)\) \}/);
+  });
 });

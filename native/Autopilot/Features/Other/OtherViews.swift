@@ -1,8 +1,8 @@
 import SwiftUI
 import Supabase
 
-/// Nutrición, calcada de `MealsList.tsx`: portada del primer plato, resumen con anillo de comidas
-/// hechas y objetivos, y «Comidas de hoy» marcables con su foto (o «Sin comidas todavía»).
+/// Nutrición, calcada de `MealsList.tsx`: resumen con anillo de comidas hechas y objetivos, y
+/// «Comidas de hoy» marcables con la foto propia de cada plato (o «Sin comidas todavía»).
 struct NutritionView: View {
     @EnvironmentObject private var session: SessionModel
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -26,7 +26,8 @@ struct NutritionView: View {
     /// Evita dos cargas simultáneas (`.task` + botón de reintentar).
     @State private var loading = false
     @State private var done: Set<String> = []
-    @State private var cover: URL?
+    /// Foto propia de cada plato (clave: el plato). Sin foto propia, la fila va sin foto.
+    @State private var photos: [String: URL] = [:]
     /// Sin comidas: nil = comprobando, true = tiene Plus (se generan), false = aviso de Plus.
     @State private var hasAccess: Bool?
     @State private var generating = false
@@ -89,7 +90,6 @@ struct NutritionView: View {
             // comidas en dos columnas. En el iPhone la rejilla se queda en una y conserva el orden.
             LazyVGrid(columns: NutritionGrid.columns(singleColumn: singleColumn || !hasMeals), alignment: .leading, spacing: singleColumn ? 32 : 24) {
                 VStack(alignment: .leading, spacing: singleColumn ? 32 : 24) {
-                    if hasMeals { coverCard }
                     if hasMeals || showTargets { summary(kcal: kcal, p: p, c: c, f: f, energy: energy, hasMeals: hasMeals, showTargets: showTargets) }
                     if hasMeals && macros == nil { macroNotice }
                 }
@@ -119,17 +119,6 @@ struct NutritionView: View {
                     }
                 }
             }
-        }
-    }
-
-    /// Portada del primer plato (héroe de la web): 176 pt, radio 28 y degradado hacia negro.
-    @ViewBuilder private var coverCard: some View {
-        if let cover {
-            Color.clear.frame(height: 176)
-                .overlay { CachedAsyncImage(url: cover, maxSide: 420) { $0.resizable().scaledToFill() } placeholder: { Palette.card } }
-                .overlay { LinearGradient(colors: [.clear, .black.opacity(0.6)], startPoint: .center, endPoint: .bottom) }
-                .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
-                .accessibilityHidden(true)
         }
     }
 
@@ -319,9 +308,11 @@ struct NutritionView: View {
                         if let d = meal.description { Text(d).font(.apSubhead).foregroundStyle(Palette.muted.opacity(isDone ? 0.6 : 1)).lineLimit(2) }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    // La foto ocupa lo mismo en todas las filas (56 · radio 12), como en el esqueleto.
-                    MealPhoto(dish: meal.description ?? name).frame(width: 56, height: 56)
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous)).opacity(isDone ? 0.5 : 1)
+                    // Solo la foto propia del plato (56 · radio 12); sin ella, ninguna: nunca la misma repetida.
+                    if let url = photos[Self.dish(meal)] {
+                        MealPhoto(url: url).frame(width: 56, height: 56)
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous)).opacity(isDone ? 0.5 : 1)
+                    }
                 }
                 .padding(.vertical, 8)
                 .overlay(alignment: .bottom) { if !last { Rectangle().fill(Palette.separator).frame(height: 0.5) } }
@@ -362,7 +353,7 @@ struct NutritionView: View {
         if !loaded, let cached = Snapshots.load(Row.self, Self.cacheKey(id)) {
             macros = cached.macros_json
             meals = cached.meals_json ?? []
-            if let dish = meals.first?.description { cover = AiCover.cachedMeal(dish) ?? AiCover.mealFallback }
+            photos = Self.cachedPhotos(meals)
             loaded = true
         }
 
@@ -374,16 +365,13 @@ struct NutritionView: View {
             macros = row?.macros_json
             if macros?.protein == nil && macros?.calories == nil { macros = await estimatedMacros(id) }
             meals = row?.meals_json ?? []
-            // La portada se resuelve desde caché antes de pintar: sin parpadeo ni salto.
-            let coverDish = meals.first?.description ?? Self.defaultDish
-            if !meals.isEmpty {
-                cover = AiCover.cachedMeal(coverDish) ?? AiCover.mealFallback
-            }
+            // Las fotos ya guardadas se pintan en el primer frame: sin parpadeo ni salto.
+            photos = Self.cachedPhotos(meals)
             loaded = true
             failed = false
             if !meals.isEmpty {
-                // Portada y fotos de todas las comidas en paralelo; la lista ya está pintada.
-                await prefetchCovers(coverDish: coverDish)
+                // Fotos de todas las comidas en paralelo; la lista ya está pintada.
+                await prefetchPhotos()
             } else if hasAccess == nil {
                 // Sin comidas: con Plus se generan solas (el servidor vuelve a comprobar el acceso).
                 // Lo decide el servidor: si responde «no_access», toca el aviso de Plus.
@@ -429,7 +417,8 @@ struct NutritionView: View {
         guard result?.meals_updated == true, let id = session.userId, let row = (try? await fetchPlan(id)) ?? nil else { generateFailed = true; return }
         macros = row.macros_json
         meals = row.meals_json ?? []
-        if !meals.isEmpty { await prefetchCovers(coverDish: meals.first?.description ?? Self.defaultDish) }
+        photos = Self.cachedPhotos(meals)
+        if !meals.isEmpty { await prefetchPhotos() }
     }
 
     /// Objetivo estimado con peso, sexo y objetivo del onboarding: kcal y proteína como la web;
@@ -459,24 +448,33 @@ struct NutritionView: View {
         throw lastError ?? URLError(.unknown)
     }
 
-    /// Precarga en paralelo la portada y la foto de cada plato. `MealPhoto` encontrará
-    /// después la URL en caché, así que no se repiten las llamadas lentas a `session-cover`.
-    private func prefetchCovers(coverDish: String) async {
-        let dishes = Set(meals.map { $0.description ?? $0.name ?? "" }.filter { !$0.isEmpty && $0 != coverDish })
-        async let coverURL = AiCover.meal(coverDish)
-        async let photos: Void = prefetchPhotos(dishes)
-        let resolved = await coverURL
-        if !Task.isCancelled { cover = resolved }
-        _ = await photos
+    /// Plato de la comida: la clave de su foto.
+    static func dish(_ meal: Meal) -> String { meal.description ?? meal.name ?? "Comida" }
+
+    /// Fotos propias ya guardadas, sin red, para pintarlas en el primer frame.
+    static func cachedPhotos(_ meals: [Meal]) -> [String: URL] {
+        var found: [String: URL] = [:]
+        for meal in meals {
+            let dish = dish(meal)
+            if let url = AiCover.cachedMeal(dish) { found[dish] = url }
+        }
+        return found
     }
 
     /// Fotos de las comidas a la vez; `CoverStore` garantiza una sola petición por plato.
-    private func prefetchPhotos(_ dishes: Set<String>) async {
-        await withTaskGroup(of: Void.self) { group in
+    /// Solo se guardan las propias de cada plato: sin foto propia, la fila va sin foto.
+    private func prefetchPhotos() async {
+        let dishes = Set(meals.map(Self.dish).filter { photos[$0] == nil })
+        guard !dishes.isEmpty else { return }
+        let found = await withTaskGroup(of: (String, URL?).self, returning: [String: URL].self) { group in
             for dish in dishes {
-                group.addTask { _ = await AiCover.meal(dish) }
+                group.addTask { (dish, await AiCover.ownMeal(dish)) }
             }
+            var found: [String: URL] = [:]
+            for await (dish, url) in group { if let url { found[dish] = url } }
+            return found
         }
+        if !Task.isCancelled { photos.merge(found) { _, new in new } }
     }
 
     private func macro(_ label: String, _ grams: Double, _ share: Double) -> some View {
@@ -518,12 +516,7 @@ private struct NutritionSkeleton: View {
         // La misma rejilla que el contenido real: esqueleto de resumen y de comidas en dos
         // columnas en iPad/Mac y en una en el iPhone, para que al llegar los datos nada salte.
         LazyVGrid(columns: NutritionGrid.columns(singleColumn: singleColumn), alignment: .leading, spacing: singleColumn ? 32 : 24) {
-            VStack(alignment: .leading, spacing: singleColumn ? 32 : 24) {
-                RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
-                    .fill(Palette.card)
-                    .frame(height: 176)
-                summarySkeleton
-            }
+            summarySkeleton
             mealsSkeleton
         }
         .opacity(pulsing ? 0.5 : 1)
@@ -713,30 +706,14 @@ private struct EmptyCard: View {
     }
 }
 
-/// Foto del plato generada por `session-cover`.
+/// Foto propia del plato generada por `session-cover`; la fila solo la pinta si existe.
 struct MealPhoto: View {
-    let dish: String
-    @State private var url: URL?
-
-    init(dish: String) {
-        self.dish = dish
-        // Caché sincrónica: el plato ya visto pinta su foto en el primer frame.
-        _url = State(initialValue: AiCover.cachedMeal(dish) ?? AiCover.mealFallback)
-    }
+    let url: URL
 
     var body: some View {
         ZStack {
             Palette.secondary
-            if let url {
-                CachedAsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { Color.clear }
-            }
-        }
-        .task(id: dish) {
-            // Al cambiar el plato se descarta la foto anterior antes de resolver la nueva.
-            url = AiCover.cachedMeal(dish) ?? AiCover.mealFallback
-            let resolved = await AiCover.meal(dish)
-            guard !Task.isCancelled, let resolved, resolved != url else { return }
-            url = resolved
+            CachedAsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { Color.clear }
         }
         .accessibilityHidden(true)
     }
@@ -750,12 +727,17 @@ enum AiCover {
     /// Antes era un único diccionario en UserDefaults; se conserva para migrar portadas ya guardadas.
     private static let legacyStore = "autopilot.aiCovers.v1"
 
-    /// Igual que la web: si la IA no da foto, se muestra siempre la foto de respaldo.
-    /// La petición es única por plato (`CoverStore`) y se cachea en memoria y en disco.
+    /// Tarjetas vacías, igual que la web: si la IA no da foto, la foto de respaldo.
     static func meal(_ dish: String) async -> URL? {
+        await ownMeal(dish) ?? mealFallback
+    }
+
+    /// Foto propia del plato o nil: las filas de comidas nunca repiten el respaldo.
+    /// La petición es única por plato (`CoverStore`) y se cachea en memoria y en disco.
+    static func ownMeal(_ dish: String) async -> URL? {
         let text = normalized(dish)
-        guard text.count >= 3 else { return mealFallback }
-        return await CoverStore.shared.cover(key: cacheKey(for: text), dish: text) ?? mealFallback
+        guard text.count >= 3 else { return nil }
+        return await CoverStore.shared.cover(key: cacheKey(for: text), dish: text)
     }
 
     /// URL ya guardada para el plato, sin `await` ni red: así la vista pinta la foto correcta

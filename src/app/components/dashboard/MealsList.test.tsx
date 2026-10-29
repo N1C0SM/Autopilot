@@ -176,6 +176,7 @@ describe("meal photos follow the current dish", () => {
 
 describe("meal rows", () => {
   it("remounts the row when the dish changes so it cannot inherit the old photo", () => {
+    localStorage.setItem("autopilot.aiCovers.v1", JSON.stringify({ "m:plato a": OLD_PHOTO, "m:plato b": NEW_PHOTO }));
     const { container, rerender } = render(
       <MealsList meals={[{ name: "Comida", description: OLD_DISH }]} />,
     );
@@ -187,5 +188,16 @@ describe("meal rows", () => {
 
     expect(after).not.toBeNull();
     expect(after).not.toBe(before);
+  });
+
+  it("shows no photo instead of repeating the same fallback on every meal", async () => {
+    localStorage.setItem("autopilot.aiCovers.v1", JSON.stringify({ "m:plato a": OLD_PHOTO }));
+    const { container } = render(
+      <MealsList meals={[{ name: "Desayuno", description: OLD_DISH }, { name: "Comida", description: NEW_DISH }]} macros={{ protein: 140, carbs: 220, fats: 65 }} />,
+    );
+    await waitFor(() => expect(mocks.invoke).toHaveBeenCalled());
+    const photos = [...container.querySelectorAll("img")].map((img) => img.getAttribute("src"));
+    // Solo la foto propia del plato A; el B, sin foto. Y ninguna portada encima del resumen.
+    expect(photos).toEqual([OLD_PHOTO]);
   });
 });
