@@ -610,9 +610,9 @@ const Dashboard = () => {
           }}>{preparingRoutine ? "Preparando…" : "Preparar mi rutina gratis"}</Button>
         </div>
       )}
-      {!campaign && !coaching && section === "nutrition" && (
-        // Plus preseleccionado siempre: es el plan que queremos vender primero.
-        <PlanPaywall plan="plus" allowCoach defaultPlan="training" onChoose={(tier) => handleCompletePayment(tier)} />
+      {!campaign && !coaching && section === "nutrition" && user && (
+        // Los macros son gratis (como la app): primero los tuyos, y debajo las comidas de Plus.
+        <BasicNutrition userId={user.id} onEdit={() => setSection("settings")} onUpgrade={() => void handleCompletePayment("training")} />
       )}
 
       {/* Chat reservado para una versión futura; el alcance también controla su navegación. */}

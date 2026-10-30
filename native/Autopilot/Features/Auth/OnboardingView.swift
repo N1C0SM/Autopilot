@@ -317,7 +317,7 @@ struct OnboardingQuizView: View {
             Text(k).font(.apFootnote).foregroundStyle(Palette.muted)
         }
         .frame(maxWidth: .infinity).padding(.vertical, 12)
-        .background(Palette.secondary, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(Palette.secondary, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         .accessibilityElement(children: .combine)
     }
 
@@ -370,8 +370,8 @@ struct OnboardingQuizView: View {
                 Image(systemName: "checkmark.circle.fill").font(.system(size: 24)).foregroundStyle(Color.black, Palette.gold)
                     .padding(8).opacity(on ? 1 : 0)
             }
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(on ? Palette.gold : .clear, lineWidth: 2))
+            .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).stroke(on ? Palette.gold : .clear, lineWidth: 2))
         }
         .buttonStyle(.pressableCard)
         .accessibilityLabel(o.l).accessibilityAddTraits(on ? .isSelected : [])

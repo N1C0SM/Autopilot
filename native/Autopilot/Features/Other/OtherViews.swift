@@ -97,12 +97,16 @@ struct NutritionView: View {
         let kcal = (macros?.calories ?? 0) > 0 ? macros!.calories! : energy.rounded()
         let hasMeals = !meals.isEmpty
         let showTargets = macros != nil && kcal > 0
-        if !hasMeals && kcal <= 0 && hasAccess == false {
-            // Sin Plus (la RLS no deja leer el plan): el aviso de Plus, no un «no hay plan».
-            EmptyCard(photo: Self.defaultDish, title: "Tus comidas, hechas para ti",
-                      message: "Con Plus, Autopilot te prepara las comidas de cada día con tus gustos, alergias y objetivo del onboarding, ajustadas a tus macros. Incluido en Plus.")
-        } else if !hasMeals && kcal <= 0 {
-            EmptyCard(photo: Self.defaultDish, title: "Aún no hay plan de comidas", message: "En cuanto tengamos tus macros, verás aquí tus calorías y las comidas del día.")
+        if !hasMeals && kcal <= 0 {
+            // Sin peso no hay macros: se pide aquí mismo (gratis), nunca una pantalla sin salida.
+            VStack(alignment: .leading, spacing: 32) {
+                if let id = session.userId { MacrosWeightCard(userId: id) { await load() } }
+                if hasAccess == false {
+                    // Sin Plus (la RLS no deja leer el plan): el aviso de Plus debajo.
+                    EmptyCard(photo: Self.defaultDish, title: "Tus comidas, hechas para ti",
+                              message: "Con Plus, Autopilot te prepara las comidas de cada día con tus gustos, alergias y objetivo del onboarding, ajustadas a tus macros. Incluido en Plus.")
+                }
+            }
         } else {
             // Una sola columna, como la web (también en Mac): el resumen arriba y las comidas debajo.
             VStack(alignment: .leading, spacing: 32) {
@@ -712,6 +716,63 @@ private struct EmptyCardPhoto: View {
             }
         }
         .accessibilityHidden(true)
+    }
+}
+
+/// Sin peso todavía (web `BasicNutrition.tsx`): se pide aquí mismo y los macros salen al momento.
+private struct MacrosWeightCard: View {
+    let userId: UUID
+    var onSaved: () async -> Void
+    @State private var weight = ""
+    @State private var saving = false
+    @State private var failed = false
+
+    private var value: Double? {
+        Double(weight.replacingOccurrences(of: ",", with: ".")).flatMap { $0 > 30 && $0 <= 300 ? $0 : nil }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Image(systemName: "flame.fill").font(.system(size: 28, weight: .semibold)).foregroundStyle(Palette.gold).accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Calcula tus macros").font(.apTitle2).accessibilityAddTraits(.isHeader)
+                Text("Dinos tu peso y te damos tus calorías y tu proteína del día. Gratis.")
+                    .font(.apSubhead).foregroundStyle(Palette.muted)
+            }
+            PillField(label: "Tu peso en kg", text: $weight).decimalKeyboard()
+            Button { Task { await save() } } label: {
+                if saving { BrandLoader().tint(.black).accessibilityHidden(true) } else { Text("Calcular mis macros") }
+            }
+            .buttonStyle(.pill)
+            .disabled(saving || value == nil)
+            .accessibilityLabel(saving ? "Calculando" : "Calcular mis macros")
+            if failed {
+                Text("No se pudo guardar tu peso. Vuelve a intentarlo.").font(.apFootnote).foregroundStyle(Palette.destructive)
+            }
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
+    }
+
+    private func save() async {
+        guard let value, !saving else { return }
+        Haptics.tap()
+        saving = true
+        failed = false
+        defer { saving = false }
+        struct Row: Encodable { let user_id: UUID; let weight: Double }
+        do {
+            try await Backend.client.from("onboarding").upsert(Row(user_id: userId, weight: value), onConflict: "user_id").execute()
+            // Con Plus el plan recalcula sus macros con el peso nuevo (sin Plus no hace nada).
+            _ = try? await Backend.client.functions.invoke("sync-nutrition-macros", options: FunctionInvokeOptions(body: [String: String]()))
+            Haptics.success()
+            await onSaved()
+        } catch {
+            failed = true
+            Haptics.error()
+            A11y.announce("No se pudo guardar tu peso. Vuelve a intentarlo.")
+        }
     }
 }
 

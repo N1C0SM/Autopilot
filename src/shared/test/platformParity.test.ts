@@ -249,6 +249,17 @@ describe("paridad web ↔ apps nativas", () => {
     expect(app).not.toContain("autopilotplan.app");
   });
 
+  it("Nutrición sin peso: Gratis ve «Calcula tus macros» en la web y en la app, no solo la tarjeta de Plus", () => {
+    const web = read("src/app/components/dashboard/BasicNutrition.tsx");
+    const app = read("native/Autopilot/Features/Other/OtherViews.swift");
+    for (const text of ["Calcula tus macros", "Dinos tu peso y te damos tus calorías y tu proteína del día. Gratis.", "Tu peso en kg", "Calcular mis macros", "No se pudo guardar tu peso. Vuelve a intentarlo.", "sync-nutrition-macros"]) {
+      expect(web, text).toContain(text);
+      expect(app, text).toContain(text);
+    }
+    expect(read("src/app/pages/Dashboard.tsx")).toContain("<BasicNutrition userId={user.id}");
+    expect(app).toMatch(/if !hasMeals && kcal <= 0 \{[\s\S]*?MacrosWeightCard\(userId: id\)/);
+  });
+
   it("Gratis y Plus no leen «tu entrenador» en el primer uso ni en Nutrición", () => {
     const web = read("src/app/pages/Dashboard.tsx");
     expect(web).not.toContain("No necesitas contratar un entrenador para empezar.");
