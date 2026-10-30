@@ -45,6 +45,48 @@ struct RestCard<Action: View>: View {
     }
 }
 
+/// Sin rutina todavía (web `Dashboard.tsx`, `!hasPlan`): la misma invitación y el mismo botón,
+/// que la prepara con generate-plan. Nunca una pantalla vacía sin salida.
+struct StarterRoutineCard: View {
+    @EnvironmentObject private var session: SessionModel
+    var onReady: () async -> Void
+    @State private var preparing = false
+    @State private var failed = false
+
+    var body: some View {
+        VStack(spacing: 16) {
+            EmptyStateView(symbol: "dumbbell", title: "Prepara tu rutina inicial gratis",
+                           message: "Te la preparamos en unos segundos.")
+            Button { Task { await prepare() } } label: {
+                if preparing { BrandLoader().tint(.black).accessibilityHidden(true) } else { Text("Preparar mi rutina gratis") }
+            }
+            .buttonStyle(.pill)
+            .disabled(preparing)
+            .accessibilityLabel(preparing ? "Preparando…" : "Preparar mi rutina gratis")
+            if failed {
+                Text("No se ha podido preparar la rutina. Vuelve a intentarlo.")
+                    .font(.apFootnote).foregroundStyle(Palette.destructive).multilineTextAlignment(.center)
+            }
+        }
+    }
+
+    private func prepare() async {
+        guard !preparing, let userId = session.userId else { return }
+        Haptics.tap()
+        preparing = true
+        failed = false
+        defer { preparing = false }
+        if await TrainingRepo.generateStarterPlan(userId: userId) {
+            Haptics.success()
+            await onReady()
+        } else {
+            failed = true
+            Haptics.error()
+            A11y.announce("No se ha podido preparar la rutina. Vuelve a intentarlo.")
+        }
+    }
+}
+
 /// Cabecera de la web (MobileHeader): campana y avatar en círculos de 30 pt dentro de 44 pt.
 struct HeaderButtons: View {
     let initial: String

@@ -161,6 +161,30 @@ describe("paridad web ↔ apps nativas", () => {
     expect(app).toMatch(/PlatformImage\.downscaled\(from: data, maxSide: 1600\)/);
   });
 
+  it("Sin rutina: la misma invitación con botón en la web y en la app (Inicio y Entrenar), nunca «descansa»", () => {
+    const web = read("src/app/pages/Dashboard.tsx");
+    const card = read("native/Autopilot/Design/Components.swift");
+    for (const text of [
+      "Prepara tu rutina inicial gratis", "Te la preparamos en unos segundos.", "Preparar mi rutina gratis",
+      "Preparando…", "No se ha podido preparar la rutina. Vuelve a intentarlo.",
+    ]) {
+      expect(web, text).toContain(text);
+      expect(card, text).toContain(text);
+    }
+    // Las dos llaman a generate-plan sin `force`: una rutina manual nunca se sustituye.
+    expect(web).toMatch(/generatePlanGuarded\(supabase, \{ user_id: user\?\.id \}/);
+    expect(read("native/Autopilot/Core/Training.swift")).toMatch(/"generate-plan", options: FunctionInvokeOptions\(body: \["user_id": /);
+    expect(read("native/Autopilot/Features/Home/HomeView.swift")).toMatch(/s\.noPlan == true \{[\s\S]*?StarterRoutineCard/);
+    expect(read("native/Autopilot/Features/Train/TrainView.swift")).toMatch(/model\.days\.isEmpty \{[\s\S]*?StarterRoutineCard/);
+  });
+
+  it("Gratis y Plus no leen «tu entrenador» en el primer uso ni en Nutrición", () => {
+    const web = read("src/app/pages/Dashboard.tsx");
+    expect(web).not.toContain("No necesitas contratar un entrenador para empezar.");
+    expect(web).not.toContain("hasta que tu entrenador calcule");
+    expect(read("native/Autopilot/Features/Train/TrainView.swift")).not.toContain("En cuanto tengamos tu plan");
+  });
+
   it("Scan: la misma ruedecita de espera en la web y en la app (anillo con %, mensajes y ritmo)", () => {
     const shared = read("src/shared/lib/scanLoading.ts");
     const view = read("src/app/components/scan/ScanAnalyzing.tsx");

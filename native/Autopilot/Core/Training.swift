@@ -320,6 +320,17 @@ enum TrainingRepo {
 
     private static func planKey(_ userId: UUID) -> String { "plan|\(userId.uuidString.lowercased())" }
 
+    /// «Preparar mi rutina gratis» (web `Dashboard.tsx`): generate-plan sin `force`, así que una
+    /// rutina manual nunca se sustituye. Al terminar, la rutina nueva queda en caché y en disco.
+    static func generateStarterPlan(userId: UUID) async -> Bool {
+        struct Result: Decodable { let success: Bool?; let protected: Bool? }
+        guard let r: Result = try? await Backend.client.functions.invoke(
+            "generate-plan", options: FunctionInvokeOptions(body: ["user_id": userId.uuidString.lowercased()])),
+              r.success == true || r.protected == true else { return false }
+        _ = try? await plan(userId: userId, force: true)
+        return true
+    }
+
     /// Rellena la foto de los ejercicios que no la traen en el plan (p. ej. rutinas creadas a
     /// mano o generadas antes de tener imagen) con la de la biblioteca, buscando por nombre.
     static func withImages(_ days: [DayPlan]) async -> [DayPlan] {

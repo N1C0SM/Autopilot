@@ -128,6 +128,7 @@ struct HomeView: View {
     private var stateLine: String {
         guard let s = snapshot else { return "Preparando tu día." }
         if s.completedToday { return "Buen trabajo." }
+        if s.noPlan == true { return "Empecemos." }
         if s.plan?.isGym == true { return "A entrenar." }
         if let p = s.plan, p.type == "actividad" { return "A \(p.sport ?? "moverte")." }
         return "Hoy, a recuperar."
@@ -268,6 +269,9 @@ struct HomeView: View {
             // Siempre lo que toca HOY (como la web): hecho, descanso o la sesión de hoy.
             if s.completedToday {
                 doneCard(s.plan)
+            } else if s.noPlan == true {
+                // Sin rutina todavía (web `!hasPlan`): invitación con botón, nunca «descansa».
+                StarterRoutineCard { await load() }
             } else if s.plan == nil {
                 RestCard(title: "Hoy toca descansar", message: nextSession(s.scheduled) ?? "Tu plan aún no tiene sesiones.") {
                     Button("Entrenar igualmente") { Haptics.tap(); onNavigate(.train) }
@@ -622,7 +626,8 @@ struct HomeView: View {
                              completedToday: completed,
                              resumable: plan != nil && draftDay == plan?.day,
                              firstName: firstName,
-                             calories: calories)
+                             calories: calories,
+                             noPlan: model.error == nil && model.days.isEmpty)
     }
 
     /// Clave de la copia en disco: por usuario y día (lo de hoy caduca al cambiar el día).
@@ -685,6 +690,8 @@ private struct TodaySnapshot: Codable {
     var resumable = false
     var firstName = ""
     var calories: Int?
+    /// Aún no hay rutina (ni sesiones ni descansos): Inicio invita a prepararla.
+    var noPlan: Bool?
     /// Gramos de proteína, carbos y grasas del plan (widget de Nutrición).
     var macros: MacroSum?
     /// Última mejor marca (widget de Récord).

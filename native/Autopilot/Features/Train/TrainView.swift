@@ -39,15 +39,15 @@ struct TrainView: View {
                 if model.loading && model.days.isEmpty {
                     VStack(spacing: 12) {
                         BrandLoader()
-                        Text("Comprobando tu sesión…").font(.apSubhead).foregroundStyle(Palette.muted)
+                        Text("Cargando tu semana…").font(.apSubhead).foregroundStyle(Palette.muted)
                     }
                     .frame(maxWidth: .infinity, minHeight: 300)
+                } else if let error = model.error, model.days.isEmpty {
+                    EmptyStateView(symbol: "dumbbell", title: error,
+                                   message: "Desliza hacia abajo para volver a intentarlo.")
                 } else if model.days.isEmpty {
-                    routineBar
-                    EmptyStateView(symbol: "dumbbell",
-                                   title: model.error ?? "Aún no hay rutina",
-                                   message: model.error == nil ? "En cuanto tengamos tu plan, verás aquí tu semana."
-                                                               : "Desliza hacia abajo para volver a intentarlo.")
+                    // Sin rutina: la misma invitación que Inicio y la web, con su botón.
+                    StarterRoutineCard { await load() }
                 } else {
                     routineBar
                     WeeklyRoutineView(days: model.days,

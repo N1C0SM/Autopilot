@@ -356,6 +356,8 @@ const Configurator = () => {
             )}
             <Choices header="Objetivo" options={GOALS} value={c.goal} onChange={(v) => set("goal", String(v))} />
             <PhotoChoices header={t("¿Dónde entrenas?", "¿Dónde entrenáis?")} options={FOCUS} value={c.focus} onChange={(v) => set("focus", v)} />
+            {/* La cabecera de la web ya no pasa por «¿Cómo creamos tu plan?»: el escáner sigue a un toque. */}
+            {!user && <p className="px-4 type-footnote text-muted-foreground">¿Prefieres empezar con fotos? <Link to="/scan" className="text-primary">Analiza tu físico con IA</Link></p>}
           </>
         )}
 
