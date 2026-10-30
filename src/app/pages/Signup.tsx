@@ -48,6 +48,14 @@ const Signup = () => {
   const [scanCtx, setScanCtx] = useState<{ currentImg?: string; result?: { potential: number; improvements?: unknown[] } } | null>(null);
   const { signUp } = useAuth();
 
+  // El código lo envía la función auth-email-hook: despertarla al abrir el formulario
+  // quita su arranque en frío (~2 s) del momento de pulsar «Crear cuenta».
+  useEffect(() => {
+    void (async () => {
+      try { await supabase.functions.invoke("auth-email-hook", { method: "GET" }); } catch { /* solo la despierta */ }
+    })();
+  }, []);
+
   useEffect(() => {
     try {
       if (isFree) sessionStorage.removeItem("autopilot_selected_plan");
@@ -124,22 +132,12 @@ const Signup = () => {
     setLoading(true);
 
     try {
-      // Final server-side check
-      const { data: avail } = await supabase.functions.invoke("check-availability", {
-        body: { email: email.trim() },
-      });
-      if (avail?.emailTaken) {
-        setEmailTaken(true);
-        void hapticNotify("error");
-        setLoading(false);
-        return;
-      }
-
       const anonScanId = readAnonScanId();
       // Quien viene del quiz ya respondió el cuestionario: tras verificar vuelve
       // al configurador, no a la pantalla de elección scan/formulario.
       const nextAfterVerify = postVerificationPath(nextParam ?? (fromQuiz ? "/onboarding" : null), fromScan);
-      const { error } = await signUp(email.trim(), password, {
+      // Sin consulta previa: el correo con el código sale en la misma petición.
+      const { error, exists } = await signUp(email.trim(), password, {
         display_name: name.trim(),
         referral_code: referralCode,
         is_free: isFree ? "true" : "false",
@@ -152,6 +150,12 @@ const Signup = () => {
       }, { next: nextAfterVerify });
       if (error) {
         fail(error.message);
+        setLoading(false);
+        return;
+      }
+      if (exists) {
+        setEmailTaken(true);
+        void hapticNotify("error");
         setLoading(false);
         return;
       }

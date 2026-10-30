@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
+import { fastImage } from "@/shared/lib/fastImage";
 
 /**
  * Foto de cada ejercicio por nombre (biblioteca de ejercicios). Es decoración:
@@ -17,7 +18,7 @@ export function useExerciseImages(names: string[]): Record<string, string> {
         const { data } = await supabase.from("exercises").select("name, image_url").in("name", key.split("\n"));
         if (!alive) return;
         const next: Record<string, string> = {};
-        for (const row of data ?? []) if (row.image_url) next[row.name] = row.image_url;
+        for (const row of data ?? []) if (row.image_url) next[row.name] = fastImage(row.image_url, 800);
         setImages(next);
       } catch { /* sin fotos */ }
     })();

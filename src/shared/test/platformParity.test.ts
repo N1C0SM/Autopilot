@@ -260,6 +260,31 @@ describe("paridad web ↔ apps nativas", () => {
     expect(app).toMatch(/if !hasMeals && kcal <= 0 \{[\s\S]*?MacrosWeightCard\(userId: id\)/);
   });
 
+  it("Fotos: la web y la app piden a Supabase la versión reducida (WebP de pocos KB), nunca el PNG original", () => {
+    const web = read("src/shared/lib/fastImage.ts");
+    const app = read("native/Autopilot/Design/Components.swift");
+    for (const part of ["/storage/v1/render/image/public/", "resize=contain&quality=55", "1000"]) {
+      expect(web, part).toContain(part);
+      expect(app, part).toContain(part);
+    }
+    expect(app).toContain('"image/webp,image/*"');
+    expect(read("native/Autopilot/Features/Scan/ScanView.swift")).toContain("ImageCache.fastURL(url, maxSide: maxSide)");
+    expect(read("src/shared/lib/brandPhotos.ts")).toContain("fastImage(");
+    expect(read("src/app/components/ExerciseMedia.tsx")).toContain("fastImage(image, 192)");
+  });
+
+  it("Código del alta: el correo sale en la misma petición y la función que lo envía ya está despierta, en la web y en la app", () => {
+    const web = read("src/app/pages/Signup.tsx");
+    const app = read("native/Autopilot/Features/Auth/OnboardingView.swift");
+    for (const src of [web, app]) {
+      expect(src).not.toContain('"check-availability", options');
+      expect(src).toContain('"auth-email-hook"');
+    }
+    expect(web).not.toMatch(/await supabase\.functions\.invoke\("check-availability", \{\s*body: \{ email: email\.trim\(\) \},\s*\}\)/);
+    expect(app).toContain("response.user.identities?.isEmpty == true");
+    expect(read("src/shared/contexts/AuthContext.tsx")).toContain("exists: data?.user?.identities?.length === 0");
+  });
+
   it("Gratis y Plus no leen «tu entrenador» en el primer uso ni en Nutrición", () => {
     const web = read("src/app/pages/Dashboard.tsx");
     expect(web).not.toContain("No necesitas contratar un entrenador para empezar.");

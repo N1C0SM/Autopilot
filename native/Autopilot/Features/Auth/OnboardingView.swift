@@ -64,6 +64,8 @@ struct WelcomeView: View {
             .frame(maxWidth: 420).padding(.horizontal, 24).padding(.bottom, 16)
         }
         .screenBackground()
+        // Las fotos del cuestionario ya están en caché cuando se pulsa «Crear mi rutina gratis».
+        .task { ImageCache.shared.prefetch(Quiz.focuses.compactMap { Quiz.photo($0.v) }, maxSide: Quiz.photoSide) }
     }
 
     private func feature(_ symbol: String, _ title: String, _ text: String) -> some View {
@@ -168,6 +170,8 @@ private enum Quiz {
                     "mixto": "d5e30e05-0791-4886-84a0-7b2695728225-1791475865184.png"][focus] ?? ""
         return URL(string: "https://enebrcdrdnfkyduzyrzm.supabase.co/storage/v1/object/public/site-assets/exercise-images/" + file)
     }
+    /// Lado de las fotos del cuestionario en pt: un tercio de pantalla, sin bajar la foto grande.
+    static let photoSide: CGFloat = 160
     static func label(_ options: [Option], _ v: String) -> String { options.first { $0.v == v }?.l ?? "—" }
 }
 
@@ -359,7 +363,7 @@ struct OnboardingQuizView: View {
             // El hueco 4:5 manda (tres iguales, como `grid-cols-3` en la web); la foto solo lo rellena.
             Color.clear.aspectRatio(4 / 5, contentMode: .fit).frame(maxWidth: .infinity)
                 .background {
-                    CachedAsyncImage(url: Quiz.photo(o.v)) { $0.resizable().scaledToFill() } placeholder: { Palette.card }
+                    CachedAsyncImage(url: Quiz.photo(o.v), maxSide: Quiz.photoSide) { $0.resizable().scaledToFill() } placeholder: { Palette.card }
                 }
                 .clipped()
                 .overlay { LinearGradient(colors: [.clear, .black.opacity(0.9)], startPoint: .center, endPoint: .bottom) }
@@ -526,6 +530,9 @@ struct CreateAccountView: View {
             .scrollDismissesKeyboard(.interactively)
         }
         .screenBackground()
+        // El código lo envía la función auth-email-hook: despertarla al abrir el formulario
+        // quita su arranque en frío (~2 s) del momento de pulsar «Crear cuenta».
+        .task { _ = try? await Backend.client.functions.invoke("auth-email-hook", options: FunctionInvokeOptions(method: .get)) }
         .onChange(of: error) { _, text in
             if let text { A11y.announce("Error: \(text)") }
         }
@@ -538,15 +545,13 @@ struct CreateAccountView: View {
         guard !name.trimmingCharacters(in: .whitespaces).isEmpty else { return fail("El nombre es obligatorio.") }
         loading = true
         defer { loading = false }
-        struct Availability: Decodable { let emailTaken: Bool? }
-        if let a: Availability = try? await Backend.client.functions.invoke("check-availability", options: FunctionInvokeOptions(body: ["email": mail])),
-           a.emailTaken == true {
-            return fail("Este correo ya está registrado.")
-        }
         do {
-            _ = try await Backend.client.auth.signUp(email: mail, password: password,
-                                                     data: ["display_name": .string(name.trimmingCharacters(in: .whitespaces)),
-                                                            "is_free": "true", "selected_plan": ""])
+            // Sin consulta previa: el correo sale en la misma petición. Si ya hay cuenta,
+            // Supabase devuelve un usuario sin identidades y no envía nada.
+            let response = try await Backend.client.auth.signUp(email: mail, password: password,
+                                                                data: ["display_name": .string(name.trimmingCharacters(in: .whitespaces)),
+                                                                       "is_free": "true", "selected_plan": ""])
+            if response.user.identities?.isEmpty == true { return fail("Este correo ya está registrado.") }
             email = mail
             OnboardingDraft.pendingEmail = mail
             codeSent = true

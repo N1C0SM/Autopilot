@@ -3,6 +3,7 @@ import { Dumbbell, Video } from "lucide-react";
 import VideoEmbed, { toEmbedUrl } from "@/web/components/VideoEmbed";
 import { cn } from "@/shared/lib/utils";
 import { BrandMark } from "@/shared/components/ui/brand-mark";
+import { fastImage } from "@/shared/lib/fastImage";
 
 const isDirectFile = (url: string) => /\.(mp4|webm|mov|m4v)(\?|$)/i.test(url);
 
@@ -57,7 +58,7 @@ export const ExerciseThumb = ({
     >
       {showImage ? (
         <img
-          src={image}
+          src={fastImage(image, 192)}
           alt={name ?? ""}
           loading="lazy"
           decoding="async"
@@ -125,7 +126,7 @@ const ExerciseMedia = ({ video, image, name, className = "", emptyLabel = "Sin v
         {/* cover: mismo encuadre exacto que el vídeo, para que toda la biblioteca
             se vea igual. El prompt de generación compone dentro de la banda 16:9,
             así que este recorte no corta al atleta. */}
-        <img src={image} alt={name ?? ""} loading="lazy" decoding="async" className="h-full w-full object-cover" />
+        <img src={fastImage(image, 1000)} alt={name ?? ""} loading="lazy" decoding="async" className="h-full w-full object-cover" />
       </div>
     );
   }

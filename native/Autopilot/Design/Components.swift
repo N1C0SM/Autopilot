@@ -303,9 +303,35 @@ final class ImageCache {
         }
     }
 
+    /// Las fotos públicas de Supabase son PNG de ~2 MB: su endpoint de render las da en WebP
+    /// de ~5–15 KB al tamaño de pantalla. Igual que `fastImage` en la web (src/shared/lib/fastImage.ts).
+    nonisolated static func fastURL(_ url: URL, maxSide: CGFloat) -> URLRequest? {
+        let object = "/storage/v1/object/public/", render = "/storage/v1/render/image/public/"
+        let text = url.absoluteString
+        guard url.host?.hasSuffix(".supabase.co") == true,
+              let base = text.components(separatedBy: "?").first,
+              let path = base.components(separatedBy: object).dropFirst().first
+                ?? base.components(separatedBy: render).dropFirst().first,
+              let root = base.components(separatedBy: "/storage/v1/").first else { return nil }
+        let side = Int(min(max(maxSide * 3, 64), 1000))
+        guard let fast = URL(string: "\(root)\(render)\(path)?width=\(side)&height=\(side)&resize=contain&quality=55") else { return nil }
+        var request = URLRequest(url: fast)
+        // Sin esta cabecera Supabase devuelve PNG (~500 KB) en vez de WebP.
+        request.setValue("image/webp,image/*", forHTTPHeaderField: "Accept")
+        return request
+    }
+
     private func download(_ url: URL, maxSide: CGFloat) async -> PlatformImage? {
         // Ya descargada en otra sesión: no se vuelve a pedir a la red.
         if let disk = await Self.fromDisk(url, maxSide: maxSide) { return disk }
+        // Primero la versión reducida; si el render fallara, la original de siempre.
+        if let fast = Self.fastURL(url, maxSide: maxSide),
+           let (data, response) = try? await session.data(for: fast),
+           (response as? HTTPURLResponse)?.statusCode ?? 200 < 400,
+           let image = await Self.decode(data, maxSide: maxSide) {
+            Self.toDisk(image, url, maxSide: maxSide)
+            return image
+        }
         // 3 intentos con espera corta: una red mala no debe dejar el hueco para siempre.
         for attempt in 0..<3 {
             if let (data, response) = try? await session.data(from: url),

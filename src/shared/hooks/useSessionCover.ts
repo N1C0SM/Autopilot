@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
+import { fastImage } from "@/shared/lib/fastImage";
 
 const STORE = "autopilot.aiCovers.v1";
 
@@ -57,7 +58,7 @@ function useAiCover(cacheKey: string, body: Record<string, unknown> | null, fall
   const shown = cover.key === cacheKey
     ? cover.url
     : (cacheKey ? readStore()[cacheKey] ?? null : null);
-  return shown ?? fallback;
+  return shown ? fastImage(shown, 1000) : fallback;
 }
 
 /** Portada de la sesión según sus músculos; mientras tanto, la foto del primer ejercicio. */

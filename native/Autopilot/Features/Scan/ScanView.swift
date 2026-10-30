@@ -1050,7 +1050,10 @@ final class ThumbnailCache {
     func load(_ url: URL, maxSide: CGFloat) async -> PlatformImage? {
         let key = key(url, maxSide)
         if let hit = memory.object(forKey: key) { return hit }
-        guard let (data, _) = try? await session.data(from: url) else { return nil }
+        // Versión reducida de Supabase (WebP); si el render fallara, la original.
+        var loaded = try? await session.data(for: ImageCache.fastURL(url, maxSide: maxSide) ?? URLRequest(url: url))
+        if (loaded?.1 as? HTTPURLResponse)?.statusCode ?? 0 >= 400 { loaded = try? await session.data(from: url) }
+        guard let (data, _) = loaded else { return nil }
         let image = await Task.detached(priority: .utility) { () -> PlatformImage? in
             guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
             let options: [CFString: Any] = [
