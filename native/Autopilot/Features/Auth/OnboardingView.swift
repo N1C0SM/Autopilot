@@ -356,12 +356,16 @@ struct OnboardingQuizView: View {
     private func photoChoice(_ o: Quiz.Option) -> some View {
         let on = c.focus == o.v
         return Button { Haptics.selection(); c.focus = o.v } label: {
-            ZStack(alignment: .bottomLeading) {
-                CachedAsyncImage(url: Quiz.photo(o.v)) { $0.resizable().scaledToFill() } placeholder: { Palette.card }
-                    .frame(maxWidth: .infinity).aspectRatio(4 / 5, contentMode: .fit).clipped()
-                    .overlay { LinearGradient(colors: [.clear, .black.opacity(0.9)], startPoint: .center, endPoint: .bottom) }
-                Text(o.l).font(.apHeadline).foregroundStyle(.white).padding(12)
-            }
+            // El hueco 4:5 manda (tres iguales, como `grid-cols-3` en la web); la foto solo lo rellena.
+            Color.clear.aspectRatio(4 / 5, contentMode: .fit).frame(maxWidth: .infinity)
+                .background {
+                    CachedAsyncImage(url: Quiz.photo(o.v)) { $0.resizable().scaledToFill() } placeholder: { Palette.card }
+                }
+                .clipped()
+                .overlay { LinearGradient(colors: [.clear, .black.opacity(0.9)], startPoint: .center, endPoint: .bottom) }
+                .overlay(alignment: .bottomLeading) {
+                    Text(o.l).font(.apHeadline).foregroundStyle(.white).lineLimit(1).minimumScaleFactor(0.8).padding(12)
+                }
             .overlay(alignment: .topTrailing) {
                 Image(systemName: "checkmark.circle.fill").font(.system(size: 24)).foregroundStyle(Color.black, Palette.gold)
                     .padding(8).opacity(on ? 1 : 0)

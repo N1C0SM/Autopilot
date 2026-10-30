@@ -213,6 +213,10 @@ describe("paridad web ↔ apps nativas", () => {
       expect(preview, text).toContain(text);
       expect(app, text).toContain(text);
     }
+    // «¿Dónde entrenas?»: tres fotos iguales en 4:5; en la app el hueco manda y la foto lo rellena.
+    expect(quiz).toMatch(/grid grid-cols-3 gap-2\.5/);
+    expect(quiz).toContain("aspect-[4/5]");
+    expect(app).toMatch(/Color\.clear\.aspectRatio\(4 \/ 5, contentMode: \.fit\)[\s\S]*?\.background \{\s*CachedAsyncImage/);
     // Mismos datos guardados: tabla, conflicto y disponibilidad.
     expect(quiz).toMatch(/from\("onboarding"\)\.upsert\(/);
     expect(app).toMatch(/from\("onboarding"\)\.upsert\(row, onConflict: "user_id"\)/);
