@@ -31,6 +31,8 @@ struct ScanView: View {
     @State private var importingFront = true
     @State private var goal = ""
     @State private var analyzing = false
+    /// Anillo de la espera (0-100), con la misma curva que la web.
+    @State private var progress: Double = 0
     @State private var result: ScanResult?
     @State private var error: String?
     /// Aviso de guardado (el análisis se ve, pero el historial o las fotos no se pudieron guardar).
@@ -49,6 +51,9 @@ struct ScanView: View {
                     Text(warning).font(.apFootnote).foregroundStyle(Palette.destructive)
                         .fixedSize(horizontal: false, vertical: true)
                 }
+            } else if analyzing {
+                ScanAnalyzingView(progress: progress)
+                    .transition(.opacity)
             } else {
                 header
                 photos
@@ -66,6 +71,7 @@ struct ScanView: View {
             }
         }
         .animation(reduceMotion ? nil : .snappy, value: result != nil)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: analyzing)
         .onChange(of: frontItem) { _, item in Task { await pick(item, isFront: true) } }
         .onChange(of: backItem) { _, item in Task { await pick(item, isFront: false) } }
         .task { await loadBiometrics() }
@@ -93,37 +99,12 @@ struct ScanView: View {
     // MARK: - Fotos
 
     private var photos: some View {
-        ZStack {
-            HStack(spacing: 12) {
-                photoTile(title: "Delante", hint: "Cuerpo completo", badge: "Obligatoria",
-                          image: front, item: $frontItem, isFront: true, silhouette: "figure.stand")
-                    .disabled(analyzing)
-                photoTile(title: "Atrás", hint: "Opcional", badge: "Opcional",
-                          image: back, item: $backItem, isFront: false, silhouette: "figure.stand")
-                    .disabled(analyzing)
-            }
-            .opacity(analyzing ? 0.35 : 1)
-
-            if analyzing {
-                VStack(spacing: 10) {
-                    BrandLoader().tint(Palette.gold).scaleEffect(1.15)
-                        .accessibilityHidden(true)
-                    Text("Analizando tu físico…").font(.apHeadline)
-                    Text("Unos segundos y listo.").font(.apFootnote).foregroundStyle(Palette.muted)
-                }
-                .padding(22)
-                .frame(maxWidth: .infinity)
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
-                        .strokeBorder(Palette.gold.opacity(0.4), lineWidth: 1)
-                }
-                .transition(.opacity)
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel("Analizando tu físico")
-            }
+        HStack(spacing: 12) {
+            photoTile(title: "Delante", hint: "Cuerpo completo", badge: "Obligatoria",
+                      image: front, item: $frontItem, isFront: true, silhouette: "figure.stand")
+            photoTile(title: "Atrás", hint: "Opcional", badge: "Opcional",
+                      image: back, item: $backItem, isFront: false, silhouette: "figure.stand")
         }
-        .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: analyzing)
     }
 
     // MARK: - Objetivo
@@ -181,14 +162,10 @@ struct ScanView: View {
 
     private var analyzeButton: some View {
         Button { Haptics.tap(); Task { await analyze() } } label: {
-            HStack(spacing: 10) {
-                if analyzing { BrandLoader().tint(.black) }
-                Text(analyzing ? "Analizando…" : "Analizar mi físico")
-            }
+            Text("Analizar mi físico")
         }
         .buttonStyle(PillButtonStyle(kind: .primary, height: 56))
-        .disabled(analyzing || (front == nil && back == nil))
-        .opacity(analyzing ? 0.6 : 1)
+        .disabled(front == nil && back == nil)
         .accessibilityHint("Con una sola foto ya hay análisis; con las dos es más completo")
     }
 
@@ -367,7 +344,15 @@ struct ScanView: View {
         analyzing = true
         error = nil
         warning = nil
-        defer { analyzing = false }
+        progress = 0
+        let started = Date()
+        let ticker = Task { @MainActor in
+            while !Task.isCancelled {
+                progress = ScanLoading.progress(after: Date().timeIntervalSince(started))
+                try? await Task.sleep(for: .milliseconds(250))
+            }
+        }
+        defer { ticker.cancel(); analyzing = false }
 
         // Si los datos de la ficha aún no habían llegado, el análisis saldría sin altura/peso/edad.
         if !bioLoaded { await loadBiometrics() }
@@ -464,6 +449,10 @@ struct ScanView: View {
             warning = !saved
                 ? "El análisis no se pudo guardar en tu historial."
                 : ((!photosSaved || photosLost) ? "Las fotos no se pudieron guardar en tu historial." : nil)
+            // El anillo llega al 100 % antes de enseñar el resultado.
+            ticker.cancel()
+            progress = 100
+            if !reduceMotion { try? await Task.sleep(for: .milliseconds(600)) }
             Haptics.success()
             result = r
         } catch {
@@ -542,6 +531,80 @@ private final class ScanCache: @unchecked Sendable {
         entries[userId] = (bio, goal, Date())
         // Tope por si en el futuro se acumulan muchas cuentas en el dispositivo.
         if entries.count > 8 { entries.removeAll() }
+    }
+}
+
+/// Espera del scan, igual que la web (`src/shared/lib/scanLoading.ts`).
+enum ScanLoading {
+    static let messages = [
+        "Analizando postura…",
+        "Detectando prioridades físicas…",
+        "Calculando margen de mejora…",
+        "Evaluando proporciones y simetría…",
+        "Evaluando tu punto de partida…",
+        "Generando tu diagnóstico personalizado…",
+    ]
+    /// Cada cuánto cambia el mensaje.
+    static let messageInterval: Duration = .milliseconds(1600)
+    /// Avance del anillo mientras responde la IA: rápido al principio y sin pasar del 95 % hasta tener el resultado.
+    static func progress(after seconds: TimeInterval) -> Double {
+        95 * (1 - exp(-max(0, seconds) / 6))
+    }
+}
+
+/// La «ruedecita» del análisis: anillo dorado con el porcentaje y mensajes que rotan
+/// (como `ScanAnalyzing.tsx` en la web).
+struct ScanAnalyzingView: View {
+    let progress: Double
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var message = 0
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ZStack {
+                Circle().fill(RadialGradient(colors: [Palette.gold.opacity(0.14), .clear], center: .center, startRadius: 0, endRadius: 144))
+                    .frame(width: 288, height: 288)
+                Circle().stroke(Palette.gold.opacity(0.2), lineWidth: 12)
+                    .frame(width: 148, height: 148)
+                Circle().trim(from: 0, to: max(0, min(1, progress / 100)))
+                    .stroke(Palette.gold, style: StrokeStyle(lineWidth: 12, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                    .frame(width: 148, height: 148)
+                    .animation(reduceMotion ? nil : .easeOut(duration: 0.7), value: progress)
+                HStack(alignment: .firstTextBaseline, spacing: 0) {
+                    Text("\(Int(progress.rounded()))").font(.figure(size: 34)).monospacedDigit()
+                        .foregroundStyle(Palette.gold)
+                    Text("%").font(.apHeadline).foregroundStyle(Palette.muted)
+                }
+            }
+            .frame(width: 160, height: 160)
+            .padding(.bottom, 32)
+            .accessibilityElement()
+            .accessibilityLabel("Progreso del análisis")
+            .accessibilityValue("\(Int(progress.rounded())) %")
+
+            Text("Analizando tu físico").font(.apTitle1)
+                .accessibilityAddTraits(.isHeader)
+            HStack(spacing: 8) {
+                BrandLoader(size: 16).accessibilityHidden(true)
+                Text(ScanLoading.messages[message])
+            }
+            .font(.inter(size: 16, relativeTo: .callout)).foregroundStyle(Palette.muted)
+            .padding(.top, 12)
+            .id(message)
+            .transition(.opacity)
+        }
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 48)
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: ScanLoading.messageInterval)
+                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) {
+                    message = (message + 1) % ScanLoading.messages.count
+                }
+            }
+        }
     }
 }
 

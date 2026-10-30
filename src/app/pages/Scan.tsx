@@ -1,5 +1,7 @@
 import { errorMessage, errorStatus } from "@/shared/lib/runtimeValues";
 import { scanErrorMessage } from "@/shared/lib/scanErrors";
+import { scanProgressAt } from "@/shared/lib/scanLoading";
+import ScanAnalyzing from "@/app/components/scan/ScanAnalyzing";
 import { formatDecimal } from "@/shared/lib/numberFormat";
 import { compressImage, toBrowserFriendlyImage } from "@/shared/lib/imageCompression";
 import { IconTile } from "@/shared/components/ui/icon-tile";
@@ -116,15 +118,6 @@ const GOALS = [
 
 // El objetivo se guarda por id ("gain_muscle"): en pantalla siempre su nombre.
 const goalLabel = (value: string | null) => GOALS.find((goal) => goal.id === value)?.label ?? value;
-
-const LOADING_MESSAGES = [
-  "Analizando postura…",
-  "Detectando prioridades físicas…",
-  "Calculando margen de mejora…",
-  "Evaluando proporciones y simetría…",
-  "Evaluando tu punto de partida…",
-  "Generando tu diagnóstico personalizado…",
-];
 
 type Result = {
   attractiveness: number;
@@ -361,7 +354,6 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
   const [phase, setPhase] = useState<Phase>("upload");
   const [goal, setGoal] = useState<string | null>(null);
   const [pendingResult, setPendingResult] = useState<Result | null>(null);
-  const [loadingMsgIdx, setLoadingMsgIdx] = useState(0);
   const [leadName, setLeadName] = useState("");
   const [leadCountry, setLeadCountry] = useState("ES");
   const [leadWhatsapp, setLeadWhatsapp] = useState("");
@@ -671,9 +663,8 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
     }
     setLoading(true);
     setScanProgress(0);
-    const interval = setInterval(() => {
-      setScanProgress((p) => Math.min(p + Math.random() * 8, 95));
-    }, 300);
+    const started = performance.now();
+    const interval = setInterval(() => setScanProgress(scanProgressAt(performance.now() - started)), 250);
     try {
       const { data, error } = await supabase.functions.invoke("analyze-physique", {
         body: {
@@ -728,16 +719,6 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
       setLoading(false);
     }
   };
-
-  // Rotate loading messages while analyzing
-  useEffect(() => {
-    if (phase !== "analyzing") return;
-    setLoadingMsgIdx(0);
-    const id = setInterval(() => {
-      setLoadingMsgIdx((i) => (i + 1) % LOADING_MESSAGES.length);
-    }, 1600);
-    return () => clearInterval(id);
-  }, [phase]);
 
   // Kick off analysis when entering "analyzing" phase
   useEffect(() => {
@@ -813,7 +794,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                 bottleneck: r.bottleneck ?? undefined,
                 summary: r.summary ?? undefined,
                 priorities: (r.improvements ?? []).slice(0, 5),
-                reportUrl: "https://autopilotplan.com/scan",
+                reportUrl: "https://autopilotplan.com/onboarding",
                 cardImageUrl: cardImageUrl ?? undefined,
                 SCAN_IMAGE_URL: cardImageUrl ?? undefined,
               },
@@ -1605,28 +1586,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
               transition={{ duration: 0.2 }}
               className="mx-auto flex min-h-[60dvh] max-w-md flex-col items-center justify-center py-12 text-center"
             >
-              <ProgressRing value={scanProgress} size={160} stroke={12} className="mb-8" label="Progreso del análisis">
-                <span className="type-figure text-[34px] font-bold leading-none tabular-nums">
-                  {Math.round(scanProgress)}
-                  <span className="type-headline text-muted-foreground">%</span>
-                </span>
-              </ProgressRing>
-              <h2 data-nav-title={inline ? undefined : true} className="type-title1">
-                Analizando tu físico
-              </h2>
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={loadingMsgIdx}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="mt-3 flex items-center justify-center gap-2 type-callout text-muted-foreground"
-                >
-                  <Spinner size="sm" />
-                  {LOADING_MESSAGES[loadingMsgIdx]}
-                </motion.div>
-              </AnimatePresence>
+              <ScanAnalyzing progress={scanProgress} navTitle={!inline} />
             </motion.div>
           ) : !result && phase === "lead" ? (
             <motion.div

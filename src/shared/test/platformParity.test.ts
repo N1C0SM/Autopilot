@@ -132,7 +132,7 @@ describe("paridad web ↔ apps nativas", () => {
       "Cámara a 2-3 m, a la altura del ombligo, cuerpo entero y móvil en vertical.",
       "Luz natural frontal y uniforme, sin contraluz ni flash, con fondo liso y claro.",
       "Ropa ajustada, pies a la anchura de los hombros y brazos relajados. Para la de atrás, date la vuelta sin moverte.",
-      "Analizar mi físico", "Analizando…", "Analizando tu físico…", "Unos segundos y listo.",
+      "Analizar mi físico",
       "Con una sola foto ya podemos analizarte: valoraremos solo lo que se vea en esa vista. Con las dos fotos el análisis es más completo.",
       "Privado: solo para tu análisis · Sin registro · Menos de 1 minuto",
       "Tu físico", "Puntuación global de tu físico", "Sin puntuación global", "Atractivo", "Potencial", "Estilo",
@@ -159,5 +159,33 @@ describe("paridad web ↔ apps nativas", () => {
     expect(app).toMatch(/\.fileImporter\(isPresented: \$importingFile, allowedContentTypes: \[\.image\]\)/);
     expect(web).toMatch(/compressImage\(await toBrowserFriendlyImage\(input\), \{ maxDimension: 1600/);
     expect(app).toMatch(/PlatformImage\.downscaled\(from: data, maxSide: 1600\)/);
+  });
+
+  it("Scan: la misma ruedecita de espera en la web y en la app (anillo con %, mensajes y ritmo)", () => {
+    const shared = read("src/shared/lib/scanLoading.ts");
+    const view = read("src/app/components/scan/ScanAnalyzing.tsx");
+    const app = read("native/Autopilot/Features/Scan/ScanView.swift");
+    // El scan público y el de Progreso usan la misma pantalla; la app la calca.
+    expect(read("src/app/pages/Scan.tsx")).toMatch(/<ScanAnalyzing progress=\{scanProgress\}/);
+    expect(read("src/app/components/scan/ProgressScan.tsx")).toMatch(/<ScanAnalyzing progress=\{progress\} \/>/);
+    expect(app).toMatch(/ScanAnalyzingView\(progress: progress\)/);
+    const messages = [...shared.matchAll(/^\s+"([^"]+…)",$/gm)].map((m) => m[1]);
+    expect(messages.length).toBe(6);
+    for (const text of messages) expect(app, text).toContain(`"${text}"`);
+    for (const text of ["Analizando tu físico", "Progreso del análisis"]) {
+      expect(view, text).toContain(text);
+      expect(app, text).toContain(text);
+    }
+    // Mismo ritmo de mensajes y misma curva: 95 % como tope y constante de 6 s.
+    expect(shared).toMatch(/SCAN_MESSAGE_MS = 1600/);
+    expect(app).toMatch(/messageInterval: Duration = \.milliseconds\(1600\)/);
+    expect(shared).toMatch(/95 \* \(1 - Math\.exp\(-Math\.max\(0, elapsedMs\) \/ 6000\)\)/);
+    expect(app).toMatch(/95 \* \(1 - exp\(-max\(0, seconds\) \/ 6\)\)/);
+    // Anillo de 160 px y trazo 12 con la cifra en Big Shoulders.
+    expect(view).toMatch(/size=\{160\} stroke=\{12\}/);
+    expect(app).toMatch(/lineWidth: 12/);
+    expect(app).toMatch(/\.frame\(width: 160, height: 160\)/);
+    expect(view).toContain("type-figure");
+    expect(app).toMatch(/\.font\(\.figure\(size: 34\)\)/);
   });
 });
