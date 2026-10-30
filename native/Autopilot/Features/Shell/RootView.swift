@@ -112,8 +112,9 @@ struct RootView: View {
                     .accessibilityLabel("Autopilot")
             } else if session.showPicker {
                 WhoIsTrainingView()
-            } else if session.session == nil || session.addingAccount {
-                LoginView()
+            } else if session.session == nil || session.addingAccount || session.finishingSignup {
+                // Primer uso sin cuenta: bienvenida y cuestionario; con cuentas guardadas, el acceso.
+                SignedOutView()
             } else {
                 MainShell()
             }

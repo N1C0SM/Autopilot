@@ -147,7 +147,7 @@ const Login = () => {
       {appleSignInEnabled() && <AppleSignInButton label="sign-in" onClick={handleApple} />}
       <div className={hideWithKeyboardClass}>
         <Button asChild variant="plain" size="sm" className={authSecondaryActionClass}>
-          <Link to="/signup" onClick={() => void hapticTap()}>Crear una cuenta</Link>
+          <Link to="/onboarding" onClick={() => void hapticTap()}>Crear una cuenta gratis</Link>
         </Button>
         <p className="flex justify-center type-footnote text-muted-foreground">
           <Link to="/legal/terminos" className="inline-flex h-11 items-center px-2 transition-opacity active:opacity-60">Términos</Link>

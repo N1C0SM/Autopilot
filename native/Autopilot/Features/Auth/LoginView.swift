@@ -1,7 +1,10 @@
 import SwiftUI
+import Supabase
 
 /// Acceso con correo o usuario. Al añadir otra cuenta ofrece protegerla con contraseña.
 struct LoginView: View {
+    /// Alta dentro de la app (cuestionario y cuenta al final); nil al añadir otra cuenta.
+    var onCreateAccount: (() -> Void)?
     @EnvironmentObject private var session: SessionModel
     @EnvironmentObject private var accounts: AccountStore
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -10,6 +13,7 @@ struct LoginView: View {
     @State private var lockAccount = false
     @State private var loading = false
     @State private var error: String?
+    @State private var forgot = false
     @FocusState private var focus: Field?
     enum Field { case identifier, password }
 
@@ -41,6 +45,9 @@ struct LoginView: View {
                             .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 8)
                             .accessibilityAddTraits(.updatesFrequently)
                     }
+                    Button("¿Olvidaste la contraseña?") { Haptics.tap(); forgot = true }
+                        .font(.apSubhead).foregroundStyle(Palette.gold).frame(minHeight: 44)
+                        .frame(maxWidth: .infinity, alignment: .trailing).padding(.horizontal, 8)
                     if offerLock {
                         Toggle(isOn: $lockAccount) {
                             Text("Pedir contraseña al elegir esta cuenta").font(.apSubhead).foregroundStyle(Palette.muted)
@@ -76,9 +83,11 @@ struct LoginView: View {
                             .font(.apSubhead).foregroundStyle(Palette.gold).frame(minHeight: 44)
                             .accessibilityHint("Elige entre las cuentas guardadas en este dispositivo")
                     }
-                    Link("Crear una cuenta", destination: URL(string: "https://autopilotplan.app/signup")!)
-                        .font(.apSubhead).foregroundStyle(Palette.muted).frame(minHeight: 44)
-                        .accessibilityHint("Abre la web de registro")
+                    if let onCreateAccount {
+                        Button("Crear una cuenta gratis") { Haptics.tap(); onCreateAccount() }
+                            .font(.apSubhead).foregroundStyle(Palette.muted).frame(minHeight: 44)
+                            .accessibilityHint("Prepara tu rutina y crea la cuenta al final")
+                    }
                 }
             }
             .frame(maxWidth: 420)
@@ -88,6 +97,7 @@ struct LoginView: View {
         // Con el teclado abierto (y texto grande) el botón no queda tapado: se puede arrastrar.
         .scrollDismissesKeyboard(.interactively)
         .screenBackground()
+        .sheet(isPresented: $forgot) { ForgotPasswordSheet(email: identifier.contains("@") ? identifier : "") }
         // No se roba el foco del teclado a VoiceOver: quien usa lector de pantalla navega a su
         // ritmo y un foco automático le haría perder el hilo del formulario.
         .onAppear { if !A11y.voiceOver { focus = identifier.isEmpty ? .identifier : .password } }
@@ -142,5 +152,67 @@ struct RoundCheckStyle: ToggleStyle {
         .accessibilityAddTraits([.isButton, .isToggle])
         .accessibilityValue(configuration.isOn ? "Activado" : "Desactivado")
         .accessibilityHint(configuration.isOn ? "Desactiva pedir contraseña al elegir esta cuenta" : "Pide contraseña al elegir esta cuenta")
+    }
+}
+
+/// «Recuperar contraseña» de la web (`ForgotPassword.tsx`): el enlace abre el cambio de
+/// contraseña en la web y después se entra aquí con la nueva.
+struct ForgotPasswordSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @State var email: String
+    @State private var sent = false
+    @State private var loading = false
+    @State private var error: String?
+
+    var body: some View {
+        VStack(spacing: 24) {
+            VStack(spacing: 12) {
+                Image(systemName: sent ? "envelope.badge" : "key.fill").font(.system(size: 36, weight: .semibold))
+                    .foregroundStyle(Palette.gold).accessibilityHidden(true)
+                Text(sent ? "Revisa tu correo" : "Recuperar contraseña").font(.apTitle1).accessibilityAddTraits(.isHeader)
+                Text(sent ? "Te hemos enviado un enlace a \(email) para restablecer tu contraseña." : "Te enviaremos un enlace a tu correo.")
+                    .font(.apSubhead).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
+            }
+            if !sent {
+                PillField(label: "Correo electrónico", text: $email, contentType: .email)
+                if let error {
+                    Text(error).font(.apFootnote).foregroundStyle(Palette.destructive)
+                        .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 8)
+                }
+            }
+            Button { if sent { dismiss() } else { Task { await send() } } } label: {
+                if loading { BrandLoader().tint(.black).accessibilityHidden(true) }
+                else { Text(sent ? "Volver al inicio de sesión" : "Enviar enlace") }
+            }
+            .buttonStyle(.pill)
+            .disabled(loading || (!sent && !email.contains("@")))
+            .accessibilityLabel(loading ? "Enviando…" : sent ? "Volver al inicio de sesión" : "Enviar enlace")
+            Spacer(minLength: 0)
+        }
+        .padding(24).padding(.top, 16)
+        .frame(maxWidth: 420)
+        .frame(maxWidth: .infinity)
+        .screenBackground()
+        .presentationDetents([.medium, .large])
+        .onChange(of: error) { _, text in
+            if let text { A11y.announce("Error: \(text)") }
+        }
+    }
+
+    private func send() async {
+        loading = true
+        error = nil
+        defer { loading = false }
+        do {
+            try await Backend.client.auth.resetPasswordForEmail(email.trimmingCharacters(in: .whitespacesAndNewlines),
+                                                                redirectTo: URL(string: "https://autopilotplan.com/reset-password"))
+            Haptics.success()
+            sent = true
+        } catch {
+            Haptics.error()
+            self.error = AccountStore.isNetworkError(error)
+                ? "Sin conexión. Inténtalo de nuevo cuando vuelvas a tener internet."
+                : "No hemos podido enviar el enlace. Revisa el correo e inténtalo de nuevo."
+        }
     }
 }

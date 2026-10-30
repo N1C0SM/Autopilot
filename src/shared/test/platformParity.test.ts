@@ -178,6 +178,73 @@ describe("paridad web ↔ apps nativas", () => {
     expect(read("native/Autopilot/Features/Train/TrainView.swift")).toMatch(/model\.days\.isEmpty \{[\s\S]*?StarterRoutineCard/);
   });
 
+  it("Primer uso sin cuenta: misma bienvenida y mismo cuestionario de 3 pasos, con la cuenta al final", () => {
+    const welcome = read("src/app/pages/Welcome.tsx");
+    const quiz = read("src/app/pages/Configurator.tsx");
+    const preview = read("src/app/components/PlanPreview.tsx");
+    const app = read("native/Autopilot/Features/Auth/OnboardingView.swift");
+    for (const text of [
+      "Te damos la bienvenida a", "Crear mi rutina gratis", "Ya tengo cuenta",
+      "Tu rutina se adapta cada semana a lo que haces y a cómo progresas.",
+      "Calorías, macros y comidas que encajan con tu objetivo y tu día.",
+      "Tu plan se mantiene al día solo. Tú apareces, él se encarga del resto.",
+    ]) {
+      expect(welcome, text).toContain(text);
+      expect(app, text).toContain(text);
+    }
+    // La bienvenida lleva al cuestionario, no a registrarse primero.
+    expect(welcome).toMatch(/navigate\("\/onboarding"\)/);
+    expect(app).toMatch(/WelcomeView\(onStart: \{ go\(\.quiz\) \}/);
+    for (const text of [
+      "¿Qué quieres conseguir?", "Tu semana", "Tu plan Autopilot", "Cuéntanos tu objetivo y dónde entrenas.",
+      "Elige al menos dos días. Ajustamos el plan a tu semana.",
+      "Así queda con tus respuestas. Crea tu cuenta para guardar tu plan completo.",
+      "Perder grasa", "Ganar músculo", "Recomposición", "Fuerza y salud", "Gimnasio", "Calistenia", "Mixto",
+      "Un plan solo para ti", "Entrenáis juntos con un plan para los dos", "30–45 min", "45–60 min", "60–90 min",
+      "Empuje / Tirón / Pierna", "No lo sé, que Autopilot elija", "Tiempo por sesión", "Tu peso en kg (opcional)",
+      "Mismo calendario, cargas adaptadas a cada uno.", "Guardar mi plan gratis",
+      "y el tratamiento de mis datos de salud para preparar mi plan.",
+    ]) {
+      expect(quiz, text).toContain(text);
+      expect(app, text).toContain(text);
+    }
+    for (const text of ["Día 1 · Empuje (Gimnasio)", "Día 1 · Full body híbrido", "Pike push-ups", "Tu nutrición diaria",
+      "sesiones que se completarán al crear el plan", "Menús y cantidades al generar el plan."]) {
+      expect(preview, text).toContain(text);
+      expect(app, text).toContain(text);
+    }
+    // Mismos datos guardados: tabla, conflicto y disponibilidad.
+    expect(quiz).toMatch(/from\("onboarding"\)\.upsert\(/);
+    expect(app).toMatch(/from\("onboarding"\)\.upsert\(row, onConflict: "user_id"\)/);
+    for (const key of ["training_days", "session_minutes", "checkin_dow", "coach_style", "training_mode", "partner_email"]) {
+      expect(quiz, key).toContain(key);
+      expect(app, key).toContain(key);
+    }
+    // La cuenta se crea y se verifica con el código dentro de la app, como en la web.
+    for (const text of ["Crea tu cuenta", "Introduce el código", "Reenviar código", "Este correo ya está registrado.",
+      "El código no es válido o ha caducado. Pide uno nuevo."]) {
+      expect(read("src/app/pages/Signup.tsx") + read("src/app/pages/VerifyEmail.tsx"), text).toContain(text);
+      expect(app, text).toContain(text);
+    }
+    expect(app).toMatch(/verifyOTP\(email: email, token: code, type: \.signup\)/);
+    expect(read("native/Autopilot/Features/Shell/RootView.swift")).toMatch(/SignedOutView\(\)/);
+  });
+
+  it("Acceso: «¿Olvidaste la contraseña?» y «Crear una cuenta gratis» llevan a lo mismo en la web y en la app", () => {
+    const web = read("src/app/pages/Login.tsx");
+    const app = read("native/Autopilot/Features/Auth/LoginView.swift");
+    expect(web).toContain("¿Olvidaste la contraseña?");
+    expect(app).toContain("¿Olvidaste la contraseña?");
+    expect(web).toContain(`<Link to="/onboarding" onClick={() => void hapticTap()}>Crear una cuenta gratis</Link>`);
+    expect(app).toContain("Crear una cuenta gratis");
+    for (const text of ["Recuperar contraseña", "Te enviaremos un enlace a tu correo.", "Enviar enlace", "Revisa tu correo", "Volver al inicio de sesión"]) {
+      expect(read("src/app/pages/ForgotPassword.tsx"), text).toContain(text);
+      expect(app, text).toContain(text);
+    }
+    // Nada apunta al dominio antiguo desde el acceso.
+    expect(app).not.toContain("autopilotplan.app");
+  });
+
   it("Gratis y Plus no leen «tu entrenador» en el primer uso ni en Nutrición", () => {
     const web = read("src/app/pages/Dashboard.tsx");
     expect(web).not.toContain("No necesitas contratar un entrenador para empezar.");

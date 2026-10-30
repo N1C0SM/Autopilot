@@ -12,6 +12,8 @@ final class SessionModel: ObservableObject {
     @Published private(set) var ready = false
     /// Mostrar «¿Quién entrena?» al abrir (varias cuentas o cuenta protegida).
     @Published var showPicker = false
+    /// Cuenta recién verificada guardando el cuestionario: se sigue en el alta hasta terminar.
+    @Published var finishingSignup = false
 
     private let accounts = AccountStore.shared
 

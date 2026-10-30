@@ -523,9 +523,15 @@ enum MacroEstimate {
     static func load(userId: UUID) async -> (kcal: Double, p: Double, c: Double, f: Double)? {
         struct O: Decodable { let weight: Double?; let sex: String?; let goal: String? }
         guard let o: O = try? await Backend.client.from("onboarding").select("weight, sex, goal").eq("user_id", value: userId).single().execute().value,
-              let w = o.weight, w > 30, w <= 300 else { return nil }
-        let base = o.sex == "female" ? w * 28 : w * 32
-        let kcal = max(1200, (o.goal == "lose_weight" ? base - 350 : o.goal == "gain_muscle" ? base + 300 : base).rounded())
+              let w = o.weight else { return nil }
+        return estimate(weight: w, sex: o.sex, goal: o.goal)
+    }
+
+    /// Como `resolveNutritionPreview` de la web: nil si el peso no es válido.
+    static func estimate(weight w: Double, sex: String?, goal: String?) -> (kcal: Double, p: Double, c: Double, f: Double)? {
+        guard w > 30, w <= 300 else { return nil }
+        let base = sex == "female" ? w * 28 : w * 32
+        let kcal = max(1200, (goal == "lose_weight" ? base - 350 : goal == "gain_muscle" ? base + 300 : base).rounded())
         let p = (w * 2).rounded(), f = (kcal * 0.25 / 9).rounded()
         return (kcal, p, max(0, ((kcal - p * 4 - f * 9) / 4).rounded()), f)
     }
