@@ -10,7 +10,7 @@ final class SessionModel: ObservableObject {
     @Published private(set) var session: Session?
     @Published private(set) var role: Role = .user
     @Published private(set) var ready = false
-    /// Mostrar «¿Quién entrena?» al abrir (varias cuentas o cuenta protegida).
+    /// Mostrar «¿Quién entrena?» al abrir (solo si la cuenta activa está protegida).
     @Published var showPicker = false
     /// Cuenta recién verificada guardando el cuestionario: se sigue en el alta hasta terminar.
     @Published var finishingSignup = false
@@ -27,7 +27,9 @@ final class SessionModel: ObservableObject {
                 self.session = session
                 if let session { accounts.remember(session); await loadRole() }
                 let currentLocked = accounts.accounts.contains { $0.id == userIdString && $0.requirePassword }
-                showPicker = accounts.accounts.count >= 2 || currentLocked
+                // Se entra directo con la última cuenta usada; cambiar de cuenta: mantener el avatar.
+                // Solo una cuenta protegida pide pasar por «¿Quién entrena?».
+                showPicker = currentLocked
                 #if DEBUG
                 // Solo para capturas de QA: `-skipPicker` entra directo con la sesión activa.
                 if ProcessInfo.processInfo.arguments.contains("-skipPicker") { showPicker = false }

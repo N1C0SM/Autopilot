@@ -3,14 +3,27 @@ export const REST_PRESETS = [45, 60, 90, 120, 180] as const;
 export type WorkoutView = "list" | "focus";
 export const WORKOUT_VIEW_EVENT = "autopilot:workout-view-changed";
 const viewKey = (userId: string) => `autopilot:workout-view:${userId}`;
+/** Ejercicio a ejercicio por defecto (como la app); la lista entera, solo si se elige. */
 export function getWorkoutView(userId: string): WorkoutView {
-  try { return localStorage.getItem(viewKey(userId)) === "focus" ? "focus" : "list"; }
-  catch { return "list"; }
+  try { return localStorage.getItem(viewKey(userId)) === "list" ? "list" : "focus"; }
+  catch { return "focus"; }
 }
 export function setWorkoutView(userId: string, view: WorkoutView) {
   try { localStorage.setItem(viewKey(userId), view); } catch { /* storage unavailable */ }
   window.dispatchEvent(new Event(WORKOUT_VIEW_EVENT));
   return view;
+}
+
+const advancedKey = (userId: string) => `autopilot:workout-advanced:${userId}`;
+/** Bajadas y calentamiento: ocultos por defecto para que anotar sea serie, kg y reps. */
+export function getWorkoutAdvanced(userId: string): boolean {
+  try { return localStorage.getItem(advancedKey(userId)) === "1"; }
+  catch { return false; }
+}
+export function setWorkoutAdvanced(userId: string, on: boolean) {
+  try { localStorage.setItem(advancedKey(userId), on ? "1" : "0"); } catch { /* storage unavailable */ }
+  window.dispatchEvent(new Event(WORKOUT_VIEW_EVENT));
+  return on;
 }
 
 const restKey = (userId: string) => `autopilot:workout-rest:${userId}`;

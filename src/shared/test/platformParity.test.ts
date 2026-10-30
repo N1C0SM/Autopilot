@@ -285,6 +285,47 @@ describe("paridad web ↔ apps nativas", () => {
     expect(read("src/shared/contexts/AuthContext.tsx")).toContain("exists: data?.user?.identities?.length === 0");
   });
 
+  it("Entreno: ejercicio a ejercicio por defecto, carrusel arriba y foto grande, «···» con opciones claras y lo avanzado oculto", () => {
+    const web = read("src/app/components/dashboard/WorkoutTracker.tsx");
+    const prefs = read("src/shared/lib/workoutPreferences.ts");
+    const app = read("native/Autopilot/Features/Train/WorkoutView.swift");
+    expect(prefs).toContain('=== "list" ? "list" : "focus"');
+    expect(app).toContain('@AppStorage("workout-view") private var workoutView = "focus"');
+    expect(read("native/Autopilot/Features/Account/AccountView.swift")).toContain('forKey: "workout-view") ?? "focus"');
+    for (const text of ["Ver toda la sesión", "Ver ejercicio a ejercicio", "Más opciones por serie", "Descartar entrenamiento"]) {
+      expect(web, text).toContain(text);
+      expect(app, text).toContain(text);
+    }
+    // Bajada, calentamiento (y en la app RPE y fallo) solo con «Más opciones por serie».
+    expect(web).toContain("si === firstPendingIndex && advanced && (");
+    expect(app).toContain("if isCurrent && advanced {");
+    expect(app).toContain('if advanced { Text("RPE")');
+    // Carrusel antes que la foto, y la foto rellena el hueco.
+    const webFocus = web.slice(web.indexOf("Carrusel arriba"));
+    expect(webFocus.indexOf('role="tablist"')).toBeLessThan(webFocus.indexOf("fetchPriority"));
+    expect(webFocus).toContain('loading="eager" className="h-full w-full object-cover"');
+    const appFocus = app.slice(app.indexOf("struct FocusViewer"));
+    expect(appFocus.indexOf("ScrollView(.horizontal")).toBeLessThan(appFocus.indexOf("CachedAsyncImage"));
+    expect(appFocus).toContain(".frame(height: 300)");
+  });
+
+  it("Al abrir se entra directo con la última cuenta: «¿Quién entrena?» solo si está protegida, en la web y en la app", () => {
+    expect(read("native/Autopilot/Core/Session.swift")).toContain("showPicker = currentLocked\n");
+    expect(read("src/shared/components/native/WhoIsTraining.tsx")).toContain("if (!shown && currentLocked) showPicker();");
+  });
+
+  it("Plan y progreso: portada de la sesión también en iPhone y, sin entrenos, una invitación en vez de «0 kg»", () => {
+    const train = read("native/Autopilot/Features/Train/TrainView.swift");
+    expect(train).toContain("            if plan.isGym {\n                sessionCover(plan)");
+    const title = "Tu progreso empieza con tu primer entreno";
+    const message = "Marca tus series al entrenar y aquí verás tus kilos, tu racha y tus récords.";
+    for (const src of [read("src/app/components/dashboard/WorkoutProgress.tsx"), read("native/Autopilot/Features/Progress/ProgressScreen.swift")]) {
+      expect(src).toContain(title);
+      expect(src).toContain(message);
+    }
+    expect(read("native/Autopilot/Features/Progress/ProgressScreen.swift")).toContain("if !(model.detailsLoaded && model.history.isEmpty) { strengthCard }");
+  });
+
   it("Gratis y Plus no leen «tu entrenador» en el primer uso ni en Nutrición", () => {
     const web = read("src/app/pages/Dashboard.tsx");
     expect(web).not.toContain("No necesitas contratar un entrenador para empezar.");

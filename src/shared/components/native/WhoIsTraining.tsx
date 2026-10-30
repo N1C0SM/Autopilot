@@ -58,7 +58,9 @@ export default function WhoIsTraining() {
       }
     }
 
-    if (!shown && (list.length >= 2 || currentLocked)) showPicker();
+    // Se entra directo con la última cuenta usada (cambiar: mantener el avatar); solo una
+    // cuenta protegida pasa por «¿Quién entrena?», igual que en la app nativa.
+    if (!shown && currentLocked) showPicker();
   }, [loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Cambio rápido: mantener el avatar o, en el Mac, Cuenta → Cambiar de usuario.

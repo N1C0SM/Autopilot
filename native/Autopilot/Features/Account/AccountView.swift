@@ -38,7 +38,7 @@ struct AccountView: View {
     @State private var sports = ""
     @State private var nutritionPrefs = ""
     @State private var allergies = ""
-    @State private var workoutView = UserDefaults.standard.string(forKey: "workout-view") ?? "list"
+    @State private var workoutView = UserDefaults.standard.string(forKey: "workout-view") ?? "focus"
     @State private var photo: PhotosPickerItem?
     @State private var exportDoc: JSONDoc?
     @State private var confirmDelete = false
@@ -92,7 +92,7 @@ struct AccountView: View {
 
                 group("Perfil") {
                     fieldRow("Nombre") { TextField("Nombre", text: $name).multilineTextAlignment(.trailing).textFieldStyle(.plain) }
-                    row("Correo") { Text(session.session?.user.email ?? "").foregroundStyle(Palette.muted).lineLimit(2) }
+                    row("Correo") { Text(session.session?.user.email ?? "").foregroundStyle(Palette.muted).lineLimit(1).minimumScaleFactor(0.8).truncationMode(.middle) }
                     actionRow("Guardar perfil") { await saveProfile() }
                 }
 

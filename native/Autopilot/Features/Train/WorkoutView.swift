@@ -21,8 +21,11 @@ struct WorkoutView: View {
     @State private var discardOpen = false
     @State private var rpe = 7
     @State private var summaryOpen = false
-    /// Vista elegida en Ajustes: lista vertical o ejercicio a ejercicio (modo foco).
-    private let focusMode = UserDefaults.standard.string(forKey: "workout-view") == "focus"
+    /// Vista elegida en «···» o en Ajustes: ejercicio a ejercicio (por defecto) o lista vertical.
+    @AppStorage("workout-view") private var workoutView = "focus"
+    private var focusMode: Bool { workoutView != "list" }
+    /// RPE, bajadas, calentamiento y fallo: ocultos por defecto para que anotar sea serie, kg y reps.
+    @AppStorage("workout-advanced") private var advanced = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
 
@@ -87,12 +90,22 @@ struct WorkoutView: View {
                 .accessibilityElement(children: .combine)
             }
             ToolbarItem(placement: .primaryAction) {
-                Button { Haptics.tap(); discardOpen = true } label: {
+                // Opciones claras: cambiar de vista y de detalle; descartar, al final y en rojo.
+                Menu {
+                    Button { Haptics.selection(); workoutView = focusMode ? "list" : "focus" } label: {
+                        Label(focusMode ? "Ver toda la sesión" : "Ver ejercicio a ejercicio",
+                              systemImage: focusMode ? "list.bullet" : "rectangle.portrait")
+                    }
+                    Toggle(isOn: $advanced) { Label("Más opciones por serie", systemImage: "slider.horizontal.3") }
+                    Divider()
+                    Button(role: .destructive) { discardOpen = true } label: {
+                        Label("Descartar entrenamiento", systemImage: "trash")
+                    }
+                } label: {
                     Image(systemName: "ellipsis").font(.inter(size: 15, weight: .bold)).foregroundStyle(Palette.gold)
                         .frame(width: 30, height: 30).background(Palette.secondary, in: Circle())
                         .frame(width: 44, height: 44).contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
                 .accessibilityLabel("Más acciones")
             }
         }
@@ -249,6 +262,7 @@ struct SessionExerciseCard: View {
     let userId: UUID
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @AppStorage("workout-advanced") private var advanced = false
 
     private var sets: [SetLog] { workout.draft.logs[exercise.name] ?? [] }
     private var allDone: Bool { !sets.isEmpty && sets.allSatisfy(\.done) }
@@ -319,7 +333,7 @@ struct SessionExerciseCard: View {
                         Text("Previa").frame(width: 52)
                         Text("Kg").frame(maxWidth: .infinity)
                         Text("Reps").frame(maxWidth: .infinity)
-                        Text("RPE").frame(width: 44)
+                        if advanced { Text("RPE").frame(width: 44) }
                         Image(systemName: "checkmark").font(.inter(size: 11, weight: .bold)).frame(width: 44)
                     }
                     .font(.inter(.caption))
@@ -495,23 +509,7 @@ struct FocusViewer: View {
     var body: some View {
         let ex = workout.exercises[index]
         VStack(spacing: 8) {
-            ZStack {
-                RoundedRectangle(cornerRadius: Radius.card, style: .continuous).fill(Palette.card)
-                if let i = ex.image_url, let u = URL(string: i) {
-                    CachedAsyncImage(url: u) { $0.resizable().scaledToFit() } placeholder: { BrandLoader() }
-                } else {
-                    Image(systemName: "dumbbell").font(.inter(.title)).foregroundStyle(Palette.muted)
-                }
-            }
-            .frame(maxWidth: .infinity).frame(height: 240)
-            .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-            .gesture(DragGesture(minimumDistance: 30).onEnded { v in
-                if v.translation.width < -60 { go(index + 1) } else if v.translation.width > 60 { go(index - 1) }
-            })
-            .accessibilityLabel("\(ex.name). Desliza para cambiar de ejercicio")
-            .accessibilityAdjustableAction { dir in
-                switch dir { case .increment: go(index + 1); case .decrement: go(index - 1); default: break }
-            }
+            // Carrusel arriba y el movimiento en grande debajo: se ve en qué ejercicio estás.
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     ForEach(Array(workout.exercises.enumerated()), id: \.element.id) { i, item in
@@ -528,6 +526,24 @@ struct FocusViewer: View {
                         .accessibilityAddTraits(i == index ? .isSelected : [])
                     }
                 }
+            }
+            // La foto rellena un hueco fijo (overlay): no empuja el ancho de la pantalla.
+            Palette.card
+                .frame(maxWidth: .infinity).frame(height: 300)
+                .overlay {
+                    if let i = ex.image_url, let u = URL(string: i) {
+                        CachedAsyncImage(url: u) { $0.resizable().scaledToFill() } placeholder: { BrandLoader() }
+                    } else {
+                        Image(systemName: "dumbbell").font(.inter(.title)).foregroundStyle(Palette.muted)
+                    }
+                }
+                .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            .gesture(DragGesture(minimumDistance: 30).onEnded { v in
+                if v.translation.width < -60 { go(index + 1) } else if v.translation.width > 60 { go(index - 1) }
+            })
+            .accessibilityLabel("\(ex.name). Desliza para cambiar de ejercicio")
+            .accessibilityAdjustableAction { dir in
+                switch dir { case .increment: go(index + 1); case .decrement: go(index - 1); default: break }
             }
         }
     }
@@ -672,6 +688,7 @@ struct SetLine: View {
     let separator: Bool
 
     private var isWarmup: Bool { self.set.isWarmup == true }
+    @AppStorage("workout-advanced") private var advanced = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -712,6 +729,7 @@ struct SetLine: View {
                 if let n = Int(v) { workout.update(exercise.name, set: index) { $0.reps = n } }
             }
                 .accessibilityLabel("Repeticiones de la serie \(index + 1) de \(exercise.name)")
+            if advanced {
             Menu {
                 ForEach(6...10, id: \.self) { v in
                     Button("RPE \(v)") {
@@ -737,6 +755,7 @@ struct SetLine: View {
             }
             .accessibilityLabel("RPE de la serie \(index + 1) de \(exercise.name)")
             .accessibilityValue(set.rpe.map { "\($0) de 10" } ?? "sin definir")
+            }
             Button { workout.toggleDone(exercise, set: index) } label: {
                 ZStack {
                     Circle().strokeBorder(set.done ? Palette.success : Palette.muted.opacity(0.4), lineWidth: 2)
@@ -765,7 +784,7 @@ struct SetLine: View {
                     if let n = Int(v) { workout.updateDrop(exercise.name, set: index, drop: di) { $0.reps = n } }
                 }
                     .accessibilityLabel("Repeticiones de la bajada \(di + 1) de la serie \(index + 1)")
-                Color.clear.frame(width: 44, height: 1)
+                if advanced { Color.clear.frame(width: 44, height: 1) }
                 Button { workout.removeDrop(exercise.name, set: index, drop: di) } label: {
                     Image(systemName: "xmark").font(.inter(size: 11, weight: .bold)).frame(width: 26, height: 26).background(Palette.secondary, in: Circle())
                         .frame(width: 44, height: 44)
@@ -774,7 +793,7 @@ struct SetLine: View {
                 .accessibilityLabel("Quitar la bajada \(di + 1) de la serie \(index + 1)")
             }
         }
-        if isCurrent {
+        if isCurrent && advanced {
             HStack(spacing: 8) {
                 Button { Haptics.tap(); workout.addDrop(exercise.name, set: index) } label: {
                     Label("Bajada", systemImage: "plus").font(.apSubhead.weight(.medium)).lineLimit(1)

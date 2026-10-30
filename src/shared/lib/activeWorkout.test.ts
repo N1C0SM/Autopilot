@@ -33,12 +33,12 @@ describe("active workout recovery", () => {
     expect(remainingRestSeconds(61000, 61000)).toBeNull();
     expect(remainingRestSeconds(61000, 91000)).toBeNull();
   });
-  it("keeps either display choice per account", () => {
-    expect(getWorkoutView("athlete")).toBe("list");
-    setWorkoutView("athlete", "focus");
+  it("keeps either display choice per account, exercise by exercise by default", () => {
     expect(getWorkoutView("athlete")).toBe("focus");
-    expect(getWorkoutView("other")).toBe("list");
     setWorkoutView("athlete", "list");
     expect(getWorkoutView("athlete")).toBe("list");
+    expect(getWorkoutView("other")).toBe("focus");
+    setWorkoutView("athlete", "focus");
+    expect(getWorkoutView("athlete")).toBe("focus");
   });
 });

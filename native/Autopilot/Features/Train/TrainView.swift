@@ -397,9 +397,8 @@ struct WeeklyRoutineView: View {
         let sets = exercises.reduce(0) { $0 + $1.series }
         let summary = exercises.isEmpty ? nil : ["\(exercises.count) \(exercises.count == 1 ? "ejercicio" : "ejercicios")", sets > 0 ? "\(sets) \(sets == 1 ? "serie" : "series")" : nil].compactMap { $0 }.joined(separator: " · ")
         VStack(alignment: .leading, spacing: 24) {
-            // Web de escritorio: portada de la sesión (`h-44` ≈ 176 pt) a todo el ancho. En el
-            // iPhone no aparece, para no cambiar el diseño actual.
-            if wideLayout, plan.isGym {
+            // Portada de la sesión (`h-44` ≈ 176 pt) a todo el ancho, en iPhone y Mac como en la web.
+            if plan.isGym {
                 sessionCover(plan)
             }
             VStack(alignment: .leading, spacing: 4) {
