@@ -5,7 +5,6 @@ import { supabase } from "@/shared/integrations/supabase/client";
 import { useAuth } from "@/shared/contexts/AuthContext";
 import { Button } from "@/shared/components/ui/button";
 import { IconTile } from "@/shared/components/ui/icon-tile";
-import { Spinner } from "@/shared/components/ui/spinner";
 import { compressImage, toBrowserFriendlyImage } from "@/shared/lib/imageCompression";
 import { formatDecimal } from "@/shared/lib/numberFormat";
 import { toLocalDateString } from "@/shared/lib/localDates";
@@ -14,6 +13,8 @@ import { hapticTap } from "@/shared/lib/native";
 import { scanErrorMessage } from "@/shared/lib/scanErrors";
 import { cn } from "@/shared/lib/utils";
 import ScanPlusCard from "./ScanPlusCard";
+import ScanAnalyzing from "./ScanAnalyzing";
+import { useScanProgress } from "@/shared/hooks/useScanProgress";
 
 /**
  * Progreso → Scan con cuenta: calcado de la app (`ScanView.swift`), que es la referencia.
@@ -86,6 +87,9 @@ export default function ProgressScan({ onScanned }: { onScanned?: () => void }) 
   const [result, setResult] = useState<ScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
+  // El anillo llega al 100 % antes de enseñar el resultado.
+  const [finishing, setFinishing] = useState(false);
+  const progress = useScanProgress(analyzing, finishing);
 
   useEffect(() => {
     if (!user) return;
@@ -171,11 +175,14 @@ export default function ProgressScan({ onScanned }: { onScanned?: () => void }) 
       setWarning(insErr
         ? "El análisis no se pudo guardar en tu historial."
         : (!photosSaved || photosLost) ? "Las fotos no se pudieron guardar en tu historial." : null);
+      setFinishing(true);
+      await new Promise((done) => setTimeout(done, reduceMotion ? 0 : 600));
       setResult(r);
     } catch (e) {
       setError(await scanErrorMessage(e));
     } finally {
       setAnalyzing(false);
+      setFinishing(false);
     }
   };
 
@@ -198,6 +205,11 @@ export default function ProgressScan({ onScanned }: { onScanned?: () => void }) 
           <ScanResultView result={result} onAgain={reset} />
           {warning && <p className="type-footnote text-destructive">{warning}</p>}
         </motion.div>
+      ) : analyzing ? (
+        <motion.div key="analyzing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}>
+          <ScanAnalyzing progress={progress} />
+        </motion.div>
       ) : (
         <motion.div key="upload" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }} className="flex flex-col gap-[18px]">
@@ -209,24 +221,9 @@ export default function ProgressScan({ onScanned }: { onScanned?: () => void }) 
             </p>
           </header>
 
-          <div className="relative">
-            <div className={cn("grid grid-cols-2 gap-3 transition-opacity duration-200", analyzing && "opacity-35")}>
-              <PhotoTile title="Delante" hint="Cuerpo completo" badge="Obligatoria" image={front} disabled={analyzing} onFile={(f) => pick(f, true)} />
-              <PhotoTile title="Atrás" hint="Opcional" badge="Opcional" image={back} disabled={analyzing} onFile={(f) => pick(f, false)} />
-            </div>
-            <AnimatePresence>
-              {analyzing && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}
-                  className="absolute inset-0 flex items-center">
-                  <div role="status" aria-label="Analizando tu físico"
-                    className="flex w-full flex-col items-center gap-2.5 rounded-[28px] bg-background/70 p-[22px] ring-1 ring-primary/40 backdrop-blur-xl">
-                    <Spinner size="lg" className="text-primary" label="Analizando" />
-                    <p className="type-headline">Analizando tu físico…</p>
-                    <p className="type-footnote text-muted-foreground">Unos segundos y listo.</p>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+          <div className="grid grid-cols-2 gap-3">
+            <PhotoTile title="Delante" hint="Cuerpo completo" badge="Obligatoria" image={front} onFile={(f) => pick(f, true)} />
+            <PhotoTile title="Atrás" hint="Opcional" badge="Opcional" image={back} onFile={(f) => pick(f, false)} />
           </div>
 
           <div className="flex items-start gap-3.5 rounded-2xl bg-card p-[18px]">
@@ -245,9 +242,8 @@ export default function ProgressScan({ onScanned }: { onScanned?: () => void }) 
             <TipRow icon={PersonStanding} title="Postura y ropa" text="Ropa ajustada, pies a la anchura de los hombros y brazos relajados. Para la de atrás, date la vuelta sin moverte." />
           </div>
 
-          <Button size="lg" className="h-14 w-full" disabled={analyzing || (!front && !back)} onClick={() => void analyze()}>
-            {analyzing && <Spinner size="sm" className="text-current" label="Analizando" />}
-            {analyzing ? "Analizando…" : "Analizar mi físico"}
+          <Button size="lg" className="h-14 w-full" disabled={!front && !back} onClick={() => void analyze()}>
+            Analizar mi físico
           </Button>
           {error && <p className="type-footnote text-destructive">{error}</p>}
           <p className="type-footnote text-muted-foreground">
@@ -263,17 +259,15 @@ export default function ProgressScan({ onScanned }: { onScanned?: () => void }) 
   );
 }
 
-function PhotoTile({ title, hint, badge, image, disabled, onFile }: {
-  title: string; hint: string; badge: string; image: string | null; disabled: boolean; onFile: (f: File) => void;
+function PhotoTile({ title, hint, badge, image, onFile }: {
+  title: string; hint: string; badge: string; image: string | null; onFile: (f: File) => void;
 }) {
   return (
-    <label className={cn("relative block h-[240px] cursor-pointer overflow-hidden rounded-[28px] bg-card transition-transform duration-150 active:scale-[0.98]",
-      disabled && "pointer-events-none")}>
+    <label className="relative block h-[240px] cursor-pointer overflow-hidden rounded-[28px] bg-card transition-transform duration-150 active:scale-[0.98]">
       <input
         type="file"
         accept="image/*"
         className="sr-only"
-        disabled={disabled}
         aria-label={image ? `${title} elegida. Pulsa para cambiarla` : `${title}, ${hint}, ${badge}. Pulsa para elegir foto`}
         onChange={(e) => {
           const f = e.target.files?.[0];
