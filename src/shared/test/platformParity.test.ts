@@ -371,6 +371,16 @@ describe("paridad web ↔ apps nativas", () => {
     }
   });
 
+  it("Tu semana: la web y la app guardan los días elegidos (0 = domingo) y el plan entrena justo esos, no desde el lunes", () => {
+    expect(read("src/app/pages/Configurator.tsx")).toContain("training_days: c.days");
+    expect(read("native/Autopilot/Features/Auth/OnboardingView.swift")).toContain("training_days: days");
+    const gen = read("supabase/functions/generate-plan/index.ts");
+    expect(gen).toContain("availabilityObj.training_days");
+    expect(gen).toContain("(n + 6) % 7");
+    expect(gen).toContain("rules, skillProfile, chosenDays);");
+    expect(gen).toContain("for (const dayIdx of order)");
+  });
+
   it("Gratis y Plus no leen «tu entrenador» en el primer uso ni en Nutrición", () => {
     const web = read("src/app/pages/Dashboard.tsx");
     expect(web).not.toContain("No necesitas contratar un entrenador para empezar.");
