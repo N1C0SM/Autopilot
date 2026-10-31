@@ -30,6 +30,7 @@ struct WorkoutView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     private var progress: Double { workout.totalSets > 0 ? Double(workout.doneSets) / Double(workout.totalSets) : 0 }
+    private var allSetsDone: Bool { workout.totalSets > 0 && workout.doneSets >= workout.totalSets }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -74,7 +75,7 @@ struct WorkoutView: View {
                 Button { Haptics.tap(); workout.persistNow(); onClose(false) } label: {
                     HStack(spacing: 2) { Image(systemName: "chevron.left").fontWeight(.semibold); Text("Salir") }
                 }
-                .foregroundStyle(Palette.gold)
+                .foregroundStyle(Palette.foreground)
                 .accessibilityHint("El entrenamiento queda guardado")
             }
             ToolbarItem(placement: .principal) {
@@ -102,7 +103,7 @@ struct WorkoutView: View {
                         Label("Descartar entrenamiento", systemImage: "trash")
                     }
                 } label: {
-                    Image(systemName: "ellipsis").font(.inter(size: 15, weight: .bold)).foregroundStyle(Palette.gold)
+                    Image(systemName: "ellipsis").font(.inter(size: 15, weight: .bold)).foregroundStyle(Palette.foreground)
                         .frame(width: 30, height: 30).background(Palette.secondary, in: Circle())
                         .frame(width: 44, height: 44).contentShape(Rectangle())
                 }
@@ -202,9 +203,11 @@ struct WorkoutView: View {
             Button {
                 finish()
             } label: {
-                if workout.saving { HStack { BrandLoader().tint(.black); Text("Guardando…") } } else { Text("Terminar entrenamiento") }
+                if workout.saving { HStack { BrandLoader().tint(allSetsDone ? .black : Palette.foreground); Text("Guardando…") } } else { Text("Terminar entrenamiento") }
             }
-            .buttonStyle(.pill)
+            // Psicología del color: mientras quedan series, la acción dorada es marcar la serie;
+            // «Terminar» se vuelve dorado solo cuando la sesión está completa (la recompensa).
+            .buttonStyle(PillButtonStyle(kind: allSetsDone ? .primary : .secondary))
             .disabled(workout.saving || workout.doneSets == 0)
             .keyboardShortcut(.return, modifiers: .command)
         }
@@ -295,7 +298,7 @@ struct SessionExerciseCard: View {
                         Text(workout.swaps[exercise.name] ?? exercise.name)
                             .font(.apHeadline)
                             .lineLimit(2)
-                            .foregroundStyle(allDone ? Palette.muted : Palette.gold)
+                            .foregroundStyle(allDone ? Palette.muted : Palette.foreground)
                         if workout.swaps[exercise.name] != nil {
                             Text("En lugar de \(exercise.name)").font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(1)
                         }
@@ -311,7 +314,7 @@ struct SessionExerciseCard: View {
                     }
                     Spacer(minLength: 0)
                     if allDone {
-                        Image(systemName: "checkmark").font(.inter(size: 18, weight: .bold)).foregroundStyle(Palette.gold)
+                        Image(systemName: "checkmark").font(.inter(size: 18, weight: .bold)).foregroundStyle(Palette.success)
                             .frame(width: 36, height: 44)
                             .scaleEffect(justCompleted && !reduceMotion ? 1.25 : 1)
                             .animation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.45), value: justCompleted)
@@ -936,7 +939,7 @@ private struct WorkoutThumb: View {
             }
             if completed {
                 Color.black.opacity(0.5)
-                Image(systemName: "checkmark").font(.inter(.headline).weight(.bold)).foregroundStyle(Palette.gold)
+                Image(systemName: "checkmark").font(.inter(.headline).weight(.bold)).foregroundStyle(Palette.success)
             }
         }
         .frame(width: size, height: size)
@@ -945,7 +948,7 @@ private struct WorkoutThumb: View {
     }
 }
 
-/// Descanso: cifra de 34 pt, −30 / +30 / Saltar en dorado y barra fina.
+/// Descanso: cifra de 34 pt, −30 / +30 en blanco, «Saltar» y la barra fina en dorado.
 struct RestTimerRow: View {
     let end: Date
     @ObservedObject var workout: ActiveWorkout
@@ -967,10 +970,11 @@ struct RestTimerRow: View {
                         .frame(minWidth: 44, minHeight: 44).accessibilityLabel("Sumar 30 segundos")
                     Button("Saltar") { Haptics.tap(); workout.skipRest() }
                         .frame(minWidth: 52, minHeight: 44).accessibilityLabel("Saltar descanso")
+                        .foregroundStyle(Palette.gold)
                 }
                 .font(.apBody.monospacedDigit())
                 .buttonStyle(.plain)
-                .foregroundStyle(Palette.gold)
+                .foregroundStyle(Palette.foreground)
                 GeometryReader { geo in
                     Capsule().fill(Palette.secondary)
                         .overlay(alignment: .leading) {

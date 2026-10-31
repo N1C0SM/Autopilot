@@ -53,7 +53,7 @@ export const ExerciseThumb = ({
   return (
     <div
       className={`relative ${box} shrink-0 overflow-hidden rounded-[10px] ${
-        completed ? "bg-primary/15" : "bg-secondary"
+        completed ? "bg-success/15" : "bg-secondary"
       } ${className}`}
     >
       {showImage ? (
@@ -67,7 +67,7 @@ export const ExerciseThumb = ({
         />
       ) : (
         <div className="flex h-full w-full items-center justify-center">
-          <Dumbbell className={`h-4 w-4 ${completed ? "text-primary" : "text-muted-foreground"}`} />
+          <Dumbbell className={`h-4 w-4 ${completed ? "text-success" : "text-muted-foreground"}`} />
         </div>
       )}
     </div>

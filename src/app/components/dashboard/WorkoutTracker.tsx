@@ -1110,6 +1110,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
   const workingLogEntries = allLogEntries.filter(({ set }) => !isWorkoutSetWarmup(set));
   const completedSets = workingLogEntries.filter(({ set }) => set.done).length;
   const totalSets = workingLogEntries.length;
+  const allSetsDone = totalSets > 0 && completedSets >= totalSets;
   const totalVolume = workingLogEntries.reduce((total, { set }) => {
     if (!set.done) return total;
     const weight = parsePositiveWeight(set.weight);
@@ -1175,7 +1176,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
         <button
           type="button"
           onClick={() => { void hapticTap(); onCancel(); }}
-          className="mb-2 inline-flex min-h-11 items-center gap-0.5 pl-0.5 pr-2 text-primary transition-opacity active:opacity-60 [touch-action:manipulation]"
+          className="mb-2 inline-flex min-h-11 items-center gap-0.5 pl-0.5 pr-2 text-foreground transition-opacity active:opacity-60 [touch-action:manipulation]"
         >
           <ChevronLeft className="h-[22px] w-[22px]" strokeWidth={2.5} aria-hidden="true" />
           <span className="type-body">Rutina semanal</span>
@@ -1192,7 +1193,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                 type="button"
                 onClick={() => { void hapticTap(); void saveAndExit(); }}
                 disabled={saving}
-                className="inline-flex h-11 items-center gap-0.5 pl-0.5 pr-2 text-primary transition-opacity active:opacity-60 disabled:opacity-40 [touch-action:manipulation]"
+                className="inline-flex h-11 items-center gap-0.5 pl-0.5 pr-2 text-foreground transition-opacity active:opacity-60 disabled:opacity-40 [touch-action:manipulation]"
               >
                 <ChevronLeft className="h-[22px] w-[22px]" strokeWidth={2.5} aria-hidden="true" />
                 <span className="type-body">Salir</span>
@@ -1210,7 +1211,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                       disabled={saving}
                       className="inline-flex h-11 w-11 items-center justify-center transition-opacity active:opacity-60 disabled:opacity-40 [touch-action:manipulation]"
                     >
-                      <span className="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-secondary text-primary">
+                      <span className="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-secondary text-foreground">
                         <MoreHorizontal className="h-[18px] w-[18px]" strokeWidth={2.5} aria-hidden="true" />
                       </span>
                     </button>
@@ -1611,7 +1612,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                   {/* Antes de empezar, la lista solo informa: cambiar y ficha viven dentro de la sesión. */}
                   <div className={`${started ? "flex" : "hidden"} shrink-0 items-center ${focused ? "-mr-2.5 -mt-2" : ""}`}>
                     {allDone && !focused && (
-                      <span className="flex h-11 w-9 items-center justify-center text-primary">
+                      <span className="flex h-11 w-9 items-center justify-center text-success">
                         <Check className="h-5 w-5" strokeWidth={2.5} aria-hidden="true" />
                       </span>
                     )}
@@ -1733,7 +1734,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                           const checkClass = set.done
                             ? isWarmup
                               ? "border-muted-foreground bg-muted-foreground text-background"
-                              : "border-primary bg-primary text-primary-foreground"
+                              : "border-success bg-success text-success-foreground"
                             : inputError
                               ? "border-destructive text-destructive"
                               : "border-muted-foreground/40 text-muted-foreground/40";
@@ -1977,8 +1978,8 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                           {Math.floor(restTimer / 60)}:{(restTimer % 60).toString().padStart(2, "0")}
                         </p>
                       </div>
-                      <button type="button" aria-label="Restar 30 segundos" onClick={() => { void hapticSelection(); adjustRest(-30); }} className="h-11 min-w-11 px-2 type-body tabular-nums text-primary transition-opacity active:opacity-60 [touch-action:manipulation]">−30</button>
-                      <button type="button" aria-label="Sumar 30 segundos" onClick={() => { void hapticSelection(); adjustRest(30); }} className="h-11 min-w-11 px-2 type-body tabular-nums text-primary transition-opacity active:opacity-60 [touch-action:manipulation]">+30</button>
+                      <button type="button" aria-label="Restar 30 segundos" onClick={() => { void hapticSelection(); adjustRest(-30); }} className="h-11 min-w-11 px-2 type-body tabular-nums text-foreground transition-opacity active:opacity-60 [touch-action:manipulation]">−30</button>
+                      <button type="button" aria-label="Sumar 30 segundos" onClick={() => { void hapticSelection(); adjustRest(30); }} className="h-11 min-w-11 px-2 type-body tabular-nums text-foreground transition-opacity active:opacity-60 [touch-action:manipulation]">+30</button>
                       <button type="button" aria-label="Omitir descanso" onClick={() => { void hapticTap(); setRestTimer(null); }} className="-mr-2 h-11 rounded-lg bg-primary/10 px-3 type-body font-semibold text-primary transition-opacity active:opacity-60 [touch-action:manipulation]">
                         Omitir
                       </button>
@@ -2005,13 +2006,16 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                       ? "Guardado automáticamente"
                       : "Se guarda automáticamente"}
             </p>
+            {/* Psicología del color: mientras quedan series, la acción dorada es marcar la serie;
+                «Terminar» se vuelve dorado solo con la sesión completa (la recompensa). */}
             <Button
               onClick={() => { void hapticTap(); void finishWorkout(); }}
               disabled={saving || completedSets === 0}
+              variant={allSetsDone ? "default" : "secondary"}
               className="w-full [.keyboard-open_&]:hidden"
               size="lg"
             >
-              {saving ? <><Spinner size="sm" className="text-primary-foreground [&>svg]:!size-full" label="Guardando" /> Guardando…</> : "Terminar entrenamiento"}
+              {saving ? <><Spinner size="sm" className={`${allSetsDone ? "text-primary-foreground" : "text-foreground"} [&>svg]:!size-full`} label="Guardando" /> Guardando…</> : "Terminar entrenamiento"}
             </Button>
             </>}
           </div>}

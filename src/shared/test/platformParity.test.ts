@@ -339,6 +339,22 @@ describe("paridad web ↔ apps nativas", () => {
     expect(app.indexOf("if hasPlus {")).toBeGreaterThan(0);
   });
 
+  it("Color en el entreno: un solo dorado (la serie actual), verde para lo hecho y «Terminar» dorado solo al completar, en la web y en la app", () => {
+    const web = read("src/app/components/dashboard/WorkoutTracker.tsx");
+    const app = read("native/Autopilot/Features/Train/WorkoutView.swift");
+    expect(web).toContain('variant={allSetsDone ? "default" : "secondary"}');
+    expect(app).toContain(".buttonStyle(PillButtonStyle(kind: allSetsDone ? .primary : .secondary))");
+    // Serie y ejercicio hechos en verde, nunca en dorado.
+    expect(web).toContain('"border-success bg-success text-success-foreground"');
+    expect(web).toContain('<span className="flex h-11 w-9 items-center justify-center text-success">');
+    expect(app).toContain("Circle().strokeBorder(set.done ? Palette.success");
+    expect(app).toContain('Image(systemName: "checkmark").font(.inter(size: 18, weight: .bold)).foregroundStyle(Palette.success)');
+    // Título del ejercicio, «Salir» y «···» en blanco.
+    expect(app).toContain(".foregroundStyle(allDone ? Palette.muted : Palette.foreground)");
+    expect(web).not.toMatch(/pl-0\.5 pr-2 text-primary/);
+    expect(app).not.toContain('Image(systemName: "ellipsis").font(.inter(size: 15, weight: .bold)).foregroundStyle(Palette.gold)');
+  });
+
   it("Gratis y Plus no leen «tu entrenador» en el primer uso ni en Nutrición", () => {
     const web = read("src/app/pages/Dashboard.tsx");
     expect(web).not.toContain("No necesitas contratar un entrenador para empezar.");
