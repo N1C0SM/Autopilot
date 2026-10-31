@@ -1,5 +1,5 @@
 import { useReducedMotion } from "framer-motion";
-import { MOTION_FLOOR, MOTION_VIEWBOX, motionKeyTimes, type MotionSpec } from "@/shared/lib/exerciseMotion";
+import { MOTION_VIEWBOX, motionKeyTimes, type MotionSpec } from "@/shared/lib/exerciseMotion";
 import { cn } from "@/shared/lib/utils";
 
 /**
@@ -22,8 +22,6 @@ export const ExerciseMotion = ({ spec, className }: { spec: MotionSpec; classNam
       role="img"
       aria-label={`Ritmo de ${spec.label}`}
     >
-      {/* El suelo: da referencia de espacio sin dibujar un gimnasio. */}
-      <line x1="4" y1={MOTION_FLOOR} x2="96" y2={MOTION_FLOOR} stroke="currentColor" strokeOpacity="0.1" strokeWidth="0.8" strokeLinecap="round" />
       {/* La trayectoria que recorre cada repetición. */}
       <path d={spec.d} fill="none" stroke="currentColor" strokeOpacity="0.22" strokeWidth={spec.stroke} strokeLinecap="round" />
       {/* Reposo (inicio) y tensión máxima (final): los dos extremos del gesto. */}
