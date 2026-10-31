@@ -9,7 +9,8 @@ struct AdminCatalogImportCard: View {
     struct Counts: Decodable { var draft: Int; var pending: Int; var published: Int; var draftCredits: Double }
     struct Preview: Decodable { var total: Int; var variants: Int; var alreadyImported: Int; var nameTaken: Int; var toImport: Int }
     private struct Imported: Decodable { var imported: Int }
-    private struct Body: Encodable { let action: String; var limit: Int? = nil }
+    private struct ImportRequest: Encodable { let action: String; var limit: Int? = nil }
+    private struct ImportFailure: Decodable { var error: String }
 
     @State private var counts: Counts?
     @State private var preview: Preview?
@@ -43,7 +44,7 @@ struct AdminCatalogImportCard: View {
                     Button("Importar \(p.toImport) como borrador") { run { try await importAll() } }
                         .buttonStyle(.pill).disabled(busy)
                 } else {
-                    Button("Revisar importación") { run { preview = try await call(Body(action: "preview")) } }
+                    Button("Revisar importación") { run { preview = try await call(ImportRequest(action: "preview")) } }
                         .buttonStyle(.pillSecondary).disabled(busy)
                 }
                 if drafting != nil {
@@ -62,20 +63,19 @@ struct AdminCatalogImportCard: View {
             }
             .frame(maxWidth: 320, alignment: .leading)
         }
-        .task { counts = try? await call(Body(action: "status")) }
+        .task { counts = try? await call(ImportRequest(action: "status")) }
     }
 
     private var credits: String {
         (counts?.draftCredits ?? 0).formatted(.number.precision(.fractionLength(0...1)).locale(Locale(identifier: "es")))
     }
 
-    private func call<T: Decodable>(_ body: Body) async throws -> T {
+    private func call<T: Decodable>(_ body: ImportRequest) async throws -> T {
         do {
             return try await Backend.client.functions.invoke("exercise-import", options: FunctionInvokeOptions(body: body))
         } catch FunctionsError.httpError(_, let data) {
-            struct E: Decodable { var error: String }
             throw NSError(domain: "exercise-import", code: 0, userInfo: [
-                NSLocalizedDescriptionKey: (try? JSONDecoder().decode(E.self, from: data))?.error ?? "No se pudo completar",
+                NSLocalizedDescriptionKey: (try? JSONDecoder().decode(ImportFailure.self, from: data))?.error ?? "No se pudo completar",
             ])
         }
     }
@@ -91,8 +91,8 @@ struct AdminCatalogImportCard: View {
     }
 
     private func importAll() async throws {
-        let r: Imported = try await call(Body(action: "import"))
-        counts = try await call(Body(action: "status"))
+        let r: Imported = try await call(ImportRequest(action: "import"))
+        counts = try await call(ImportRequest(action: "status"))
         preview = nil
         message = "\(r.imported) ejercicios importados como borrador"
         onChanged()
@@ -104,7 +104,7 @@ struct AdminCatalogImportCard: View {
         drafting = (0, total)
         defer { drafting = nil; onChanged() }
         while let c = counts, c.draft > 0, !stopDrafting {
-            let next: Counts = try await call(Body(action: "draft", limit: 25))
+            let next: Counts = try await call(ImportRequest(action: "draft", limit: 25))
             counts = next
             drafting = (total - next.draft, total)
             // Si una tanda no avanza, los que quedan fallan siempre: no se repite en bucle.
@@ -113,7 +113,7 @@ struct AdminCatalogImportCard: View {
     }
 
     private func publish() async throws {
-        counts = try await call(Body(action: "publish"))
+        counts = try await call(ImportRequest(action: "publish"))
         confirmPublish = false
         message = "Ejercicios publicados"
         onChanged()
