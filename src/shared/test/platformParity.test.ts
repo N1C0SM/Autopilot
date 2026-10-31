@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { ADMIN_NAV_GROUPS } from "@/app/components/admin/adminNav";
+import { DETAIL_SECTIONS, EQUIPMENT, FILTER_GROUPS, MODALITIES } from "@/shared/lib/exerciseLibrary";
 
 /**
  * Web y apps nativas son un solo producto: web grande = Mac, web pequeña = iPhone.
@@ -426,5 +427,30 @@ describe("paridad web ↔ apps nativas", () => {
     expect(app).toMatch(/\.frame\(width: 160, height: 160\)/);
     expect(view).toContain("type-figure");
     expect(app).toMatch(/\.font\(\.figure\(size: 34\)\)/);
+  });
+
+  it("Biblioteca de ejercicios: misma entrada en Entrenar, mismos filtros y mismas secciones de ficha, en la web y en la app", () => {
+    const app = read("native/Autopilot/Features/Train/ExerciseLibraryView.swift");
+    const swiftArray = (name: string) => {
+      const m = app.match(new RegExp(`static let ${name} = \\[([^\\]]*)\\]`));
+      return [...(m?.[1] ?? "").matchAll(/"([^"]+)"/g)].map((x) => x[1]);
+    };
+    expect(swiftArray("groups")).toEqual([...FILTER_GROUPS]);
+    expect(swiftArray("equipment")).toEqual([...EQUIPMENT]);
+    expect(swiftArray("modalities")).toEqual([...MODALITIES]);
+    expect(swiftArray("detailSections")).toEqual([...DETAIL_SECTIONS]);
+    expect(FILTER_GROUPS).toHaveLength(12);
+    expect(EQUIPMENT).toHaveLength(11);
+    expect(MODALITIES).toHaveLength(5);
+    // Se abre desde la barra de la rutina, junto a «Editar», en los dos lados.
+    expect(read("src/app/pages/Dashboard.tsx")).toMatch(/label: "Ejercicios",[^}]*setLibraryOpen\(true\)/);
+    const train = read("native/Autopilot/Features/Train/TrainView.swift");
+    expect(train).toMatch(/Label\("Ejercicios", image: "lu-book-open"\)/);
+    expect(train).toContain("ExerciseLibraryView(userId: session.userId)");
+    const web = read("src/app/components/library/ExerciseLibrarySheet.tsx");
+    for (const text of ["Demostración en preparación", "Recientes", "Favoritos", "Quitar filtros"]) {
+      expect(web).toContain(text);
+      expect(app).toContain(text);
+    }
   });
 });

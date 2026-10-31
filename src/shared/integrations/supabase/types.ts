@@ -409,6 +409,276 @@ export type Database = {
         }
         Relationships: []
       }
+      equipment: {
+        Row: {
+          id: string
+          slug: string
+          name: string
+          sort: number
+        }
+        Insert: {
+          id?: string
+          slug: string
+          name: string
+          sort?: number
+        }
+        Update: {
+          id?: string
+          slug?: string
+          name?: string
+          sort?: number
+        }
+        Relationships: []
+      }
+      exercise_categories: {
+        Row: {
+          exercise_id: string
+          category_id: string
+        }
+        Insert: {
+          exercise_id: string
+          category_id: string
+        }
+        Update: {
+          exercise_id?: string
+          category_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_categories_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exercise_categories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "exercise_categories_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exercise_categories_catalog: {
+        Row: {
+          id: string
+          slug: string
+          name: string
+          sort: number
+        }
+        Insert: {
+          id?: string
+          slug: string
+          name: string
+          sort?: number
+        }
+        Update: {
+          id?: string
+          slug?: string
+          name?: string
+          sort?: number
+        }
+        Relationships: []
+      }
+      exercise_equipment: {
+        Row: {
+          exercise_id: string
+          equipment_id: string
+        }
+        Insert: {
+          exercise_id: string
+          equipment_id: string
+        }
+        Update: {
+          exercise_id?: string
+          equipment_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_equipment_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exercise_equipment_equipment_id_fkey"
+            columns: ["equipment_id"]
+            isOneToOne: false
+            referencedRelation: "equipment"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exercise_favorites: {
+        Row: {
+          user_id: string
+          exercise_id: string
+          created_at: string
+        }
+        Insert: {
+          user_id: string
+          exercise_id: string
+          created_at?: string
+        }
+        Update: {
+          user_id?: string
+          exercise_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_favorites_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exercise_media: {
+        Row: {
+          id: string
+          exercise_id: string
+          kind: string
+          url: string
+          source: string
+          source_url: string | null
+          license: string | null
+          license_author: string | null
+          status: string
+          sort: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          exercise_id: string
+          kind: string
+          url: string
+          source?: string
+          source_url?: string | null
+          license?: string | null
+          license_author?: string | null
+          status?: string
+          sort?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          exercise_id?: string
+          kind?: string
+          url?: string
+          source?: string
+          source_url?: string | null
+          license?: string | null
+          license_author?: string | null
+          status?: string
+          sort?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_media_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exercise_muscles: {
+        Row: {
+          exercise_id: string
+          muscle_id: string
+          role: string
+        }
+        Insert: {
+          exercise_id: string
+          muscle_id: string
+          role?: string
+        }
+        Update: {
+          exercise_id?: string
+          muscle_id?: string
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_muscles_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exercise_muscles_muscle_id_fkey"
+            columns: ["muscle_id"]
+            isOneToOne: false
+            referencedRelation: "muscles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exercise_recent: {
+        Row: {
+          user_id: string
+          exercise_id: string
+          viewed_at: string
+        }
+        Insert: {
+          user_id: string
+          exercise_id: string
+          viewed_at?: string
+        }
+        Update: {
+          user_id?: string
+          exercise_id?: string
+          viewed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_recent_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exercise_relations: {
+        Row: {
+          exercise_id: string
+          related_id: string
+          kind: string
+        }
+        Insert: {
+          exercise_id: string
+          related_id: string
+          kind: string
+        }
+        Update: {
+          exercise_id?: string
+          related_id?: string
+          kind?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_relations_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exercise_relations_related_id_fkey"
+            columns: ["related_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exercise_user_preferences: {
         Row: {
           created_at: string
@@ -468,6 +738,22 @@ export type Database = {
           video_job_id: string | null
           video_priority: number | null
           video_url: string | null
+          slug: string
+          alt_names: string[]
+          description: string | null
+          instructions: string[]
+          common_mistakes: string[]
+          tips: string[]
+          safety_notes: string[]
+          mechanic: string | null
+          status: string
+          source: string
+          source_ref: string | null
+          source_url: string | null
+          license: string | null
+          license_author: string | null
+          reviewed_at: string | null
+          updated_at: string
         }
         Insert: {
           alternative_id?: string | null
@@ -497,6 +783,22 @@ export type Database = {
           video_job_id?: string | null
           video_priority?: number | null
           video_url?: string | null
+          slug?: string
+          alt_names?: string[]
+          description?: string | null
+          instructions?: string[]
+          common_mistakes?: string[]
+          tips?: string[]
+          safety_notes?: string[]
+          mechanic?: string | null
+          status?: string
+          source?: string
+          source_ref?: string | null
+          source_url?: string | null
+          license?: string | null
+          license_author?: string | null
+          reviewed_at?: string | null
+          updated_at?: string
         }
         Update: {
           alternative_id?: string | null
@@ -526,6 +828,22 @@ export type Database = {
           video_job_id?: string | null
           video_priority?: number | null
           video_url?: string | null
+          slug?: string
+          alt_names?: string[]
+          description?: string | null
+          instructions?: string[]
+          common_mistakes?: string[]
+          tips?: string[]
+          safety_notes?: string[]
+          mechanic?: string | null
+          status?: string
+          source?: string
+          source_ref?: string | null
+          source_url?: string | null
+          license?: string | null
+          license_author?: string | null
+          reviewed_at?: string | null
+          updated_at?: string
         }
         Relationships: [
           {
@@ -782,6 +1100,30 @@ export type Database = {
         Update: {
           created_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      muscles: {
+        Row: {
+          id: string
+          slug: string
+          name: string
+          filter_group: string | null
+          sort: number
+        }
+        Insert: {
+          id?: string
+          slug: string
+          name: string
+          filter_group?: string | null
+          sort?: number
+        }
+        Update: {
+          id?: string
+          slug?: string
+          name?: string
+          filter_group?: string | null
+          sort?: number
         }
         Relationships: []
       }

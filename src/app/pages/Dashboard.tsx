@@ -1,4 +1,4 @@
-import { Play, PencilLine } from "lucide-react";
+import { BookOpen, Play, PencilLine } from "lucide-react";
 import { generatePlanGuarded, isManualPlan } from "@/shared/lib/planShield";
 import { DASHBOARD_CHAT_ENABLED } from "@/shared/lib/releaseScope";
 import { readActiveWorkout } from "@/shared/lib/activeWorkout";
@@ -53,6 +53,7 @@ const Recursos = lazy(() => import("@/web/pages/Recursos"));
 const ProgressScan = lazy(() => import("@/app/components/scan/ProgressScan"));
 const PlanEditor = lazy(() => import("@/app/components/dashboard/PlanEditor"));
 const FreeSessionBuilder = lazy(() => import("@/app/components/dashboard/FreeSessionBuilder"));
+const ExerciseLibrarySheet = lazy(() => import("@/app/components/library/ExerciseLibrarySheet"));
 
 const SectionFallback = () => (
   <Skeleton className="min-h-40 w-full rounded-2xl bg-card" aria-hidden />
@@ -185,6 +186,7 @@ const Dashboard = () => {
   const [planFocusDay, setPlanFocusDay] = useState<string | undefined>();
   const [editorOpen, setEditorOpen] = useState(false);
   const [freeOpen, setFreeOpen] = useState(false);
+  const [libraryOpen, setLibraryOpen] = useState(false);
   const [freePlans, setFreePlans] = useState<DayPlan[] | null>(null);
   const [trainingView, setTrainingView] = useState<"tracker" | "plan">(() => {
     const fromParam = searchParams.get("view");
@@ -719,7 +721,9 @@ const Dashboard = () => {
                     {[
                       { label: "Libre", aria: "Modo libre", Icon: Play, on: () => setFreeOpen(true) },
                       { label: "Editar", aria: "Editar rutina", Icon: PencilLine, on: () => setEditorOpen(true) },
-                    ].map(({ label, aria, Icon, on }) => (
+                      // Biblioteca: en móvil solo el icono, para que el modo del plan no se corte.
+                      { label: "Ejercicios", aria: "Ejercicios", Icon: BookOpen, on: () => setLibraryOpen(true), compact: true },
+                    ].map(({ label, aria, Icon, on, compact }) => (
                       <button
                         key={label}
                         type="button"
@@ -728,7 +732,7 @@ const Dashboard = () => {
                         className="flex h-9 items-center gap-1.5 rounded-full bg-secondary px-3 type-footnote font-semibold text-primary transition active:opacity-50"
                       >
                         <Icon className="h-4 w-4 shrink-0" aria-hidden />
-                        {label}
+                        <span className={compact ? "hidden sm:inline" : undefined}>{label}</span>
                       </button>
                     ))}
                   </div>
@@ -784,6 +788,7 @@ const Dashboard = () => {
             dayPlans={dayPlans}
             onSaved={(p) => { setDayPlans(p); setTrainingView("plan"); }}
           />
+          <ExerciseLibrarySheet open={libraryOpen} onOpenChange={setLibraryOpen} userId={user.id} />
           <FreeSessionBuilder
             open={freeOpen}
             onOpenChange={setFreeOpen}
