@@ -45,6 +45,16 @@ function normalizeGroups(raw: (string | null)[]): string[] {
   return list.length >= 4 || list.length === 0 ? ["full body"] : list.slice(0, 3);
 }
 
+const COVER_EXTS = ["webp", "png", "jpg"];
+
+/** Tipo real de la imagen por su firma de bytes; null si no es PNG/JPEG/WebP. */
+function detectImage(b: Uint8Array): { ext: string; mime: string } | null {
+  if (b.length > 8 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return { ext: "png", mime: "image/png" };
+  if (b.length > 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return { ext: "jpg", mime: "image/jpeg" };
+  if (b.length > 12 && b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 && b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50) return { ext: "webp", mime: "image/webp" };
+  return null;
+}
+
 /** PNG/JPEG -> WebP (calidad 82, máx. 1280 px de ancho). null si falla. */
 async function toWebp(bytes: Uint8Array): Promise<Uint8Array | null> {
   try {
@@ -114,12 +124,12 @@ Deno.serve(async (req) => {
       folder = `session-covers/v${COVER_STYLE_VERSION}`;
       prompt = `A training session focused on ${groups.join(", ")}: the athlete performs a classic strength exercise for ${groups[0]}. ${STYLE}`;
     }
-    const path = `${folder}/${key}.webp`;
-    const { data: pub } = svc.storage.from("site-assets").getPublicUrl(path);
+    const publicUrl = (p: string) => svc.storage.from("site-assets").getPublicUrl(p).data.publicUrl;
 
-    // Ya generada: se devuelve sin gastar IA.
-    const { data: existing } = await svc.storage.from("site-assets").list(folder, { search: `${key}.webp` });
-    if (existing?.some((f) => f.name === `${key}.webp`)) return json({ url: pub.publicUrl, cached: true });
+    // Ya generada (WebP o, si la conversión falló, el original): se devuelve sin gastar IA.
+    const { data: existing } = await svc.storage.from("site-assets").list(folder, { search: key });
+    const hit = existing?.find((f) => COVER_EXTS.some((ext) => f.name === `${key}.${ext}`));
+    if (hit) return json({ url: publicUrl(`${folder}/${hit.name}`), cached: true });
 
     const cfg = await getAiConfig();
     const apiKey = cfg.mediaOrder[0] === "openai" ? cfg.openaiKey : cfg.lovableKey;
@@ -145,11 +155,19 @@ Deno.serve(async (req) => {
     else if (url) { const dl = await fetch(url); if (dl.ok) bytes = new Uint8Array(await dl.arrayBuffer()); }
     if (!bytes) return json({ error: "La IA no devolvió ninguna imagen" }, 502);
 
+    // WebP si se puede; si no, el original con su tipo real. Nunca falla por la conversión.
     const webp = await toWebp(bytes);
-    if (!webp) return json({ error: "No se pudo convertir la portada" }, 500);
-    const { error: upErr } = await svc.storage.from("site-assets").upload(path, webp, { contentType: "image/webp", upsert: true, cacheControl: "31536000" });
-    if (upErr) return json({ error: "No se pudo guardar la portada" }, 500);
-    return json({ url: pub.publicUrl, cached: false });
+    const original = detectImage(bytes);
+    if (!webp && !original) return json({ url: null, unavailable: "unsupported_image" });
+    const ext = webp ? "webp" : original!.ext;
+    const contentType = webp ? "image/webp" : original!.mime;
+    const path = `${folder}/${key}.${ext}`;
+    const { error: upErr } = await svc.storage.from("site-assets").upload(path, webp ?? bytes, { contentType, upsert: true, cacheControl: "31536000" });
+    if (upErr) {
+      console.error(`cover upload failed: ${upErr.message}`);
+      return json({ url: null, unavailable: "storage_failed" });
+    }
+    return json({ url: publicUrl(path), cached: false, converted: !!webp });
   } catch (e) {
     console.error(`session-cover error: ${(e as Error).message}`);
     return json({ error: "Error interno" }, 500);
