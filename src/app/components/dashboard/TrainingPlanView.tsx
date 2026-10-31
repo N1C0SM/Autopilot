@@ -141,6 +141,9 @@ const TrainingPlanView = ({ dayPlans, initialDay, onOpenWorkout }: Props) => {
     rest?: string;
     category?: string | null;
     type?: string | null;
+    pattern?: string | null;
+    stimulus?: string | null;
+    load?: string | null;
   } | null>(null);
   const exerciseMetadata = useExerciseMetadata(dayPlans);
   /** Imágenes de ejercicio que fallaron al cargar: la miniatura y la ficha usan su hueco compuesto, nunca la imagen rota. */
@@ -264,13 +267,16 @@ const TrainingPlanView = ({ dayPlans, initialDay, onOpenWorkout }: Props) => {
                 const image = metadata?.image_url || ex.image_url;
                 const category = ex.muscle_group || metadata?.muscle_group;
                 const exerciseType = ex.exercise_type || metadata?.exercise_type;
+                const pattern = metadata?.movement_pattern ?? null;
+                const stimulus = metadata?.stimulus_type ?? null;
+                const load = metadata?.load_level ?? null;
                 const info = [ex.rest, category, exerciseType].filter(Boolean).join(" · ");
 
                 return (
                   <ListRow
                     key={`${selectedDay}-${ex.exercise_id || ex.name}-${i}`}
                     // La miniatura es la portada del vídeo: al tocar la fila se abre la ficha, cuyo héroe es el vídeo.
-                    leading={<ExerciseThumb image={usableImage(image)} video={video} name={ex.name} size="sm" />}
+                    leading={<ExerciseThumb image={usableImage(image)} video={video} name={ex.name} pattern={pattern} stimulus={stimulus} load={load} size="sm" />}
                     title={<span className="line-clamp-2 whitespace-normal">{ex.name}</span>}
                     subtitle={info ? <span className="block truncate">{info}</span> : undefined}
                     value={<span className="tabular-nums">{ex.series} × {ex.reps}</span>}
