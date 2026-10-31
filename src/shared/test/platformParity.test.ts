@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { ADMIN_NAV_GROUPS } from "@/app/components/admin/adminNav";
+import { DETAIL_SECTIONS, EQUIPMENT, FILTER_GROUPS, MODALITIES } from "@/shared/lib/exerciseLibrary";
 
 /**
  * Web y apps nativas son un solo producto: web grande = Mac, web pequeña = iPhone.
@@ -426,5 +427,53 @@ describe("paridad web ↔ apps nativas", () => {
     expect(app).toMatch(/\.frame\(width: 160, height: 160\)/);
     expect(view).toContain("type-figure");
     expect(app).toMatch(/\.font\(\.figure\(size: 34\)\)/);
+  });
+
+  it("Biblioteca de ejercicios: misma entrada en Entrenar, mismos filtros y mismas secciones de ficha, en la web y en la app", () => {
+    const app = read("native/Autopilot/Features/Train/ExerciseLibraryView.swift");
+    const swiftArray = (name: string) => {
+      const m = app.match(new RegExp(`static let ${name} = \\[([^\\]]*)\\]`));
+      return [...(m?.[1] ?? "").matchAll(/"([^"]+)"/g)].map((x) => x[1]);
+    };
+    expect(swiftArray("groups")).toEqual([...FILTER_GROUPS]);
+    expect(swiftArray("equipment")).toEqual([...EQUIPMENT]);
+    expect(swiftArray("modalities")).toEqual([...MODALITIES]);
+    expect(swiftArray("detailSections")).toEqual([...DETAIL_SECTIONS]);
+    expect(FILTER_GROUPS).toHaveLength(12);
+    expect(EQUIPMENT).toHaveLength(11);
+    expect(MODALITIES).toHaveLength(5);
+    // Se abre desde la barra de la rutina, junto a «Editar», en los dos lados.
+    expect(read("src/app/pages/Dashboard.tsx")).toMatch(/label: "Ejercicios",[^}]*setLibraryOpen\(true\)/);
+    const train = read("native/Autopilot/Features/Train/TrainView.swift");
+    expect(train).toMatch(/Label\("Ejercicios", image: "lu-book-open"\)/);
+    expect(train).toContain("ExerciseLibraryView(userId: session.userId)");
+    const web = read("src/app/components/library/ExerciseLibrarySheet.tsx");
+    for (const text of ["Demostración en preparación", "Recientes", "Favoritos", "Quitar filtros"]) {
+      expect(web).toContain(text);
+      expect(app).toContain(text);
+    }
+  });
+
+  it("Admin → Biblioteca: el catálogo base se importa, redacta y publica igual en la web y en la app", () => {
+    const web = read("src/app/components/admin-library/CatalogImport.tsx");
+    const app = read("native/Autopilot/Features/Admin/AdminCatalogImport.swift");
+    for (const text of [
+      "Catálogo base",
+      "Ejercicios con datos abiertos (licencia MIT), sin imágenes de terceros. Entran como borrador, la IA los reescribe con la voz de Autopilot y los publicas tú. El planificador no los usa hasta que los marques como aptos.",
+      "Revisar importación", "Redactar con IA", "Publicar redactados", "como borrador", "variantes repetidas", "ya están en tu biblioteca",
+      "Pendientes de revisar", "no se pudieron redactar",
+    ]) {
+      expect(web).toContain(text);
+      expect(app).toContain(text);
+    }
+    for (const action of ["status", "preview", "import", "draft", "publish"]) {
+      expect(web).toContain(`action: "${action}"`);
+      expect(app).toContain(`action: "${action}"`);
+    }
+    // Las fichas importadas no llevan marca ajena: solo CC BY / BY-SA obliga a citar en la ficha.
+    expect(read("src/shared/lib/exerciseLibrary.ts")).toContain('!/^CC BY/i.test(e.license ?? "")');
+    expect(read("native/Autopilot/Features/Train/ExerciseLibraryView.swift")).toContain('(license ?? "").uppercased().hasPrefix("CC BY")');
+    expect(read("src/app/components/admin/ExerciseLibrary.tsx")).toContain("<CatalogImport ");
+    expect(read("native/Autopilot/Features/Admin/AdminExercises.swift")).toContain("AdminCatalogImportCard {");
   });
 });

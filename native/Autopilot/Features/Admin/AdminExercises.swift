@@ -95,6 +95,8 @@ struct AdminExercisesView: View {
                         }
                     }
 
+                    AdminCatalogImportCard { Task { await load() } }
+
                     HStack {
                         Image(systemName: "magnifyingglass").foregroundStyle(Palette.muted)
                             .accessibilityHidden(true)
