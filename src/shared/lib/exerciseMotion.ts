@@ -21,21 +21,21 @@ export type MotionInput = {
 
 export type MotionPoint = { x: number; y: number };
 
-/** Puntos de una repetición sobre un lienzo de 100 × 56 (la posición de estiramiento y la de contracción). */
+/** Una repetición: de la posición de estiramiento (músculo largo) a la de contracción. */
 type Rail = [MotionPoint, MotionPoint, MotionPoint, MotionPoint];
 
 export type MotionSpec = {
   /** Trayectoria de una repetición, lista para `<animateMotion path>`. */
   d: string;
-  /** Donde el músculo trabaja más: el punto donde se queda el punto en reposo. */
-  peak: MotionPoint;
-  /** Reposo de la trayectoria. */
+  /** Reposo de la trayectoria (donde empieza y termina cada repetición). */
   start: MotionPoint;
+  /** Donde el músculo trabaja más: el final del recorrido. */
+  end: MotionPoint;
   /** Duración de un ciclo completo (concentric + excéntrica + pausa), en segundos. */
   duration: number;
-  /** Repeticiones que sugiere el estímulo (solo se insinúan, nunca se prometen). */
+  /** Repeticiones que sugiere el estímulo. */
   reps: number;
-  /** Isométrico: el punto viaja una vez y respira en su sitio. */
+  /** Isométrico: el punto viaja una vez y aguanta arriba. */
   hold: boolean;
   /** Grosor de la línea, en unidades del lienzo. */
   stroke: number;
@@ -47,24 +47,24 @@ export type MotionSpec = {
   label: string;
 };
 
-/** Lienzo común: 100 × 56, con el suelo en y = 46. */
+/** Lienzo común: 100 × 56 (16:9), con el suelo en y = 46. */
 export const MOTION_VIEWBOX = "0 0 100 56";
-const FLOOR = 46;
+export const MOTION_FLOOR = 46;
 
 /**
- * Raíles: de la posición de estiramiento (el músculo largo) a la de contracción
- * (el músculo corto). Cada patrón va por donde va de verdad el movimiento.
+ * Raíles: por donde va de verdad cada patrón. Los cuatro puntos son la curva
+ * Bézier de una repetición (inicio, dos controles, final).
  */
 const RAILS: Record<MotionPattern, Rail> = {
   Empuje: [{ x: 30, y: 38 }, { x: 46, y: 33 }, { x: 64, y: 22 }, { x: 79, y: 13 }],
   "Tirón": [{ x: 79, y: 16 }, { x: 62, y: 20 }, { x: 44, y: 30 }, { x: 28, y: 36 }],
-  Sentadilla: [{ x: 50, y: 13 }, { x: 45, y: 24 }, { x: 45, y: 35 }, { x: 50, y: FLOOR - 3 }],
-  Bisagra: [{ x: 26, y: 17 }, { x: 43, y: 19 }, { x: 61, y: 27 }, { x: 75, y: FLOOR - 8 }],
+  Sentadilla: [{ x: 50, y: 13 }, { x: 45, y: 24 }, { x: 45, y: 35 }, { x: 50, y: 43 }],
+  Bisagra: [{ x: 26, y: 17 }, { x: 43, y: 19 }, { x: 61, y: 27 }, { x: 75, y: 38 }],
   Core: [{ x: 39, y: 35 }, { x: 45, y: 26 }, { x: 55, y: 26 }, { x: 61, y: 35 }],
 };
 
 /**
- * Ritmo por estímulo (en segundos). La fase concéntrica es corta y viva; la
+ * Ritmo por estímulo, en segundos. La fase concéntrica es corta y viva; la
  * excéntrica, más lenta; la pausa deja respirar el bucle.
  */
 const TEMPO: Record<MotionStimulus, { conc: number; ecc: number; pause: number; reps: number }> = {
@@ -97,19 +97,21 @@ const jitter = (seed: number, index: number, span: number): number => {
   return Math.round(wave * span * 100) / 100;
 };
 
-const railPath = (rail: Rail, seed: number, amp: number): string => {
-  const [p0, c1, c2, p1] = rail;
-  // Todo se escala desde el centro del lienzo: la amplitud abre o cierra el gesto.
-  const at = (p: MotionPoint, i: number): MotionPoint => ({
-    x: Math.round((50 + (p.x - 50) * amp + jitter(seed, i, 2.4)) * 100) / 100,
-    y: Math.round((28 + (p.y - 28) * amp + jitter(seed, i + 4, 1.8)) * 100) / 100,
-  });
-  const s = at(p0, 0);
-  const a = at(c1, 1);
-  const b = at(c2, 2);
-  const e = at(p1, 3);
-  return `M${s.x} ${s.y}C${a.x} ${a.y} ${b.x} ${b.y} ${e.x} ${e.y}`;
-};
+const round2 = (n: number): number => Math.round(n * 100) / 100;
+
+/**
+ * Los cuatro puntos de la curva, ya con la amplitud de la carga y la letra del
+ * ejercicio. Se escala desde el centro del lienzo para no salirse del cuadro.
+ */
+function shape(rail: Rail, seed: number, amp: number): MotionPoint[] {
+  return rail.map((p, i) => ({
+    x: round2(50 + (p.x - 50) * amp + jitter(seed, i, 2.4)),
+    y: round2(28 + (p.y - 28) * amp + jitter(seed, i + 4, 1.8)),
+  }));
+}
+
+const pathOf = ([s, a, b, e]: MotionPoint[]): string =>
+  `M${s.x} ${s.y}C${a.x} ${a.y} ${b.x} ${b.y} ${e.x} ${e.y}`;
 
 /**
  * La huella del ejercicio, o `null` si la ficha no tiene patrón: sin patrón no
@@ -122,17 +124,13 @@ export function exerciseMotion(input: MotionInput): MotionSpec | null {
   const stimulus = STIMULUS_TYPES.find((s) => s === input.stimulus) ?? null;
   const tempo = TEMPO[stimulus ?? "Hipertrofia"];
   const weight = WEIGHT[input.load ?? "Media"] ?? WEIGHT.Media;
-  const seed = hash(input.name);
-
-  const rail = RAILS[pattern];
-  const peak = rail[3];
-  const start = rail[0];
+  const pts = shape(RAILS[pattern], hash(input.name), weight.amp);
 
   return {
-    d: railPath(rail, seed, weight.amp),
-    peak,
-    start,
-    duration: Math.round((tempo.conc + tempo.ecc + tempo.pause) * 100) / 100,
+    d: pathOf(pts),
+    start: pts[0],
+    end: pts[3],
+    duration: round2(tempo.conc + tempo.ecc + tempo.pause),
     reps: tempo.reps,
     hold: stimulus === "Isométrico",
     stroke: weight.stroke,
@@ -143,15 +141,14 @@ export function exerciseMotion(input: MotionInput): MotionSpec | null {
 }
 
 /**
- * Tiempos de `keyTimes` para un ciclo: sube rápido (concentric), baja despacio
- * (excéntrica) y descansa. Con `hold`, viaja una vez y se queda arriba.
+ * Tiempos del bucle para `<animateMotion>`: sube rápido (concentric), baja
+ * despacio (excéntrica) y descansa. Con `hold`, viaja una vez y aguanta arriba.
  */
 export function motionKeyTimes(spec: MotionSpec): { keyPoints: string; keyTimes: string } {
-  const stimulus = spec.stimulus ?? "Hipertrofia";
-  const tempo = TEMPO[stimulus];
+  const tempo = TEMPO[spec.stimulus ?? "Hipertrofia"];
   if (spec.hold) return { keyPoints: "0;1;1", keyTimes: "0;0.28;1" };
-  const total = spec.duration;
-  const up = Math.round((tempo.conc / total) * 1000) / 1000;
-  const down = Math.round(((tempo.conc + tempo.ecc) / total) * 1000) / 1000;
-  return { keyPoints: "0;1;0;0", keyTimes: `0;${up};${down};1` };
+  return {
+    keyPoints: "0;1;0;0",
+    keyTimes: `0;${round2(tempo.conc / spec.duration)};${round2((tempo.conc + tempo.ecc) / spec.duration)};1`,
+  };
 }
