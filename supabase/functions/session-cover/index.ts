@@ -145,9 +145,13 @@ Deno.serve(async (req) => {
     else if (url) { const dl = await fetch(url); if (dl.ok) bytes = new Uint8Array(await dl.arrayBuffer()); }
     if (!bytes) return json({ error: "La IA no devolvió ninguna imagen" }, 502);
 
+    // WebP when the encoder is available; otherwise keep the original image (served with its real type).
     const webp = await toWebp(bytes);
-    if (!webp) return json({ error: "No se pudo convertir la portada" }, 500);
-    const { error: upErr } = await svc.storage.from("site-assets").upload(path, webp, { contentType: "image/webp", upsert: true, cacheControl: "31536000" });
+    const isPng = bytes[0] === 0x89 && bytes[1] === 0x50;
+    const isWebp = bytes[8] === 0x57 && bytes[9] === 0x45;
+    const body = webp ?? bytes;
+    const contentType = webp ? "image/webp" : isPng ? "image/png" : isWebp ? "image/webp" : "image/jpeg";
+    const { error: upErr } = await svc.storage.from("site-assets").upload(path, body, { contentType, upsert: true, cacheControl: "31536000" });
     if (upErr) return json({ error: "No se pudo guardar la portada" }, 500);
     return json({ url: pub.publicUrl, cached: false });
   } catch (e) {
