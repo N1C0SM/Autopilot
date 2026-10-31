@@ -10,11 +10,11 @@ struct AdminLandingView: View {
     struct Recommendation: Codable, Identifiable, Hashable { var id: String; var title: String; var description: String; var url: String; var badge: String; var image_url: String? }
 
     private static let aiKeys = [
-        ("OPENAI_API_KEY", "OpenAI (ChatGPT)", "Vídeos, imágenes, blog, libros y el resto de la IA con tu cuenta de OpenAI.", "sk-..."),
+        ("OPENAI_API_KEY", "OpenAI (ChatGPT)", "Imágenes, blog, libros y el resto de la IA con tu cuenta de OpenAI. Los vídeos usan siempre la IA de Lovable.", "sk-..."),
         ("ANTHROPIC_API_KEY", "Claude (Anthropic)", "Segunda opción para el texto si OpenAI se queda sin saldo.", "sk-ant-..."),
         ("DEEPSEEK_API_KEY", "DeepSeek", "Solo texto (planes, blog, chat, clasificación), mucho más barato. No genera imágenes ni vídeos: para eso sigue haciendo falta OpenAI.", "sk-..."),
     ]
-    private static let providers = [("openai", "OpenAI", "Texto, imágenes y vídeo"), ("anthropic", "Claude", "Solo texto"), ("deepseek", "DeepSeek", "Solo texto, muy barato"), ("lovable", "Lovable", "Incluida, sin clave")]
+    private static let providers = [("openai", "OpenAI", "Texto e imágenes"), ("anthropic", "Claude", "Solo texto"), ("deepseek", "DeepSeek", "Solo texto, muy barato"), ("lovable", "Lovable", "Incluida, sin clave")]
     private static let engines = [("auto", "Automático", "Sigue el orden del motor de texto (se salta las que no hacen imágenes)."), ("openai", "OpenAI", "Siempre tu cuenta de OpenAI; si falla, Lovable de respaldo."), ("lovable", "Lovable", "Siempre los créditos de Lovable.")]
 
     @State private var settings: Row = [:]
