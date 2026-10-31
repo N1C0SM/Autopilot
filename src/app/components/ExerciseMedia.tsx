@@ -5,7 +5,7 @@ import { cn } from "@/shared/lib/utils";
 import { BrandMark } from "@/shared/components/ui/brand-mark";
 import { fastImage } from "@/shared/lib/fastImage";
 
-const isDirectFile = (url: string) => /\.(mp4|webm|mov|m4v)(\?|$)/i.test(url);
+export const isDirectFile = (url: string) => /\.(mp4|webm|mov|m4v)(\?|$)/i.test(url);
 
 /** Escala única de miniaturas. No inventar tamaños fuera de esta lista. */
 const THUMB_SIZES = {

@@ -371,6 +371,18 @@ describe("paridad web ↔ apps nativas", () => {
     }
   });
 
+  it("Ejercicio en movimiento: bucle corto, mudo y sin controles sobre la foto, y foto fija con «reducir movimiento», en la web y en la app", () => {
+    const web = read("src/app/components/dashboard/WorkoutTracker.tsx");
+    const app = read("native/Autopilot/Features/Train/WorkoutView.swift");
+    const loop = read("native/Autopilot/Design/LoopingVideo.swift");
+    expect(web).toContain("const loop = vid && isDirectFile(vid) && !prefersReducedMotion ? vid : null;");
+    expect(web).toContain("autoPlay muted loop playsInline");
+    expect(app).toContain("if !reduceMotion, let v = loops.urls[ex.name] { LoopingVideo(url: v) }");
+    expect(loop).toContain("player.isMuted = true");
+    expect(loop).toContain("AVPlayerLooper(");
+    expect(loop).toContain('["mp4", "mov", "m4v"]');
+  });
+
   it("Tu semana: la web y la app guardan los días elegidos (0 = domingo) y el plan entrena justo esos, no desde el lunes", () => {
     expect(read("src/app/pages/Configurator.tsx")).toContain("training_days: c.days");
     expect(read("native/Autopilot/Features/Auth/OnboardingView.swift")).toContain("training_days: days");

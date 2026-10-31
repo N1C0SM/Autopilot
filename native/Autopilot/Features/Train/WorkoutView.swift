@@ -502,6 +502,8 @@ struct ChoiceSheet: View {
 struct FocusViewer: View {
     @ObservedObject var workout: ActiveWorkout
     let index: Int
+    @ObservedObject private var loops = ExerciseLoops.shared
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private func go(_ i: Int) {
         guard workout.exercises.indices.contains(i) else { return }
@@ -543,11 +545,17 @@ struct FocusViewer: View {
                         Image(systemName: "dumbbell").font(.inter(.title)).foregroundStyle(Palette.muted)
                     }
                 }
+                // El movimiento en bucle corto encima de la foto (que hace de portada mientras carga),
+                // como en la web; con «Reducir movimiento», solo la foto.
+                .overlay {
+                    if !reduceMotion, let v = loops.urls[ex.name] { LoopingVideo(url: v) }
+                }
                 .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             .gesture(DragGesture(minimumDistance: 30).onEnded { v in
                 if v.translation.width < -60 { go(index + 1) } else if v.translation.width > 60 { go(index - 1) }
             })
             .accessibilityLabel("\(ex.name). Desliza para cambiar de ejercicio")
+            .task { await loops.load(workout.exercises.map(\.name)) }
             .accessibilityAdjustableAction { dir in
                 switch dir { case .increment: go(index + 1); case .decrement: go(index - 1); default: break }
             }

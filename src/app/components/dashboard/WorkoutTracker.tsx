@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import type { DayPlan, ExerciseTrackingMode, GymExerciseEntry } from "@/shared/types/training";
 import ExercisePicker from "@/app/components/dashboard/ExercisePicker";
 import RPEDialog from "@/app/components/dashboard/RPEDialog";
-import { ExerciseThumb } from "@/app/components/ExerciseMedia";
+import { ExerciseThumb, isDirectFile } from "@/app/components/ExerciseMedia";
 import ExerciseFocus from "@/app/components/ExerciseFocus";
 import { useExerciseMetadata } from "@/shared/hooks/useExerciseMetadata";
 import { getWorkoutAdvanced, getWorkoutRestPreference, getWorkoutView, setWorkoutAdvanced, setWorkoutView, WORKOUT_VIEW_EVENT } from "@/shared/lib/workoutPreferences";
@@ -107,6 +107,12 @@ const SET_GRID = "grid grid-cols-[24px_52px_minmax(0,1fr)_minmax(0,1fr)_44px] it
 const NUMBER_FIELD = "scroll-mb-40 h-11 w-full min-w-0 rounded-[10px] border-0 bg-secondary px-1 text-center font-rounded type-headline tabular-nums outline-none transition-colors duration-150 placeholder:font-normal placeholder:text-muted-foreground/60 focus:bg-accent aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-inset aria-[invalid=true]:ring-destructive";
 // La serie en curso: cifras más grandes que el resto.
 const CURRENT_FIGURE = "!text-[22px] !font-bold !leading-7";
+// iOS solo arranca un vídeo en silencio si `muted` está puesto antes de `play()`.
+const startLoop = (el: HTMLVideoElement | null) => {
+  if (!el) return;
+  el.muted = true;
+  void el.play().catch(() => undefined);
+};
 // Cápsula de 34 pt con el objetivo táctil ampliado a 44 pt.
 const CAPSULE_HIT = "relative before:absolute before:inset-x-0 before:-inset-y-[5px] before:content-['']";
 
@@ -1459,6 +1465,9 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
             const meta = exerciseMetadata.byId[active.exercise_id] || exerciseMetadata.byName[active.name];
             const img = meta?.image_url || active.image_url;
             const vid = active.video_url || meta?.video_url;
+            // El movimiento en bucle corto (como un GIF) con la foto de portada; con «reducir
+            // movimiento», solo la foto. Igual que `LoopingVideo` en la app.
+            const loop = vid && isDirectFile(vid) && !prefersReducedMotion ? vid : null;
             return (
               <div className="space-y-2">
                 {/* Carrusel arriba y el movimiento en grande debajo: se ve en qué ejercicio estás. */}
@@ -1499,8 +1508,10 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                   }}
                   style={{ touchAction: "pan-y" }}
                   aria-label="Desliza para cambiar de ejercicio"
-                  className={`relative flex w-full items-center justify-center overflow-hidden rounded-2xl bg-card md:cursor-grab md:active:cursor-grabbing ${img ? "aspect-[4/3] max-h-[26dvh] [@media(max-height:700px)]:max-h-[22dvh] md:max-h-[40dvh]" : "h-12"}`}>
-                  {img ? (
+                  className={`relative flex w-full items-center justify-center overflow-hidden rounded-2xl bg-card md:cursor-grab md:active:cursor-grabbing ${img || loop ? "aspect-[4/3] max-h-[26dvh] [@media(max-height:700px)]:max-h-[22dvh] md:max-h-[40dvh]" : "h-12"}`}>
+                  {loop ? (
+                    <video key={loop} ref={startLoop} src={loop} poster={img || undefined} autoPlay muted loop playsInline preload="auto" disablePictureInPicture aria-label={active.name} draggable={false} className="pointer-events-none h-full w-full object-cover" />
+                  ) : img ? (
                     <img src={img} alt={active.name} draggable={false} decoding="async" fetchPriority="high" loading="eager" className="h-full w-full object-cover" />
                   ) : (
                     <Dumbbell className="h-6 w-6 text-muted-foreground/60" strokeWidth={1.75} aria-hidden="true" />
@@ -1510,7 +1521,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                       type="button"
                       aria-label={`Ver vídeo de técnica de ${active.name}`}
                       onClick={() => { void hapticTap(); setTechnique({ name: active.name, image: img, video: vid, series: active.series != null ? String(active.series) : undefined, reps: active.reps != null ? String(active.reps) : undefined, rest: active.rest, category: active.muscle_group || meta?.muscle_group, type: active.exercise_type || meta?.exercise_type }); }}
-                      className="material absolute inset-0 m-auto flex h-14 w-14 items-center justify-center rounded-full text-foreground transition-opacity active:opacity-60"
+                      className={`material absolute flex items-center justify-center rounded-full text-foreground transition-opacity active:opacity-60 ${loop ? "bottom-2 right-2 h-11 w-11" : "inset-0 m-auto h-14 w-14"}`}
                     >
                       <Play className="h-5 w-5 fill-current" aria-hidden="true" />
                     </button>
