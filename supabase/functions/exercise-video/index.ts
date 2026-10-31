@@ -7,7 +7,14 @@ const json = (b: unknown, status = 200) =>
   new Response(JSON.stringify(b), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
 const GATEWAY = "https://ai.gateway.lovable.dev";
-const MODEL = "google/gemini-omni-1.1-flash";
+/**
+ * Veo 3.1 Fast: admite foto como primer y último fotograma, clips de 4 s y no
+ * añade sonido salvo que se pida. OpenAI retiró Sora 2 y su API de vídeos el
+ * 24-09-2026, así que los vídeos van siempre por el AI Gateway de Lovable.
+ */
+const MODEL = "google/veo-3.1-fast";
+/** Una repetición completa que empieza y acaba en la pose de la foto. */
+const CLIP_SECONDS = 4;
 const IMAGE_MODEL = "openai/gpt-image-2.5-sunburst";
 
 /** Estilo visual maestro compartido por foto y vídeo (coherencia tipo Hevy/Symmetry). */
@@ -37,6 +44,14 @@ function cameraAngle(name: string, group: string): string {
   }
   return "Camera angle: centered 45 degree medium shot focused on the working muscle.";
 }
+
+/**
+ * La foto del ejercicio como primer y último fotograma: el clip arranca y acaba
+ * en la misma pose (bucle sin salto) y el vídeo coincide con la foto.
+ * Los nombres de campo del AI Gateway no están documentados en público: si el
+ * gateway los rechaza (400, sin coste), solo hay que cambiarlos aquí.
+ */
+const loopFrames = (url: string) => ({ first_frame: { image_url: url }, last_frame: { image_url: url } });
 
 type Job = { id: string; status: string; progress?: number; error?: { code: string; message: string } };
 
@@ -167,15 +182,16 @@ Deno.serve(async (req) => {
       // 200 con `paused`: no es un fallo, la cola simplemente salta los vídeos.
       return json({ paused: true, status: "paused", message: "La generación de vídeos está pausada en Ajustes → Claves de IA" });
     }
-    const jobRaw = String(exercise.video_job_id || "");
-    const jobIsOpenai = jobRaw.startsWith("openai:");
-    const useOpenai = action === "check" && jobRaw ? jobIsOpenai : cfg.mediaOrder[0] === "openai";
-    const openaiKey = useOpenai ? cfg.openaiKey : "";
+    const jobId = String(exercise.video_job_id || "");
+    // Trabajos antiguos de Sora: su API ya no existe; se sueltan para regenerarlos.
+    if (action === "check" && jobId.startsWith("openai:")) {
+      await svc.from("exercises").update({ video_job_id: null, media_error: null }).eq("id", exerciseId);
+      return json({ status: "failed", expired: true, error: "El vídeo anterior caducó; se volverá a generar" });
+    }
+    // Fotos: proveedor según Ajustes. Vídeos: siempre créditos de Lovable.
+    const openaiKey = action === "image" && cfg.mediaOrder[0] === "openai" ? cfg.openaiKey : "";
     const apiKey = openaiKey || cfg.lovableKey;
     if (!apiKey) return json({ error: "Falta la clave de IA del proyecto" }, 500);
-    const BASE = openaiKey ? "https://api.openai.com" : GATEWAY;
-    const jobId = jobRaw.replace(/^openai:/, "");
-    const noCredit = openaiKey ? "Sin saldo en tu cuenta de OpenAI" : "Sin créditos de IA suficientes";
 
     const name = exercise.name || "un ejercicio";
     const group = exercise.muscle_group || "full body";
@@ -246,14 +262,17 @@ Deno.serve(async (req) => {
       if (exercise.video_job_id) {
         return json({ jobId: exercise.video_job_id, status: "in_progress", resumed: true });
       }
-      const prompt = `Professional exercise technique demonstration video of the exercise "${name}" (${group}). The athlete performs exactly 2 smooth controlled repetitions with perfect biomechanical form, cadence 2 seconds eccentric, 1 second pause, 2 seconds concentric, full range of motion, ending back at the exact starting position so the clip loops seamlessly. ${angle} ${STYLE}`;
-      const r = await fetch(`${BASE}/v1/videos`, {
+      const frame = typeof exercise.image_url === "string" ? exercise.image_url : "";
+      if (!frame) return json({ error: "Genera primero la foto: el vídeo parte de ella" }, 400);
+      const prompt = `Professional exercise technique demonstration video of the exercise "${name}" (${group}). Start from the exact pose of the reference frame, perform exactly one smooth controlled repetition with perfect biomechanical form over the full range of motion, and return to that exact pose on the last frame so the clip loops seamlessly. Same athlete, outfit, equipment, lighting and framing as the reference frame. Silent clip, no audio. ${angle} ${STYLE}`;
+      const r = await fetch(`${GATEWAY}/v1/videos`, {
         method: "POST",
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json", "X-Lovable-AIG-SDK": "fetch" },
-        body: JSON.stringify(openaiKey ? { model: "sora-2", prompt, seconds: "8", size: "1280x720" } : {
+        body: JSON.stringify({
           model: MODEL,
           input: prompt,
-          response_format: { type: "video", resolution: "720p", duration: "8s", aspect_ratio: "16:9" },
+          ...loopFrames(frame),
+          response_format: { type: "video", resolution: "720p", duration: `${CLIP_SECONDS}s`, aspect_ratio: "16:9" },
         }),
       });
       if (!r.ok) {
@@ -262,11 +281,9 @@ Deno.serve(async (req) => {
         const message = r.status === 429
           ? "Ya hay un vídeo generándose, espera unos segundos"
           : (r.status === 402 || body?.error?.code === "insufficient_quota")
-            ? noCredit
+            ? "Sin créditos de IA suficientes"
             : r.status === 404
-              ? (openaiKey
-                ? "Vídeos no disponibles: tu cuenta de OpenAI no tiene acceso al modelo de vídeo (sora-2)"
-                : "Vídeos no disponibles ahora mismo en la IA de Lovable")
+              ? "Vídeos no disponibles ahora mismo en la IA de Lovable"
               : msg;
         console.error(`video create failed [${r.status}]: ${msg}`);
         await svc.from("exercises").update({ media_error: message }).eq("id", exerciseId);
@@ -274,7 +291,7 @@ Deno.serve(async (req) => {
       }
       const job = (await r.json()) as Job;
       await svc.from("exercises").update({
-        video_job_id: openaiKey ? `openai:${job.id}` : job.id,
+        video_job_id: job.id,
         media_error: null,
       }).eq("id", exerciseId);
       return json({ jobId: job.id, status: job.status });
@@ -287,7 +304,7 @@ Deno.serve(async (req) => {
     }
 
 
-    const poll = await fetch(`${BASE}/v1/videos/${encodeURIComponent(jobId)}`, {
+    const poll = await fetch(`${GATEWAY}/v1/videos/${encodeURIComponent(jobId)}`, {
       headers: { Authorization: `Bearer ${apiKey}` },
     });
     if (!poll.ok) {
@@ -311,7 +328,7 @@ Deno.serve(async (req) => {
     }
 
     // Download MP4 and store it (the gateway URL expires)
-    const dl = await fetch(`${BASE}/v1/videos/${encodeURIComponent(job.id)}/content`, {
+    const dl = await fetch(`${GATEWAY}/v1/videos/${encodeURIComponent(job.id)}/content`, {
       headers: { Authorization: `Bearer ${apiKey}` },
     });
     if (!dl.ok || !dl.body) {
