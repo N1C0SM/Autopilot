@@ -291,6 +291,9 @@ const TrainingPlanView = ({ dayPlans, initialDay, onOpenWorkout }: Props) => {
                         rest: ex.rest,
                         category,
                         type: exerciseType,
+                        pattern,
+                        stimulus,
+                        load,
                       })
                     }
                   />
@@ -361,6 +364,9 @@ const TrainingPlanView = ({ dayPlans, initialDay, onOpenWorkout }: Props) => {
           rest: detail.rest,
           muscleGroup: detail.category,
           exerciseType: detail.type,
+          pattern: detail.pattern,
+          stimulus: detail.stimulus,
+          load: detail.load,
         } : null}
         onClose={() => setDetail(null)}
       />

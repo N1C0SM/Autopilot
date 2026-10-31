@@ -154,7 +154,7 @@ const ExerciseList = ({ items, favorites, onOpen }: {
     {items.map((e) => (
       <li key={e.id}>
         <button type="button" onClick={() => onOpen(e)} className="flex w-full items-center gap-3 py-2.5 text-left transition active:opacity-60">
-          <ExerciseThumb image={e.image} name={e.name} size="md" />
+          <ExerciseThumb image={e.image} name={e.name} pattern={e.pattern} stimulus={e.stimulus} load={e.load} size="md" />
           <span className="min-w-0 flex-1">
             <span className="block truncate type-body font-medium">{e.name}</span>
             <span className="block truncate type-footnote text-muted-foreground">{subtitle(e)}</span>
