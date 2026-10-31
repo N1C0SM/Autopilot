@@ -155,8 +155,8 @@ private enum Quiz {
     static let goals = [Option(v: "lose_weight", l: "Perder grasa"), Option(v: "gain_muscle", l: "Ganar músculo"),
                         Option(v: "recomp", l: "Recomposición"), Option(v: "general_health", l: "Fuerza y salud")]
     static let focuses = [Option(v: "gimnasio", l: "Gimnasio"), Option(v: "calistenia", l: "Calistenia"), Option(v: "mixto", l: "Mixto")]
-    static let modes = [Option(v: "individual", l: "Individual", d: "Un plan solo para ti"),
-                        Option(v: "pareja", l: "En pareja", d: "Entrenáis juntos con un plan para los dos")]
+    // Filas de una línea, iguales que «Perder grasa» / «Ganar músculo».
+    static let modes = [Option(v: "individual", l: "Individual"), Option(v: "pareja", l: "En pareja")]
     static let durations = [Option(v: "40", l: "30–45 min"), Option(v: "55", l: "45–60 min"), Option(v: "75", l: "60–90 min")]
     static let structures = [Option(v: "full_body", l: "Full Body"), Option(v: "torso_pierna", l: "Torso / Pierna"),
                              Option(v: "ppl", l: "Empuje / Tirón / Pierna"), Option(v: "coach", l: "No lo sé, que Autopilot elija")]
@@ -346,8 +346,7 @@ struct OnboardingQuizView: View {
                         Image(systemName: "checkmark").font(.system(size: 17, weight: .bold)).foregroundStyle(Palette.gold)
                             .opacity(o.v == value ? 1 : 0)
                     }
-                    // Con subtítulo, aire arriba y abajo como en la web (`py-3`): el texto no toca la línea.
-                    .padding(.horizontal, 16).padding(.vertical, o.d == nil ? 0 : 12).frame(minHeight: 56).contentShape(Rectangle())
+                    .padding(.horizontal, 16).frame(minHeight: 56).contentShape(Rectangle())
                     .overlay(alignment: .bottom) { if i < options.count - 1 { Palette.separator.frame(height: 0.5).padding(.leading, 16) } }
                 }
                 .buttonStyle(.plain)

@@ -41,10 +41,8 @@ const STRUCTURE = [
 const STYLE = [
   { v: "direct", l: "Directo y exigente" }, { v: "flexible", l: "Flexible y realista" }, { v: "technical", l: "Técnico y analítico" },
 ];
-const MODE = [
-  { v: "individual", l: "Individual", d: "Un plan solo para ti" },
-  { v: "pareja", l: "En pareja", d: "Entrenáis juntos con un plan para los dos" },
-];
+// Filas de una línea, iguales que «Perder grasa» / «Ganar músculo».
+const MODE = [{ v: "individual", l: "Individual" }, { v: "pareja", l: "En pareja" }];
 const TIMES = Array.from({ length: 32 }, (_, i) => {
   const m = 7 * 60 + i * 30;
   return `${String(Math.floor(m / 60)).padStart(2, "0")}:${m % 60 ? "30" : "00"}`;

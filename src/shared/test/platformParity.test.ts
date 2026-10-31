@@ -200,7 +200,7 @@ describe("paridad web ↔ apps nativas", () => {
       "Elige al menos dos días. Ajustamos el plan a tu semana.",
       "Así queda con tus respuestas. Crea tu cuenta para guardar tu plan completo.",
       "Perder grasa", "Ganar músculo", "Recomposición", "Fuerza y salud", "Gimnasio", "Calistenia", "Mixto",
-      "Un plan solo para ti", "Entrenáis juntos con un plan para los dos", "30–45 min", "45–60 min", "60–90 min",
+      "Individual", "En pareja", "30–45 min", "45–60 min", "60–90 min",
       "Empuje / Tirón / Pierna", "No lo sé, que Autopilot elija", "Tiempo por sesión", "Tu peso en kg (opcional)",
       "Mismo calendario, cargas adaptadas a cada uno.", "Guardar mi plan gratis",
       "y el tratamiento de mis datos de salud para preparar mi plan.",
@@ -360,9 +360,11 @@ describe("paridad web ↔ apps nativas", () => {
     expect(app).not.toContain('Image(systemName: "ellipsis").font(.inter(size: 15, weight: .bold)).foregroundStyle(Palette.gold)');
   });
 
-  it("Primer uso: las opciones con subtítulo (Individual / En pareja) tienen aire arriba y abajo, en la web y en la app", () => {
-    expect(read("src/app/pages/Configurator.tsx")).toContain("items-center gap-3 py-3 sm:py-3.5");
-    expect(read("native/Autopilot/Features/Auth/OnboardingView.swift")).toContain(".padding(.vertical, o.d == nil ? 0 : 12)");
+  it("Primer uso: Individual / En pareja son filas de una línea, como «Perder grasa», en la web y en la app", () => {
+    for (const src of [read("src/app/pages/Configurator.tsx"), read("native/Autopilot/Features/Auth/OnboardingView.swift")]) {
+      expect(src).not.toContain("Un plan solo para ti");
+      expect(src).not.toContain("Entrenáis juntos con un plan para los dos");
+    }
   });
 
   it("Gratis y Plus no leen «tu entrenador» en el primer uso ni en Nutrición", () => {
