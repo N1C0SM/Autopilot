@@ -109,6 +109,8 @@ struct LibraryExercise: Identifiable, Hashable {
     let equipment: [String]
     let modalities: [String]
     let pattern: String?
+    let stimulus: String?
+    let load: String?
     let level: Int?
     let image: String?
     let video: String?
@@ -148,7 +150,7 @@ final class ExerciseLibraryModel: ObservableObject {
     @Published var personal = false
 
     private static var cache: [LibraryExercise]?
-    private static let base = "id, name, muscle_group, exercise_type, movement_pattern, level, image_url, video_url"
+    private static let base = "id, name, muscle_group, exercise_type, movement_pattern, stimulus_type, load_level, level, image_url, video_url"
     private static let full = base + ", slug, alt_names, description, instructions, common_mistakes, tips, safety_notes, source, license, license_author, source_url, "
         + "exercise_muscles(role, muscles(name, filter_group, sort)), exercise_equipment(equipment(name, sort)), "
         + "exercise_categories(exercise_categories_catalog(name))"
@@ -161,6 +163,7 @@ final class ExerciseLibraryModel: ObservableObject {
         struct CategoryLink: Decodable { let exercise_categories_catalog: Named? }
         let id: String; let name: String
         let muscle_group: String?; let exercise_type: String?; let movement_pattern: String?; let level: Int?
+        let stimulus_type: String?; let load_level: String?
         let image_url: String?; let video_url: String?
         let alt_names: [String]?; let description: String?; let instructions: [String]?
         let common_mistakes: [String]?; let tips: [String]?; let safety_notes: [String]?
@@ -182,7 +185,7 @@ final class ExerciseLibraryModel: ObservableObject {
                 secondaryMuscles: uniq(links.filter { $0.role != "primary" }.map { $0.muscles?.name }),
                 equipment: uniq((exercise_equipment ?? []).sorted { ($0.equipment?.sort ?? 0) < ($1.equipment?.sort ?? 0) }.map { $0.equipment?.name }),
                 modalities: modalities.isEmpty ? ExerciseLibraryCatalog.legacyModalities[exercise_type ?? ""] ?? [] : modalities,
-                pattern: movement_pattern, level: level, image: image_url, video: video_url,
+                pattern: movement_pattern, stimulus: stimulus_type, load: load_level, level: level, image: image_url, video: video_url,
                 description: description, instructions: instructions ?? [], mistakes: common_mistakes ?? [],
                 tips: tips ?? [], safety: safety_notes ?? [], source: source ?? "autopilot",
                 license: license, licenseAuthor: license_author, sourceUrl: source_url)
@@ -432,7 +435,7 @@ struct ExerciseLibraryView: View {
                         ForEach(recent) { e in
                             Button { open(e) } label: {
                                 VStack(alignment: .leading, spacing: 6) {
-                                    ExerciseThumbView(url: e.image, width: 112, height: 63)
+                                    ExerciseThumbView(url: e.image, name: e.name, pattern: e.pattern, stimulus: e.stimulus, load: e.load, width: 112, height: 63)
                                     Text(e.name).font(.apFootnote.weight(.medium)).lineLimit(2).multilineTextAlignment(.leading)
                                 }
                                 .frame(width: 112, alignment: .leading)
@@ -485,11 +488,18 @@ private struct LibrarySectionTitle: View {
 
 private struct ExerciseThumbView: View {
     let url: String?
+    var name: String = ""
+    var pattern: String? = nil
+    var stimulus: String? = nil
+    var load: String? = nil
     var width: CGFloat = 48
     var height: CGFloat = 48
     var body: some View {
         Group {
-            if let url, let u = URL(string: url) {
+            if let spec = ExerciseMotion.spec(name: name, pattern: pattern, stimulus: stimulus, load: load) {
+                // La huella del ejercicio manda: es la firma de Autopilot, no una foto.
+                ZStack { Palette.secondary; ExerciseMotionGlyph(spec: spec).padding(6) }
+            } else if let url, let u = URL(string: url) {
                 CachedAsyncImage(url: u, maxSide: 200) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
             } else {
                 ZStack { Palette.secondary; Image("lu-dumbbell").resizable().frame(width: 18, height: 18).foregroundStyle(Palette.muted) }
@@ -510,7 +520,7 @@ private struct ExerciseRows: View {
             ForEach(Array(items.enumerated()), id: \.element.id) { index, e in
                 Button { onOpen(e) } label: {
                     HStack(spacing: 12) {
-                        ExerciseThumbView(url: e.image)
+                        ExerciseThumbView(url: e.image, name: e.name, pattern: e.pattern, stimulus: e.stimulus, load: e.load)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(e.name).font(.apBody.weight(.medium)).lineLimit(1)
                             Text(e.subtitle).font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(1)
@@ -536,6 +546,7 @@ struct ExerciseDetailView: View {
     let userId: UUID?
     let onOpen: (LibraryExercise) -> Void
     @State private var variantIds: [String] = []
+    @State private var showPhoto = false
 
     private var all: [LibraryExercise] { model.items ?? [] }
     private var variants: [LibraryExercise] { variantIds.compactMap { id in all.first { $0.id == id } } }
