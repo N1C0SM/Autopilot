@@ -61,6 +61,8 @@ WHERE b.id = e.id;
 CREATE UNIQUE INDEX IF NOT EXISTS exercises_slug_key ON public.exercises (slug);
 CREATE INDEX IF NOT EXISTS exercises_name_key_idx ON public.exercises (public.exercise_name_key(name));
 CREATE INDEX IF NOT EXISTS exercises_status_idx ON public.exercises (status);
+-- Una sola ficha por ejercicio de cada catálogo importado (la importación se puede repetir sin duplicar).
+CREATE UNIQUE INDEX IF NOT EXISTS exercises_source_ref_key ON public.exercises (source, source_ref) WHERE source_ref IS NOT NULL;
 
 -- Slug automático, updated_at y ningún nombre repetido en altas o renombres.
 -- Los duplicados que ya existieran no bloquean nada: solo se comprueba al cambiar el nombre.

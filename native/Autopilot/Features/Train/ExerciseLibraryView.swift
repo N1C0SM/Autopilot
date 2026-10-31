@@ -125,7 +125,8 @@ struct LibraryExercise: Identifiable, Hashable {
     var subtitle: String { [primaryMuscles.first ?? groups.first, equipment.first].compactMap { $0 }.joined(separator: " · ") }
     /// Atribución obligatoria para fichas de terceros (CC BY-SA).
     var attribution: String? {
-        guard source != "autopilot" else { return nil }
+        // Solo las licencias que exigen citar al autor en la ficha (CC BY / BY-SA); lo demás se ve como de Autopilot.
+        guard source != "autopilot", (license ?? "").uppercased().hasPrefix("CC BY") else { return nil }
         return ["Fuente: \(source == "wger" ? "wger.de" : source)", licenseAuthor, license].compactMap { $0 }.joined(separator: " · ")
     }
 }

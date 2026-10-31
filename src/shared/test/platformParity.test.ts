@@ -453,4 +453,27 @@ describe("paridad web ↔ apps nativas", () => {
       expect(app).toContain(text);
     }
   });
+
+  it("Admin → Biblioteca: el catálogo base se importa, redacta y publica igual en la web y en la app", () => {
+    const web = read("src/app/components/admin-library/CatalogImport.tsx");
+    const app = read("native/Autopilot/Features/Admin/AdminCatalogImport.swift");
+    for (const text of [
+      "Catálogo base",
+      "Ejercicios con datos abiertos (licencia MIT), sin imágenes de terceros. Entran como borrador, la IA los reescribe con la voz de Autopilot y los publicas tú. El planificador no los usa hasta que los marques como aptos.",
+      "Revisar importación", "Redactar con IA", "Publicar redactados", "como borrador", "variantes repetidas", "ya están en tu biblioteca",
+      "Pendientes de revisar", "no se pudieron redactar",
+    ]) {
+      expect(web).toContain(text);
+      expect(app).toContain(text);
+    }
+    for (const action of ["status", "preview", "import", "draft", "publish"]) {
+      expect(web).toContain(`action: "${action}"`);
+      expect(app).toContain(`action: "${action}"`);
+    }
+    // Las fichas importadas no llevan marca ajena: solo CC BY / BY-SA obliga a citar en la ficha.
+    expect(read("src/shared/lib/exerciseLibrary.ts")).toContain('!/^CC BY/i.test(e.license ?? "")');
+    expect(read("native/Autopilot/Features/Train/ExerciseLibraryView.swift")).toContain('(license ?? "").uppercased().hasPrefix("CC BY")');
+    expect(read("src/app/components/admin/ExerciseLibrary.tsx")).toContain("<CatalogImport ");
+    expect(read("native/Autopilot/Features/Admin/AdminExercises.swift")).toContain("AdminCatalogImportCard {");
+  });
 });

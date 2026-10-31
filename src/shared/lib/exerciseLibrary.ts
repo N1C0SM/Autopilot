@@ -175,8 +175,9 @@ export const subtitle = (e: LibraryExercise): string =>
   [e.primaryMuscles[0] ?? e.groups[0], e.equipment[0]].filter(Boolean).join(" · ");
 
 /** Texto de atribución obligatorio para fichas de terceros (CC BY-SA). */
+/** Solo las licencias que exigen citar al autor en la ficha (CC BY / BY-SA); lo demás se ve como de Autopilot. */
 export const attribution = (e: LibraryExercise): string | null => {
-  if (e.source === "autopilot") return null;
+  if (e.source === "autopilot" || !/^CC BY/i.test(e.license ?? "")) return null;
   const source = e.source === "wger" ? "wger.de" : e.source;
   return [`Fuente: ${source}`, e.licenseAuthor, e.license].filter(Boolean).join(" · ");
 };

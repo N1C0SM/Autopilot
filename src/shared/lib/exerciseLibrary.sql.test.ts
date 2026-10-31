@@ -100,6 +100,10 @@ describe("biblioteca de ejercicios: modelo de datos", () => {
     await expect(db.exec(`UPDATE public.exercises SET name = 'Sentadilla bulgara' WHERE id = '${PRESS}'`)).rejects.toThrow(/Ya existe/);
     // Los duplicados antiguos se pueden seguir editando mientras no cambie el nombre.
     await db.exec(`UPDATE public.exercises SET image_url = 'https://x/y.webp' WHERE id = '${PRESS_DUP}'`);
+    // Cada ejercicio de un catálogo importado entra una sola vez.
+    await db.exec("INSERT INTO public.exercises (name, source, source_ref, status) VALUES ('Barbell curl', 'exercises-dataset', '0031', 'draft')");
+    await expect(db.exec("INSERT INTO public.exercises (name, source, source_ref) VALUES ('Curl con barra', 'exercises-dataset', '0031')"))
+      .rejects.toThrow(/exercises_source_ref_key/);
   });
 
   it("los usuarios ven publicados y archivados; borradores y pendientes solo el admin", async () => {

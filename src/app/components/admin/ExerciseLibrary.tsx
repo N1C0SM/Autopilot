@@ -36,6 +36,7 @@ import { hapticSelection, hapticTap } from "@/shared/lib/native";
 import { cn } from "@/shared/lib/utils";
 import { skipAutoFocusOnTouch } from "@/app/components/admin-library/touchAutoFocus";
 import { WithImageFallback } from "@/app/components/admin-library/WithImageFallback";
+import CatalogImport from "@/app/components/admin-library/CatalogImport";
 
 /**
  * Versión del estilo visual actual. Debe coincidir con MEDIA_STYLE_VERSION de la
@@ -1069,6 +1070,8 @@ const ExerciseLibrary = () => {
           <Progress value={((mediaBatch.current - 1) / mediaBatch.total) * 100} aria-label="Progreso de la cola de medios" />
         </div>
       )}
+
+      <CatalogImport onChanged={() => void fetchExercises()} />
 
       {!mediaColumnsReady && (
         <p role="status" className="type-footnote text-muted-foreground">
