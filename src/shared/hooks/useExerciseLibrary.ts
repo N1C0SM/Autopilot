@@ -11,6 +11,8 @@ type Row = {
   muscle_group: string | null;
   exercise_type: string | null;
   movement_pattern: string | null;
+  stimulus_type?: string | null;
+  load_level?: string | null;
   level: number | null;
   image_url: string | null;
   video_url: string | null;

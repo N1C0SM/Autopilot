@@ -10,6 +10,8 @@ export interface ExerciseMetadata {
   muscle_group: string | null;
   exercise_type: string | null;
   movement_pattern: string | null;
+  stimulus_type?: string | null;
+  load_level?: string | null;
   skill_tag: string | null;
   video_url: string | null;
   image_url: string | null;
