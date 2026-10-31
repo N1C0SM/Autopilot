@@ -1194,6 +1194,9 @@ const ExerciseLibrary = () => {
                         name: ex.name,
                         image: ex.image_url,
                         video: ex.video_url,
+                        pattern: ex.movement_pattern,
+                        stimulus: ex.stimulus_type,
+                        load: ex.load_level,
                         detail: [ex.muscle_group, ex.exercise_type].filter(Boolean).join(" · ") || null,
                       });
                     }}

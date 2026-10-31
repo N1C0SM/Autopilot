@@ -9,6 +9,10 @@ export type ExercisePreviewData = {
   video?: string | null;
   /** Línea corta bajo el nombre (series, categoría…). */
   detail?: string | null;
+  /** Patrón, estímulo y carga: dibujan la huella de movimiento en el héroe. */
+  pattern?: string | null;
+  stimulus?: string | null;
+  load?: string | null;
 };
 
 /**
@@ -29,7 +33,7 @@ export const ExercisePreviewSheet = ({
       {...(exercise?.detail ? {} : { "aria-describedby": undefined })}
     >
       {/* Bajo el botón de cerrar, no debajo de él: los controles del vídeo quedan libres. */}
-      <ExerciseMedia video={exercise?.video} image={exercise?.image} name={exercise?.name} className="mt-7 rounded-[14px] sm:mt-6" />
+      <ExerciseMedia video={exercise?.video} image={exercise?.image} name={exercise?.name} pattern={exercise?.pattern} stimulus={exercise?.stimulus} load={exercise?.load} className="mt-7 rounded-[14px] sm:mt-6" />
 
       <div className="mt-5 pr-8">
         <DialogTitle className="type-title2 sm:type-title2">{exercise?.name}</DialogTitle>

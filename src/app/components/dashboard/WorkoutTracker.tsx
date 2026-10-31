@@ -179,6 +179,9 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
     rest?: string;
     category?: string | null;
     type?: string | null;
+    pattern?: string | null;
+    stimulus?: string | null;
+    load?: string | null;
   } | null>(null);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [saveError, setSaveError] = useState(false);
@@ -1487,7 +1490,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                         onClick={() => { setExpandedExercise(idx); void hapticTap(); }}
                         className={`shrink-0 rounded-[14px] p-0.5 transition-opacity duration-150 active:opacity-40 ${isActive ? "ring-2 ring-inset ring-primary" : "opacity-60"}`}
                       >
-                        <ExerciseThumb image={m?.image_url || item.image_url} video={item.video_url || m?.video_url} name={item.name} completed={done} />
+                        <ExerciseThumb image={m?.image_url || item.image_url} video={item.video_url || m?.video_url} name={item.name} pattern={m?.movement_pattern} stimulus={m?.stimulus_type} load={m?.load_level} completed={done} />
                       </button>
                     );
                   })}
@@ -1520,7 +1523,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                     <button
                       type="button"
                       aria-label={`Ver vídeo de técnica de ${active.name}`}
-                      onClick={() => { void hapticTap(); setTechnique({ name: active.name, image: img, video: vid, series: active.series != null ? String(active.series) : undefined, reps: active.reps != null ? String(active.reps) : undefined, rest: active.rest, category: active.muscle_group || meta?.muscle_group, type: active.exercise_type || meta?.exercise_type }); }}
+                      onClick={() => { void hapticTap(); setTechnique({ name: active.name, image: img, video: vid, series: active.series != null ? String(active.series) : undefined, reps: active.reps != null ? String(active.reps) : undefined, rest: active.rest, category: active.muscle_group || meta?.muscle_group, type: active.exercise_type || meta?.exercise_type, pattern: meta?.movement_pattern, stimulus: meta?.stimulus_type, load: meta?.load_level }); }}
                       className={`material absolute flex items-center justify-center rounded-full text-foreground transition-opacity active:opacity-60 ${loop ? "bottom-2 right-2 h-11 w-11" : "inset-0 m-auto h-14 w-14"}`}
                     >
                       <Play className="h-5 w-5 fill-current" aria-hidden="true" />
@@ -1554,6 +1557,12 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
             const exerciseVideo = ex.video_url || metadata?.video_url;
             const exerciseCategory = ex.muscle_group || metadata?.muscle_group;
             const exerciseType = ex.exercise_type || metadata?.exercise_type;
+            // Patrón, estímulo y carga: con los tres se dibuja la huella del ejercicio.
+            const exercisePattern = ("movement_pattern" in ex && typeof ex.movement_pattern === "string"
+              ? ex.movement_pattern
+              : metadata?.movement_pattern) ?? null;
+            const exerciseStimulus = metadata?.stimulus_type ?? null;
+            const exerciseLoad = metadata?.load_level ?? null;
             const trackingConfig = getExerciseTrackingConfig({
               name: ex.name,
               skill_tag: metadata?.skill_tag ?? undefined,
@@ -1602,7 +1611,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                     : "flex h-auto w-full items-center gap-3 whitespace-normal p-0 pl-3 text-left transition-colors duration-150 active:bg-accent has-[[role=button]:active]:bg-transparent"}
                 >
                   {/* Miniatura única de ejercicio (misma que en el resto de la app); en foco ya está el visor */}
-                  {!focused && <ExerciseThumb image={metadata?.image_url || ex.image_url} video={exerciseVideo} name={ex.name} completed={allDone} />}
+                  {!focused && <ExerciseThumb image={metadata?.image_url || ex.image_url} video={exerciseVideo} name={ex.name} pattern={exercisePattern} stimulus={exerciseStimulus} load={exerciseLoad} completed={allDone} />}
                   <div className={focused ? "flex min-w-0 flex-1 items-start" : `flex min-h-[68px] min-w-0 flex-1 items-center py-2 pr-1 ${i > 0 ? "sep-t" : ""}`}>
                   <div className="min-w-0 flex-1 text-left">
                     <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
@@ -1675,6 +1684,9 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                           rest: ex.rest,
                           category: exerciseCategory,
                           type: exerciseType,
+                          pattern: exercisePattern,
+                          stimulus: exerciseStimulus,
+                          load: exerciseLoad,
                         });
                       }}
                       onKeyDown={(e) => {
@@ -1690,6 +1702,9 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                             rest: ex.rest,
                             category: exerciseCategory,
                             type: exerciseType,
+                            pattern: exercisePattern,
+                            stimulus: exerciseStimulus,
+                            load: exerciseLoad,
                           });
                         }
                       }}
@@ -2044,6 +2059,9 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
           rest: technique.rest,
           muscleGroup: technique.category,
           exerciseType: technique.type,
+          pattern: technique.pattern,
+          stimulus: technique.stimulus,
+          load: technique.load,
         } : null}
         onClose={() => setTechnique(null)}
       />

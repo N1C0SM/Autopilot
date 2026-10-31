@@ -4,13 +4,14 @@ import { applyProgressionToPendingSets, getProgressionSuggestion, summarizePrevi
 const exercise = { exercise_id: "1", name: "Press banca", series: 3, reps: 8, weight: "60", rest: "90 s" };
 
 describe("getProgressionSuggestion", () => {
-  it("suggests a small increase after all target reps", () => {
+  it("keeps the load after all target reps and leaves the increase to the user", () => {
     const result = getProgressionSuggestion(exercise, [
       { weight: "60", reps: 8, done: true },
       { weight: "60", reps: 9, done: true },
       { weight: "60", reps: 8, done: true },
     ]);
-    expect(result).toMatchObject({ label: "Subir", weight: "62.5" });
+    expect(result).toMatchObject({ label: "Mantener", weight: "60" });
+    expect(result?.reason).toContain("aumentarla manualmente");
   });
 
   describe("applyProgressionToPendingSets", () => {
@@ -74,7 +75,8 @@ describe("getProgressionSuggestion", () => {
       { weight: "60,5", reps: 8, done: true },
     ]);
 
-    expect(result).toMatchObject({ label: "Subir", weight: "63" });
+    // La coma se lee como decimal (60,5 → 60.5), no se trunca a 60 ni a 605.
+    expect(result).toMatchObject({ label: "Mantener", weight: "60.5" });
   });
 
   it("ignores invalid weights instead of suggesting an unsafe load", () => {
