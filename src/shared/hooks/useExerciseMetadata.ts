@@ -50,13 +50,14 @@ export function useExerciseMetadata(dayPlans: DayPlan[]): ExerciseMetadataIndex 
             supabase
               .from("exercises")
               .select("id, name, muscle_group, exercise_type, movement_pattern, stimulus_type, load_level, skill_tag, video_url, image_url, tracking_mode")
+              .in("id", ids),
           );
         }
         if (names.length > 0) {
           requests.push(
             supabase
               .from("exercises")
-              .select("id, name, muscle_group, exercise_type, movement_pattern, skill_tag, video_url, image_url, tracking_mode")
+              .select("id, name, muscle_group, exercise_type, movement_pattern, stimulus_type, load_level, skill_tag, video_url, image_url, tracking_mode")
               .in("name", names),
           );
         }
