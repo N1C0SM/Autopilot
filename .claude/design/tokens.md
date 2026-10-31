@@ -4,17 +4,31 @@ Los valores viven en `src/index.css` (variables CSS y clases `type-*`, `btn-*`) 
 
 ## Color
 
-| Token | Uso |
+Escala de superficies: cuatro pasos sobre negro, ni uno más. Una tarjeta no lleva borde; lo que la separa es el escalón de color.
+
+| Token | Valor | Uso |
+|---|---|---|
+| `bg-background` | `#000` | Fondo de toda pantalla. |
+| `bg-card` | `240 5% 8%` (`#141416`) | Tarjetas, grupos de ajustes, filas. |
+| `bg-secondary` | `240 5% 16%` (`#29292C`) | Superficie dentro de tarjeta: campos, chips, botón secundario. |
+| `bg-accent` | `240 5% 21%` (`#333338`) | Solo pulsado / fila resaltada. |
+| `border` / `bg-border` | `240 4% 15%` (`#262629`) | Separadores (`sep-b`, `sep-t`). **Nunca borde de tarjeta.** |
+| `text-foreground` | blanco | Texto principal. |
+| `text-muted-foreground` | `240 4% 67%` (`#A8A8AE`) | Texto secundario (AA sobre las tres superficies). Nunca más pequeño que `type-footnote`. |
+| `text-primary` / `bg-primary` | dorado `41 61% 61%` (`#D8B25E`) | Acción principal, cifra protagonista, palabra destacada, estado activo. |
+| `bg-primary/15` | dorado al 15 % | Etiquetas, fichas activas, fila «hecha». |
+| `border-primary/30` | dorado al 30 % | Borde de la fila o campo activo. |
+| `text-destructive` | `#FF453A` | Solo borrar, cerrar sesión o error. **Nunca el número de serie ni el fondo de una fila.** |
+| `text-success` | verde | Solo confirmación real (pago, guardado). El entrenamiento no usa verde: su estado es dorado. |
+
+Regla de estado del entrenamiento (una sola escala, la misma en web, iPhone y Mac):
+
+| Estado | Cómo se ve |
 |---|---|
-| `bg-background` (negro `#000`) | Fondo de toda pantalla. |
-| `bg-card` (gris muy oscuro) | Tarjetas, filas, campos. |
-| `bg-secondary` | Superficie dentro de una tarjeta, chips, botones secundarios. |
-| `text-foreground` (blanco) | Texto principal. |
-| `text-muted-foreground` (gris ≈68 %) | Texto secundario. Nunca más claro ni más pequeño que `type-footnote`. |
-| `text-primary` / `bg-primary` (dorado `43 61% 60%`) | Acción principal, cifra protagonista, palabra destacada, estado activo. |
-| `bg-primary/15` | Etiquetas y fichas activas sobre fondo oscuro. |
-| `text-destructive` | Solo para borrar, cerrar sesión o errores. |
-| `text-success` | Solo para «hecho» y confirmaciones. |
+| Pendiente | `bg-secondary`, número y texto en `text-muted-foreground` |
+| Activo | `bg-card` + `border-primary/30`, número en `text-primary` |
+| Hecho | `bg-primary/15`, check en `text-primary` |
+| Fallo | Solo la etiqueta «Fallo» en `text-destructive` |
 
 Halo de marca (detrás del elemento principal):
 
@@ -38,20 +52,26 @@ Fuente única: **Inter** (`font-sans`, `font-display`, `font-rounded` apuntan a 
 | `type-body` | 17 px | Texto |
 | `type-subhead` | 15 px | Descripciones |
 | `type-footnote` | 13 px | Notas, fechas |
-| `type-caption1/2` | 12/11 px | Solo etiquetas pequeñas |
+| `type-caption1` | 12 px | Etiquetas técnicas (contadores, unidades) |
+| `type-caption2` | 12 px | Solo la etiqueta de la barra de pestañas |
 
-Cifras protagonistas: `font-rounded font-bold leading-none tracking-tight tabular-nums`, 56–72 px en la app, hasta `clamp(…, 180px)` en la landing. Unidades al lado en `type-title3 text-muted-foreground`. Decimales en formato español (`toLocaleString("es-ES")` → `49,6`).
+Cifras protagonistas: `type-figure` o `font-rounded font-bold leading-none tracking-tight tabular-nums`, 56–72 px en la app, hasta `clamp(…, 180px)` en la landing. Unidades al lado en `type-title3 text-muted-foreground`. Decimales en formato español (`toLocaleString("es-ES")` → `49,6`). **Una sola cifra protagonista por bloque**: si hay dos, la segunda baja de tamaño o de color.
+
+Suelo de la interfaz: **13 px** (`type-footnote`). La única excepción es la etiqueta de la barra de pestañas, a 12 px y siempre con su icono de 22 px al lado. Prohibido `text-[10px]`, `text-[11px]`, `text-xs`.
 
 ## Radios
 
-| Elemento | Radio |
-|---|---|
-| Tarjeta normal (`rounded-2xl`) | **22 px** (configurado en Tailwind) |
-| Portada, tarjeta protagonista, hoja inferior | `rounded-[28px]` |
-| Bloque grande de la landing | `rounded-[28px]`–`rounded-[40px]` |
-| Botones (`btn-md`, `btn-lg`), campos de acceso, filas de selección de cuenta | píldora (`rounded-full`) |
-| Avatares, icono de la app en acceso | círculo |
-| Miniaturas de ejercicio o comida | `rounded-xl` |
+Cinco radios y ninguno más. En código nuevo usa las clases semánticas; `rounded-md/lg/xl/3xl` quedan como legado y se sustituyen al tocar cada pantalla.
+
+| Clase | Radio | Para |
+|---|---|---|
+| `rounded-chip` | 14 px | Chips, celdas de tabla, miniaturas pequeñas, `IconTile` |
+| `rounded-media` | 18 px | Foto o miniatura dentro de una tarjeta |
+| `rounded-card` | 22 px | Tarjeta, grupo de lista, bloque (`rounded-2xl` es el mismo valor) |
+| `rounded-sheet` | 28 px | Portada, tarjeta protagonista, hoja inferior, estado vacío con foto |
+| `rounded-full` | píldora | Botones, campos, segmentado, filas de selección |
+
+Avatares e icono de la app: círculo.
 
 ## Espacio
 

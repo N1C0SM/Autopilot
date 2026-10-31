@@ -8,6 +8,14 @@ Antes de escribir una pieza nueva, busca aquí. Si no encaja, amplía el compone
 - **`Surface`** — tarjeta plana `rounded-2xl bg-card`.
 - **`ListGroup` / `ListRow`** — listas tipo Ajustes de iOS: `header`, `footer`, `leading` (miniatura o avatar), `trailing`, `chevron`, `destructive`.
 - **`SectionHeader`** — título de sección (`type-title2/3` en negrita) con acción opcional.
+- **`PageTitle`** — cabecera de pantalla: `eyebrow` opcional en dorado, título `type-large-title`, subtítulo de una línea y acción a la derecha. Toda pantalla de primer nivel la usa; no escribas el `h1` a mano.
+- **`Field`** — campo de formulario: etiqueta visible arriba, control debajo (píldora) y `hint`/`error` debajo en `type-footnote`. Inyecta `id`, `aria-describedby` y `aria-invalid` en el hijo, así que no se repiten en cada formulario:
+
+  ```tsx
+  <Field label="Email" hint="El de tu cuenta" error={errors.email}>
+    <Input type="email" placeholder="tu@correo.com" />
+  </Field>
+  ```
 - **`EmptyState`** — estados vacíos:
   - normal: icono en ficha tintada + título + línea;
   - `photo={BRAND_PHOTOS.x}`: tarjeta alta con foto real y texto abajo;

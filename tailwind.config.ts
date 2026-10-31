@@ -102,6 +102,12 @@ export default {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        // Radios semánticos del sistema «Autopilot 2»: usa `rounded-card` en vez de
+        // `rounded-2xl`/`rounded-xl` para que un cambio de escala sea un token.
+        chip: "var(--radius-chip)",
+        media: "var(--radius-media)",
+        card: "var(--radius-card)",
+        sheet: "var(--radius-sheet)",
         // Tarjetas de toda la app y la web: más redondas, como las de la landing (28 px en portadas).
         "2xl": "22px",
       },

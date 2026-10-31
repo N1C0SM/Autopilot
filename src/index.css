@@ -89,11 +89,11 @@ input, textarea, select, [contenteditable="true"] {
    same way UIKit darkens systemFill and separator when the setting is on. */
 @media (prefers-contrast: more) {
   :root {
-    --border: 240 2% 40%;
-    --input: 240 2% 40%;
-    --muted-foreground: 240 3% 80%;
-    --secondary: 240 2% 24%;
-    --accent: 240 2% 32%;
+    --border: 240 4% 30%;
+    --input: 240 4% 30%;
+    --muted-foreground: 240 4% 82%;
+    --secondary: 240 5% 18%;
+    --accent: 240 5% 24%;
   }
 }
 
@@ -205,61 +205,71 @@ body.keyboard-open main {
 
 @layer base {
   :root {
-    /* iOS dark system palette. The gold tint is the only brand colour; every
-       neutral is the system's own so the app sits next to Apple's without a seam.
-         background  = systemBackground                    #000000
-         card        = secondarySystemGroupedBackground    #1C1C1E
-         secondary   = tertiarySystemGroupedBackground     #2C2C2E  (also control fills)
-         accent      = pressed / highlighted row fill      #3A3A3C
-         border      = opaque separator                    #38383A
-         muted-fg    = secondaryLabel                      ~#98989E */
+    /* Sistema «Autopilot 2» (.claude/design/tokens.md).
+       Un solo acento (el dorado) y una escala de superficies de cinco pasos sobre
+       negro. Los neutros ya no imitan la paleta de iOS: son propios, algo más
+       apagados, para que la tarjeta no parezca una caja y el dorado sea lo único
+       que brilla.
+         background  = #000000
+         card        = #141416   (8 %)
+         secondary   = #29292C   (16 %) controles, campos, chips
+         accent      = #333338   (21 %) pulsado / fila resaltada
+         border      = #262629   (15 %) separador, nunca borde de tarjeta
+         muted-fg    = #A8A8AE   67 %, AA sobre las tres superficies */
     --background: 0 0% 0%;
     --foreground: 0 0% 100%;
 
-    --card: 240 3% 11%;
+    --card: 240 5% 8%;
     --card-foreground: 0 0% 100%;
 
-    --popover: 240 3% 11%;
+    --popover: 240 5% 8%;
     --popover-foreground: 0 0% 100%;
 
-    --primary: 43 61% 60%;
+    /* Dorado de marca #D8B25E. Un pelo más cálido que el anterior (43 61% 60 %). */
+    --primary: 41 61% 61%;
     --primary-foreground: 0 0% 0%;
 
-    --secondary: 240 2% 18%;
+    --secondary: 240 5% 16%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 240 2% 18%;
-    --muted-foreground: 240 3% 68%;
+    --muted: 240 5% 16%;
+    --muted-foreground: 240 4% 67%;
 
-    --accent: 240 2% 23%;
+    --accent: 240 5% 21%;
     --accent-foreground: 0 0% 100%;
 
-    /* systemRed / systemGreen, dark appearance. */
+    /* systemRed / systemGreen, dark appearance. El verde solo confirma (pago,
+       guardado); en el entrenamiento no marca estado: eso es trabajo del dorado. */
     --destructive: 3 100% 61%;
     --destructive-foreground: 0 0% 100%;
 
     --success: 135 64% 50%;
     --success-foreground: 0 0% 100%;
 
-    --border: 240 2% 22%;
-    --input: 240 2% 22%;
-    --ring: 43 61% 60%;
+    --border: 240 4% 15%;
+    --input: 240 4% 15%;
+    --ring: 41 61% 61%;
 
+    /* Radios semánticos: úsalos en pantallas nuevas en vez de md/lg/xl/3xl. */
     --radius: 0.75rem;
+    --radius-chip: 14px;
+    --radius-media: 18px;
+    --radius-card: 22px;
+    --radius-sheet: 28px;
 
     /* Dynamic Type: 1 = tamaño Large del sistema (17 pt). `syncDynamicType()` lo
        ajusta al tamaño de texto elegido en Ajustes → Pantalla y brillo → Texto.
        Solo se escala la tipografía, no la rejilla: las tarjetas no se deforman. */
     --type-scale: 1;
 
-    --sidebar-background: 240 3% 11%;
+    --sidebar-background: 240 5% 8%;
     --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 43 61% 60%;
+    --sidebar-primary: 41 61% 61%;
     --sidebar-primary-foreground: 0 0% 0%;
-    --sidebar-accent: 240 2% 18%;
+    --sidebar-accent: 240 5% 16%;
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 240 2% 22%;
-    --sidebar-ring: 43 61% 60%;
+    --sidebar-border: 240 4% 15%;
+    --sidebar-ring: 41 61% 61%;
 
     /* Inter (self-hosted, variable) on every platform: one typeface, typography-led design. */
     --font-display: "Inter Variable", "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
@@ -271,12 +281,12 @@ body.keyboard-open main {
     --ease-brand: cubic-bezier(0.34, 1.56, 0.64, 1);
     --dur-brand: 360ms;
 
-    --gradient-hero: linear-gradient(135deg, hsl(44 78% 72%) 0%, hsl(38 66% 52%) 100%);
-    --gradient-gold: linear-gradient(180deg, hsl(44 78% 74%) 0%, hsl(40 66% 52%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(41 78% 72%) 0%, hsl(37 66% 52%) 100%);
+    --gradient-gold: linear-gradient(180deg, hsl(41 78% 74%) 0%, hsl(37 66% 52%) 100%);
     /* Elevación mínima: un filo, no una sombra difusa de 80px. */
-    --shadow-glow: 0 0 0 1px hsl(42 68% 58% / 0.35);
+    --shadow-glow: 0 0 0 1px hsl(41 68% 58% / 0.35);
     --shadow-card: none;
-    --shadow-premium: 0 0 0 1px hsl(42 58% 54% / 0.3);
+    --shadow-premium: 0 0 0 1px hsl(41 58% 54% / 0.3);
   }
 }
 
@@ -366,7 +376,9 @@ body.keyboard-open main {
   .type-subhead     { font-size: calc(15px * var(--type-scale)); line-height: calc(20px * var(--type-scale)); font-weight: 400; letter-spacing: -0.006em; }
   .type-footnote    { font-size: calc(13px * var(--type-scale)); line-height: calc(18px * var(--type-scale)); font-weight: 400; letter-spacing: normal; }
   .type-caption1    { font-size: calc(12px * var(--type-scale)); line-height: calc(16px * var(--type-scale)); font-weight: 400; letter-spacing: normal; }
-  .type-caption2    { font-size: calc(11px * var(--type-scale)); line-height: calc(13px * var(--type-scale)); font-weight: 400; letter-spacing: normal; }
+  /* 12 px, no 11: es el suelo real de la interfaz (etiquetas de la barra de
+     pestañas). Todo lo demás usa footnote (13) o más. */
+  .type-caption2    { font-size: calc(12px * var(--type-scale)); line-height: calc(15px * var(--type-scale)); font-weight: 400; letter-spacing: normal; }
 
   /* Header above an inset grouped list (Settings): footnote, uppercase, secondary label. */
   .type-group-header {
