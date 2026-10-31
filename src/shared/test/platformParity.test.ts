@@ -306,7 +306,11 @@ describe("paridad web ↔ apps nativas", () => {
     expect(webFocus).toContain('loading="eager" className="h-full w-full object-cover"');
     const appFocus = app.slice(app.indexOf("struct FocusViewer"));
     expect(appFocus.indexOf("ScrollView(.horizontal")).toBeLessThan(appFocus.indexOf("CachedAsyncImage"));
-    expect(appFocus).toContain(".frame(height: 300)");
+    expect(appFocus).toContain(".frame(height: 220)");
+    expect(web).toContain("aspect-[4/3] max-h-[26dvh]");
+    // La foto no se repite: sin miniatura en la tarjeta del ejercicio en foco.
+    expect(web).toContain("{!focused && <ExerciseThumb");
+    expect(app).toContain("if !focused { WorkoutThumb(url: exercise.image_url");
   });
 
   it("Al abrir se entra directo con la última cuenta: «¿Quién entrena?» solo si está protegida, en la web y en la app", () => {

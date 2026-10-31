@@ -41,7 +41,7 @@ struct WorkoutView: View {
                     sessionStats
                     if focusMode, let i = Optional(min(workout.draft.currentExercise, max(workout.exercises.count - 1, 0))), let ex = workout.exercises[safe: i] {
                         FocusViewer(workout: workout, index: i)
-                        SessionExerciseCard(workout: workout, exercise: ex, index: i, userId: userId)
+                        SessionExerciseCard(workout: workout, exercise: ex, index: i, userId: userId, focused: true)
                             .onAppear { workout.openExercises.insert(i) }
                             .id(ex.id)
                     } else {
@@ -263,6 +263,8 @@ struct SessionExerciseCard: View {
     let exercise: GymExercise
     let index: Int
     let userId: UUID
+    /// En «ejercicio a ejercicio» la foto ya está arriba: sin miniatura repetida (como la web).
+    var focused = false
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage("workout-advanced") private var advanced = false
@@ -293,7 +295,7 @@ struct SessionExerciseCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 12) {
-                    WorkoutThumb(url: exercise.image_url, completed: allDone)
+                    if !focused { WorkoutThumb(url: exercise.image_url, completed: allDone) }
                     VStack(alignment: .leading, spacing: 5) {
                         Text(workout.swaps[exercise.name] ?? exercise.name)
                             .font(.apHeadline)
@@ -530,9 +532,10 @@ struct FocusViewer: View {
                     }
                 }
             }
-            // La foto rellena un hueco fijo (overlay): no empuja el ancho de la pantalla.
+            // La foto rellena un hueco fijo (overlay): no empuja el ancho de la pantalla. 220 pt deja
+            // ver las series debajo sin hacer scroll.
             Palette.card
-                .frame(maxWidth: .infinity).frame(height: 300)
+                .frame(maxWidth: .infinity).frame(height: 220)
                 .overlay {
                     if let i = ex.image_url, let u = URL(string: i) {
                         CachedAsyncImage(url: u) { $0.resizable().scaledToFill() } placeholder: { BrandLoader() }
