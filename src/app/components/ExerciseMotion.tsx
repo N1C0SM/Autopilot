@@ -50,12 +50,18 @@ export const ExerciseMotion = ({ spec, className }: { spec: MotionSpec; classNam
 
 /**
  * La misma huella en miniatura: sin animación ni texto, para las filas de las
- * listas. Se lee en 48 px y no baja una sola foto.
+ * listas. Se lee en 40 px y no baja una sola foto. El trazo es grueso a propósito:
+ * en un cuadro tan pequeño una línea fina se convierte en polvo.
  */
 export const ExerciseMotionGlyph = ({ spec, className }: { spec: MotionSpec; className?: string }) => (
   <svg viewBox={MOTION_VIEWBOX} preserveAspectRatio="xMidYMid meet" aria-hidden className={cn("h-full w-full text-primary", className)}>
-    <path d={spec.d} fill="none" stroke="currentColor" strokeOpacity="0.28" strokeWidth={spec.stroke + 0.8} strokeLinecap="round" />
-    <circle cx={spec.start.x} cy={spec.start.y} r="1.6" fill="currentColor" fillOpacity="0.4" />
-    <circle cx={spec.end.x} cy={spec.end.y} r="3.6" fill="currentColor" />
+    <path d={spec.d} fill="none" stroke="currentColor" strokeOpacity="0.3" strokeWidth={spec.stroke + 4.5} strokeLinecap="round" />
+    <circle cx={spec.start.x} cy={spec.start.y} r="2.8" fill="currentColor" fillOpacity="0.45" />
+    {spec.hold ? (
+      // Isométrico: el punto no viaja, aguanta. Se marca con un anillo.
+      <circle cx={spec.end.x} cy={spec.end.y} r="5.2" fill="none" stroke="currentColor" strokeWidth="2.4" />
+    ) : (
+      <circle cx={spec.end.x} cy={spec.end.y} r="5.5" fill="currentColor" />
+    )}
   </svg>
 );
