@@ -32,3 +32,10 @@ supabase/.temp/
 .env.local
 .env.*.local
 !.env.example
+
+# Auditoría visual: el informe y las hojas de contacto se versionan; las
+# capturas individuales, los recortes de análisis y las sesiones no.
+audit/antes/
+audit/despues/
+audit/tmp/
+audit/.auth/
