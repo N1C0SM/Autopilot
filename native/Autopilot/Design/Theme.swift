@@ -254,9 +254,11 @@ struct EmptyStateView: View {
         VStack(spacing: 10) {
             Image(systemName: symbol).font(.system(size: 36, weight: .semibold)).foregroundStyle(Palette.gold)
                 .accessibilityHidden(true)
-            Text(title).font(.apHeadline).accessibilityAddTraits(.isHeader)
+            Text(title).font(.apHeadline).multilineTextAlignment(.center).accessibilityAddTraits(.isHeader)
             if let message { Text(message).font(.apSubhead).foregroundStyle(Palette.muted).multilineTextAlignment(.center) }
         }
+        // Margen lateral: dentro de una tarjeta el texto no toca los bordes.
+        .padding(.horizontal, 24)
         .frame(maxWidth: .infinity)
         .padding(.vertical, 40)
         .accessibilityElement(children: .combine)
