@@ -11,6 +11,8 @@ type Row = {
   muscle_group: string | null;
   exercise_type: string | null;
   movement_pattern: string | null;
+  stimulus_type?: string | null;
+  load_level?: string | null;
   level: number | null;
   image_url: string | null;
   video_url: string | null;
@@ -28,7 +30,7 @@ type Row = {
   exercise_categories?: { exercise_categories_catalog: { name: string } | null }[] | null;
 };
 
-const BASE = "id, name, muscle_group, exercise_type, movement_pattern, level, image_url, video_url";
+const BASE = "id, name, muscle_group, exercise_type, movement_pattern, stimulus_type, load_level, level, image_url, video_url";
 const FULL = `${BASE}, slug, alt_names, description, instructions, common_mistakes, tips, safety_notes, source, license, license_author, source_url, `
   + "exercise_muscles(role, muscles(name, filter_group, sort)), exercise_equipment(equipment(name, sort)), "
   + "exercise_categories(exercise_categories_catalog(name))";
@@ -57,6 +59,8 @@ export const toLibraryExercise = (r: Row): LibraryExercise => {
     modalities: modalities.length ? modalities : legacyModalities(r.exercise_type),
     pattern: r.movement_pattern,
     level: r.level,
+    stimulus: r.stimulus_type ?? null,
+    load: r.load_level ?? null,
     image: r.image_url,
     video: r.video_url,
     description: r.description ?? null,
