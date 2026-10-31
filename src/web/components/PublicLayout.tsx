@@ -6,6 +6,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from "@/shared/components/ui/sheet";
 import { ListGroup, ListRow } from "@/shared/components/ui/list";
 import { hapticTap } from "@/shared/lib/native";
+import { track } from "@/shared/lib/analytics";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { socialLinkList } from "@/shared/lib/socialLinks";
 import AppStoreBadges from "@/web/components/AppStoreBadges";
@@ -76,10 +77,10 @@ export default function PublicLayout({ title, description, children }: { title: 
           {navigation.map(([to, label]) => <NavLink key={to} to={to} className={({ isActive }) => `inline-flex min-h-11 items-center px-3 type-subhead transition-colors active:opacity-60 ${isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}>{label}</NavLink>)}
           {showApp && <NavLink to="/app" className="inline-flex min-h-11 items-center px-3 type-subhead text-muted-foreground transition-colors hover:text-foreground active:opacity-60">App móvil</NavLink>}
           <Button variant="plain" asChild><Link to="/login">Iniciar sesión</Link></Button>
-          <Button variant="tinted" asChild><Link to="/onboarding-choice">Crear mi rutina</Link></Button>
+          <Button variant="tinted" asChild><Link to="/onboarding" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source: "header" }); }}>Crear mi rutina</Link></Button>
         </nav>
         <div className="flex items-center lg:hidden">
-          <Button variant="plain" asChild><Link to="/onboarding-choice" onClick={() => void hapticTap()}>Crear mi rutina</Link></Button>
+          <Button variant="plain" asChild><Link to="/onboarding" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source: "header" }); }}>Crear mi rutina</Link></Button>
           <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
             <SheetTrigger asChild><Button variant="ghost" size="icon" aria-label="Abrir menú" onClick={() => void hapticTap()}><Menu className="h-6 w-6" strokeWidth={2} /></Button></SheetTrigger>
             <SheetContent className="w-[min(90vw,360px)] overflow-y-auto px-4" onOpenAutoFocus={(e) => e.preventDefault()}>

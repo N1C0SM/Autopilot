@@ -39,15 +39,15 @@ struct TrainView: View {
                 if model.loading && model.days.isEmpty {
                     VStack(spacing: 12) {
                         BrandLoader()
-                        Text("Comprobando tu sesión…").font(.apSubhead).foregroundStyle(Palette.muted)
+                        Text("Cargando tu semana…").font(.apSubhead).foregroundStyle(Palette.muted)
                     }
                     .frame(maxWidth: .infinity, minHeight: 300)
+                } else if let error = model.error, model.days.isEmpty {
+                    EmptyStateView(symbol: "dumbbell", title: error,
+                                   message: "Desliza hacia abajo para volver a intentarlo.")
                 } else if model.days.isEmpty {
-                    routineBar
-                    EmptyStateView(symbol: "dumbbell",
-                                   title: model.error ?? "Aún no hay rutina",
-                                   message: model.error == nil ? "En cuanto tengamos tu plan, verás aquí tu semana."
-                                                               : "Desliza hacia abajo para volver a intentarlo.")
+                    // Sin rutina: la misma invitación que Inicio y la web, con su botón.
+                    StarterRoutineCard { await load() }
                 } else {
                     routineBar
                     WeeklyRoutineView(days: model.days,
@@ -397,9 +397,8 @@ struct WeeklyRoutineView: View {
         let sets = exercises.reduce(0) { $0 + $1.series }
         let summary = exercises.isEmpty ? nil : ["\(exercises.count) \(exercises.count == 1 ? "ejercicio" : "ejercicios")", sets > 0 ? "\(sets) \(sets == 1 ? "serie" : "series")" : nil].compactMap { $0 }.joined(separator: " · ")
         VStack(alignment: .leading, spacing: 24) {
-            // Web de escritorio: portada de la sesión (`h-44` ≈ 176 pt) a todo el ancho. En el
-            // iPhone no aparece, para no cambiar el diseño actual.
-            if wideLayout, plan.isGym {
+            // Portada de la sesión (`h-44` ≈ 176 pt) a todo el ancho, en iPhone y Mac como en la web.
+            if plan.isGym {
                 sessionCover(plan)
             }
             VStack(alignment: .leading, spacing: 4) {

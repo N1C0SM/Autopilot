@@ -130,7 +130,8 @@ struct ProgressScreen: View {
     /// Tarjeta del hero (cifras + barras), su esqueleto o el aviso de error.
     @ViewBuilder private var strengthHero: some View {
         if model.strengthLoaded {
-            strengthCard
+            // Sin ningún entreno no se pinta «0 kg levantados» (desanima): solo la invitación de abajo, como la web.
+            if !(model.detailsLoaded && model.history.isEmpty) { strengthCard }
         } else if let error = model.strengthError {
             // Sin conexión y sin datos previos: se explica en vez de dejar latiendo el esqueleto
             // (o de pintar «0 kg», que parecería que no has entrenado).
@@ -153,8 +154,8 @@ struct ProgressScreen: View {
                 }
             } else {
                 // Cuenta recién creada: sin esto la pestaña parecía rota (solo la tarjeta a 0 kg).
-                EmptyStateView(symbol: "chart.line.uptrend.xyaxis", title: "Aún no hay progreso",
-                               message: "Cuando registres tus primeros entrenos verás aquí la evolución por ejercicio.")
+                EmptyStateView(symbol: "dumbbell", title: "Tu progreso empieza con tu primer entreno",
+                               message: "Marca tus series al entrenar y aquí verás tus kilos, tu racha y tus récords.")
                     .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
             }
         } else if let error = model.detailsError {

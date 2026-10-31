@@ -89,6 +89,20 @@ describe("signup", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Password is too weak");
     await waitFor(() => expect(hapticNotify).toHaveBeenCalledWith("error"));
   });
+  it("si el correo ya tiene cuenta lo dice sin consultar antes: el código sale en la misma petición", async () => {
+    signUp.mockResolvedValue({ error: null, exists: true });
+    renderSignup();
+
+    fireEvent.change(screen.getByLabelText("Tu nombre"), { target: { value: "Ana" } });
+    fireEvent.change(screen.getByLabelText("Correo electrónico"), { target: { value: "ana@example.test" } });
+    fireEvent.change(screen.getByLabelText("Contraseña"), { target: { value: "123456" } });
+    fireEvent.click(screen.getByRole("button", { name: "Crear cuenta gratis" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Este correo ya está registrado.");
+    expect(invoke).not.toHaveBeenCalledWith("check-availability", expect.anything());
+    expect(invoke).toHaveBeenCalledWith("auth-email-hook", { method: "GET" });
+  });
+
   it("guarda el contexto de verificación y lleva a /verify-email", async () => {
     invoke.mockResolvedValue({ data: { emailTaken: false } });
     signUp.mockResolvedValue({ error: null });

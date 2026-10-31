@@ -450,12 +450,13 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
     const { error } = await supabase.from("onboarding").upsert({
       user_id: user.id,
       age: parseInt(onboarding.age) || null, height: parseFloat(onboarding.height) || null,
-      weight: parseFloat(onboarding.weight) || null, goal: onboarding.goal, sports: onboarding.sports,
+      weight: parseFloat(onboarding.weight) || null, goal: onboarding.goal,
       availability: availabilityEdited
         ? { ...originalAvailability, ...onboarding.availability, auto_calculated: false }
         : originalAvailability,
-      nutrition_preferences: onboarding.nutrition_preferences,
-      allergies: onboarding.allergies,
+      // Lo que no se ve aquí no se envía (deportes nunca, comida solo con Plus): así un fallo
+      // al cargar nunca borra lo guardado sin que se vea.
+      ...(hasPaidAccess ? { nutrition_preferences: onboarding.nutrition_preferences, allergies: onboarding.allergies } : {}),
     }, { onConflict: "user_id" });
     if (error) {
       console.error("saveOnboarding", error);
@@ -855,9 +856,8 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
             </FieldRow>
           </ListGroup>
 
-          <ListGroup header="Deportes">
-            <Textarea aria-label="Deportes" value={onboarding.sports} onChange={(e) => editOnboarding({ sports: e.target.value })} className={blockTextarea} rows={2} />
-          </ListGroup>
+          {/* Deportes (calendario) es avanzado: fuera de Ajustes. Lo de comida, solo con Plus. */}
+          {hasPaidAccess && <>
           <div className="space-y-6">
             <ChipGroup header="Lo que te gusta" options={FOOD_LIKES}
               isOn={(v) => readLikes(onboarding.nutrition_preferences).includes(v)}
@@ -872,6 +872,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
           <ListGroup header="Alergias y otros alimentos a evitar">
             <Textarea aria-label="Alergias" value={onboarding.allergies} onChange={(e) => editOnboarding({ allergies: e.target.value })} className={blockTextarea} rows={2} />
           </ListGroup>
+          </>}
 
           <ListGroup>
             <ListRow

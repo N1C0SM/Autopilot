@@ -163,8 +163,8 @@ const WorkoutProgress = ({ userId, compact = false }: Props) => {
       ) : exercises.length === 0 ? (
         <EmptyState
           icon={Dumbbell}
-          title="Aún no hay sesiones registradas"
-          description="Completa series en Entrenamiento y aquí aparecerá tu evolución por ejercicio."
+          title="Tu progreso empieza con tu primer entreno"
+          description="Marca tus series al entrenar y aquí verás tus kilos, tu racha y tus récords."
           className={compact ? "flex-1 py-8" : "py-8"}
         />
       ) : (

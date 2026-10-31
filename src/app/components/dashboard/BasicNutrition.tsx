@@ -5,7 +5,9 @@ import { resolveNutritionPreview, type NutritionPreview } from "@/shared/lib/nut
 import { Spinner } from "@/shared/components/ui/spinner";
 import { EmptyState } from "@/shared/components/ui/empty-state";
 import { Button } from "@/shared/components/ui/button";
-import { Apple } from "lucide-react";
+import { Apple, Flame } from "lucide-react";
+import { Input } from "@/shared/components/ui/input";
+import { hapticNotify, hapticTap } from "@/shared/lib/native";
 import { ProgressRing } from "@/shared/components/ui/progress-ring";
 
 export default function BasicNutrition({ userId, onEdit, onUpgrade }: { userId: string; onEdit: () => void; onUpgrade?: () => void }) {
@@ -101,11 +103,10 @@ export default function BasicNutrition({ userId, onEdit, onUpgrade }: { userId: 
 
   if (!targets.hasWeight) {
     return (
-      <EmptyState
-        icon={Apple}
-        title="Completa tu peso para calcular tus objetivos"
-        action={<Button onClick={onEdit}>Completar mis datos</Button>}
-      />
+      <section className="w-full space-y-8 py-4">
+        <MacrosWeightCard userId={userId} />
+        <MealsPlusCard onUpgrade={onUpgrade} />
+      </section>
     );
   }
 
@@ -152,5 +153,48 @@ export default function BasicNutrition({ userId, onEdit, onUpgrade }: { userId: 
       </Button>
       <MealsPlusCard onUpgrade={onUpgrade} />
     </section>
+  );
+}
+
+/** Sin peso no hay macros: se pide aquí mismo (como la app) y los objetivos salen al momento. */
+function MacrosWeightCard({ userId }: { userId: string }) {
+  const [weight, setWeight] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const value = Number(weight.replace(",", "."));
+  const valid = value > 30 && value <= 300;
+
+  const save = async () => {
+    if (!valid || saving) return;
+    void hapticTap();
+    setSaving(true);
+    setFailed(false);
+    const { error } = await supabase.from("onboarding").upsert({ user_id: userId, weight: value }, { onConflict: "user_id" });
+    if (error) {
+      setSaving(false);
+      setFailed(true);
+      void hapticNotify("error");
+      return;
+    }
+    // Con Plus el plan recalcula sus macros con el peso nuevo (sin Plus no hace nada).
+    await supabase.functions.invoke("sync-nutrition-macros").catch(() => undefined);
+    void hapticNotify("success");
+    window.dispatchEvent(new Event("autopilot:onboarding-updated"));
+  };
+
+  return (
+    <form className="space-y-4 rounded-[28px] bg-card p-5" onSubmit={(e) => { e.preventDefault(); void save(); }}>
+      <Flame aria-hidden="true" className="h-7 w-7 text-primary" strokeWidth={1.75} />
+      <div>
+        <h2 className="type-title2">Calcula tus macros</h2>
+        <p className="mt-1 type-subhead text-muted-foreground">Dinos tu peso y te damos tus calorías y tu proteína del día. Gratis.</p>
+      </div>
+      <Input type="text" inputMode="decimal" enterKeyHint="done" autoComplete="off" aria-label="Tu peso en kg" placeholder="Tu peso en kg"
+        value={weight} onChange={(e) => setWeight(e.target.value.replace(/[^\d.,]/g, ""))} />
+      <Button type="submit" size="lg" className="w-full rounded-full" disabled={!valid || saving}>
+        {saving ? <Spinner size="sm" className="text-primary-foreground" label="Calculando" /> : "Calcular mis macros"}
+      </Button>
+      {failed && <p role="alert" className="type-footnote text-destructive">No se pudo guardar tu peso. Vuelve a intentarlo.</p>}
+    </form>
   );
 }

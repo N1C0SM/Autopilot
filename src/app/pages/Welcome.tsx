@@ -1,5 +1,5 @@
 import { useNavigate, Navigate, Link } from "react-router-dom";
-import { ArrowRight, Loader2, Dumbbell, Apple, Sparkles } from "lucide-react";
+import { Loader2, Dumbbell, Apple, Sparkles } from "lucide-react";
 import { useAuth } from "@/shared/contexts/AuthContext";
 import { Helmet } from "react-helmet-async";
 import { hapticTap } from "@/shared/lib/native";
@@ -107,11 +107,10 @@ const Welcome = () => {
       <footer className="pb-6 pt-4 space-y-3 max-w-sm mx-auto w-full">
         <button
           type="button"
-          onClick={() => { void hapticTap(); navigate("/signup?free=true"); }}
+          onClick={() => { void hapticTap(); navigate("/onboarding"); }}
           className="w-full h-[52px] rounded-2xl bg-primary text-primary-foreground type-body font-semibold tracking-[-0.015em] flex items-center justify-center gap-1.5 transition-transform duration-150 ease-out active:scale-[0.98]"
         >
-          Continuar
-          <ArrowRight className="w-4 h-4" />
+          Crear mi rutina gratis
         </button>
         <button
           type="button"

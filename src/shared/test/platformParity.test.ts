@@ -161,6 +161,245 @@ describe("paridad web ↔ apps nativas", () => {
     expect(app).toMatch(/PlatformImage\.downscaled\(from: data, maxSide: 1600\)/);
   });
 
+  it("Sin rutina: la misma invitación con botón en la web y en la app (Inicio y Entrenar), nunca «descansa»", () => {
+    const web = read("src/app/pages/Dashboard.tsx");
+    const card = read("native/Autopilot/Design/Components.swift");
+    for (const text of [
+      "Prepara tu rutina inicial gratis", "Te la preparamos en unos segundos.", "Preparar mi rutina gratis",
+      "Preparando…", "No se ha podido preparar la rutina. Vuelve a intentarlo.",
+    ]) {
+      expect(web, text).toContain(text);
+      expect(card, text).toContain(text);
+    }
+    // Las dos llaman a generate-plan sin `force`: una rutina manual nunca se sustituye.
+    expect(web).toMatch(/generatePlanGuarded\(supabase, \{ user_id: user\?\.id \}/);
+    expect(read("native/Autopilot/Core/Training.swift")).toMatch(/"generate-plan", options: FunctionInvokeOptions\(body: \["user_id": /);
+    expect(read("native/Autopilot/Features/Home/HomeView.swift")).toMatch(/s\.noPlan == true \{[\s\S]*?StarterRoutineCard/);
+    expect(read("native/Autopilot/Features/Train/TrainView.swift")).toMatch(/model\.days\.isEmpty \{[\s\S]*?StarterRoutineCard/);
+  });
+
+  it("Primer uso sin cuenta: misma bienvenida y mismo cuestionario de 3 pasos, con la cuenta al final", () => {
+    const welcome = read("src/app/pages/Welcome.tsx");
+    const quiz = read("src/app/pages/Configurator.tsx");
+    const preview = read("src/app/components/PlanPreview.tsx");
+    const app = read("native/Autopilot/Features/Auth/OnboardingView.swift");
+    for (const text of [
+      "Te damos la bienvenida a", "Crear mi rutina gratis", "Ya tengo cuenta",
+      "Tu rutina se adapta cada semana a lo que haces y a cómo progresas.",
+      "Calorías, macros y comidas que encajan con tu objetivo y tu día.",
+      "Tu plan se mantiene al día solo. Tú apareces, él se encarga del resto.",
+    ]) {
+      expect(welcome, text).toContain(text);
+      expect(app, text).toContain(text);
+    }
+    // La bienvenida lleva al cuestionario, no a registrarse primero.
+    expect(welcome).toMatch(/navigate\("\/onboarding"\)/);
+    expect(app).toMatch(/WelcomeView\(onStart: \{ go\(\.quiz\) \}/);
+    for (const text of [
+      "¿Qué quieres conseguir?", "Tu semana", "Tu plan Autopilot", "Cuéntanos tu objetivo y dónde entrenas.",
+      "Elige al menos dos días. Ajustamos el plan a tu semana.",
+      "Así queda con tus respuestas. Crea tu cuenta para guardar tu plan completo.",
+      "Perder grasa", "Ganar músculo", "Recomposición", "Fuerza y salud", "Gimnasio", "Calistenia", "Mixto",
+      "Individual", "En pareja", "30–45 min", "45–60 min", "60–90 min",
+      "Empuje / Tirón / Pierna", "No lo sé, que Autopilot elija", "Tiempo por sesión", "Tu peso en kg (opcional)",
+      "Mismo calendario, cargas adaptadas a cada uno.", "Guardar mi plan gratis",
+      "y el tratamiento de mis datos de salud para preparar mi plan.",
+    ]) {
+      expect(quiz, text).toContain(text);
+      expect(app, text).toContain(text);
+    }
+    for (const text of ["Día 1 · Empuje (Gimnasio)", "Día 1 · Full body híbrido", "Pike push-ups", "Tu nutrición diaria",
+      "sesiones que se completarán al crear el plan", "Menús y cantidades al generar el plan."]) {
+      expect(preview, text).toContain(text);
+      expect(app, text).toContain(text);
+    }
+    // «¿Dónde entrenas?»: tres fotos iguales en 4:5; en la app el hueco manda y la foto lo rellena.
+    expect(quiz).toMatch(/grid grid-cols-3 gap-2\.5/);
+    expect(quiz).toContain("aspect-[4/5]");
+    expect(app).toMatch(/Color\.clear\.aspectRatio\(4 \/ 5, contentMode: \.fit\)[\s\S]*?\.background \{\s*CachedAsyncImage/);
+    // Mismos datos guardados: tabla, conflicto y disponibilidad.
+    expect(quiz).toMatch(/from\("onboarding"\)\.upsert\(/);
+    expect(app).toMatch(/from\("onboarding"\)\.upsert\(row, onConflict: "user_id"\)/);
+    for (const key of ["training_days", "session_minutes", "checkin_dow", "coach_style", "training_mode", "partner_email"]) {
+      expect(quiz, key).toContain(key);
+      expect(app, key).toContain(key);
+    }
+    // La cuenta se crea y se verifica con el código dentro de la app, como en la web.
+    for (const text of ["Crea tu cuenta", "Introduce el código", "Reenviar código", "Este correo ya está registrado.",
+      "El código no es válido o ha caducado. Pide uno nuevo."]) {
+      expect(read("src/app/pages/Signup.tsx") + read("src/app/pages/VerifyEmail.tsx"), text).toContain(text);
+      expect(app, text).toContain(text);
+    }
+    expect(app).toMatch(/verifyOTP\(email: email, token: code, type: \.signup\)/);
+    expect(read("native/Autopilot/Features/Shell/RootView.swift")).toMatch(/SignedOutView\(\)/);
+  });
+
+  it("Acceso: «¿Olvidaste la contraseña?» y «Crear una cuenta gratis» llevan a lo mismo en la web y en la app", () => {
+    const web = read("src/app/pages/Login.tsx");
+    const app = read("native/Autopilot/Features/Auth/LoginView.swift");
+    expect(web).toContain("¿Olvidaste la contraseña?");
+    expect(app).toContain("¿Olvidaste la contraseña?");
+    expect(web).toContain(`<Link to="/onboarding" onClick={() => void hapticTap()}>Crear una cuenta gratis</Link>`);
+    expect(app).toContain("Crear una cuenta gratis");
+    for (const text of ["Recuperar contraseña", "Te enviaremos un enlace a tu correo.", "Enviar enlace", "Revisa tu correo", "Volver al inicio de sesión"]) {
+      expect(read("src/app/pages/ForgotPassword.tsx"), text).toContain(text);
+      expect(app, text).toContain(text);
+    }
+    // Nada apunta al dominio antiguo desde el acceso.
+    expect(app).not.toContain("autopilotplan.app");
+  });
+
+  it("Nutrición sin peso: Gratis ve «Calcula tus macros» en la web y en la app, no solo la tarjeta de Plus", () => {
+    const web = read("src/app/components/dashboard/BasicNutrition.tsx");
+    const app = read("native/Autopilot/Features/Other/OtherViews.swift");
+    for (const text of ["Calcula tus macros", "Dinos tu peso y te damos tus calorías y tu proteína del día. Gratis.", "Tu peso en kg", "Calcular mis macros", "No se pudo guardar tu peso. Vuelve a intentarlo.", "sync-nutrition-macros"]) {
+      expect(web, text).toContain(text);
+      expect(app, text).toContain(text);
+    }
+    expect(read("src/app/pages/Dashboard.tsx")).toContain("<BasicNutrition userId={user.id}");
+    expect(app).toMatch(/if !hasMeals && kcal <= 0 \{[\s\S]*?MacrosWeightCard\(userId: id\)/);
+  });
+
+  it("Fotos: la web y la app piden a Supabase la versión reducida (WebP de pocos KB), nunca el PNG original", () => {
+    const web = read("src/shared/lib/fastImage.ts");
+    const app = read("native/Autopilot/Design/Components.swift");
+    for (const part of ["/storage/v1/render/image/public/", "resize=contain&quality=55", "1000"]) {
+      expect(web, part).toContain(part);
+      expect(app, part).toContain(part);
+    }
+    expect(app).toContain('"image/webp,image/*"');
+    expect(read("native/Autopilot/Features/Scan/ScanView.swift")).toContain("ImageCache.fastURL(url, maxSide: maxSide)");
+    expect(read("src/shared/lib/brandPhotos.ts")).toContain("fastImage(");
+    expect(read("src/app/components/ExerciseMedia.tsx")).toContain("fastImage(image, 192)");
+  });
+
+  it("Código del alta: el correo sale en la misma petición y la función que lo envía ya está despierta, en la web y en la app", () => {
+    const web = read("src/app/pages/Signup.tsx");
+    const app = read("native/Autopilot/Features/Auth/OnboardingView.swift");
+    for (const src of [web, app]) {
+      expect(src).not.toContain('"check-availability", options');
+      expect(src).toContain('"auth-email-hook"');
+    }
+    expect(web).not.toMatch(/await supabase\.functions\.invoke\("check-availability", \{\s*body: \{ email: email\.trim\(\) \},\s*\}\)/);
+    expect(app).toContain("response.user.identities?.isEmpty == true");
+    expect(read("src/shared/contexts/AuthContext.tsx")).toContain("exists: data?.user?.identities?.length === 0");
+  });
+
+  it("Entreno: ejercicio a ejercicio por defecto, carrusel arriba y foto grande, «···» con opciones claras y lo avanzado oculto", () => {
+    const web = read("src/app/components/dashboard/WorkoutTracker.tsx");
+    const prefs = read("src/shared/lib/workoutPreferences.ts");
+    const app = read("native/Autopilot/Features/Train/WorkoutView.swift");
+    expect(prefs).toContain('=== "list" ? "list" : "focus"');
+    expect(app).toContain('@AppStorage("workout-view") private var workoutView = "focus"');
+    expect(read("native/Autopilot/Features/Account/AccountView.swift")).toContain('forKey: "workout-view") ?? "focus"');
+    for (const text of ["Ver toda la sesión", "Ver ejercicio a ejercicio", "Más opciones por serie", "Descartar entrenamiento"]) {
+      expect(web, text).toContain(text);
+      expect(app, text).toContain(text);
+    }
+    // Bajada, calentamiento (y en la app RPE y fallo) solo con «Más opciones por serie».
+    expect(web).toContain("si === firstPendingIndex && advanced && (");
+    expect(app).toContain("if isCurrent && advanced {");
+    expect(app).toContain('if advanced { Text("RPE")');
+    // Carrusel antes que la foto, y la foto rellena el hueco.
+    const webFocus = web.slice(web.indexOf("Carrusel arriba"));
+    expect(webFocus.indexOf('role="tablist"')).toBeLessThan(webFocus.indexOf("fetchPriority"));
+    expect(webFocus).toContain('loading="eager" className="h-full w-full object-cover"');
+    const appFocus = app.slice(app.indexOf("struct FocusViewer"));
+    expect(appFocus.indexOf("ScrollView(.horizontal")).toBeLessThan(appFocus.indexOf("CachedAsyncImage"));
+    expect(appFocus).toContain(".frame(height: 220)");
+    expect(web).toContain("aspect-[4/3] max-h-[26dvh]");
+    // La foto no se repite: sin miniatura en la tarjeta del ejercicio en foco.
+    expect(web).toContain("{!focused && <ExerciseThumb");
+    expect(app).toContain("if !focused { WorkoutThumb(url: exercise.image_url");
+  });
+
+  it("Al abrir se entra directo con la última cuenta: «¿Quién entrena?» solo si está protegida, en la web y en la app", () => {
+    expect(read("native/Autopilot/Core/Session.swift")).toContain("showPicker = currentLocked\n");
+    expect(read("src/shared/components/native/WhoIsTraining.tsx")).toContain("if (!shown && currentLocked) showPicker();");
+  });
+
+  it("Plan y progreso: portada de la sesión también en iPhone y, sin entrenos, una invitación en vez de «0 kg»", () => {
+    const train = read("native/Autopilot/Features/Train/TrainView.swift");
+    expect(train).toContain("            if plan.isGym {\n                sessionCover(plan)");
+    const title = "Tu progreso empieza con tu primer entreno";
+    const message = "Marca tus series al entrenar y aquí verás tus kilos, tu racha y tus récords.";
+    for (const src of [read("src/app/components/dashboard/WorkoutProgress.tsx"), read("native/Autopilot/Features/Progress/ProgressScreen.swift")]) {
+      expect(src).toContain(title);
+      expect(src).toContain(message);
+    }
+    expect(read("native/Autopilot/Features/Progress/ProgressScreen.swift")).toContain("if !(model.detailsLoaded && model.history.isEmpty) { strengthCard }");
+  });
+
+  it("Ajustes: sin «Deportes» y sin nada de comida hasta tener Plus, en la web y en la app", () => {
+    const web = read("src/app/components/SettingsPanel.tsx");
+    const app = read("native/Autopilot/Features/Account/AccountView.swift");
+    expect(web).not.toContain('header="Deportes"');
+    expect(app).not.toContain('group("Deportes")');
+    for (const text of ["Lo que te gusta", "Lo que no comes", "Preferencias nutricionales", "Alergias y otros alimentos a evitar"]) {
+      expect(web.indexOf(text), text).toBeGreaterThan(web.indexOf("{hasPaidAccess && <>"));
+      expect(app.indexOf(text), text).toBeGreaterThan(app.indexOf("if hasPlus {"));
+    }
+    expect(web.indexOf("{hasPaidAccess && <>")).toBeGreaterThan(0);
+    expect(app.indexOf("if hasPlus {")).toBeGreaterThan(0);
+    // Lo oculto tampoco se envía al guardar: un fallo al cargar no puede borrarlo.
+    expect(web).toContain("...(hasPaidAccess ? { nutrition_preferences:");
+    expect(web).not.toContain("sports: onboarding.sports");
+    expect(app).toContain("nutrition_preferences: hasPlus ? nutritionPrefs : nil");
+    expect(app).not.toContain("sports: sports,");
+  });
+
+  it("Color en el entreno: un solo dorado (la serie actual), verde para lo hecho y «Terminar» dorado solo al completar, en la web y en la app", () => {
+    const web = read("src/app/components/dashboard/WorkoutTracker.tsx");
+    const app = read("native/Autopilot/Features/Train/WorkoutView.swift");
+    expect(web).toContain('variant={allSetsDone ? "default" : "secondary"}');
+    expect(app).toContain(".buttonStyle(PillButtonStyle(kind: allSetsDone ? .primary : .secondary))");
+    // Serie y ejercicio hechos en verde, nunca en dorado.
+    expect(web).toContain('"border-success bg-success text-success-foreground"');
+    expect(web).toContain('<span className="flex h-11 w-9 items-center justify-center text-success">');
+    expect(app).toContain("Circle().strokeBorder(set.done ? Palette.success");
+    expect(app).toContain('Image(systemName: "checkmark").font(.inter(size: 18, weight: .bold)).foregroundStyle(Palette.success)');
+    // Título del ejercicio, «Salir» y «···» en blanco.
+    expect(app).toContain(".foregroundStyle(allDone ? Palette.muted : Palette.foreground)");
+    expect(web).not.toMatch(/pl-0\.5 pr-2 text-primary/);
+    expect(app).not.toContain('Image(systemName: "ellipsis").font(.inter(size: 15, weight: .bold)).foregroundStyle(Palette.gold)');
+  });
+
+  it("Primer uso: Individual / En pareja son filas de una línea, como «Perder grasa», en la web y en la app", () => {
+    for (const src of [read("src/app/pages/Configurator.tsx"), read("native/Autopilot/Features/Auth/OnboardingView.swift")]) {
+      expect(src).not.toContain("Un plan solo para ti");
+      expect(src).not.toContain("Entrenáis juntos con un plan para los dos");
+    }
+  });
+
+  it("Ejercicio en movimiento: bucle corto, mudo y sin controles sobre la foto, y foto fija con «reducir movimiento», en la web y en la app", () => {
+    const web = read("src/app/components/dashboard/WorkoutTracker.tsx");
+    const app = read("native/Autopilot/Features/Train/WorkoutView.swift");
+    const loop = read("native/Autopilot/Design/LoopingVideo.swift");
+    expect(web).toContain("const loop = vid && isDirectFile(vid) && !prefersReducedMotion ? vid : null;");
+    expect(web).toContain("autoPlay muted loop playsInline");
+    expect(app).toContain("if !reduceMotion, let v = loops.urls[ex.name] { LoopingVideo(url: v) }");
+    expect(loop).toContain("player.isMuted = true");
+    expect(loop).toContain("AVPlayerLooper(");
+    expect(loop).toContain('["mp4", "mov", "m4v"]');
+  });
+
+  it("Tu semana: la web y la app guardan los días elegidos (0 = domingo) y el plan entrena justo esos, no desde el lunes", () => {
+    expect(read("src/app/pages/Configurator.tsx")).toContain("training_days: c.days");
+    expect(read("native/Autopilot/Features/Auth/OnboardingView.swift")).toContain("training_days: days");
+    const gen = read("supabase/functions/generate-plan/index.ts");
+    expect(gen).toContain("availabilityObj.training_days");
+    expect(gen).toContain("(n + 6) % 7");
+    expect(gen).toContain("rules, skillProfile, chosenDays);");
+    expect(gen).toContain("for (const dayIdx of order)");
+  });
+
+  it("Gratis y Plus no leen «tu entrenador» en el primer uso ni en Nutrición", () => {
+    const web = read("src/app/pages/Dashboard.tsx");
+    expect(web).not.toContain("No necesitas contratar un entrenador para empezar.");
+    expect(web).not.toContain("hasta que tu entrenador calcule");
+    expect(read("native/Autopilot/Features/Train/TrainView.swift")).not.toContain("En cuanto tengamos tu plan");
+  });
+
   it("Scan: la misma ruedecita de espera en la web y en la app (anillo con %, mensajes y ritmo)", () => {
     const shared = read("src/shared/lib/scanLoading.ts");
     const view = read("src/app/components/scan/ScanAnalyzing.tsx");

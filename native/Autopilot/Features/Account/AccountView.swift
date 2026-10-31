@@ -38,7 +38,7 @@ struct AccountView: View {
     @State private var sports = ""
     @State private var nutritionPrefs = ""
     @State private var allergies = ""
-    @State private var workoutView = UserDefaults.standard.string(forKey: "workout-view") ?? "list"
+    @State private var workoutView = UserDefaults.standard.string(forKey: "workout-view") ?? "focus"
     @State private var photo: PhotosPickerItem?
     @State private var exportDoc: JSONDoc?
     @State private var confirmDelete = false
@@ -48,6 +48,8 @@ struct AccountView: View {
     @State private var unlocking: SavedAccount?
     @State private var subStatus = ""
     @State private var subEnd: Date?
+    @State private var paymentPaid = false
+    @State private var oneTimePurchase = false
     @State private var isAdmin = false
     /// Ficha y datos ya cargados del servidor. Sin esto, un fallo de red dejaba los campos vacíos
     /// y «Guardar» podía sobrescribir con vacíos lo que ya había (pérdida de datos).
@@ -57,6 +59,12 @@ struct AccountView: View {
     private var planName: String { ["full", "transform", "personal"].contains(subTier ?? "") ? "Coach" : subTier == "training" ? "Plus" : "Free" }
     private var paid: Bool { planName != "Free" }
     private var subActive: Bool { subStatus == "active" || subStatus == "trialing" }
+    /// Plus o Coach pagado y en vigor, igual que `hasCoaching` (entitlements.ts). Sin esto,
+    /// Ajustes no enseña nada de comida: eso llega con Plus y su propio onboarding.
+    private var hasPlus: Bool {
+        guard paymentPaid, paid else { return false }
+        return oneTimePurchase || (subActive && (subEnd.map { $0 > Date() } ?? true))
+    }
 
     private func setRest(_ secs: Int) {
         let v = min(600, max(15, secs))
@@ -92,7 +100,7 @@ struct AccountView: View {
 
                 group("Perfil") {
                     fieldRow("Nombre") { TextField("Nombre", text: $name).multilineTextAlignment(.trailing).textFieldStyle(.plain) }
-                    row("Correo") { Text(session.session?.user.email ?? "").foregroundStyle(Palette.muted).lineLimit(2) }
+                    row("Correo") { Text(session.session?.user.email ?? "").foregroundStyle(Palette.muted).lineLimit(1).minimumScaleFactor(0.8).truncationMode(.middle) }
                     actionRow("Guardar perfil") { await saveProfile() }
                 }
 
@@ -129,8 +137,10 @@ struct AccountView: View {
                 group("Disponibilidad") {
                     fieldRow("Días/semana") { numberField($days) }
                     fieldRow("Minutos/sesión") { numberField($minutes) }
+                    if !hasPlus { actionRow("Guardar datos") { await saveData() } }
                 }
-                group("Deportes") { TextField("Fútbol los martes, pádel…", text: $sports, axis: .vertical).textFieldStyle(.plain).frame(minHeight: 44) }
+                // Deportes (calendario) es avanzado: fuera de Ajustes. Lo de comida, solo con Plus.
+                if hasPlus {
                 group("Lo que te gusta") {
                     FoodChips(options: FoodPrefs.likes, isOn: { FoodPrefs.readLikes(nutritionPrefs).contains($0) }) { v in
                         nutritionPrefs = FoodPrefs.writeLikes(nutritionPrefs, FoodPrefs.toggle(FoodPrefs.readLikes(nutritionPrefs), v))
@@ -145,6 +155,7 @@ struct AccountView: View {
                 group("Alergias y otros alimentos a evitar") {
                     TextField("Frutos secos, marisco…", text: $allergies, axis: .vertical).textFieldStyle(.plain).frame(minHeight: 44)
                     actionRow("Guardar datos") { await saveData() }
+                }
                 }
 
                 group("Tu forma de entrenar", footer: "Elige cuánto quieres descansar al marcar una serie. El temporizador se inicia solo durante tu entreno.") {
@@ -657,14 +668,15 @@ struct AccountView: View {
             name = ""; avatar = nil; namePublic = false; avatarPublic = false
             age = ""; height = ""; weight = ""; days = ""; minutes = ""
             sports = ""; nutritionPrefs = ""; allergies = ""
-            goal = "gain_muscle"; subTier = nil; subStatus = ""; subEnd = nil
+            goal = "gain_muscle"; subTier = nil; subStatus = ""; subEnd = nil; paymentPaid = false; oneTimePurchase = false
         }
-        struct P: Decodable { let name: String?; let avatar_url: String?; let name_public: Bool?; let avatar_public: Bool?; let subscription_tier: String?; let subscription_status: String?; let subscription_end: Date? }
-        if let p: P = try? await Backend.client.from("profiles").select("name, avatar_url, name_public, avatar_public, subscription_tier, subscription_status, subscription_end")
+        struct P: Decodable { let name: String?; let avatar_url: String?; let name_public: Bool?; let avatar_public: Bool?; let subscription_tier: String?; let subscription_status: String?; let subscription_end: Date?; let payment_status: String?; let stripe_payment_id: String? }
+        if let p: P = try? await Backend.client.from("profiles").select("name, avatar_url, name_public, avatar_public, subscription_tier, subscription_status, subscription_end, payment_status, stripe_payment_id")
             .eq("user_id", value: id).single().execute().value {
             name = p.name ?? ""; avatar = p.avatar_url
             namePublic = p.name_public ?? false; avatarPublic = p.avatar_public ?? false
             subTier = p.subscription_tier; subStatus = p.subscription_status ?? "inactive"; subEnd = p.subscription_end
+            paymentPaid = p.payment_status == "paid"; oneTimePurchase = !(p.stripe_payment_id ?? "").isEmpty
             profileLoaded = true
         }
         isAdmin = session.role == .admin
@@ -755,10 +767,13 @@ struct AccountView: View {
         if !trimmed(minutes).isEmpty, num(minutes) == nil { show("Revisa los minutos por sesión"); return }
         busy = true; defer { busy = false }
         struct Avail: Encodable { let days: Int?; let hours: Double?; let auto_calculated: Bool }
-        struct U: Encodable { let user_id: UUID; let age: Int?; let height: Double?; let weight: Double?; let goal: String; let availability: Avail; let sports: String; let nutrition_preferences: String; let allergies: String }
+        // Lo que no se ve aquí no se envía (deportes nunca, comida solo con Plus): un `nil` se omite
+        // del JSON, así un fallo al cargar nunca borra lo guardado sin que se vea.
+        struct U: Encodable { let user_id: UUID; let age: Int?; let height: Double?; let weight: Double?; let goal: String; let availability: Avail; let nutrition_preferences: String?; let allergies: String? }
         let row = U(user_id: id, age: Int(age), height: num(height), weight: num(weight), goal: goal,
                     availability: Avail(days: Int(days), hours: num(minutes).map { $0 / 60 }, auto_calculated: false),
-                    sports: sports, nutrition_preferences: nutritionPrefs, allergies: allergies.trimmingCharacters(in: .whitespaces))
+                    nutrition_preferences: hasPlus ? nutritionPrefs : nil,
+                    allergies: hasPlus ? allergies.trimmingCharacters(in: .whitespaces) : nil)
         do {
             try await Backend.client.from("onboarding").upsert(row, onConflict: "user_id").execute()
             Haptics.success(); show("Datos guardados")

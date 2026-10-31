@@ -823,6 +823,8 @@ function buildWeeklyPlan(
   exerciseLib: Record<string, ExerciseRow[]>,
   rules: Rules,
   skillProfile: SkillProfile | null,
+  // Días concretos que eligió (0 = lunes … 6 = domingo). Sin ellos, desde el lunes como antes.
+  allowedDays: number[] = [],
 ) {
   const plan: Array<Omit<DayPlan, "exercises"> & { exercises?: Array<Omit<GymExerciseEntry, "reps"> & { reps: string }> }> = [];
   const trainedMuscles: Record<string, number> = {};
@@ -832,7 +834,9 @@ function buildWeeklyPlan(
   const gymDays = hasSports ? Math.max(Math.ceil(daysAvailable * 0.6), gymSplit.length) : daysAvailable;
   const sportDayCount = hasSports ? Math.max(1, daysAvailable - gymDays) : 0;
 
-  for (let dayIdx = 0; dayIdx < 7 && plan.length < daysAvailable; dayIdx++) {
+  const order = allowedDays.length > 0 ? allowedDays : [0, 1, 2, 3, 4, 5, 6];
+  for (const dayIdx of order) {
+    if (plan.length >= daysAvailable) break;
     if (gymDayIdx < gymSplit.length && gymDayIdx < gymDays) {
       const routine = gymSplit[gymDayIdx];
       const canTrain = routine.muscles.every((m) => {
@@ -1039,12 +1043,24 @@ serve(async (req) => {
     const gymSlots = Array.isArray(scheduleResult.data?.gym_slots)
       ? (scheduleResult.data!.gym_slots as Array<{ day: number; start: string; duration: number }>)
       : [];
-    const scheduleDays = gymSlots.length > 0 ? gymSlots.length : null;
     console.log(`[GENERATE-PLAN] onb.availability raw:`, onb.availability);
-    const daysAvailable = scheduleDays ?? parseInt(
+    // Los días concretos que eligió (horario real o cuestionario; 0 = domingo como getDay)
+    // mandan: antes solo se usaba cuántos eran y el plan empezaba siempre el lunes.
+    const toDayIdx = (d: unknown) => {
+      const n = typeof d === "number" ? d : typeof d === "string" && d.trim() !== "" ? Number(d) : NaN;
+      return Number.isInteger(n) && n >= 0 && n <= 6 ? (n + 6) % 7 : null;
+    };
+    const availabilityObj: Record<string, unknown> = typeof onb.availability === "object" && onb.availability !== null ? jsonObject(onb.availability) : {};
+    const pickedDays: unknown[] = gymSlots.length > 0
+      ? gymSlots.map((slot) => slot.day)
+      : Array.isArray(availabilityObj.training_days) ? availabilityObj.training_days : [];
+    const chosenDays = [...new Set(pickedDays.map(toDayIdx).filter((d): d is number => d !== null))].sort((a, b) => a - b);
+    const scheduleDays = gymSlots.length > 0 ? gymSlots.length : null;
+    const daysAvailable = chosenDays.length > 0 ? chosenDays.length : scheduleDays ?? parseInt(
       typeof onb.availability === "object" && onb.availability !== null
-        ? String(jsonObject(onb.availability).days || "4") : "4"
+        ? String(availabilityObj.days || "4") : "4"
     );
+    console.log(`[GENERATE-PLAN] chosen weekdays (0 = lunes): ${chosenDays.join(",") || "none"}`);
     console.log(`[GENERATE-PLAN] daysAvailable computed: ${daysAvailable} (scheduleDays: ${scheduleDays})`);
     if (scheduleDays) {
       console.log(`[GENERATE-PLAN] Using user_schedule: ${scheduleDays} gym slots/week`);
@@ -1172,7 +1188,7 @@ serve(async (req) => {
     }
 
     const gymSplit = getGymSplit(Math.min(daysAvailable, 6), skillProfile);
-    const weeklyPlan = buildWeeklyPlan(gymSplit, sports, Math.min(daysAvailable, 7), config, exerciseLib, rules, skillProfile);
+    const weeklyPlan = buildWeeklyPlan(gymSplit, sports, Math.min(daysAvailable, 7), config, exerciseLib, rules, skillProfile, chosenDays);
 
     // ─── APPLY USER PREFERENCES (SWAPS + WEIGHTS) ───
     // Priority: USER PREFERENCE > SCAN DATA > ONBOARDING

@@ -17,10 +17,11 @@ import { toast } from "sonner";
 import type { DayPlan, ExerciseTrackingMode, GymExerciseEntry } from "@/shared/types/training";
 import ExercisePicker from "@/app/components/dashboard/ExercisePicker";
 import RPEDialog from "@/app/components/dashboard/RPEDialog";
-import { ExerciseThumb } from "@/app/components/ExerciseMedia";
+import { ExerciseThumb, isDirectFile } from "@/app/components/ExerciseMedia";
 import ExerciseFocus from "@/app/components/ExerciseFocus";
 import { useExerciseMetadata } from "@/shared/hooks/useExerciseMetadata";
-import { getWorkoutRestPreference, getWorkoutView, WORKOUT_VIEW_EVENT } from "@/shared/lib/workoutPreferences";
+import { getWorkoutAdvanced, getWorkoutRestPreference, getWorkoutView, setWorkoutAdvanced, setWorkoutView, WORKOUT_VIEW_EVENT } from "@/shared/lib/workoutPreferences";
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu";
 import { readActiveWorkout, saveActiveWorkout, clearActiveWorkout, clearPendingOfflineSeries, remainingRestSeconds, formatElapsed, playRestBeep } from "@/shared/lib/activeWorkout";
 import { getProgressionSuggestion } from "@/shared/lib/workoutProgression";
 import { parsePositiveWeight } from "@/shared/lib/weight";
@@ -106,6 +107,12 @@ const SET_GRID = "grid grid-cols-[24px_52px_minmax(0,1fr)_minmax(0,1fr)_44px] it
 const NUMBER_FIELD = "scroll-mb-40 h-11 w-full min-w-0 rounded-[10px] border-0 bg-secondary px-1 text-center font-rounded type-headline tabular-nums outline-none transition-colors duration-150 placeholder:font-normal placeholder:text-muted-foreground/60 focus:bg-accent aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-inset aria-[invalid=true]:ring-destructive";
 // La serie en curso: cifras más grandes que el resto.
 const CURRENT_FIGURE = "!text-[22px] !font-bold !leading-7";
+// iOS solo arranca un vídeo en silencio si `muted` está puesto antes de `play()`.
+const startLoop = (el: HTMLVideoElement | null) => {
+  if (!el) return;
+  el.muted = true;
+  void el.play().catch(() => undefined);
+};
 // Cápsula de 34 pt con el objetivo táctil ampliado a 44 pt.
 const CAPSULE_HIT = "relative before:absolute before:inset-x-0 before:-inset-y-[5px] before:content-['']";
 
@@ -125,12 +132,13 @@ function focusSetField(e: { currentTarget: HTMLInputElement }) {
 const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resume = false, onAutoStartConsumed, onExit, onCancel, onSessionModeChange }: Props) => {
   const [resumeDraft] = useState(() => resume ? readActiveWorkout(userId) : null);
   const [workoutView, setWorkoutViewState] = useState(() => getWorkoutView(userId));
+  const [advanced, setAdvancedState] = useState(() => getWorkoutAdvanced(userId));
   const [openExercises, setOpenExercises] = useState<number[]>([]);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(() => 
     window.matchMedia("(prefers-reduced-motion: reduce)").matches
   );
   useEffect(() => {
-    const refresh = () => setWorkoutViewState(getWorkoutView(userId));
+    const refresh = () => { setWorkoutViewState(getWorkoutView(userId)); setAdvancedState(getWorkoutAdvanced(userId)); };
     window.addEventListener(WORKOUT_VIEW_EVENT, refresh);
     return () => window.removeEventListener(WORKOUT_VIEW_EVENT, refresh);
   }, [userId]);
@@ -1108,6 +1116,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
   const workingLogEntries = allLogEntries.filter(({ set }) => !isWorkoutSetWarmup(set));
   const completedSets = workingLogEntries.filter(({ set }) => set.done).length;
   const totalSets = workingLogEntries.length;
+  const allSetsDone = totalSets > 0 && completedSets >= totalSets;
   const totalVolume = workingLogEntries.reduce((total, { set }) => {
     if (!set.done) return total;
     const weight = parsePositiveWeight(set.weight);
@@ -1173,7 +1182,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
         <button
           type="button"
           onClick={() => { void hapticTap(); onCancel(); }}
-          className="mb-2 inline-flex min-h-11 items-center gap-0.5 pl-0.5 pr-2 text-primary transition-opacity active:opacity-60 [touch-action:manipulation]"
+          className="mb-2 inline-flex min-h-11 items-center gap-0.5 pl-0.5 pr-2 text-foreground transition-opacity active:opacity-60 [touch-action:manipulation]"
         >
           <ChevronLeft className="h-[22px] w-[22px]" strokeWidth={2.5} aria-hidden="true" />
           <span className="type-body">Rutina semanal</span>
@@ -1190,7 +1199,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                 type="button"
                 onClick={() => { void hapticTap(); void saveAndExit(); }}
                 disabled={saving}
-                className="inline-flex h-11 items-center gap-0.5 pl-0.5 pr-2 text-primary transition-opacity active:opacity-60 disabled:opacity-40 [touch-action:manipulation]"
+                className="inline-flex h-11 items-center gap-0.5 pl-0.5 pr-2 text-foreground transition-opacity active:opacity-60 disabled:opacity-40 [touch-action:manipulation]"
               >
                 <ChevronLeft className="h-[22px] w-[22px]" strokeWidth={2.5} aria-hidden="true" />
                 <span className="type-body">Salir</span>
@@ -1198,18 +1207,34 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
             }
             trailing={
               <>
-                {/* Lo destructivo no va a la vista en la barra: «···» abre la hoja de acciones. */}
-                <button
-                  type="button"
-                  aria-label="Más acciones"
-                  onClick={() => { void hapticTap(); setDiscardOpen(true); }}
-                  disabled={saving}
-                  className="inline-flex h-11 w-11 items-center justify-center transition-opacity active:opacity-60 disabled:opacity-40 [touch-action:manipulation]"
-                >
-                  <span className="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-secondary text-primary">
-                    <MoreHorizontal className="h-[18px] w-[18px]" strokeWidth={2.5} aria-hidden="true" />
-                  </span>
-                </button>
+                {/* Opciones claras: cambiar de vista y de detalle; descartar, al final y en rojo. */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label="Más acciones"
+                      onClick={() => void hapticTap()}
+                      disabled={saving}
+                      className="inline-flex h-11 w-11 items-center justify-center transition-opacity active:opacity-60 disabled:opacity-40 [touch-action:manipulation]"
+                    >
+                      <span className="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-secondary text-foreground">
+                        <MoreHorizontal className="h-[18px] w-[18px]" strokeWidth={2.5} aria-hidden="true" />
+                      </span>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onSelect={() => setWorkoutView(userId, workoutView === "list" ? "focus" : "list")}>
+                      {workoutView === "list" ? "Ver ejercicio a ejercicio" : "Ver toda la sesión"}
+                    </DropdownMenuItem>
+                    <DropdownMenuCheckboxItem checked={advanced} onCheckedChange={(on) => setWorkoutAdvanced(userId, on === true)}>
+                      Más opciones por serie
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => setDiscardOpen(true)}>
+                      Descartar entrenamiento
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 {saveStatus === "error" && (
                   <span role="status" className="flex h-11 w-11 items-center justify-center text-destructive">
                     <CloudOff className="h-5 w-5" aria-hidden="true" />
@@ -1440,41 +1465,12 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
             const meta = exerciseMetadata.byId[active.exercise_id] || exerciseMetadata.byName[active.name];
             const img = meta?.image_url || active.image_url;
             const vid = active.video_url || meta?.video_url;
+            // El movimiento en bucle corto (como un GIF) con la foto de portada; con «reducir
+            // movimiento», solo la foto. Igual que `LoopingVideo` en la app.
+            const loop = vid && isDirectFile(vid) && !prefersReducedMotion ? vid : null;
             return (
               <div className="space-y-2">
-                <motion.div
-                  key={expandedExercise}
-                  initial={{ opacity: 0.4, x: 0 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.18 }}
-                  drag="x"
-                  dragConstraints={{ left: 0, right: 0 }}
-                  dragElastic={0.35}
-                  onDragEnd={(_, info) => {
-                    const total = currentPlan.exercises?.length || 0;
-                    const swipe = info.offset.x + info.velocity.x * 0.2;
-                    if (swipe < -60 && expandedExercise < total - 1) { setExpandedExercise(expandedExercise + 1); void hapticTap(); }
-                    else if (swipe > 60 && expandedExercise > 0) { setExpandedExercise(expandedExercise - 1); void hapticTap(); }
-                  }}
-                  style={{ touchAction: "pan-y" }}
-                  aria-label="Desliza para cambiar de ejercicio"
-                  className={`relative flex w-full items-center justify-center overflow-hidden rounded-2xl bg-card md:cursor-grab md:active:cursor-grabbing ${img ? "aspect-[4/3] max-h-[24dvh] [@media(max-height:700px)]:max-h-[14dvh] md:max-h-[34dvh]" : "h-12"}`}>
-                  {img ? (
-                    <img src={img} alt={active.name} draggable={false} decoding="async" fetchPriority="high" loading="eager" className="h-full w-full object-contain" />
-                  ) : (
-                    <Dumbbell className="h-6 w-6 text-muted-foreground/60" strokeWidth={1.75} aria-hidden="true" />
-                  )}
-                  {vid && (
-                    <button
-                      type="button"
-                      aria-label={`Ver vídeo de técnica de ${active.name}`}
-                      onClick={() => { void hapticTap(); setTechnique({ name: active.name, image: img, video: vid, series: active.series != null ? String(active.series) : undefined, reps: active.reps != null ? String(active.reps) : undefined, rest: active.rest, category: active.muscle_group || meta?.muscle_group, type: active.exercise_type || meta?.exercise_type }); }}
-                      className="material absolute inset-0 m-auto flex h-14 w-14 items-center justify-center rounded-full text-foreground transition-opacity active:opacity-60"
-                    >
-                      <Play className="h-5 w-5 fill-current" aria-hidden="true" />
-                    </button>
-                  )}
-                </motion.div>
+                {/* Carrusel arriba y el movimiento en grande debajo: se ve en qué ejercicio estás. */}
                 <div role="tablist" aria-label="Ejercicios de la sesión" className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 py-1">
                   {(currentPlan.exercises || []).map((item, idx) => {
                     const m = exerciseMetadata.byId[item.exercise_id] || exerciseMetadata.byName[item.name];
@@ -1496,6 +1492,41 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                     );
                   })}
                 </div>
+                <motion.div
+                  key={expandedExercise}
+                  initial={{ opacity: 0.4, x: 0 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.18 }}
+                  drag="x"
+                  dragConstraints={{ left: 0, right: 0 }}
+                  dragElastic={0.35}
+                  onDragEnd={(_, info) => {
+                    const total = currentPlan.exercises?.length || 0;
+                    const swipe = info.offset.x + info.velocity.x * 0.2;
+                    if (swipe < -60 && expandedExercise < total - 1) { setExpandedExercise(expandedExercise + 1); void hapticTap(); }
+                    else if (swipe > 60 && expandedExercise > 0) { setExpandedExercise(expandedExercise - 1); void hapticTap(); }
+                  }}
+                  style={{ touchAction: "pan-y" }}
+                  aria-label="Desliza para cambiar de ejercicio"
+                  className={`relative flex w-full items-center justify-center overflow-hidden rounded-2xl bg-card md:cursor-grab md:active:cursor-grabbing ${img || loop ? "aspect-[4/3] max-h-[26dvh] [@media(max-height:700px)]:max-h-[22dvh] md:max-h-[40dvh]" : "h-12"}`}>
+                  {loop ? (
+                    <video key={loop} ref={startLoop} src={loop} poster={img || undefined} autoPlay muted loop playsInline preload="auto" disablePictureInPicture aria-label={active.name} draggable={false} className="pointer-events-none h-full w-full object-cover" />
+                  ) : img ? (
+                    <img src={img} alt={active.name} draggable={false} decoding="async" fetchPriority="high" loading="eager" className="h-full w-full object-cover" />
+                  ) : (
+                    <Dumbbell className="h-6 w-6 text-muted-foreground/60" strokeWidth={1.75} aria-hidden="true" />
+                  )}
+                  {vid && (
+                    <button
+                      type="button"
+                      aria-label={`Ver vídeo de técnica de ${active.name}`}
+                      onClick={() => { void hapticTap(); setTechnique({ name: active.name, image: img, video: vid, series: active.series != null ? String(active.series) : undefined, reps: active.reps != null ? String(active.reps) : undefined, rest: active.rest, category: active.muscle_group || meta?.muscle_group, type: active.exercise_type || meta?.exercise_type }); }}
+                      className={`material absolute flex items-center justify-center rounded-full text-foreground transition-opacity active:opacity-60 ${loop ? "bottom-2 right-2 h-11 w-11" : "inset-0 m-auto h-14 w-14"}`}
+                    >
+                      <Play className="h-5 w-5 fill-current" aria-hidden="true" />
+                    </button>
+                  )}
+                </motion.div>
               </div>
             );
           })()}
@@ -1592,7 +1623,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                   {/* Antes de empezar, la lista solo informa: cambiar y ficha viven dentro de la sesión. */}
                   <div className={`${started ? "flex" : "hidden"} shrink-0 items-center ${focused ? "-mr-2.5 -mt-2" : ""}`}>
                     {allDone && !focused && (
-                      <span className="flex h-11 w-9 items-center justify-center text-primary">
+                      <span className="flex h-11 w-9 items-center justify-center text-success">
                         <Check className="h-5 w-5" strokeWidth={2.5} aria-hidden="true" />
                       </span>
                     )}
@@ -1714,7 +1745,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                           const checkClass = set.done
                             ? isWarmup
                               ? "border-muted-foreground bg-muted-foreground text-background"
-                              : "border-primary bg-primary text-primary-foreground"
+                              : "border-success bg-success text-success-foreground"
                             : inputError
                               ? "border-destructive text-destructive"
                               : "border-muted-foreground/40 text-muted-foreground/40";
@@ -1864,7 +1895,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                                 </div>
                                 );
                               })}
-                              {si === firstPendingIndex && (
+                              {si === firstPendingIndex && advanced && (
                               <div className="mt-2 flex gap-2">
                               <Button
                                 type="button"
@@ -1958,8 +1989,8 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                           {Math.floor(restTimer / 60)}:{(restTimer % 60).toString().padStart(2, "0")}
                         </p>
                       </div>
-                      <button type="button" aria-label="Restar 30 segundos" onClick={() => { void hapticSelection(); adjustRest(-30); }} className="h-11 min-w-11 px-2 type-body tabular-nums text-primary transition-opacity active:opacity-60 [touch-action:manipulation]">−30</button>
-                      <button type="button" aria-label="Sumar 30 segundos" onClick={() => { void hapticSelection(); adjustRest(30); }} className="h-11 min-w-11 px-2 type-body tabular-nums text-primary transition-opacity active:opacity-60 [touch-action:manipulation]">+30</button>
+                      <button type="button" aria-label="Restar 30 segundos" onClick={() => { void hapticSelection(); adjustRest(-30); }} className="h-11 min-w-11 px-2 type-body tabular-nums text-foreground transition-opacity active:opacity-60 [touch-action:manipulation]">−30</button>
+                      <button type="button" aria-label="Sumar 30 segundos" onClick={() => { void hapticSelection(); adjustRest(30); }} className="h-11 min-w-11 px-2 type-body tabular-nums text-foreground transition-opacity active:opacity-60 [touch-action:manipulation]">+30</button>
                       <button type="button" aria-label="Omitir descanso" onClick={() => { void hapticTap(); setRestTimer(null); }} className="-mr-2 h-11 rounded-lg bg-primary/10 px-3 type-body font-semibold text-primary transition-opacity active:opacity-60 [touch-action:manipulation]">
                         Omitir
                       </button>
@@ -1986,13 +2017,16 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                       ? "Guardado automáticamente"
                       : "Se guarda automáticamente"}
             </p>
+            {/* Psicología del color: mientras quedan series, la acción dorada es marcar la serie;
+                «Terminar» se vuelve dorado solo con la sesión completa (la recompensa). */}
             <Button
               onClick={() => { void hapticTap(); void finishWorkout(); }}
               disabled={saving || completedSets === 0}
+              variant={allSetsDone ? "default" : "secondary"}
               className="w-full [.keyboard-open_&]:hidden"
               size="lg"
             >
-              {saving ? <><Spinner size="sm" className="text-primary-foreground [&>svg]:!size-full" label="Guardando" /> Guardando…</> : "Terminar entrenamiento"}
+              {saving ? <><Spinner size="sm" className={`${allSetsDone ? "text-primary-foreground" : "text-foreground"} [&>svg]:!size-full`} label="Guardando" /> Guardando…</> : "Terminar entrenamiento"}
             </Button>
             </>}
           </div>}

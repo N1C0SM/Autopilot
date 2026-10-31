@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/shared/integrations/supabase/client";
 import type { DayPlan } from "@/shared/types/training";
+import { fastImage } from "@/shared/lib/fastImage";
 
 export interface ExerciseMetadata {
   id: string;
@@ -74,7 +75,7 @@ export function useExerciseMetadata(dayPlans: DayPlan[]): ExerciseMetadataIndex 
               movement_pattern: row.movement_pattern,
               skill_tag: row.skill_tag,
               video_url: row.video_url,
-              image_url: row.image_url,
+              image_url: fastImage(row.image_url, 800),
             };
             index.byId[item.id] = item;
             index.byName[item.name] = item;

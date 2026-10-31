@@ -5,15 +5,16 @@ import { usePlanAvailability } from "@/shared/lib/planCatalog";
 import { usePublicBooks } from "@/shared/hooks/usePublicBooks";
 import { BRAND_PHOTOS } from "@/shared/lib/brandPhotos";
 import BookCover from "@/web/components/BookCover";
+import { fastImage } from "@/shared/lib/fastImage";
 
 type Card = { icon: LucideIcon; title: string; text: string; tag?: string; photo?: string; visual?: ReactNode };
 
 // Fotos reales de ejercicios de la biblioteca de la app (las mismas que usa la demo).
 const IMG = "https://enebrcdrdnfkyduzyrzm.supabase.co/storage/v1/object/public/site-assets/exercise-images/";
 const PHOTOS = {
-  squat: `${IMG}14988835-a004-49d6-95c5-63978dbce978-1791475887313.png`,
-  row: `${IMG}d5e30e05-0791-4886-84a0-7b2695728225-1791475865184.png`,
-  press: `${IMG}a31c7206-d2a4-4b31-856a-f5dec09b890e-1791475829849.png`,
+  squat: fastImage(`${IMG}14988835-a004-49d6-95c5-63978dbce978-1791475887313.png`, 1000),
+  row: fastImage(`${IMG}d5e30e05-0791-4886-84a0-7b2695728225-1791475865184.png`, 1000),
+  press: fastImage(`${IMG}a31c7206-d2a4-4b31-856a-f5dec09b890e-1791475829849.png`, 1000),
   meal: BRAND_PHOTOS.meal,
 };
 

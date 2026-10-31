@@ -583,7 +583,7 @@ const Dashboard = () => {
   const sectionHelp = hasPlan && section === "nutrition" && nutrition
     ? macros
       ? "Estos son tus objetivos diarios. No hace falta clavarlos al gramo: acércate y sé constante."
-      : "Las comidas son orientativas hasta que tu entrenador calcule objetivos con tu peso actual."
+      : "Las comidas son orientativas hasta que añadas tu peso actual para calcular tus objetivos."
     : hasPlan && section === "progress" && user
       ? "Sube una foto cada 2 semanas, misma luz y misma hora. Es la forma más fiable de ver el cambio."
       : null;
@@ -596,7 +596,7 @@ const Dashboard = () => {
             className="flex-1"
             icon={Dumbbell}
             title="Prepara tu rutina inicial gratis"
-            description="No necesitas contratar un entrenador para empezar."
+            description="Te la preparamos en unos segundos."
           />
           <Button size="lg" className="w-full md:w-auto md:self-center" disabled={preparingRoutine} onClick={async () => {
             void hapticTap();
@@ -610,9 +610,9 @@ const Dashboard = () => {
           }}>{preparingRoutine ? "Preparando…" : "Preparar mi rutina gratis"}</Button>
         </div>
       )}
-      {!campaign && !coaching && section === "nutrition" && (
-        // Plus preseleccionado siempre: es el plan que queremos vender primero.
-        <PlanPaywall plan="plus" allowCoach defaultPlan="training" onChoose={(tier) => handleCompletePayment(tier)} />
+      {!campaign && !coaching && section === "nutrition" && user && (
+        // Los macros son gratis (como la app): primero los tuyos, y debajo las comidas de Plus.
+        <BasicNutrition userId={user.id} onEdit={() => setSection("settings")} onUpgrade={() => void handleCompletePayment("training")} />
       )}
 
       {/* Chat reservado para una versión futura; el alcance también controla su navegación. */}

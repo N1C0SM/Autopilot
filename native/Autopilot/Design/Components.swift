@@ -45,6 +45,48 @@ struct RestCard<Action: View>: View {
     }
 }
 
+/// Sin rutina todavía (web `Dashboard.tsx`, `!hasPlan`): la misma invitación y el mismo botón,
+/// que la prepara con generate-plan. Nunca una pantalla vacía sin salida.
+struct StarterRoutineCard: View {
+    @EnvironmentObject private var session: SessionModel
+    var onReady: () async -> Void
+    @State private var preparing = false
+    @State private var failed = false
+
+    var body: some View {
+        VStack(spacing: 16) {
+            EmptyStateView(symbol: "dumbbell", title: "Prepara tu rutina inicial gratis",
+                           message: "Te la preparamos en unos segundos.")
+            Button { Task { await prepare() } } label: {
+                if preparing { BrandLoader().tint(.black).accessibilityHidden(true) } else { Text("Preparar mi rutina gratis") }
+            }
+            .buttonStyle(.pill)
+            .disabled(preparing)
+            .accessibilityLabel(preparing ? "Preparando…" : "Preparar mi rutina gratis")
+            if failed {
+                Text("No se ha podido preparar la rutina. Vuelve a intentarlo.")
+                    .font(.apFootnote).foregroundStyle(Palette.destructive).multilineTextAlignment(.center)
+            }
+        }
+    }
+
+    private func prepare() async {
+        guard !preparing, let userId = session.userId else { return }
+        Haptics.tap()
+        preparing = true
+        failed = false
+        defer { preparing = false }
+        if await TrainingRepo.generateStarterPlan(userId: userId) {
+            Haptics.success()
+            await onReady()
+        } else {
+            failed = true
+            Haptics.error()
+            A11y.announce("No se ha podido preparar la rutina. Vuelve a intentarlo.")
+        }
+    }
+}
+
 /// Cabecera de la web (MobileHeader): campana y avatar en círculos de 30 pt dentro de 44 pt.
 struct HeaderButtons: View {
     let initial: String
@@ -261,9 +303,35 @@ final class ImageCache {
         }
     }
 
+    /// Las fotos públicas de Supabase son PNG de ~2 MB: su endpoint de render las da en WebP
+    /// de ~5–15 KB al tamaño de pantalla. Igual que `fastImage` en la web (src/shared/lib/fastImage.ts).
+    nonisolated static func fastURL(_ url: URL, maxSide: CGFloat) -> URLRequest? {
+        let object = "/storage/v1/object/public/", render = "/storage/v1/render/image/public/"
+        let text = url.absoluteString
+        guard url.host?.hasSuffix(".supabase.co") == true,
+              let base = text.components(separatedBy: "?").first,
+              let path = base.components(separatedBy: object).dropFirst().first
+                ?? base.components(separatedBy: render).dropFirst().first,
+              let root = base.components(separatedBy: "/storage/v1/").first else { return nil }
+        let side = Int(min(max(maxSide * 3, 64), 1000))
+        guard let fast = URL(string: "\(root)\(render)\(path)?width=\(side)&height=\(side)&resize=contain&quality=55") else { return nil }
+        var request = URLRequest(url: fast)
+        // Sin esta cabecera Supabase devuelve PNG (~500 KB) en vez de WebP.
+        request.setValue("image/webp,image/*", forHTTPHeaderField: "Accept")
+        return request
+    }
+
     private func download(_ url: URL, maxSide: CGFloat) async -> PlatformImage? {
         // Ya descargada en otra sesión: no se vuelve a pedir a la red.
         if let disk = await Self.fromDisk(url, maxSide: maxSide) { return disk }
+        // Primero la versión reducida; si el render fallara, la original de siempre.
+        if let fast = Self.fastURL(url, maxSide: maxSide),
+           let (data, response) = try? await session.data(for: fast),
+           (response as? HTTPURLResponse)?.statusCode ?? 200 < 400,
+           let image = await Self.decode(data, maxSide: maxSide) {
+            Self.toDisk(image, url, maxSide: maxSide)
+            return image
+        }
         // 3 intentos con espera corta: una red mala no debe dejar el hueco para siempre.
         for attempt in 0..<3 {
             if let (data, response) = try? await session.data(from: url),
@@ -481,9 +549,15 @@ enum MacroEstimate {
     static func load(userId: UUID) async -> (kcal: Double, p: Double, c: Double, f: Double)? {
         struct O: Decodable { let weight: Double?; let sex: String?; let goal: String? }
         guard let o: O = try? await Backend.client.from("onboarding").select("weight, sex, goal").eq("user_id", value: userId).single().execute().value,
-              let w = o.weight, w > 30, w <= 300 else { return nil }
-        let base = o.sex == "female" ? w * 28 : w * 32
-        let kcal = max(1200, (o.goal == "lose_weight" ? base - 350 : o.goal == "gain_muscle" ? base + 300 : base).rounded())
+              let w = o.weight else { return nil }
+        return estimate(weight: w, sex: o.sex, goal: o.goal)
+    }
+
+    /// Como `resolveNutritionPreview` de la web: nil si el peso no es válido.
+    static func estimate(weight w: Double, sex: String?, goal: String?) -> (kcal: Double, p: Double, c: Double, f: Double)? {
+        guard w > 30, w <= 300 else { return nil }
+        let base = sex == "female" ? w * 28 : w * 32
+        let kcal = max(1200, (goal == "lose_weight" ? base - 350 : goal == "gain_muscle" ? base + 300 : base).rounded())
         let p = (w * 2).rounded(), f = (kcal * 0.25 / 9).rounded()
         return (kcal, p, max(0, ((kcal - p * 4 - f * 9) / 4).rounded()), f)
     }
