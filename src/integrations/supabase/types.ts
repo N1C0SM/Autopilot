@@ -439,6 +439,276 @@ export type Database = {
         }
         Relationships: []
       }
+      equipment: {
+        Row: {
+          id: string
+          name: string
+          slug: string
+          sort: number
+        }
+        Insert: {
+          id?: string
+          name: string
+          slug: string
+          sort?: number
+        }
+        Update: {
+          id?: string
+          name?: string
+          slug?: string
+          sort?: number
+        }
+        Relationships: []
+      }
+      exercise_categories: {
+        Row: {
+          category_id: string
+          exercise_id: string
+        }
+        Insert: {
+          category_id: string
+          exercise_id: string
+        }
+        Update: {
+          category_id?: string
+          exercise_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_categories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "exercise_categories_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exercise_categories_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exercise_categories_catalog: {
+        Row: {
+          id: string
+          name: string
+          slug: string
+          sort: number
+        }
+        Insert: {
+          id?: string
+          name: string
+          slug: string
+          sort?: number
+        }
+        Update: {
+          id?: string
+          name?: string
+          slug?: string
+          sort?: number
+        }
+        Relationships: []
+      }
+      exercise_equipment: {
+        Row: {
+          equipment_id: string
+          exercise_id: string
+        }
+        Insert: {
+          equipment_id: string
+          exercise_id: string
+        }
+        Update: {
+          equipment_id?: string
+          exercise_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_equipment_equipment_id_fkey"
+            columns: ["equipment_id"]
+            isOneToOne: false
+            referencedRelation: "equipment"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exercise_equipment_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exercise_favorites: {
+        Row: {
+          created_at: string
+          exercise_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          exercise_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          exercise_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_favorites_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exercise_media: {
+        Row: {
+          created_at: string
+          exercise_id: string
+          id: string
+          kind: string
+          license: string | null
+          license_author: string | null
+          sort: number
+          source: string
+          source_url: string | null
+          status: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          exercise_id: string
+          id?: string
+          kind: string
+          license?: string | null
+          license_author?: string | null
+          sort?: number
+          source?: string
+          source_url?: string | null
+          status?: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          exercise_id?: string
+          id?: string
+          kind?: string
+          license?: string | null
+          license_author?: string | null
+          sort?: number
+          source?: string
+          source_url?: string | null
+          status?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_media_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exercise_muscles: {
+        Row: {
+          exercise_id: string
+          muscle_id: string
+          role: string
+        }
+        Insert: {
+          exercise_id: string
+          muscle_id: string
+          role?: string
+        }
+        Update: {
+          exercise_id?: string
+          muscle_id?: string
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_muscles_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exercise_muscles_muscle_id_fkey"
+            columns: ["muscle_id"]
+            isOneToOne: false
+            referencedRelation: "muscles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exercise_recent: {
+        Row: {
+          exercise_id: string
+          user_id: string
+          viewed_at: string
+        }
+        Insert: {
+          exercise_id: string
+          user_id: string
+          viewed_at?: string
+        }
+        Update: {
+          exercise_id?: string
+          user_id?: string
+          viewed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_recent_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exercise_relations: {
+        Row: {
+          exercise_id: string
+          kind: string
+          related_id: string
+        }
+        Insert: {
+          exercise_id: string
+          kind: string
+          related_id: string
+        }
+        Update: {
+          exercise_id?: string
+          kind?: string
+          related_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_relations_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exercise_relations_related_id_fkey"
+            columns: ["related_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exercise_user_preferences: {
         Row: {
           created_at: string
@@ -471,18 +741,25 @@ export type Database = {
       }
       exercises: {
         Row: {
+          alt_names: string[]
           alternative_id: string | null
+          common_mistakes: string[]
           created_at: string
+          description: string | null
           exercise_type: string | null
           fatigue_level: string | null
           high_tension: boolean
           id: string
           image_generated_at: string | null
           image_url: string | null
+          instructions: string[]
           is_progressable: boolean
           is_stable: boolean
           level: number | null
+          license: string | null
+          license_author: string | null
           load_level: string | null
+          mechanic: string | null
           media_error: string | null
           media_style_version: number | null
           movement_pattern: string | null
@@ -491,27 +768,43 @@ export type Database = {
           priority: number | null
           progression_order: number | null
           recommended_order: number | null
+          reviewed_at: string | null
+          safety_notes: string[]
           skill_tag: string | null
+          slug: string | null
+          source: string
+          source_ref: string | null
+          source_url: string | null
+          status: string
           stimulus_type: string | null
+          tips: string[]
           tracking_mode: string | null
+          updated_at: string
           video_generated_at: string | null
           video_job_id: string | null
           video_priority: number | null
           video_url: string | null
         }
         Insert: {
+          alt_names?: string[]
           alternative_id?: string | null
+          common_mistakes?: string[]
           created_at?: string
+          description?: string | null
           exercise_type?: string | null
           fatigue_level?: string | null
           high_tension?: boolean
           id?: string
           image_generated_at?: string | null
           image_url?: string | null
+          instructions?: string[]
           is_progressable?: boolean
           is_stable?: boolean
           level?: number | null
+          license?: string | null
+          license_author?: string | null
           load_level?: string | null
+          mechanic?: string | null
           media_error?: string | null
           media_style_version?: number | null
           movement_pattern?: string | null
@@ -520,27 +813,43 @@ export type Database = {
           priority?: number | null
           progression_order?: number | null
           recommended_order?: number | null
+          reviewed_at?: string | null
+          safety_notes?: string[]
           skill_tag?: string | null
+          slug?: string | null
+          source?: string
+          source_ref?: string | null
+          source_url?: string | null
+          status?: string
           stimulus_type?: string | null
+          tips?: string[]
           tracking_mode?: string | null
+          updated_at?: string
           video_generated_at?: string | null
           video_job_id?: string | null
           video_priority?: number | null
           video_url?: string | null
         }
         Update: {
+          alt_names?: string[]
           alternative_id?: string | null
+          common_mistakes?: string[]
           created_at?: string
+          description?: string | null
           exercise_type?: string | null
           fatigue_level?: string | null
           high_tension?: boolean
           id?: string
           image_generated_at?: string | null
           image_url?: string | null
+          instructions?: string[]
           is_progressable?: boolean
           is_stable?: boolean
           level?: number | null
+          license?: string | null
+          license_author?: string | null
           load_level?: string | null
+          mechanic?: string | null
           media_error?: string | null
           media_style_version?: number | null
           movement_pattern?: string | null
@@ -549,9 +858,18 @@ export type Database = {
           priority?: number | null
           progression_order?: number | null
           recommended_order?: number | null
+          reviewed_at?: string | null
+          safety_notes?: string[]
           skill_tag?: string | null
+          slug?: string | null
+          source?: string
+          source_ref?: string | null
+          source_url?: string | null
+          status?: string
           stimulus_type?: string | null
+          tips?: string[]
           tracking_mode?: string | null
+          updated_at?: string
           video_generated_at?: string | null
           video_job_id?: string | null
           video_priority?: number | null
@@ -812,6 +1130,30 @@ export type Database = {
         Update: {
           created_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      muscles: {
+        Row: {
+          filter_group: string | null
+          id: string
+          name: string
+          slug: string
+          sort: number
+        }
+        Insert: {
+          filter_group?: string | null
+          id?: string
+          name: string
+          slug: string
+          sort?: number
+        }
+        Update: {
+          filter_group?: string | null
+          id?: string
+          name?: string
+          slug?: string
+          sort?: number
         }
         Relationships: []
       }
@@ -2350,6 +2692,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      exercise_name_key: { Args: { _name: string }; Returns: string }
       get_apk_download_enabled: { Args: never; Returns: boolean }
       get_consumer_plans_public: {
         Args: never
