@@ -24,10 +24,29 @@ const KEY = "autopilot.accounts.v1";
 export function listAccounts(): SavedAccount[] {
   try {
     const raw: unknown = JSON.parse(localStorage.getItem(KEY) || "[]");
-    return Array.isArray(raw) ? raw.filter((a): a is SavedAccount => !!a && typeof a.id === "string" && typeof a.refreshToken === "string") : [];
+    return Array.isArray(raw) ? uniqueAccounts(raw.filter((a): a is SavedAccount => !!a && typeof a.id === "string" && typeof a.refreshToken === "string")) : [];
   } catch {
     return [];
   }
+}
+
+const mailOf = (a: SavedAccount) => (a.email ?? "").trim().toLowerCase();
+
+/**
+ * Una persona, una tarjeta. El correo es único en Supabase: dos entradas con el mismo
+ * correo (o el mismo id) son la misma persona, p. ej. una cuenta borrada y vuelta a crear.
+ * Se queda la que sigue valiendo (la más reciente si empatan), en el sitio de la primera,
+ * y conserva la contraseña opcional si cualquiera de las dos la pedía.
+ */
+function uniqueAccounts(list: SavedAccount[]): SavedAccount[] {
+  const out: SavedAccount[] = [];
+  for (const a of list) {
+    const j = out.findIndex((b) => b.id === a.id || (!!mailOf(a) && mailOf(b) === mailOf(a)));
+    if (j < 0) { out.push(a); continue; }
+    const keep = a.expired && !out[j].expired ? out[j] : a;
+    out[j] = { ...keep, requirePassword: out[j].requirePassword || a.requirePassword };
+  }
+  return out;
 }
 
 function save(list: SavedAccount[]) {
@@ -47,7 +66,12 @@ export function rememberSession(session: Session) {
     accessToken: session.access_token,
     refreshToken: session.refresh_token,
   };
-  const list = listAccounts();
+  // Otra tarjeta con este correo y otro id es esta misma persona con una cuenta que ya no
+  // existe: pasa a ser esta (mismo sitio, misma contraseña opcional), nunca una segunda.
+  const all = listAccounts();
+  const replaced = all.filter((a) => a.id !== account.id && !!mailOf(account) && mailOf(a) === mailOf(account)).map((a) => a.id);
+  const list = uniqueAccounts(all.map((a) => (replaced.includes(a.id) ? { ...a, id: account.id } : a)));
+  if (replaced.includes(getDefaultAccountId() ?? "")) setDefaultAccountId(account.id);
   const i = list.findIndex((a) => a.id === account.id);
   // El nombre y la foto del perfil ganan a los del registro (que a menudo no los traen).
   if (i >= 0) list[i] = { ...account, name: list[i].name || account.name, avatar: list[i].avatar ?? account.avatar, requirePassword: list[i].requirePassword, expired: false };

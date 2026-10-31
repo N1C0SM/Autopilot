@@ -20,6 +20,23 @@ describe("cuentas en el dispositivo", () => {
     expect(listAccounts().map((a) => [a.id, a.refreshToken, a.name])).toEqual([["u1", "r3", "Nombre u1"], ["u2", "r2", "Nombre u2"]]);
   });
 
+  it("una cuenta borrada y vuelta a crear con el mismo correo no sale dos veces en «¿Quién entrena?»", () => {
+    rememberSession(session("u1", "a@x.com", "r1"));
+    rememberSession(session("u2", "b@x.com", "r2"));
+    setRequirePassword("u1", true);
+    setDefaultAccountId("u1");
+    rememberSession(session("u3", "A@x.com", "r3"));
+    expect(listAccounts().map((a) => [a.id, a.refreshToken])).toEqual([["u3", "r3"], ["u2", "r2"]]);
+    expect(listAccounts()[0].requirePassword).toBe(true);
+    expect(getDefaultAccountId()).toBe("u3");
+  });
+
+  it("limpia las tarjetas repetidas que ya estaban guardadas y se queda con la que vale", () => {
+    const saved = (id: string, email: string, expired?: boolean) => ({ id, email, name: "Nico", avatar: null, accessToken: "a", refreshToken: `r-${id}`, expired });
+    localStorage.setItem("autopilot.accounts.v1", JSON.stringify([saved("u1", "a@x.com", true), saved("u2", "b@x.com"), saved("u3", "a@x.com"), saved("u2", "b@x.com")]));
+    expect(listAccounts().map((a) => a.id)).toEqual(["u3", "u2"]);
+  });
+
   it("cambia de cuenta con la sesión guardada y nunca pierde cuentas", async () => {
     rememberSession(session("u1", "a@x.com"));
     rememberSession(session("u2", "b@x.com", "r2"));

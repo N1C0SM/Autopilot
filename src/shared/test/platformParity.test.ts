@@ -319,6 +319,20 @@ describe("paridad web ↔ apps nativas", () => {
     expect(read("src/shared/components/native/WhoIsTraining.tsx")).toContain("if (!shown && currentLocked) showPicker();");
   });
 
+  it("«¿Quién entrena?»: una tarjeta por persona (mismo correo = misma cuenta), al guardar y al leer, en la web y en la app", () => {
+    const web = read("src/shared/lib/accounts.ts");
+    const app = read("native/Autopilot/Core/Accounts.swift");
+    expect(web).toContain("uniqueAccounts(raw.filter(");
+    expect(web).toContain("const list = uniqueAccounts(all.map(");
+    expect(app).toContain("return Self.unique((try? JSONDecoder()");
+    expect(app).toContain("var list = Self.unique(accounts.map {");
+    // Gana la que sigue valiendo y la contraseña opcional nunca se pierde.
+    expect(web).toContain("const keep = a.expired && !out[j].expired ? out[j] : a;");
+    expect(app).toContain("var keep = a.expired && !out[j].expired ? out[j] : a");
+    expect(web).toContain("requirePassword: out[j].requirePassword || a.requirePassword");
+    expect(app).toContain("keep.requirePassword = out[j].requirePassword || a.requirePassword");
+  });
+
   it("Plan y progreso: portada de la sesión también en iPhone y, sin entrenos, una invitación en vez de «0 kg»", () => {
     const train = read("native/Autopilot/Features/Train/TrainView.swift");
     expect(train).toContain("            if plan.isGym {\n                sessionCover(plan)");
