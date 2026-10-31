@@ -1684,6 +1684,9 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                           rest: ex.rest,
                           category: exerciseCategory,
                           type: exerciseType,
+                          pattern: exercisePattern,
+                          stimulus: exerciseStimulus,
+                          load: exerciseLoad,
                         });
                       }}
                       onKeyDown={(e) => {
@@ -1699,6 +1702,9 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                             rest: ex.rest,
                             category: exerciseCategory,
                             type: exerciseType,
+                            pattern: exercisePattern,
+                            stimulus: exerciseStimulus,
+                            load: exerciseLoad,
                           });
                         }
                       }}
