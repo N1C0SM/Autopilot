@@ -44,7 +44,7 @@ import { WithImageFallback } from "@/app/components/admin-library/WithImageFallb
  */
 const MEDIA_STYLE_VERSION = 2;
 
-/** Los vídeos con IA (sora-2) tardan bastante más de 4 minutos; damos 10. */
+/** Un vídeo con IA tarda 1–3 minutos; damos 10 de margen. */
 const VIDEO_DEADLINE_MS = 10 * 60 * 1000;
 
 /** Columnas de medios que la biblioteca necesita además del tipo Exercise. */
