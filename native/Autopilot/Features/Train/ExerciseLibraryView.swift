@@ -87,13 +87,13 @@ enum ExerciseLibraryCatalog {
     /// Parecidos: mismo grupo principal, mismo patrón y equipo compartido.
     static func similar(_ target: LibraryExercise, _ items: [LibraryExercise], limit: Int = 6) -> [LibraryExercise] {
         let main = target.groups.first
-        return items.filter { $0.id != target.id }.map { e -> (LibraryExercise, Int) in
-            let group = (main != nil && e.groups.first == main) ? 3 : (e.groups.contains { target.groups.contains($0) } ? 1 : 0)
-            let pattern = (target.pattern != nil && e.pattern == target.pattern) ? 2 : 0
-            let equip = e.equipment.contains { target.equipment.contains($0) } ? 1 : 0
+        let scored: [(LibraryExercise, Int)] = items.filter { $0.id != target.id }.map { e -> (LibraryExercise, Int) in
+            let group: Int = (main != nil && e.groups.first == main) ? 3 : (e.groups.contains { target.groups.contains($0) } ? 1 : 0)
+            let pattern: Int = (target.pattern != nil && e.pattern == target.pattern) ? 2 : 0
+            let equip: Int = e.equipment.contains { target.equipment.contains($0) } ? 1 : 0
             return (e, group + pattern + equip)
         }
-        .filter { $0.1 >= 3 }
+        return scored.filter { $0.1 >= 3 }
         .sorted { $0.1 != $1.1 ? $0.1 > $1.1 : $0.0.name.compare($1.0.name, locale: Locale(identifier: "es")) == .orderedAscending }
         .prefix(limit).map(\.0)
     }
