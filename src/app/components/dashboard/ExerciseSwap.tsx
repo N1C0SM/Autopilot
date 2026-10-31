@@ -137,7 +137,7 @@ export function ExerciseSwap({ original, current, movementPattern, muscleGroup, 
               {options.map((option) => (
                 <ListRow
                   key={option.name}
-                  leading={<ExerciseThumb image={option.image} name={option.name} size="sm" />}
+                  leading={<ExerciseThumb image={option.image} name={option.name} pattern={option.pattern} stimulus={option.stimulus} load={option.load} size="sm" />}
                   title={<span className="line-clamp-2 whitespace-normal">{option.name}</span>}
                   value={current === option.name ? (
                     <Check className="h-5 w-5 text-primary" strokeWidth={2.5} aria-label="Seleccionado" />
