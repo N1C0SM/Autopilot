@@ -83,6 +83,8 @@ describe("huella de movimiento", () => {
       expect(Math.max(...xs) - Math.min(...xs) + (Math.max(...ys) - Math.min(...ys))).toBeGreaterThanOrEqual(40);
     }
   });
+
+  it("la etiqueta se lee en voz alta y dice la verdad", () => {
     expect(exerciseMotion({ name: "Press banca", pattern: "Empuje", stimulus: "Fuerza" })?.label).toBe("Empuje · Fuerza");
     expect(exerciseMotion({ name: "Press banca", pattern: "Empuje" })?.label).toBe("Empuje");
   });
