@@ -14,6 +14,9 @@ interface Row {
   name: string;
   muscle_group: string | null;
   exercise_type: string | null;
+  movement_pattern: string | null;
+  stimulus_type: string | null;
+  load_level: string | null;
   image_url: string | null;
   video_url: string | null;
   tracking_mode: string | null;
@@ -64,7 +67,7 @@ const ExercisePicker = ({ open, onOpenChange, onPick, existing = [] }: Props) =>
     if (!open || cache) return;
     void supabase
       .from("exercises")
-      .select("id,name,muscle_group,exercise_type,image_url,video_url,tracking_mode,fatigue_level")
+      .select("id,name,muscle_group,exercise_type,movement_pattern,stimulus_type,load_level,image_url,video_url,tracking_mode,fatigue_level")
       .order("name")
       .then(({ data }) => {
         cache = (data as Row[]) ?? [];
@@ -143,7 +146,7 @@ const ExercisePicker = ({ open, onOpenChange, onPick, existing = [] }: Props) =>
                   sel >= 0 ? "bg-primary/10" : "hover:bg-muted/50 active:bg-muted/60",
                 )}
               >
-                <ExerciseThumb image={r.image_url ?? undefined} video={r.video_url ?? undefined} name={r.name} size="sm" />
+                <ExerciseThumb image={r.image_url ?? undefined} video={r.video_url ?? undefined} name={r.name} pattern={r.movement_pattern} stimulus={r.stimulus_type} load={r.load_level} size="sm" />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate type-subhead font-medium">{r.name}</span>
                   <span className="block truncate type-footnote text-muted-foreground">
