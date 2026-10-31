@@ -19,6 +19,8 @@ import ExercisePicker from "@/app/components/dashboard/ExercisePicker";
 import RPEDialog from "@/app/components/dashboard/RPEDialog";
 import { ExerciseThumb, isDirectFile } from "@/app/components/ExerciseMedia";
 import ExerciseFocus from "@/app/components/ExerciseFocus";
+import ExerciseFigure from "@/app/components/ExerciseFigure";
+import { exerciseFigure } from "@/shared/lib/exerciseFigure";
 import { useExerciseMetadata } from "@/shared/hooks/useExerciseMetadata";
 import { getWorkoutAdvanced, getWorkoutRestPreference, getWorkoutView, setWorkoutAdvanced, setWorkoutView, WORKOUT_VIEW_EVENT } from "@/shared/lib/workoutPreferences";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu";
@@ -1511,13 +1513,12 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                   }}
                   style={{ touchAction: "pan-y" }}
                   aria-label="Desliza para cambiar de ejercicio"
-                  className={`relative flex w-full items-center justify-center overflow-hidden rounded-2xl bg-card md:cursor-grab md:active:cursor-grabbing ${img || loop ? "aspect-[4/3] max-h-[26dvh] [@media(max-height:700px)]:max-h-[22dvh] md:max-h-[40dvh]" : "h-12"}`}>
+                  className={`relative flex w-full items-center justify-center overflow-hidden rounded-2xl bg-card md:cursor-grab md:active:cursor-grabbing aspect-[4/3] max-h-[26dvh] [@media(max-height:700px)]:max-h-[22dvh] md:max-h-[40dvh]`}>
                   {loop ? (
                     <video key={loop} ref={startLoop} src={loop} poster={img || undefined} autoPlay muted loop playsInline preload="auto" disablePictureInPicture aria-label={active.name} draggable={false} className="pointer-events-none h-full w-full object-cover" />
-                  ) : img ? (
-                    <img src={img} alt={active.name} draggable={false} decoding="async" fetchPriority="high" loading="eager" className="h-full w-full object-cover" />
                   ) : (
-                    <Dumbbell className="h-6 w-6 text-muted-foreground/60" strokeWidth={1.75} aria-hidden="true" />
+                    // Sin vídeo propio: la silueta hace la repetición en bucle (estilo Hevy).
+                    <ExerciseFigure spec={exerciseFigure({ name: swaps[active.name] || active.name, pattern: meta?.movement_pattern, stimulus: meta?.stimulus_type })} label={swaps[active.name] || active.name} className="pointer-events-none py-2" />
                   )}
                   {vid && (
                     <button
