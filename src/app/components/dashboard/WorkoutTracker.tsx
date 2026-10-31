@@ -1557,6 +1557,12 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
             const exerciseVideo = ex.video_url || metadata?.video_url;
             const exerciseCategory = ex.muscle_group || metadata?.muscle_group;
             const exerciseType = ex.exercise_type || metadata?.exercise_type;
+            // Patrón, estímulo y carga: con los tres se dibuja la huella del ejercicio.
+            const exercisePattern = ("movement_pattern" in ex && typeof ex.movement_pattern === "string"
+              ? ex.movement_pattern
+              : metadata?.movement_pattern) ?? null;
+            const exerciseStimulus = metadata?.stimulus_type ?? null;
+            const exerciseLoad = metadata?.load_level ?? null;
             const trackingConfig = getExerciseTrackingConfig({
               name: ex.name,
               skill_tag: metadata?.skill_tag ?? undefined,
@@ -1605,7 +1611,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                     : "flex h-auto w-full items-center gap-3 whitespace-normal p-0 pl-3 text-left transition-colors duration-150 active:bg-accent has-[[role=button]:active]:bg-transparent"}
                 >
                   {/* Miniatura única de ejercicio (misma que en el resto de la app); en foco ya está el visor */}
-                  {!focused && <ExerciseThumb image={metadata?.image_url || ex.image_url} video={exerciseVideo} name={ex.name} completed={allDone} />}
+                  {!focused && <ExerciseThumb image={metadata?.image_url || ex.image_url} video={exerciseVideo} name={ex.name} pattern={exercisePattern} stimulus={exerciseStimulus} load={exerciseLoad} completed={allDone} />}
                   <div className={focused ? "flex min-w-0 flex-1 items-start" : `flex min-h-[68px] min-w-0 flex-1 items-center py-2 pr-1 ${i > 0 ? "sep-t" : ""}`}>
                   <div className="min-w-0 flex-1 text-left">
                     <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
@@ -2047,6 +2053,9 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
           rest: technique.rest,
           muscleGroup: technique.category,
           exerciseType: technique.type,
+          pattern: technique.pattern,
+          stimulus: technique.stimulus,
+          load: technique.load,
         } : null}
         onClose={() => setTechnique(null)}
       />
