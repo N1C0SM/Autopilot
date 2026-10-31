@@ -46,13 +46,12 @@ type ThumbProps = MotionProps & {
  * Miniatura de ejercicio. Única en toda la app: mismo tamaño, mismo radio y
  * mismo placeholder, tanto en administración como en usuario y entrenador.
  *
- * Qué se ve, en este orden: el vídeo de técnica si lo hay → la huella de
- * movimiento del ejercicio (su patrón, su ritmo y su carga) → la foto → hueco.
- * La administración no pasa el patrón a propósito: allí se gestiona la foto.
+ * Qué se ve, en este orden: la huella de movimiento del ejercicio (su patrón,
+ * su ritmo y su carga) → la foto → hueco. La administración no pasa el patrón a
+ * propósito: allí se gestiona la foto, así que allí se sigue viendo la foto.
  */
 export const ExerciseThumb = ({
   image,
-  video,
   name,
   pattern,
   stimulus,
@@ -63,7 +62,6 @@ export const ExerciseThumb = ({
   className = "",
 }: ThumbProps) => {
   const box = aspect === "video" ? "aspect-video w-28" : THUMB_SIZES[size];
-  const hasVideo = Boolean(video && isDirectFile(video));
   const spec = useMotion(name, { pattern, stimulus, load });
   const [broken, setBroken] = useState<string | null>(null);
   const showImage = image && broken !== image;
