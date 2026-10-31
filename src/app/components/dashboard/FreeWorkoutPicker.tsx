@@ -10,6 +10,9 @@ interface Exercise {
   name: string;
   muscle_group: string | null;
   exercise_type: string | null;
+  movement_pattern: string | null;
+  stimulus_type: string | null;
+  load_level: string | null;
   image_url: string | null;
   tracking_mode: string | null;
 }
@@ -47,7 +50,7 @@ export function FreeWorkoutPicker({ open, onClose, onAdd, added = [] }: Props) {
       setLoading(true);
       let query = supabase
         .from("exercises")
-        .select("name, muscle_group, exercise_type, image_url, tracking_mode")
+        .select("name, muscle_group, exercise_type, movement_pattern, stimulus_type, load_level, image_url, tracking_mode")
         .order("recommended_order", { ascending: true, nullsFirst: false })
         .order("name")
         .limit(40);
@@ -176,6 +179,9 @@ export function FreeWorkoutPicker({ open, onClose, onAdd, added = [] }: Props) {
                       <ExerciseThumb
                         image={ex.image_url}
                         name={ex.name}
+                        pattern={ex.movement_pattern}
+                        stimulus={ex.stimulus_type}
+                        load={ex.load_level}
                         size="sm"
                       />
                       <div className="min-w-0 flex-1">

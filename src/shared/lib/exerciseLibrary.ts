@@ -35,6 +35,9 @@ export type LibraryExercise = {
   modalities: string[];
   pattern: string | null;
   level: number | null;
+  /** Estímulo y carga: con el patrón dibujan la huella de movimiento. */
+  stimulus: string | null;
+  load: string | null;
   image: string | null;
   video: string | null;
   description: string | null;

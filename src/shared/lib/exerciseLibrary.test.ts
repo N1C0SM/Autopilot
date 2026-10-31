@@ -6,7 +6,7 @@ import {
 
 const ex = (name: string, over: Partial<LibraryExercise> = {}): LibraryExercise => ({
   id: name, slug: nameKey(name).replace(/ /g, "-"), name, altNames: [], groups: [], primaryMuscles: [], secondaryMuscles: [],
-  equipment: [], modalities: [], pattern: null, level: null, image: null, video: null, description: null,
+  equipment: [], modalities: [], pattern: null, level: null, stimulus: null, load: null, image: null, video: null, description: null,
   instructions: [], mistakes: [], tips: [], safety: [], source: "autopilot", license: null, licenseAuthor: null, sourceUrl: null,
   ...over,
 });
