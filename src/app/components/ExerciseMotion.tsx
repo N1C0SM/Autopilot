@@ -55,13 +55,13 @@ export const ExerciseMotion = ({ spec, className }: { spec: MotionSpec; classNam
  */
 export const ExerciseMotionGlyph = ({ spec, className }: { spec: MotionSpec; className?: string }) => (
   <svg viewBox={MOTION_VIEWBOX} preserveAspectRatio="xMidYMid meet" aria-hidden className={cn("h-full w-full text-primary", className)}>
-    <path d={spec.d} fill="none" stroke="currentColor" strokeOpacity="0.3" strokeWidth={spec.stroke + 4.5} strokeLinecap="round" />
-    <circle cx={spec.start.x} cy={spec.start.y} r="2.8" fill="currentColor" fillOpacity="0.45" />
+    <path d={spec.d} fill="none" stroke="currentColor" strokeOpacity="0.42" strokeWidth={spec.stroke + 6} strokeLinecap="round" />
+    <circle cx={spec.start.x} cy={spec.start.y} r="3.4" fill="currentColor" fillOpacity="0.5" />
     {spec.hold ? (
       // Isométrico: el punto no viaja, aguanta. Se marca con un anillo.
-      <circle cx={spec.end.x} cy={spec.end.y} r="5.2" fill="none" stroke="currentColor" strokeWidth="2.4" />
+      <circle cx={spec.end.x} cy={spec.end.y} r="6.4" fill="none" stroke="currentColor" strokeWidth="2.8" />
     ) : (
-      <circle cx={spec.end.x} cy={spec.end.y} r="5.5" fill="currentColor" />
+      <circle cx={spec.end.x} cy={spec.end.y} r="6.6" fill="currentColor" />
     )}
   </svg>
 );

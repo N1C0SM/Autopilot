@@ -74,7 +74,15 @@ describe("huella de movimiento", () => {
     }
   });
 
-  it("la etiqueta se lee en voz alta y dice la verdad", () => {
+  it("la huella llena el cuadro: no se encoge en un rincón", () => {
+    for (const pattern of ["Empuje", "Tirón", "Sentadilla", "Bisagra", "Core"]) {
+      const spec = exerciseMotion({ name: `Llena ${pattern}`, pattern, load: "Alta" })!;
+      const nums = numbers(spec.d);
+      const xs = nums.filter((_, i) => i % 2 === 0);
+      const ys = nums.filter((_, i) => i % 2 === 1);
+      expect(Math.max(...xs) - Math.min(...xs) + (Math.max(...ys) - Math.min(...ys))).toBeGreaterThanOrEqual(40);
+    }
+  });
     expect(exerciseMotion({ name: "Press banca", pattern: "Empuje", stimulus: "Fuerza" })?.label).toBe("Empuje · Fuerza");
     expect(exerciseMotion({ name: "Press banca", pattern: "Empuje" })?.label).toBe("Empuje");
   });

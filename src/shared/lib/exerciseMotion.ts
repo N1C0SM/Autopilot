@@ -56,11 +56,11 @@ export const MOTION_FLOOR = 46;
  * Bézier de una repetición (inicio, dos controles, final).
  */
 const RAILS: Record<MotionPattern, Rail> = {
-  Empuje: [{ x: 30, y: 38 }, { x: 46, y: 33 }, { x: 64, y: 22 }, { x: 79, y: 13 }],
-  "Tirón": [{ x: 79, y: 16 }, { x: 62, y: 20 }, { x: 44, y: 30 }, { x: 28, y: 36 }],
-  Sentadilla: [{ x: 50, y: 13 }, { x: 45, y: 24 }, { x: 45, y: 35 }, { x: 50, y: 43 }],
-  Bisagra: [{ x: 26, y: 17 }, { x: 43, y: 19 }, { x: 61, y: 27 }, { x: 75, y: 38 }],
-  Core: [{ x: 39, y: 35 }, { x: 45, y: 26 }, { x: 55, y: 26 }, { x: 61, y: 35 }],
+  Empuje: [{ x: 16, y: 42 }, { x: 40, y: 38 }, { x: 62, y: 24 }, { x: 84, y: 12 }],
+  "Tirón": [{ x: 84, y: 14 }, { x: 62, y: 18 }, { x: 38, y: 32 }, { x: 16, y: 40 }],
+  Sentadilla: [{ x: 50, y: 10 }, { x: 34, y: 26 }, { x: 34, y: 40 }, { x: 50, y: 44 }],
+  Bisagra: [{ x: 16, y: 14 }, { x: 38, y: 18 }, { x: 62, y: 30 }, { x: 84, y: 42 }],
+  Core: [{ x: 18, y: 42 }, { x: 38, y: 12 }, { x: 62, y: 12 }, { x: 82, y: 42 }],
 };
 
 /**
@@ -107,8 +107,8 @@ const clamp = (n: number, min: number, max: number): number => Math.min(max, Mat
  */
 function shape(rail: Rail, seed: number, amp: number): MotionPoint[] {
   return rail.map((p, i) => ({
-    x: clamp(round2(50 + (p.x - 50) * amp + jitter(seed, i, 4)), 6, 94),
-    y: clamp(round2(28 + (p.y - 28) * amp + jitter(seed, i + 4, 3)), 5, MOTION_FLOOR - 2),
+    x: clamp(round2(50 + (p.x - 50) * amp + jitter(seed, i, 6)), 6, 94),
+    y: clamp(round2(28 + (p.y - 28) * amp + jitter(seed, i + 4, 4.5)), 5, MOTION_FLOOR - 2),
   }));
 }
 
