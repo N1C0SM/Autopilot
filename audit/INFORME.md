@@ -107,7 +107,8 @@ Evidencia: `mobile/publico/planes.jpg`. Además no hay separadores ni agrupació
 
 **H14 · El pie móvil mide más de 1.100 px.** `landing-m5.jpg`: tres listas verticales con 44 px por enlace. En móvil, acordeón o dos columnas; en escritorio, 4 columnas con 15 px.
 
-**H15 · Faltan estados de vacío/carga en la web pública.** La demo es una imagen estática (`/app-shots/hoy.jpg`) y el «producto dentro» no reacciona; las tiendas y el scan no tienen esqueletos. En la app, `Skeleton` existe pero no se usa en todas las pantallas.
+**H15 · Faltan estados de vacío/carga en la web pública y la demo no es interactiva.** La demo de la landing invita a «toca las pestañas del teléfono», pero renderiza **una sola imagen estática** (`/app-shots/hoy.jpg`) con **0 pestañas reales** (comprobado con `scripts/audit/demo.mjs`). Es una promesa incumplida en el punto de la página donde el visitante decide. Las tiendas y el scan tampoco tienen esqueletos. En la app, `Skeleton` existe pero no se usa en todas las pantallas.
+**Arreglo:** montar la demo con los componentes reales de solo lectura (`PublicAppScreen`, que ya existe y ya usa datos de ejemplo aislados) y, mientras carga, esqueletos con la forma final.
 
 **H16 · Texto por debajo de 13 px en pantallas reales.** Tabla de planes (10–11 px), notas legales, etiquetas de la barra. El manual prohíbe `text-xs` para interfaz; hay 11 usos directos y muchos `type-caption2` (11 px).
 
@@ -157,6 +158,8 @@ Roles (`admin`, `trainer`) son independientes del plan: un admin ve el panel aun
 
 ## 6. Sistema de diseño propuesto — «Autopilot 2»
 
+**Maqueta visual:** abre `audit/sistema/style-tile.html` (o mira `audit/sistema/preview/{desktop,mobile}.jpg`). Muestra los tokens y las piezas de esta sección ya compuestas, incluido el antes/después del registro de series. Es HTML estático: no está conectado a la app ni cambia nada del producto.
+
 La dirección: **menos piezas, más precisas**. Apple Design Awards enseña contención, jerarquía y movimiento con intención; Hevy enseña densidad útil y registro a un toque. Autopilot debe quedarse con lo primero y la mecánica de lo segundo, sin copiar ni el look de Apple ni el de Hevy: negro cálido, un solo dorado, cifras grandes y una rejilla estricta.
 
 ### 6.1 Principios
@@ -204,7 +207,7 @@ Degradados: únicamente el halo dorado (`radial-gradient(closest-side, rgba(216,
 | Caption | 12 / 16 | 500 | 0.01em (solo etiquetas técnicas) |
 | Cifra protagonista | 56–88 app · 96–180 web | 700 | −0.03em, `tabular-nums` |
 
-Regla dura: **nada de interfaz por debajo de 13 px**. En móvil, `17` es el cuerpo y `15` el mínimo de apoyo.
+Regla dura: **nada de interfaz por debajo de 13 px**. En móvil, `17` es el cuerpo y `15` el mínimo de apoyo. Única excepción: la etiqueta de la barra de pestañas, a 12 px y siempre anclada a su icono de 22 px.
 
 **Espacio**: 4 · 8 · 12 · 16 · 20 · 24 · 32 · 40 · 48 · 64 · 80 · 96 · 128.
 - Márgenes: 20 móvil, 32 tablet, 40 escritorio (centrado en 1.180/1.200).
@@ -316,15 +319,16 @@ npm run dev -- --port 8080            # servidor local
 node scripts/audit/capture.mjs --group public --out audit/antes
 node scripts/audit/capture.mjs --group app   --state audit/.auth/user.json  --out audit/antes
 node scripts/audit/capture.mjs --group admin --state audit/.auth/admin.json --out audit/antes
+node scripts/audit/demo.mjs           # sección «demo» de la landing
 python3 scripts/audit/contact.py audit/antes audit/contacto
 ```
 
-Capturas base en `audit/antes/`, hojas de contacto en `audit/contacto/`.
+Capturas base en `audit/antes/`, hojas de contacto en `audit/contacto/`, maqueta del sistema en `audit/sistema/style-tile.html` (+ vistas en `audit/sistema/preview/`).
 
 ---
 
 ## 10. Pendiente
 
 1. **Cuenta admin de QA** (email + contraseña) para crear fixtures Free/Plus/Coach/entrenador con `scripts/verify-live-qa.mjs` y capturar Inicio, Entrenar, Nutrición, Progreso, Ajustes, Drive, las 17 secciones de Admin y el panel de entrenador en los tres tamaños. Con eso se cierra la Fase 1 y se afinan los hallazgos de esas pantallas.
-2. **Decisión de dirección**: ¿apruebas el sistema «Autopilot 2» (tokens y componentes de la sección 6) para empezar por F1–F2, o quieres ajustar antes el dorado, la tipografía o la densidad?
+2. **Decisión de dirección**: ¿apruebas el sistema «Autopilot 2» (tokens y componentes de la sección 6, ya compuestos en `audit/sistema/style-tile.html`) para empezar por F1–F2, o quieres ajustar antes el dorado, la tipografía o la densidad?
 3. Confirmar si el rediseño debe incluir el **espejo nativo** en la misma tanda (F2–F6) o si primero cerramos web y luego Mac/iPhone.

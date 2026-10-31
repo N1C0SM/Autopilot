@@ -1,0 +1,532 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Autopilot 2 · maqueta del sistema</title>
+<style>
+  :root {
+    /* ——— Tokens propuestos (audit/INFORME.md §6.2) ——— */
+    --bg: #000000;
+    --surface-1: #131316;
+    --surface-2: #1c1c20;
+    --surface-3: #26262b;
+    --line: rgb(255 255 255 / .07);
+    --text: #ffffff;
+    --text-2: #a8a8ae;
+    --text-3: #6e6e75;
+    --gold: #d8b25e;
+    --gold-strong: #e8c87a;
+    --gold-soft: rgb(216 178 94 / .14);
+    --gold-line: rgb(216 178 94 / .30);
+    --danger: #ff453a;
+
+    --r-sheet: 28px;
+    --r-card: 22px;
+    --r-media: 18px;
+    --r-chip: 14px;
+
+    --ease-out: cubic-bezier(.22, 1, .36, 1);
+    --font: "Inter Variable", "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { color-scheme: dark; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 17px;
+    line-height: 26px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 64px 40px 120px; }
+  @media (max-width: 720px) { .wrap { padding: 40px 20px 80px; } }
+
+  /* ——— Tipografía ——— */
+  .eyebrow { font-size: 13px; line-height: 18px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--gold); }
+  h1 { font-size: 44px; line-height: 48px; font-weight: 700; letter-spacing: -.035em; margin: 12px 0 0; }
+  h2 { font-size: 28px; line-height: 34px; font-weight: 700; letter-spacing: -.025em; margin: 0; }
+  h3 { font-size: 17px; line-height: 22px; font-weight: 600; letter-spacing: -.01em; margin: 0; }
+  p.lead { font-size: 17px; line-height: 26px; color: var(--text-2); margin: 12px 0 0; max-width: 62ch; }
+  .footnote { font-size: 13px; line-height: 18px; color: var(--text-2); }
+  .caption { font-size: 13px; line-height: 18px; font-weight: 500; letter-spacing: .01em; color: var(--text-2); }
+  .num { font-variant-numeric: tabular-nums; }
+
+  section.block { margin-top: 72px; }
+  .block-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+  .block-head .caption {
+    max-width: 44ch; text-align: right;
+    font-size: 13px; line-height: 18px; color: var(--text-2);
+  }
+  @media (max-width: 720px) {
+    .block-head { flex-direction: column; gap: 6px; }
+    .block-head .caption { text-align: left; max-width: 100%; }
+  }
+
+  /* ——— Rejilla de la maqueta ——— */
+  .grid { display: grid; gap: 16px; }
+  .cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  @media (max-width: 900px) { .cols-3, .cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 560px) { .cols-2, .cols-3, .cols-4 { grid-template-columns: minmax(0, 1fr); } }
+
+  .card { background: var(--surface-1); border-radius: var(--r-card); padding: 20px; }
+  @media (min-width: 721px) { .card { padding: 24px; } }
+  .card h3 + .footnote { margin-top: 4px; }
+
+  /* ——— Color ——— */
+  .swatch { border-radius: var(--r-chip); height: 76px; border: 1px solid var(--line); }
+  .swatch-row { display: grid; gap: 10px; grid-template-columns: repeat(6, minmax(0,1fr)); }
+  @media (max-width: 900px) { .swatch-row { grid-template-columns: repeat(3, minmax(0,1fr)); } }
+  .swatch-name { margin-top: 8px; font-size: 13px; line-height: 18px; }
+  .swatch-hex { font-size: 12px; line-height: 16px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+
+  /* ——— Botones ——— */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    height: 52px; padding: 0 24px; border: 0; border-radius: 999px;
+    font-family: inherit; font-size: 17px; font-weight: 600; letter-spacing: -.01em;
+    cursor: pointer; transition: transform 120ms var(--ease-out), background 220ms var(--ease-out);
+  }
+  .btn:active { transform: scale(.975); }
+  .btn-primary { background: var(--gold); color: #0b0b0c; }
+  .btn-secondary { background: var(--surface-2); color: var(--text); }
+  .btn-plain { background: transparent; color: var(--gold); padding: 0 8px; }
+  .btn-sm { height: 44px; font-size: 15px; padding: 0 18px; }
+
+  /* ——— Campos ——— */
+  .field { display: grid; gap: 8px; }
+  .field label { font-size: 13px; line-height: 18px; font-weight: 600; color: var(--text-2); }
+  .field input {
+    height: 56px; padding: 0 20px; border-radius: 999px;
+    background: var(--surface-2); border: 1px solid transparent;
+    color: var(--text); font-family: inherit; font-size: 17px; outline: none;
+    transition: border-color 220ms var(--ease-out), background 220ms var(--ease-out);
+  }
+  .field input::placeholder { color: var(--text-3); }
+  .field input:focus { border-color: var(--gold); background: var(--surface-1); }
+  .field.filled input { border-color: var(--gold-line); }
+
+  /* ——— Tab bar propuesta ——— */
+  .tabbar {
+    display: grid; grid-template-columns: repeat(5, 1fr); align-items: center;
+    height: 64px; border-radius: var(--r-card); padding: 0 8px;
+    background: rgba(0,0,0,.72); border: 1px solid var(--line);
+    backdrop-filter: blur(24px);
+  }
+  .tab {
+    display: grid; justify-items: center; gap: 4px;
+    color: var(--text-2); font-size: 12px; line-height: 15px; font-weight: 500;
+    padding: 8px 0 6px; position: relative;
+  }
+  .tab svg { width: 22px; height: 22px; stroke-width: 1.75; }
+  .tab.active { color: var(--gold); }
+  .tab.active::after {
+    content: ""; position: absolute; top: 0; width: 16px; height: 3px; border-radius: 999px; background: var(--gold);
+  }
+
+  /* ——— Tabla de series ——— */
+  .sets { display: grid; gap: 8px; }
+  .set-row {
+    display: grid; grid-template-columns: 28px 1fr 64px 64px 56px;
+    align-items: center; gap: 8px; height: 56px; padding: 0 16px;
+    border-radius: var(--r-chip); background: var(--surface-2);
+    font-variant-numeric: tabular-nums; font-size: 17px;
+    border: 1px solid transparent;
+  }
+  .set-row .idx { color: var(--text-2); font-weight: 600; }
+  .set-row .kg, .set-row .reps { text-align: center; font-weight: 600; }
+  .set-row .check { justify-self: end; color: var(--text-3); }
+  .set-row.done { background: var(--gold-soft); }
+  .set-row.done .idx, .set-row.done .check { color: var(--gold); }
+  .set-row.active { border-color: var(--gold-line); background: var(--surface-1); }
+  .set-row.active .idx { color: var(--gold); }
+  .set-row .fail { font-size: 12px; font-weight: 600; letter-spacing: .02em; color: var(--danger); }
+  .sets-head {
+    display: grid; grid-template-columns: 28px 1fr 64px 64px 56px; gap: 8px;
+    padding: 0 16px; font-size: 13px; line-height: 18px; font-weight: 600; color: var(--text-2);
+  }
+  .sets-head span:nth-child(n+3) { text-align: center; }
+  @media (max-width: 560px) {
+    .set-row, .sets-head { grid-template-columns: 24px 1fr 52px 44px 28px; gap: 6px; padding: 0 12px; }
+    .set-row { font-size: 15px; }
+  }
+
+  /* ——— Tarjeta de sesión ——— */
+  .hero-card {
+    position: relative; border-radius: var(--r-sheet); overflow: hidden;
+    min-height: 300px; display: flex; align-items: flex-end;
+    background:
+      radial-gradient(120% 80% at 80% 0%, rgb(216 178 94 / .18), transparent 60%),
+      linear-gradient(160deg, #26211a, #0e0e10 70%);
+    border: 1px solid var(--line);
+    padding: 24px;
+  }
+  .hero-card .chip {
+    position: absolute; top: 20px; left: 20px;
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 32px; padding: 0 14px; border-radius: 999px;
+    background: var(--gold-soft); color: var(--gold);
+    font-size: 13px; font-weight: 600;
+  }
+  .hero-card .chip i { width: 6px; height: 6px; border-radius: 999px; background: var(--gold); }
+  .hero-card h2 { font-size: 28px; line-height: 34px; }
+  .hero-card .meta { margin-top: 6px; font-size: 15px; line-height: 21px; color: var(--text-2); }
+  .hero-card .hero-foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 18px; }
+
+  /* ——— Métrica ——— */
+  .metric { display: grid; gap: 12px; }
+  .icon-tile {
+    width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center;
+    background: var(--surface-2); color: var(--gold);
+  }
+  .icon-tile svg { width: 20px; height: 20px; stroke-width: 1.75; }
+  .metric .figure { font-size: 52px; line-height: 52px; font-weight: 700; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+  .metric .figure small { font-size: 17px; font-weight: 500; color: var(--text-2); letter-spacing: 0; margin-left: 4px; }
+  .metric .label { font-size: 17px; line-height: 22px; font-weight: 600; letter-spacing: -.01em; }
+  .delta { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; color: var(--gold); }
+  .delta.flat { color: var(--text-2); }
+
+  /* ——— Lista tipo Ajustes ——— */
+  .list { background: var(--surface-1); border-radius: var(--r-card); overflow: hidden; }
+  .list-row {
+    display: flex; align-items: center; gap: 14px; padding: 16px 20px; min-height: 56px;
+    border-bottom: 1px solid var(--line); font-size: 17px;
+  }
+  .list-row:last-child { border-bottom: 0; }
+  .list-row .chev { margin-left: auto; color: var(--text-3); }
+  .list-row .value { margin-left: auto; color: var(--text-2); font-size: 17px; }
+  .list-header { padding: 0 20px 8px; font-size: 13px; font-weight: 600; color: var(--text-2); }
+
+  /* ——— Comparativa ——— */
+  .compare { background: var(--surface-1); border-radius: var(--r-card); overflow: hidden; }
+  .compare-head {
+    display: grid; grid-template-columns: 1fr 88px 88px; align-items: center;
+    padding: 14px 20px; position: sticky; top: 0;
+    background: var(--surface-2); font-size: 13px; font-weight: 600; color: var(--text-2);
+    border-bottom: 1px solid var(--line);
+  }
+  .compare-head span:not(:first-child) { text-align: center; }
+  .compare-head .plus { color: var(--gold); }
+  .compare-group { padding: 10px 20px 6px; font-size: 12px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--text-2); background: #0f0f11; }
+  .compare-row {
+    display: grid; grid-template-columns: 1fr 88px 88px; align-items: center;
+    padding: 14px 20px; min-height: 52px; font-size: 15px;
+    border-bottom: 1px solid var(--line);
+  }
+  .compare-row:last-child { border-bottom: 0; }
+  .compare-row > span:not(:first-child) { text-align: center; }
+  .yes { color: var(--gold); font-weight: 700; }
+  .no { color: var(--text-3); }
+
+  /* ——— Planes ——— */
+  .plan { display: flex; flex-direction: column; gap: 16px; height: 100%; }
+  .plan .price { font-size: 40px; line-height: 40px; font-weight: 700; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+  .plan .price small { font-size: 17px; font-weight: 500; color: var(--text-2); letter-spacing: 0; }
+  .plan ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; font-size: 15px; line-height: 21px; color: var(--text-2); }
+  .plan li { display: flex; gap: 10px; }
+  .plan li svg { flex: none; width: 18px; height: 18px; margin-top: 2px; color: var(--gold); stroke-width: 2; }
+  .plan .cta { margin-top: auto; }
+  .badge { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 999px; background: var(--gold-soft); color: var(--gold); font-size: 12px; font-weight: 600; }
+
+  /* ——— Semana ——— */
+  .week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+  .day { display: grid; justify-items: center; gap: 8px; padding: 12px 0; border-radius: var(--r-chip); background: var(--surface-2); }
+  .day .d { font-size: 12px; font-weight: 600; color: var(--text-2); }
+  .day .v { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 999px; font-size: 13px; font-weight: 600; }
+  .day.done .v { background: var(--gold-soft); color: var(--gold); }
+  .day.today { outline: 1.5px solid var(--gold-line); }
+  .day.today .v { background: var(--gold); color: #0b0b0c; }
+  .day.rest .v { color: var(--text-3); }
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 14px; font-size: 13px; color: var(--text-2); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .dot { width: 8px; height: 8px; border-radius: 999px; }
+
+  /* ——— Antes / después ——— */
+  .ba { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px; }
+  @media (max-width: 720px) { .ba { grid-template-columns: minmax(0,1fr); } }
+  .ba-label { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 13px; font-weight: 600; color: var(--text-2); }
+  .ba-label b { font-weight: 700; }
+  .ba-label.before b { color: var(--danger); }
+  .ba-label.after b { color: var(--gold); }
+  .mock-before { background: var(--surface-2); border-radius: var(--r-chip); padding: 14px; display: grid; gap: 8px; }
+  .mock-before .rowm { display: grid; grid-template-columns: 28px 1fr 64px 64px; gap: 8px; align-items: center; height: 48px; padding: 0 12px; border-radius: 10px; background: #1f1f23; font-size: 15px; font-variant-numeric: tabular-nums; }
+  .mock-before .rowm.ok { background: rgb(34 197 94 / .18); color: #4ade80; }
+  .mock-before .rowm.act { outline: 1px solid var(--gold); }
+  .mock-before .rowm.err { color: #ef4444; }
+
+  footer.foot { margin-top: 80px; padding-top: 24px; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">Autopilot 2 · propuesta</p>
+    <h1>Un acento, una rejilla, una cifra.</h1>
+    <p class="lead">
+      Maqueta estática del sistema propuesto en <code>audit/INFORME.md</code> §6. No es código de producto:
+      nada de esto está conectado a la app. Sirve para aprobar la dirección antes de tocar React.
+    </p>
+  </header>
+
+  <!-- 1 · COLOR -->
+  <section class="block">
+    <div class="block-head">
+      <h2>Color</h2>
+      <p class="caption">El dorado solo marca acción, cifra y estado activo. Verde y rojo quedan para semántica real.</p>
+    </div>
+    <div class="swatch-row">
+      <div><div class="swatch" style="background:#000"></div><p class="swatch-name">Fondo</p><p class="swatch-hex">#000000</p></div>
+      <div><div class="swatch" style="background:#131316"></div><p class="swatch-name">Tarjeta</p><p class="swatch-hex">#131316</p></div>
+      <div><div class="swatch" style="background:#1c1c20"></div><p class="swatch-name">Superficie</p><p class="swatch-hex">#1C1C20</p></div>
+      <div><div class="swatch" style="background:#26262b"></div><p class="swatch-name">Chip / hover</p><p class="swatch-hex">#26262B</p></div>
+      <div><div class="swatch" style="background:#d8b25e"></div><p class="swatch-name">Dorado</p><p class="swatch-hex">#D8B25E</p></div>
+      <div><div class="swatch" style="background:#a8a8ae"></div><p class="swatch-name">Texto 2</p><p class="swatch-hex">#A8A8AE · AA</p></div>
+    </div>
+    <div class="grid cols-2" style="margin-top:16px">
+      <div class="card">
+        <h3>Todo el estado, en dorado</h3>
+        <p class="footnote">Hecho, activo y pendiente se distinguen por relleno y borde, no por cambiar de familia de color.</p>
+        <div class="sets" style="margin-top:16px">
+          <div class="set-row done"><span class="idx">1</span><span>Calentamiento</span><span class="kg">40 kg</span><span class="reps">12</span><span class="check">✓</span></div>
+          <div class="set-row active"><span class="idx">2</span><span>Trabajo</span><span class="kg">60 kg</span><span class="reps">8</span><span class="check">·</span></div>
+          <div class="set-row"><span class="idx">3</span><span>Trabajo</span><span class="kg">—</span><span class="reps">—</span><span class="check">·</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Rojo solo donde significa algo</h3>
+        <p class="footnote">Un fallo de serie, un borrado, un error de formulario. Nunca el número de serie ni el fondo de una fila hecha.</p>
+        <div class="sets" style="margin-top:16px">
+          <div class="set-row"><span class="idx">1</span><span>Sentadilla <span class="fail">FALLO</span></span><span class="kg">100 kg</span><span class="reps">3</span><span class="check">·</span></div>
+          <div class="set-row done"><span class="idx">2</span><span>Sentadilla</span><span class="kg">95 kg</span><span class="reps">8</span><span class="check">✓</span></div>
+          <div class="set-row" style="color:var(--danger)"><span class="idx" style="color:var(--danger)">—</span><span>Borrar entrenamiento</span><span></span><span></span><span class="check" style="color:var(--danger)">→</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 · TIPOGRAFÍA -->
+  <section class="block">
+    <div class="block-head">
+      <h2>Tipografía</h2>
+      <p class="caption">Inter Variable en todo. Nada de interfaz por debajo de 13 px. Una cifra protagonista por bloque.</p>
+    </div>
+    <div class="card">
+      <p class="eyebrow">Eyebrow 13 · dorado</p>
+      <h1 style="margin-top:8px">Título de pantalla 34/40</h1>
+      <h2 style="margin-top:16px">Título de bloque 28/34</h2>
+      <h3 style="margin-top:16px">Headline 17/22</h3>
+      <p style="margin:12px 0 0;max-width:62ch">Body 17/26. El texto de lectura de la app y de las páginas legales. Sesenta y ocho caracteres por línea como máximo, nunca el ancho completo de la ventana.</p>
+      <p class="footnote" style="margin:10px 0 0">Footnote 13/18 · el mínimo de apoyo. Texto secundario, notas legales, deltas.</p>
+      <div style="display:flex;align-items:baseline;gap:12px;margin-top:24px;flex-wrap:wrap">
+        <span class="num" style="font-size:64px;line-height:64px;font-weight:700;letter-spacing:-.03em">2.540</span>
+        <span class="footnote">kcal · cifra protagonista, tabular-nums</span>
+      </div>
+      <div style="display:flex;align-items:baseline;gap:12px;margin-top:8px;flex-wrap:wrap">
+        <span class="num" style="font-size:52px;line-height:52px;font-weight:700;letter-spacing:-.03em">201,2</span>
+        <span class="footnote">kg levantados esta semana</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 · COMPONENTES -->
+  <section class="block">
+    <div class="block-head">
+      <h2>Piezas</h2>
+      <p class="caption">Botones, campos, barra de pestañas, lista y semana. Radios 28 / 22 / 18 / 14 / píldora.</p>
+    </div>
+
+    <div class="grid cols-2">
+      <div class="card">
+        <h3>Acciones</h3>
+        <p class="footnote" style="margin-top:4px">Una sola acción dorada por pantalla.</p>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:18px">
+          <button class="btn btn-primary">Empezar sesión</button>
+          <button class="btn btn-secondary">Ver resumen</button>
+          <button class="btn btn-plain">Ahora no</button>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:12px">
+          <button class="btn btn-primary btn-sm">Guardar</button>
+          <button class="btn btn-secondary btn-sm">Cancelar</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Formulario</h3>
+        <p class="footnote" style="margin-top:4px">Píldora 56, etiqueta 13 encima y el CTA a 16 px del último campo.</p>
+        <div style="display:grid;gap:14px;margin-top:18px">
+          <div class="field filled"><label for="mail">Email</label><input id="mail" value="nicolas@autopilotplan.com" /></div>
+          <div class="field"><label for="pass">Contraseña</label><input id="pass" type="password" value="········" /></div>
+          <button class="btn btn-primary" style="width:100%">Entrar</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid" style="margin-top:16px">
+      <div class="card">
+        <h3>Barra de pestañas</h3>
+        <p class="footnote" style="margin-top:4px">Activo = glifo dorado + etiqueta dorada + indicador de 3 px. Sin bloque de fondo de 100 px.</p>
+        <div class="tabbar" style="margin-top:18px">
+          <div class="tab active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>Hoy</div>
+          <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6.5 6.5v11M17.5 6.5v11M3 9v6M21 9v6M6.5 12h11"/></svg>Entrenar</div>
+          <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z"/><path d="M12 7v10M7 12h10"/></svg>Nutrición</div>
+          <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19V5M4 19h16"/><path d="m7 15 4-5 3 3 4-6"/></svg>Progreso</div>
+          <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 7 19.4a1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0-1.2-2.9H1a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 2.6 7a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1"/></svg>Ajustes</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid cols-3" style="margin-top:16px">
+      <div class="card metric">
+        <div class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6.5 6.5v11M17.5 6.5v11M3 9v6M21 9v6M6.5 12h11"/></svg></div>
+        <div><div class="figure num">201,2<small>kg</small></div><div class="label" style="margin-top:6px">Volumen semanal</div><div class="delta" style="margin-top:4px">↑ 8,4 % vs. la anterior</div></div>
+      </div>
+      <div class="card metric">
+        <div class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 3v18M5 8l7-5 7 5M5 16l7 5 7-5"/></svg></div>
+        <div><div class="figure num">7<small>días</small></div><div class="label" style="margin-top:6px">Racha actual</div><div class="delta flat" style="margin-top:4px">Mejor racha: 21 días</div></div>
+      </div>
+      <div class="card metric">
+        <div class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z"/><path d="M12 7v5l3 2"/></svg></div>
+        <div><div class="figure num">48<small>min</small></div><div class="label" style="margin-top:6px">Duración media</div><div class="delta flat" style="margin-top:4px">Últimas 4 sesiones</div></div>
+      </div>
+    </div>
+
+    <div class="grid cols-2" style="margin-top:16px">
+      <div>
+        <p class="list-header">Ajustes</p>
+        <div class="list">
+          <div class="list-row">Perfil <span class="chev">›</span></div>
+          <div class="list-row">Suscripción <span class="value">Plus</span><span class="chev">›</span></div>
+          <div class="list-row">Notificaciones <span class="chev">›</span></div>
+          <div class="list-row">Exportar datos <span class="chev">›</span></div>
+          <div class="list-row" style="color:var(--danger)">Cerrar sesión <span class="chev" style="color:var(--danger)">›</span></div>
+        </div>
+      </div>
+      <div>
+        <p class="list-header">Tu semana</p>
+        <div class="card">
+          <div class="week">
+            <div class="day done"><span class="d">L</span><span class="v">✓</span></div>
+            <div class="day done"><span class="d">M</span><span class="v">✓</span></div>
+            <div class="day today"><span class="d">X</span><span class="v">3</span></div>
+            <div class="day"><span class="d">J</span><span class="v">4</span></div>
+            <div class="day rest"><span class="d">V</span><span class="v">·</span></div>
+            <div class="day"><span class="d">S</span><span class="v">5</span></div>
+            <div class="day rest"><span class="d">D</span><span class="v">·</span></div>
+          </div>
+          <div class="legend">
+            <span><i class="dot" style="background:var(--gold)"></i>Hoy</span>
+            <span><i class="dot" style="background:var(--gold-soft)"></i>Hecho</span>
+            <span><i class="dot" style="background:var(--surface-3)"></i>Programado</span>
+            <span><i class="dot" style="background:var(--text-3)"></i>Descanso</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 · ANTES / DESPUÉS -->
+  <section class="block">
+    <div class="block-head">
+      <h2>El cambio que más se nota</h2>
+      <p class="caption">Registro de series. Mismo contenido, mismos datos, una sola escala de estado.</p>
+    </div>
+    <div class="ba">
+      <div>
+        <p class="ba-label"><b>Ahora</b> · verde + rojo + dorado</p>
+        <div class="mock-before">
+          <div class="rowm ok"><span>1</span><span>Calentamiento</span><span>40</span><span>12</span></div>
+          <div class="rowm act" style="color:#ef4444"><span>2</span><span>Trabajo</span><span>60</span><span>8</span></div>
+          <div class="rowm" style="color:#ef4444"><span>3</span><span>Trabajo</span><span>—</span><span>—</span></div>
+          <div class="rowm"><span>4</span><span>Trabajo</span><span>—</span><span>—</span></div>
+        </div>
+        <p class="caption" style="margin-top:10px">Tres acentos compitiendo; el rojo (reservado a borrar) marca el número de serie.</p>
+      </div>
+      <div>
+        <p class="ba-label"><b>Propuesta</b> · hecho / activo / pendiente</p>
+        <div class="sets-head" style="padding-bottom:8px"><span>#</span><span>Serie</span><span>kg</span><span>Reps</span><span></span></div>
+        <div class="sets">
+          <div class="set-row done"><span class="idx">1</span><span>Calentamiento</span><span class="kg">40</span><span class="reps">12</span><span class="check">✓</span></div>
+          <div class="set-row active"><span class="idx">2</span><span>Trabajo</span><span class="kg">60</span><span class="reps">8</span><span class="check">·</span></div>
+          <div class="set-row"><span class="idx">3</span><span>Trabajo</span><span class="kg">—</span><span class="reps">—</span><span class="check">·</span></div>
+          <div class="set-row"><span class="idx">4</span><span>Trabajo</span><span class="kg">—</span><span class="reps">—</span><span class="check">·</span></div>
+        </div>
+        <p class="caption" style="margin-top:10px">Un solo acento; el estado se lee por relleno, borde y check.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 · TARJETA DE SESIÓN Y PLANES -->
+  <section class="block">
+    <div class="block-head">
+      <h2>Tarjeta de sesión y planes</h2>
+      <p class="caption">Foto 16:10 con degradado, chip de estado arriba y una sola acción. Planes a igual altura, CTA anclado al fondo.</p>
+    </div>
+    <div class="grid cols-2">
+      <div class="hero-card">
+        <span class="chip"><i></i>Hoy · Empuje</span>
+        <div style="width:100%">
+          <h2>Press banca + militar</h2>
+          <p class="meta">6 ejercicios · 18 series · ~48 min</p>
+          <div class="hero-foot">
+            <button class="btn btn-primary btn-sm">Empezar sesión</button>
+            <button class="btn btn-plain btn-sm">Ver plan</button>
+          </div>
+        </div>
+      </div>
+      <div class="grid cols-2" style="gap:16px">
+        <div class="card plan">
+          <div><span class="badge">Gratis</span></div>
+          <div class="price">0 <small>€</small></div>
+          <ul>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m5 13 4 4L19 7"/></svg>Rutina y registro de series</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m5 13 4 4L19 7"/></svg>Macros y calorías</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m5 13 4 4L19 7"/></svg>Progreso y récords</li>
+          </ul>
+          <button class="btn btn-secondary btn-sm cta">Empezar gratis</button>
+        </div>
+        <div class="card plan">
+          <div><span class="badge">Recomendado</span></div>
+          <div class="price">14,99 <small>€/mes</small></div>
+          <ul>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m5 13 4 4L19 7"/></svg>Todo lo gratis</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m5 13 4 4L19 7"/></svg>Comidas del día</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m5 13 4 4L19 7"/></svg>Scan completo</li>
+          </ul>
+          <button class="btn btn-primary btn-sm cta">Probar Plus</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 · COMPARATIVA -->
+  <section class="block">
+    <div class="block-head">
+      <h2>Comparativa agrupada</h2>
+      <p class="caption">Cabecera fija, una etiqueta por columna y grupos por tema. En móvil deja de repetir «Free / Plus» en cada fila.</p>
+    </div>
+    <div class="compare">
+      <div class="compare-head"><span></span><span>Gratis</span><span class="plus">Plus</span></div>
+      <div class="compare-group">Entrenamiento</div>
+      <div class="compare-row"><span>Rutina semanal</span><span class="yes">✓</span><span class="yes">✓</span></div>
+      <div class="compare-row"><span>Registro de series</span><span class="yes">✓</span><span class="yes">✓</span></div>
+      <div class="compare-row"><span>Progresión automática</span><span class="no">—</span><span class="yes">✓</span></div>
+      <div class="compare-group">Nutrición</div>
+      <div class="compare-row"><span>Macros y calorías</span><span class="yes">✓</span><span class="yes">✓</span></div>
+      <div class="compare-row"><span>Comidas del día</span><span class="no">—</span><span class="yes">✓</span></div>
+      <div class="compare-group">Análisis</div>
+      <div class="compare-row"><span>Scan básico</span><span class="yes">✓</span><span class="yes">✓</span></div>
+      <div class="compare-row"><span>Scan completo</span><span class="no">—</span><span class="yes">✓</span></div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <p class="footnote">Maqueta estática · <code>audit/sistema/style-tile.html</code> · sin conexión con la app.</p>
+    <p class="footnote">Tokens y especificación completa: <code>audit/INFORME.md</code> §6.</p>
+  </footer>
+</div>
+</body>
+</html>
