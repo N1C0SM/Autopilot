@@ -346,7 +346,8 @@ struct OnboardingQuizView: View {
                         Image(systemName: "checkmark").font(.system(size: 17, weight: .bold)).foregroundStyle(Palette.gold)
                             .opacity(o.v == value ? 1 : 0)
                     }
-                    .padding(.horizontal, 16).frame(minHeight: 56).contentShape(Rectangle())
+                    // Con subtítulo, aire arriba y abajo como en la web (`py-3`): el texto no toca la línea.
+                    .padding(.horizontal, 16).padding(.vertical, o.d == nil ? 0 : 12).frame(minHeight: 56).contentShape(Rectangle())
                     .overlay(alignment: .bottom) { if i < options.count - 1 { Palette.separator.frame(height: 0.5).padding(.leading, 16) } }
                 }
                 .buttonStyle(.plain)

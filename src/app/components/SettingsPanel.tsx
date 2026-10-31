@@ -450,12 +450,13 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
     const { error } = await supabase.from("onboarding").upsert({
       user_id: user.id,
       age: parseInt(onboarding.age) || null, height: parseFloat(onboarding.height) || null,
-      weight: parseFloat(onboarding.weight) || null, goal: onboarding.goal, sports: onboarding.sports,
+      weight: parseFloat(onboarding.weight) || null, goal: onboarding.goal,
       availability: availabilityEdited
         ? { ...originalAvailability, ...onboarding.availability, auto_calculated: false }
         : originalAvailability,
-      nutrition_preferences: onboarding.nutrition_preferences,
-      allergies: onboarding.allergies,
+      // Lo que no se ve aquí no se envía (deportes nunca, comida solo con Plus): así un fallo
+      // al cargar nunca borra lo guardado sin que se vea.
+      ...(hasPaidAccess ? { nutrition_preferences: onboarding.nutrition_preferences, allergies: onboarding.allergies } : {}),
     }, { onConflict: "user_id" });
     if (error) {
       console.error("saveOnboarding", error);

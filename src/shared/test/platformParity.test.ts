@@ -337,6 +337,11 @@ describe("paridad web ↔ apps nativas", () => {
     }
     expect(web.indexOf("{hasPaidAccess && <>")).toBeGreaterThan(0);
     expect(app.indexOf("if hasPlus {")).toBeGreaterThan(0);
+    // Lo oculto tampoco se envía al guardar: un fallo al cargar no puede borrarlo.
+    expect(web).toContain("...(hasPaidAccess ? { nutrition_preferences:");
+    expect(web).not.toContain("sports: onboarding.sports");
+    expect(app).toContain("nutrition_preferences: hasPlus ? nutritionPrefs : nil");
+    expect(app).not.toContain("sports: sports,");
   });
 
   it("Color en el entreno: un solo dorado (la serie actual), verde para lo hecho y «Terminar» dorado solo al completar, en la web y en la app", () => {
@@ -353,6 +358,11 @@ describe("paridad web ↔ apps nativas", () => {
     expect(app).toContain(".foregroundStyle(allDone ? Palette.muted : Palette.foreground)");
     expect(web).not.toMatch(/pl-0\.5 pr-2 text-primary/);
     expect(app).not.toContain('Image(systemName: "ellipsis").font(.inter(size: 15, weight: .bold)).foregroundStyle(Palette.gold)');
+  });
+
+  it("Primer uso: las opciones con subtítulo (Individual / En pareja) tienen aire arriba y abajo, en la web y en la app", () => {
+    expect(read("src/app/pages/Configurator.tsx")).toContain("items-center gap-3 py-3 sm:py-3.5");
+    expect(read("native/Autopilot/Features/Auth/OnboardingView.swift")).toContain(".padding(.vertical, o.d == nil ? 0 : 12)");
   });
 
   it("Gratis y Plus no leen «tu entrenador» en el primer uso ni en Nutrición", () => {

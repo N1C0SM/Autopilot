@@ -767,10 +767,13 @@ struct AccountView: View {
         if !trimmed(minutes).isEmpty, num(minutes) == nil { show("Revisa los minutos por sesión"); return }
         busy = true; defer { busy = false }
         struct Avail: Encodable { let days: Int?; let hours: Double?; let auto_calculated: Bool }
-        struct U: Encodable { let user_id: UUID; let age: Int?; let height: Double?; let weight: Double?; let goal: String; let availability: Avail; let sports: String; let nutrition_preferences: String; let allergies: String }
+        // Lo que no se ve aquí no se envía (deportes nunca, comida solo con Plus): un `nil` se omite
+        // del JSON, así un fallo al cargar nunca borra lo guardado sin que se vea.
+        struct U: Encodable { let user_id: UUID; let age: Int?; let height: Double?; let weight: Double?; let goal: String; let availability: Avail; let nutrition_preferences: String?; let allergies: String? }
         let row = U(user_id: id, age: Int(age), height: num(height), weight: num(weight), goal: goal,
                     availability: Avail(days: Int(days), hours: num(minutes).map { $0 / 60 }, auto_calculated: false),
-                    sports: sports, nutrition_preferences: nutritionPrefs, allergies: allergies.trimmingCharacters(in: .whitespaces))
+                    nutrition_preferences: hasPlus ? nutritionPrefs : nil,
+                    allergies: hasPlus ? allergies.trimmingCharacters(in: .whitespaces) : nil)
         do {
             try await Backend.client.from("onboarding").upsert(row, onConflict: "user_id").execute()
             Haptics.success(); show("Datos guardados")
