@@ -326,6 +326,19 @@ describe("paridad web ↔ apps nativas", () => {
     expect(read("native/Autopilot/Features/Progress/ProgressScreen.swift")).toContain("if !(model.detailsLoaded && model.history.isEmpty) { strengthCard }");
   });
 
+  it("Ajustes: sin «Deportes» y sin nada de comida hasta tener Plus, en la web y en la app", () => {
+    const web = read("src/app/components/SettingsPanel.tsx");
+    const app = read("native/Autopilot/Features/Account/AccountView.swift");
+    expect(web).not.toContain('header="Deportes"');
+    expect(app).not.toContain('group("Deportes")');
+    for (const text of ["Lo que te gusta", "Lo que no comes", "Preferencias nutricionales", "Alergias y otros alimentos a evitar"]) {
+      expect(web.indexOf(text), text).toBeGreaterThan(web.indexOf("{hasPaidAccess && <>"));
+      expect(app.indexOf(text), text).toBeGreaterThan(app.indexOf("if hasPlus {"));
+    }
+    expect(web.indexOf("{hasPaidAccess && <>")).toBeGreaterThan(0);
+    expect(app.indexOf("if hasPlus {")).toBeGreaterThan(0);
+  });
+
   it("Gratis y Plus no leen «tu entrenador» en el primer uso ni en Nutrición", () => {
     const web = read("src/app/pages/Dashboard.tsx");
     expect(web).not.toContain("No necesitas contratar un entrenador para empezar.");
