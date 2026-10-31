@@ -5,7 +5,7 @@ import { cn } from "@/shared/lib/utils";
 import { BrandMark } from "@/shared/components/ui/brand-mark";
 import { fastImage } from "@/shared/lib/fastImage";
 import { exerciseMotion } from "@/shared/lib/exerciseMotion";
-import { ExerciseMotion } from "@/app/components/ExerciseMotion";
+import { ExerciseMotion, ExerciseMotionGlyph } from "@/app/components/ExerciseMotion";
 
 export const isDirectFile = (url: string) => /\.(mp4|webm|mov|m4v)(\?|$)/i.test(url);
 
@@ -74,20 +74,10 @@ export const ExerciseThumb = ({
         completed ? "bg-success/15" : "bg-secondary"
       } ${className}`}
     >
-      {hasVideo ? (
-        <video
-          src={video!}
-          poster={showImage ? fastImage(image, 192) : undefined}
-          muted
-          playsInline
-          preload="metadata"
-          onLoadedMetadata={(e) => {
-            void e.currentTarget.play().catch(() => undefined);
-          }}
-          className="h-full w-full object-cover"
-        />
-      ) : spec ? (
-        <ExerciseMotionGlyphFrame spec={spec} completed={completed} />
+      {spec ? (
+        <div className="h-full w-full p-1.5">
+          <ExerciseMotionGlyph spec={spec} className={completed ? "opacity-60" : ""} />
+        </div>
       ) : showImage ? (
         <img
           src={fastImage(image, 192)}
