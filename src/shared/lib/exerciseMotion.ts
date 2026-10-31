@@ -99,14 +99,16 @@ const jitter = (seed: number, index: number, span: number): number => {
 
 const round2 = (n: number): number => Math.round(n * 100) / 100;
 
+const clamp = (n: number, min: number, max: number): number => Math.min(max, Math.max(min, n));
+
 /**
  * Los cuatro puntos de la curva, ya con la amplitud de la carga y la letra del
  * ejercicio. Se escala desde el centro del lienzo para no salirse del cuadro.
  */
 function shape(rail: Rail, seed: number, amp: number): MotionPoint[] {
   return rail.map((p, i) => ({
-    x: round2(50 + (p.x - 50) * amp + jitter(seed, i, 2.4)),
-    y: round2(28 + (p.y - 28) * amp + jitter(seed, i + 4, 1.8)),
+    x: clamp(round2(50 + (p.x - 50) * amp + jitter(seed, i, 4)), 6, 94),
+    y: clamp(round2(28 + (p.y - 28) * amp + jitter(seed, i + 4, 3)), 5, MOTION_FLOOR - 2),
   }));
 }
 
@@ -124,7 +126,9 @@ export function exerciseMotion(input: MotionInput): MotionSpec | null {
   const stimulus = STIMULUS_TYPES.find((s) => s === input.stimulus) ?? null;
   const tempo = TEMPO[stimulus ?? "Hipertrofia"];
   const weight = WEIGHT[input.load ?? "Media"] ?? WEIGHT.Media;
-  const pts = shape(RAILS[pattern], hash(input.name), weight.amp);
+  // El isométrico viaja menos: aguanta, no recorre.
+  const amp = weight.amp * (stimulus === "Isométrico" ? 0.7 : 1);
+  const pts = shape(RAILS[pattern], hash(input.name), amp);
 
   return {
     d: pathOf(pts),
