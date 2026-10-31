@@ -230,14 +230,14 @@ CREATE INDEX IF NOT EXISTS exercise_media_exercise_idx ON public.exercise_media 
 
 -- ─── Datos de cada usuario ───
 CREATE TABLE IF NOT EXISTS public.exercise_favorites (
-  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL,
   exercise_id uuid NOT NULL REFERENCES public.exercises(id) ON DELETE CASCADE,
   created_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (user_id, exercise_id)
 );
 
 CREATE TABLE IF NOT EXISTS public.exercise_recent (
-  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL,
   exercise_id uuid NOT NULL REFERENCES public.exercises(id) ON DELETE CASCADE,
   viewed_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (user_id, exercise_id)
@@ -308,3 +308,6 @@ GRANT INSERT, UPDATE, DELETE ON public.muscles, public.equipment, public.exercis
   public.exercise_muscles, public.exercise_equipment, public.exercise_categories,
   public.exercise_relations, public.exercise_media TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.exercise_favorites, public.exercise_recent TO authenticated;
+GRANT ALL ON public.muscles, public.equipment, public.exercise_categories_catalog,
+  public.exercise_muscles, public.exercise_equipment, public.exercise_categories,
+  public.exercise_relations, public.exercise_media, public.exercise_favorites, public.exercise_recent TO service_role;

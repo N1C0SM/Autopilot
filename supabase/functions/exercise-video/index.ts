@@ -46,12 +46,19 @@ function cameraAngle(name: string, group: string): string {
 }
 
 /**
- * La foto del ejercicio como primer y último fotograma: el clip arranca y acaba
- * en la misma pose (bucle sin salto) y el vídeo coincide con la foto.
- * Los nombres de campo del AI Gateway no están documentados en público: si el
- * gateway los rechaza (400, sin coste), solo hay que cambiarlos aquí.
+ * La foto del ejercicio como primer y último fotograma (Veo: instance.image + instance.lastFrame),
+ * en bytes base64 JPEG/PNG: Veo no acepta URLs ni WebP. null si la foto no sirve.
  */
-const loopFrames = (url: string) => ({ first_frame: { image_url: url }, last_frame: { image_url: url } });
+async function loopFrame(url: string): Promise<{ bytesBase64Encoded: string; mimeType: string } | null> {
+  const r = await fetch(url);
+  if (!r.ok) return null;
+  const b = new Uint8Array(await r.arrayBuffer());
+  const mimeType = b[0] === 0x89 && b[1] === 0x50 ? "image/png" : b[0] === 0xff && b[1] === 0xd8 ? "image/jpeg" : "";
+  if (!mimeType) return null;
+  let bin = "";
+  for (let i = 0; i < b.length; i += 0x8000) bin += String.fromCharCode(...b.subarray(i, i + 0x8000));
+  return { bytesBase64Encoded: btoa(bin), mimeType };
+}
 
 type Job = { id: string; status: string; progress?: number; error?: { code: string; message: string } };
 
@@ -265,14 +272,16 @@ Deno.serve(async (req) => {
       const frame = typeof exercise.image_url === "string" ? exercise.image_url : "";
       if (!frame) return json({ error: "Genera primero la foto: el vídeo parte de ella" }, 400);
       const prompt = `Professional exercise technique demonstration video of the exercise "${name}" (${group}). Start from the exact pose of the reference frame, perform exactly one smooth controlled repetition with perfect biomechanical form over the full range of motion, and return to that exact pose on the last frame so the clip loops seamlessly. Same athlete, outfit, equipment, lighting and framing as the reference frame. Silent clip, no audio. ${angle} ${STYLE}`;
+      const still = await loopFrame(frame);
+      if (!still) return json({ error: "La foto del ejercicio debe ser PNG o JPEG para crear el vídeo" }, 400);
       const r = await fetch(`${GATEWAY}/v1/videos`, {
         method: "POST",
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json", "X-Lovable-AIG-SDK": "fetch" },
         body: JSON.stringify({
           model: MODEL,
-          input: prompt,
-          ...loopFrames(frame),
-          response_format: { type: "video", resolution: "720p", duration: `${CLIP_SECONDS}s`, aspect_ratio: "16:9" },
+          instances: [{ prompt, image: still, lastFrame: still }],
+          // aspectRatio omitted: Veo derives it from the input image and rejects it alongside one.
+          parameters: { durationSeconds: CLIP_SECONDS, resolution: "720p", sampleCount: 1, generateAudio: false },
         }),
       });
       if (!r.ok) {
