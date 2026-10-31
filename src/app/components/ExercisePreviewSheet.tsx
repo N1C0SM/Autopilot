@@ -9,6 +9,10 @@ export type ExercisePreviewData = {
   video?: string | null;
   /** Línea corta bajo el nombre (series, categoría…). */
   detail?: string | null;
+  /** Patrón, estímulo y carga: dibujan la huella de movimiento en el héroe. */
+  pattern?: string | null;
+  stimulus?: string | null;
+  load?: string | null;
 };
 
 /**

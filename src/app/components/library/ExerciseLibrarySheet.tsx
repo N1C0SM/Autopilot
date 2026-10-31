@@ -190,7 +190,7 @@ const Browse = ({ items, recent, favorites, onOpen, onGroup }: {
           <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-1">
             {recent.map((e) => (
               <button key={e.id} type="button" onClick={() => onOpen(e)} className="w-28 shrink-0 text-left transition active:opacity-60">
-                <ExerciseThumb image={e.image} name={e.name} aspect="video" className="w-28" />
+                <ExerciseThumb image={e.image} name={e.name} pattern={e.pattern} stimulus={e.stimulus} load={e.load} aspect="video" className="w-28" />
                 <span className="mt-1.5 line-clamp-2 type-footnote font-medium">{e.name}</span>
               </button>
             ))}
@@ -268,7 +268,7 @@ const ExerciseDetail = ({ exercise: e, all, byId, favorite, canFavorite, onFavor
       <button type="button" onClick={onBack} className="mb-3 flex h-9 items-center gap-1 rounded-full pr-3 type-subhead font-semibold text-primary active:opacity-60">
         <ChevronLeft className="h-5 w-5" aria-hidden /> Ejercicios
       </button>
-      <ExerciseMedia video={e.video} image={e.image} name={e.name} emptyLabel="Demostración en preparación" className="rounded-[28px]" />
+      <ExerciseMedia video={e.video} image={e.image} name={e.name} pattern={e.pattern} stimulus={e.stimulus} load={e.load} emptyLabel="Demostración en preparación" className="rounded-[28px]" />
       <div className="mt-4 flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <h2 className="type-title2 font-bold tracking-tight">{e.name}</h2>
