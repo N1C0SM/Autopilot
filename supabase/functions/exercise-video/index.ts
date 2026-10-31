@@ -45,14 +45,39 @@ function cameraAngle(name: string, group: string): string {
   return "Camera angle: centered 45 degree medium shot focused on the working muscle.";
 }
 
+const WEBP_DECODER_WASM = "https://cdn.jsdelivr.net/npm/@jsquash/webp@1.4.0/codec/dec/webp_dec.wasm";
+const isWebp = (b: Uint8Array) =>
+  b.length > 12 && String.fromCharCode(...b.subarray(0, 4)) === "RIFF" && String.fromCharCode(...b.subarray(8, 12)) === "WEBP";
+
+/** WebP -> JPEG (calidad 90). Las fotos se guardan en WebP y Veo solo acepta PNG o JPEG. null si falla. */
+async function webpToJpeg(bytes: Uint8Array): Promise<Uint8Array | null> {
+  try {
+    // El decodificador (wasm) devuelve un ImageData, que Deno no trae.
+    const g = globalThis as { ImageData?: unknown };
+    g.ImageData ??= class { constructor(public data: Uint8ClampedArray, public width: number, public height: number) {} };
+    const { default: decode, init } = await import("npm:@jsquash/webp@1.4.0/decode.js");
+    await init(await WebAssembly.compile(await (await fetch(WEBP_DECODER_WASM)).arrayBuffer()));
+    const img = await decode(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
+    const { Image } = await import("https://deno.land/x/imagescript@1.3.0/mod.ts");
+    const out = new Image(img.width, img.height);
+    out.bitmap.set(img.data);
+    return await out.encodeJPEG(90);
+  } catch (e) {
+    console.error(`webp->jpeg failed: ${(e as Error).message}`);
+    return null;
+  }
+}
+
 /**
  * La foto del ejercicio como primer y último fotograma (Veo: instance.image + instance.lastFrame),
- * en bytes base64 JPEG/PNG: Veo no acepta URLs ni WebP. null si la foto no sirve.
+ * en bytes base64 JPEG/PNG: Veo no acepta URLs ni WebP, así que la foto WebP se pasa a JPEG aquí.
+ * null si la foto no sirve.
  */
 async function loopFrame(url: string): Promise<{ bytesBase64Encoded: string; mimeType: string } | null> {
   const r = await fetch(url);
   if (!r.ok) return null;
-  const b = new Uint8Array(await r.arrayBuffer());
+  let b = new Uint8Array(await r.arrayBuffer());
+  if (isWebp(b)) b = (await webpToJpeg(b)) ?? b;
   const mimeType = b[0] === 0x89 && b[1] === 0x50 ? "image/png" : b[0] === 0xff && b[1] === 0xd8 ? "image/jpeg" : "";
   if (!mimeType) return null;
   let bin = "";
