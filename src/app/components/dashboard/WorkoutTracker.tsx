@@ -179,6 +179,9 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
     rest?: string;
     category?: string | null;
     type?: string | null;
+    pattern?: string | null;
+    stimulus?: string | null;
+    load?: string | null;
   } | null>(null);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [saveError, setSaveError] = useState(false);
@@ -1487,7 +1490,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                         onClick={() => { setExpandedExercise(idx); void hapticTap(); }}
                         className={`shrink-0 rounded-[14px] p-0.5 transition-opacity duration-150 active:opacity-40 ${isActive ? "ring-2 ring-inset ring-primary" : "opacity-60"}`}
                       >
-                        <ExerciseThumb image={m?.image_url || item.image_url} video={item.video_url || m?.video_url} name={item.name} completed={done} />
+                        <ExerciseThumb image={m?.image_url || item.image_url} video={item.video_url || m?.video_url} name={item.name} pattern={m?.movement_pattern} stimulus={m?.stimulus_type} load={m?.load_level} completed={done} />
                       </button>
                     );
                   })}
@@ -1520,7 +1523,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                     <button
                       type="button"
                       aria-label={`Ver vídeo de técnica de ${active.name}`}
-                      onClick={() => { void hapticTap(); setTechnique({ name: active.name, image: img, video: vid, series: active.series != null ? String(active.series) : undefined, reps: active.reps != null ? String(active.reps) : undefined, rest: active.rest, category: active.muscle_group || meta?.muscle_group, type: active.exercise_type || meta?.exercise_type }); }}
+                      onClick={() => { void hapticTap(); setTechnique({ name: active.name, image: img, video: vid, series: active.series != null ? String(active.series) : undefined, reps: active.reps != null ? String(active.reps) : undefined, rest: active.rest, category: active.muscle_group || meta?.muscle_group, type: active.exercise_type || meta?.exercise_type, pattern: meta?.movement_pattern, stimulus: meta?.stimulus_type, load: meta?.load_level }); }}
                       className={`material absolute flex items-center justify-center rounded-full text-foreground transition-opacity active:opacity-60 ${loop ? "bottom-2 right-2 h-11 w-11" : "inset-0 m-auto h-14 w-14"}`}
                     >
                       <Play className="h-5 w-5 fill-current" aria-hidden="true" />
