@@ -606,23 +606,50 @@ struct ExerciseDetailView: View {
 
     @ViewBuilder private var hero: some View {
         let shape = RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
-        ZStack {
+        let videoURL = exercise.video
+            .flatMap { URL(string: $0) }
+            .flatMap { ["mp4", "mov", "m4v"].contains($0.pathExtension.lowercased()) ? $0 : nil }
+        let motion = ExerciseMotion.spec(name: exercise.name, pattern: exercise.pattern, stimulus: exercise.stimulus, load: exercise.load)
+        ZStack(alignment: .bottomLeading) {
             Palette.card
-            if let image = exercise.image, let url = URL(string: image) {
+            if let videoURL {
+                LoopingVideo(url: videoURL)
+            } else if let motion, !showPhoto {
+                ExerciseMotionHero(spec: motion).padding(12)
+            } else if let image = exercise.image, let url = URL(string: image) {
                 CachedAsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { Palette.card }
-            }
-            if let video = exercise.video, let url = URL(string: video), ["mp4", "mov", "m4v"].contains(url.pathExtension.lowercased()) {
-                LoopingVideo(url: url)
-            } else if exercise.image == nil {
+            } else {
                 VStack(spacing: 8) {
                     Image("lu-dumbbell").resizable().frame(width: 28, height: 28).foregroundStyle(Palette.muted)
                     Text("Demostración en preparación").font(.apFootnote).foregroundStyle(Palette.muted)
                 }
             }
+            // Con foto y huella, se cambia entre las dos con una píldora discreta.
+            if motion != nil, exercise.image != nil, videoURL == nil {
+                HStack(spacing: 2) {
+                    heroTab("Ritmo", on: !showPhoto) { showPhoto = false }
+                    heroTab("Foto", on: showPhoto) { showPhoto = true }
+                }
+                .padding(2)
+                .background(Palette.secondary, in: Capsule())
+                .padding(12)
+            }
         }
         .aspectRatio(16 / 9, contentMode: .fit)
         .clipShape(shape)
         .accessibilityLabel(exercise.name)
+    }
+
+    private func heroTab(_ title: String, on: Bool, show: @escaping () -> Void) -> some View {
+        Button(action: show) {
+            Text(title)
+                .font(.apFootnote.weight(.semibold))
+                .foregroundStyle(on ? Palette.gold : Palette.muted)
+                .padding(.horizontal, 12)
+                .frame(height: 28)
+                .background(on ? Palette.gold.opacity(0.15) : Color.clear, in: Capsule())
+        }
+        .buttonStyle(.plain)
     }
 
     private func list(_ items: [String], numbered: Bool = false) -> some View {
