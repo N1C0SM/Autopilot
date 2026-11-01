@@ -193,8 +193,8 @@ describe("paridad web ↔ apps nativas", () => {
       expect(welcome, text).toContain(text);
       expect(app, text).toContain(text);
     }
-    // La bienvenida lleva al registro (con el plan gratis), no al cuestionario directo.
-    expect(welcome).toMatch(/navigate\("\/signup\?free=true"\)/);
+    // La bienvenida lleva al cuestionario, no a registrarse primero (probar sin cuenta, como la app).
+    expect(welcome).toMatch(/navigate\("\/onboarding"\)/);
     expect(app).toMatch(/WelcomeView\(onStart: \{ go\(\.quiz\) \}/);
     for (const text of [
       "¿Qué quieres conseguir?", "Tu semana", "Tu plan Autopilot", "Cuéntanos tu objetivo y dónde entrenas.",
