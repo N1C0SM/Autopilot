@@ -4,7 +4,7 @@ import Supabase
 /// Varias cuentas en el mismo dispositivo, como los usuarios de un Mac (igual que
 /// `src/shared/lib/accounts.ts`): cada una guarda su sesión y cambiar carga la de otra.
 struct SavedAccount: Codable, Identifiable, Equatable {
-    let id: String
+    var id: String
     var email: String
     var name: String
     var avatar: String?
@@ -41,7 +41,27 @@ final class AccountStore: ObservableObject {
 
     private func load() -> [SavedAccount] {
         guard let data = Keychain.data(key) else { return [] }
-        return (try? JSONDecoder().decode([SavedAccount].self, from: data)) ?? []
+        return Self.unique((try? JSONDecoder().decode([SavedAccount].self, from: data)) ?? [])
+    }
+
+    private static func mail(_ email: String) -> String { email.trimmingCharacters(in: .whitespaces).lowercased() }
+
+    /// Una persona, una tarjeta (igual que `uniqueAccounts` en la web). El correo es único en
+    /// Supabase: dos entradas con el mismo correo (o el mismo id) son la misma persona, p. ej. una
+    /// cuenta borrada y vuelta a crear. Se queda la que sigue valiendo (la más reciente si empatan),
+    /// en el sitio de la primera, y conserva la contraseña opcional si cualquiera la pedía.
+    static func unique(_ list: [SavedAccount]) -> [SavedAccount] {
+        var out: [SavedAccount] = []
+        for a in list {
+            guard let j = out.firstIndex(where: { $0.id == a.id || (!mail(a.email).isEmpty && mail($0.email) == mail(a.email)) }) else {
+                out.append(a)
+                continue
+            }
+            var keep = a.expired && !out[j].expired ? out[j] : a
+            keep.requirePassword = out[j].requirePassword || a.requirePassword
+            out[j] = keep
+        }
+        return out
     }
 
     private func save(_ list: [SavedAccount]) {
@@ -52,11 +72,25 @@ final class AccountStore: ObservableObject {
     /// Guarda o actualiza la sesión de la cuenta activa (los tokens rotan al refrescarse).
     func remember(_ session: Session) {
         let user = session.user
+        let id = user.id.uuidString.lowercased()
         let meta = user.userMetadata
         let name = meta["full_name"]?.stringValue ?? meta["name"]?.stringValue ?? (user.email ?? "").components(separatedBy: "@").first ?? ""
-        var list = accounts
-        let lock = takePendingLock(for: user.id.uuidString.lowercased())
-        if let i = list.firstIndex(where: { $0.id == user.id.uuidString.lowercased() }) {
+        // Otra tarjeta con este correo y otro id es esta misma persona con una cuenta que ya no
+        // existe: pasa a ser esta (mismo sitio, misma contraseña opcional), nunca una segunda.
+        let email = Self.mail(user.email ?? "")
+        let replaced = Set(accounts.filter { $0.id != id && !email.isEmpty && Self.mail($0.email) == email }.map(\.id))
+        var list = Self.unique(accounts.map { a in
+            guard replaced.contains(a.id) else { return a }
+            var b = a
+            b.id = id
+            return b
+        })
+        if let d = defaultId, replaced.contains(d) {
+            defaultId = id
+            UserDefaults.standard.set(id, forKey: defaultKey)
+        }
+        let lock = takePendingLock(for: id)
+        if let i = list.firstIndex(where: { $0.id == id }) {
             list[i].accessToken = session.accessToken
             list[i].refreshToken = session.refreshToken
             list[i].email = user.email ?? list[i].email
@@ -64,7 +98,7 @@ final class AccountStore: ObservableObject {
             if let lock { list[i].requirePassword = lock }
         } else {
             list.append(SavedAccount(
-                id: user.id.uuidString.lowercased(), email: user.email ?? "", name: name,
+                id: id, email: user.email ?? "", name: name,
                 avatar: meta["avatar_url"]?.stringValue, accessToken: session.accessToken,
                 refreshToken: session.refreshToken, requirePassword: lock ?? false))
         }
