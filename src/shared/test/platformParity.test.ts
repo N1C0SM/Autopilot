@@ -456,11 +456,11 @@ describe("paridad web ↔ apps nativas", () => {
     expect(app).toMatch(/DragGesture\(minimumDistance: 10\)/);
     expect(web).toMatch(/drag="y"/);
     expect(web).toMatch(/if \(showInfo\) setShowInfo\(false\);\s*else setViewingPhoto\(null\);/);
-    // Mismo reparto de pantalla: la foto sube al 42 % y el panel ocupa el 58 %, con esquinas de 28.
+    // Mismo reparto de pantalla: la foto sube al 42 % y el panel ocupa el 58 %, con esquinas de 28 (`sheet` = `Radius.hero`).
     expect(app).toMatch(/geo\.size\.height \* 0\.58/);
     expect(app).toMatch(/topLeadingRadius: Radius\.hero/);
     expect(web).toMatch(/height: showInfo \? "42%" : "100%"/);
-    expect(web).toMatch(/h-\[58%\][^"]*rounded-t-\[28px\]/);
+    expect(web).toMatch(/h-\[58%\][^"]*rounded-t-sheet/);
     // Mismos textos en los dos lados.
     for (const text of [
       "Ver información", "Ocultar información", "Cerrar visor", "Desliza hacia arriba para ver la información",

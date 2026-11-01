@@ -138,7 +138,7 @@ const PhotoInfoPanel = ({ photo, onClose }: { photo: Photo; onClose: () => void 
       dragElastic={{ top: 0, bottom: 0.6 }}
       onDragEnd={(_, info) => { if (info.offset.y > 60 || info.velocity.y > 500) onClose(); }}
       onClick={(e) => e.stopPropagation()}
-      className="absolute inset-x-0 bottom-0 z-20 mx-auto flex h-[58%] max-w-[640px] flex-col rounded-t-[28px] bg-card text-foreground"
+      className="absolute inset-x-0 bottom-0 z-20 mx-auto flex h-[58%] max-w-[640px] flex-col rounded-t-sheet bg-card text-foreground"
     >
       {/* Asa y fecha: también se arrastran para bajar el panel. */}
       <div className="shrink-0 cursor-grab touch-none px-5 pb-4 pt-2.5" onPointerDown={(e) => dragControls.start(e)}>
