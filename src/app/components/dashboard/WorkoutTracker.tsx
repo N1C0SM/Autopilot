@@ -1473,6 +1473,28 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
             const loop = vid && isDirectFile(vid) && !prefersReducedMotion ? vid : null;
             return (
               <div className="space-y-2">
+                {/* Carrusel arriba y el movimiento en grande debajo: se ve en qué ejercicio estás. */}
+                <div role="tablist" aria-label="Ejercicios de la sesión" className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 py-1">
+                  {(currentPlan.exercises || []).map((item, idx) => {
+                    const m = exerciseMetadata.byId[item.exercise_id] || exerciseMetadata.byName[item.name];
+                    const itemSets = exerciseLogs[item.name] || [];
+                    const done = itemSets.length > 0 && itemSets.every((set) => set.done);
+                    const isActive = idx === expandedExercise;
+                    return (
+                      <button
+                        key={`${item.name}-${idx}`}
+                        type="button"
+                        role="tab"
+                        aria-selected={isActive}
+                        aria-label={`${idx + 1}. ${swaps[item.name] || item.name}${done ? " · hecho" : ""}`}
+                        onClick={() => { setExpandedExercise(idx); void hapticTap(); }}
+                        className={`shrink-0 rounded-[14px] p-0.5 transition-opacity duration-150 active:opacity-40 ${isActive ? "ring-2 ring-inset ring-primary" : "opacity-60"}`}
+                      >
+                        <ExerciseThumb image={m?.image_url || item.image_url} video={item.video_url || m?.video_url} name={item.name} pattern={m?.movement_pattern} stimulus={m?.stimulus_type} load={m?.load_level} completed={done} />
+                      </button>
+                    );
+                  })}
+                </div>
                 <motion.div
                   key={expandedExercise}
                   initial={{ opacity: 0.4, x: 0 }}
@@ -1506,27 +1528,6 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                     </button>
                   )}
                 </motion.div>
-                <div role="tablist" aria-label="Ejercicios de la sesión" className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 py-1">
-                  {(currentPlan.exercises || []).map((item, idx) => {
-                    const m = exerciseMetadata.byId[item.exercise_id] || exerciseMetadata.byName[item.name];
-                    const itemSets = exerciseLogs[item.name] || [];
-                    const done = itemSets.length > 0 && itemSets.every((set) => set.done);
-                    const isActive = idx === expandedExercise;
-                    return (
-                      <button
-                        key={`${item.name}-${idx}`}
-                        type="button"
-                        role="tab"
-                        aria-selected={isActive}
-                        aria-label={`${idx + 1}. ${swaps[item.name] || item.name}${done ? " · hecho" : ""}`}
-                        onClick={() => { setExpandedExercise(idx); void hapticTap(); }}
-                        className={`shrink-0 rounded-[14px] p-0.5 transition-opacity duration-150 active:opacity-40 ${isActive ? "ring-2 ring-inset ring-primary" : "opacity-60"}`}
-                      >
-                        <ExerciseThumb image={m?.image_url || item.image_url} video={item.video_url || m?.video_url} name={item.name} pattern={m?.movement_pattern} stimulus={m?.stimulus_type} load={m?.load_level} completed={done} />
-                      </button>
-                    );
-                  })}
-                </div>
                 <motion.div
                   key={expandedExercise}
                   initial={{ opacity: 0.4, x: 0 }}
@@ -1664,7 +1665,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                   {/* Antes de empezar, la lista solo informa: cambiar y ficha viven dentro de la sesión. */}
                   <div className={`${started ? "flex" : "hidden"} shrink-0 items-center ${focused ? "-mr-2.5 -mt-2" : ""}`}>
                     {allDone && !focused && (
-                      <span className="flex h-11 w-9 items-center justify-center text-success">
+                      <span className="flex h-11 w-9 items-center justify-center text-primary">
                         <Check className="h-5 w-5" strokeWidth={2.5} aria-hidden="true" />
                       </span>
                     )}
@@ -1792,12 +1793,12 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                           const checkClass = set.done
                             ? isWarmup
                               ? "border-muted-foreground bg-muted-foreground text-background"
-                              : "border-success bg-success text-success-foreground"
+                              : "border-primary bg-primary text-primary-foreground"
                             : inputError
                               ? "border-destructive text-destructive"
                               : "border-muted-foreground/40 text-muted-foreground/40";
                           return (
-                          <div key={si} aria-current={si === firstPendingIndex ? "step" : undefined} className={`pl-3 transition-colors duration-300 ${si === firstPendingIndex ? "rounded-chip ring-1 ring-inset ring-primary/50 bg-primary/5" : set.done && !isWarmup ? "rounded-chip bg-success/10" : ""}`}>
+                          <div key={si} aria-current={si === firstPendingIndex ? "step" : undefined} className={`pl-3 transition-colors duration-300 ${si === firstPendingIndex ? "rounded-chip ring-1 ring-inset ring-primary/50 bg-primary/5" : set.done && !isWarmup ? "rounded-chip bg-primary/10" : ""}`}>
                             <div className={`py-2 pr-2 ${si > 0 ? "sep-t" : ""}`}>
                             {/* Segmento principal de la serie */}
                             <div className={SET_GRID}>
