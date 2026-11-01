@@ -11,7 +11,7 @@ type Certificate = Database["public"]["Tables"]["trainer_certificates"]["Row"];
 export function TrainerPresentation({ trainer, certificates }: { trainer: Trainer; certificates: Certificate[] }) {
   const [photoFailed, setPhotoFailed] = useState(false);
   return <article className="sep-t grid gap-6 py-8 sm:grid-cols-[96px_1fr]">
-    {trainer.photo_url && !photoFailed ? <img src={trainer.photo_url} alt={trainer.display_name || "Entrenador del equipo"} loading="lazy" onError={() => setPhotoFailed(true)} className="h-24 w-24 rounded-2xl object-cover" /> : <div className="flex h-24 w-24 items-center justify-center rounded-2xl bg-secondary"><User className="h-9 w-9 text-muted-foreground" strokeWidth={1.75} aria-hidden="true" /></div>}
+    {trainer.photo_url && !photoFailed ? <img src={trainer.photo_url} alt={trainer.display_name || "Entrenador del equipo"} loading="lazy" onError={() => setPhotoFailed(true)} className="h-24 w-24 rounded-media object-cover" /> : <div className="flex h-24 w-24 items-center justify-center rounded-media bg-secondary"><User className="h-9 w-9 text-muted-foreground" strokeWidth={1.75} aria-hidden="true" /></div>}
     <div className="min-w-0 space-y-3">
       <p className="type-footnote text-primary">Entrenador del equipo</p>
       <h3 className="type-title2 break-words">{trainer.display_name || "Equipo de entrenamiento"}</h3>

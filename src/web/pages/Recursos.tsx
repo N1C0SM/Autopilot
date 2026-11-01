@@ -39,10 +39,10 @@ const sentenceCase = (t: string) => {
 const RowThumb = ({ src, alt, fallback: Fallback }: { src?: string | null; alt: string; fallback: typeof Newspaper }) => {
   const [failed, setFailed] = useState(false);
   if (src && !failed) {
-    return <img src={src} alt={alt} loading="lazy" onError={() => setFailed(true)} className="h-14 w-14 shrink-0 rounded-xl bg-secondary object-cover" />;
+    return <img src={src} alt={alt} loading="lazy" onError={() => setFailed(true)} className="h-14 w-14 shrink-0 rounded-media bg-secondary object-cover" />;
   }
   return (
-    <span aria-hidden className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-secondary">
+    <span aria-hidden className="flex h-14 w-14 shrink-0 items-center justify-center rounded-media bg-secondary">
       <Fallback className="h-6 w-6 text-muted-foreground" strokeWidth={1.75} />
     </span>
   );

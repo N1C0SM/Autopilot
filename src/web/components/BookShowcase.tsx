@@ -106,7 +106,7 @@ export default function BookShowcase() {
     <div className="mt-14 flex snap-x snap-mandatory gap-5 overflow-x-auto px-5 pb-6 [scrollbar-width:none] sm:justify-center sm:px-8 [&::-webkit-scrollbar]:hidden">
       {(books ?? Array.from({ length: 4 }, () => null)).map((b, i) => b
         ? <Link key={b.id} to={`/recursos?guia=${encodeURIComponent(b.id)}`} onClick={() => open(b)} className="group flex w-[200px] shrink-0 snap-center flex-col text-left sm:w-[220px]">{cover(b)}{info(b)}</Link>
-        : <div key={i} aria-hidden="true" className="w-[200px] shrink-0 sm:w-[220px]"><div className="aspect-[3/4] animate-pulse rounded-xl bg-card" /></div>)}
+        : <div key={i} aria-hidden="true" className="w-[200px] shrink-0 sm:w-[220px]"><div className="aspect-[3/4] animate-pulse rounded-media bg-card" /></div>)}
     </div>
     {footer}
   </section>;

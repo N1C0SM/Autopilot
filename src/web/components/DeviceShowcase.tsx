@@ -15,11 +15,11 @@ function LaptopScreen() {
   return <div className="flex h-full flex-col bg-background text-left">
     <div aria-hidden="true" className="flex h-7 shrink-0 items-center gap-1.5 border-b border-border/40 px-3">
       {[0, 1, 2].map((i) => <span key={i} className="h-2 w-2 rounded-full bg-muted-foreground/30" />)}
-      <span className="mx-auto rounded-md bg-secondary px-6 py-0.5 type-caption2 text-muted-foreground">autopilotplan.com</span>
+      <span className="mx-auto rounded-chip bg-secondary px-6 py-0.5 type-caption2 text-muted-foreground">autopilotplan.com</span>
     </div>
     <div className="flex min-h-0 flex-1">
       <nav aria-hidden="true" className="hidden w-36 shrink-0 flex-col gap-1 border-r border-border/40 p-3 sm:flex">
-        {[[Home, "Inicio"], [Dumbbell, "Entrenamiento"], [Apple, "Nutrición"], [LineChart, "Mi progreso"], [Settings, "Ajustes"], [BookOpen, "Recursos"]].map(([I, label], i) => { const Icon = I as typeof Home; return <span key={label as string} className={`flex items-center gap-2 rounded-lg px-2 py-1.5 type-footnote ${i === 0 ? "bg-secondary font-semibold" : "text-muted-foreground"}`}><Icon className="h-3.5 w-3.5" />{label as string}</span>; })}
+        {[[Home, "Inicio"], [Dumbbell, "Entrenamiento"], [Apple, "Nutrición"], [LineChart, "Mi progreso"], [Settings, "Ajustes"], [BookOpen, "Recursos"]].map(([I, label], i) => { const Icon = I as typeof Home; return <span key={label as string} className={`flex items-center gap-2 rounded-chip px-2 py-1.5 type-footnote ${i === 0 ? "bg-secondary font-semibold" : "text-muted-foreground"}`}><Icon className="h-3.5 w-3.5" />{label as string}</span>; })}
       </nav>
       <div className="grid min-w-0 flex-1 grid-cols-1 gap-4 overflow-hidden p-4 ">
         <div className="min-w-0 origin-top-left scale-[0.8]"><PhoneHome plans={plans} /></div>

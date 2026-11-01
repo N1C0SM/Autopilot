@@ -212,7 +212,7 @@ export default function Index() {
         </div>
         <div>
           <h2 className="type-title2">Dudas frecuentes</h2>
-          <Accordion type="single" collapsible className="mt-4 rounded-2xl bg-card px-4 [&>:last-child]:border-b-0">
+          <Accordion type="single" collapsible className="mt-4 rounded-media bg-card px-4 [&>:last-child]:border-b-0">
             {faqs.map((f, i) => <AccordionItem key={f.q} value={`f${i}`}><AccordionTrigger className="min-h-12 text-left">{f.q}</AccordionTrigger><AccordionContent>{f.a}</AccordionContent></AccordionItem>)}
           </Accordion>
           <Link to="/preguntas-frecuentes" className="mt-2 inline-flex min-h-11 items-center type-body text-primary transition-opacity active:opacity-60">Ver todas las dudas</Link>

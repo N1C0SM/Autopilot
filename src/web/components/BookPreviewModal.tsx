@@ -134,7 +134,7 @@ export default function BookPreviewModal({
             target="_blank"
             rel="noreferrer"
             onClick={() => buy(pack!, "preview_modal_pack")}
-            className="flex min-h-[44px] items-center gap-3 rounded-2xl bg-secondary p-3 transition-colors active:bg-accent"
+            className="flex min-h-[44px] items-center gap-3 rounded-media bg-secondary p-3 transition-colors active:bg-accent"
           >
             <Package className="h-7 w-7 shrink-0 text-primary" strokeWidth={1.75} />
             <div className="min-w-0 flex-1">

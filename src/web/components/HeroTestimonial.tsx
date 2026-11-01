@@ -23,7 +23,7 @@ const HeroTestimonial = () => {
   if (!t) return null;
 
   return (
-    <div className="mt-6 mx-auto max-w-md flex items-start gap-3 rounded-2xl border border-border bg-card/60 px-4 py-3 text-left">
+    <div className="mt-6 mx-auto max-w-md flex items-start gap-3 rounded-media border border-border bg-card/60 px-4 py-3 text-left">
       {t.photo_url ? (
         <img
           src={t.photo_url}

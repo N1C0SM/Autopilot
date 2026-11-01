@@ -35,7 +35,7 @@ const VideoEmbed = ({ url, className = "" }: Props) => {
 
   if (!embed) {
     return (
-      <div className={cn("flex flex-col items-center justify-center gap-2 rounded-xl bg-secondary p-6 text-muted-foreground", className)}>
+      <div className={cn("flex flex-col items-center justify-center gap-2 rounded-media bg-secondary p-6 text-muted-foreground", className)}>
         <Video className="h-7 w-7 text-muted-foreground/60" strokeWidth={1.75} aria-hidden="true" />
         <p className="type-footnote">Sin vídeo</p>
       </div>
@@ -44,14 +44,14 @@ const VideoEmbed = ({ url, className = "" }: Props) => {
 
   if (embed.type === "video") {
     return (
-      <div className={cn("relative w-full overflow-hidden rounded-xl bg-black", className)} style={{ aspectRatio: "16/9" }}>
+      <div className={cn("relative w-full overflow-hidden rounded-media bg-black", className)} style={{ aspectRatio: "16/9" }}>
         <video src={embed.src} controls playsInline className="absolute inset-0 h-full w-full object-cover" />
       </div>
     );
   }
 
   return (
-    <div className={cn("relative w-full overflow-hidden rounded-xl bg-black", className)} style={{ aspectRatio: "16/9" }}>
+    <div className={cn("relative w-full overflow-hidden rounded-media bg-black", className)} style={{ aspectRatio: "16/9" }}>
       <iframe
         src={embed.src}
         title="Vídeo del ejercicio"

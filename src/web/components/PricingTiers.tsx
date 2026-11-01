@@ -50,7 +50,7 @@ const PricingTiersContent = ({ onSelect, recommended = "training", hideFree }: P
             ? Array.from(new Set(t.features.map((f) => (/chat|videollamada/i.test(f) ? COACH_CONTACT_FEATURE : f))))
             : t.features;
           return (
-            <div key={key} className="flex h-full flex-col rounded-2xl bg-card p-6">
+            <div key={key} className="flex h-full flex-col rounded-media bg-card p-6">
               <div className="flex items-baseline justify-between gap-3">
                 <h3 className="type-title3">{t.name}</h3>
                 {isRec && <span className="type-footnote font-semibold text-primary">Recomendado</span>}

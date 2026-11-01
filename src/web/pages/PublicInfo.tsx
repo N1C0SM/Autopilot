@@ -69,7 +69,7 @@ export default function PublicInfo({ page }: { page: Page }) {
         <Suspense fallback={<div className="h-32" aria-hidden="true" />}>
           <PlanDifferences />
         </Suspense>
-        {plans.coach && <details className="group mt-8 rounded-2xl bg-card px-4"><summary className="flex min-h-12 list-none items-center justify-between gap-3 py-3 type-body transition-opacity active:opacity-60 [&::-webkit-details-marker]:hidden">¿Qué tipo de ayuda necesito?<ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground/60 transition-transform duration-200 ease-ios group-open:rotate-180" aria-hidden="true" /></summary><ComparisonTable /></details>}
+        {plans.coach && <details className="group mt-8 rounded-media bg-card px-4"><summary className="flex min-h-12 list-none items-center justify-between gap-3 py-3 type-body transition-opacity active:opacity-60 [&::-webkit-details-marker]:hidden">¿Qué tipo de ayuda necesito?<ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground/60 transition-transform duration-200 ease-ios group-open:rotate-180" aria-hidden="true" /></summary><ComparisonTable /></details>}
         <p className="mx-auto mt-8 max-w-2xl text-center type-footnote text-muted-foreground">Los planes mensuales se renuevan automáticamente. Gestiona la cancelación desde Ajustes → Suscripción. <Link to="/preguntas-frecuentes" className="text-primary">Resolver dudas</Link></p>
       </section>}
       {page === "how" && <>

@@ -157,7 +157,7 @@ const BlogPost = () => {
           </header>
 
           {toc.length > 1 && (
-            <details className="lg:hidden mb-10 rounded-2xl bg-secondary/50 p-4">
+            <details className="lg:hidden mb-10 rounded-media bg-secondary/50 p-4">
               <summary className="type-subhead font-medium cursor-pointer">Contenido</summary>
               <ol className="mt-3 space-y-2 type-subhead">
                 {toc.map((t) => <li key={t.id} className={t.depth === 3 ? "pl-4" : ""}><a href={`#${t.id}`} className="text-muted-foreground hover:text-foreground">{t.text}</a></li>)}
@@ -166,7 +166,7 @@ const BlogPost = () => {
           )}
 
           {post.cover_url && (
-            <div className="mb-10 rounded-3xl overflow-hidden">
+            <div className="mb-10 rounded-card overflow-hidden">
               <img loading="lazy" decoding="async" src={post.cover_url} alt={post.title} className="w-full h-auto object-cover" />
             </div>
           )}
@@ -193,13 +193,13 @@ const BlogPost = () => {
           {(prev || next) && (
             <nav aria-label="Navegación entre artículos" className="mt-16 grid sm:grid-cols-2 gap-3">
               {prev ? (
-                <Link to={`/blog/${prev.slug}`} className="rounded-2xl bg-secondary/50 p-5 hover:bg-secondary transition-colors">
+                <Link to={`/blog/${prev.slug}`} className="rounded-media bg-secondary/50 p-5 hover:bg-secondary transition-colors">
                   <span className="type-footnote text-muted-foreground inline-flex items-center gap-1"><ArrowLeft className="w-3 h-3" /> Anterior</span>
                   <p className="font-medium mt-1">{prev.title}</p>
                 </Link>
               ) : <span />}
               {next && (
-                <Link to={`/blog/${next.slug}`} className="rounded-2xl bg-secondary/50 p-5 hover:bg-secondary transition-colors sm:text-right">
+                <Link to={`/blog/${next.slug}`} className="rounded-media bg-secondary/50 p-5 hover:bg-secondary transition-colors sm:text-right">
                   <span className="type-footnote text-muted-foreground inline-flex items-center gap-1">Siguiente <ArrowRight className="w-3 h-3" /></span>
                   <p className="font-medium mt-1">{next.title}</p>
                 </Link>
@@ -223,7 +223,7 @@ const BlogPost = () => {
             </section>
           )}
 
-          <div className="mt-16 p-6 sm:p-8 bg-card border border-border rounded-3xl text-center">
+          <div className="mt-16 p-6 sm:p-8 bg-card border border-border rounded-card text-center">
             <h3 className="type-title1 mb-3">Pon esto en práctica</h3>
             <p className="type-subhead text-muted-foreground mb-5 max-w-md mx-auto">Crea tu rutina gratis y registra tus entrenamientos. Sin tarjeta.</p>
             <Link to="/onboarding" className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-primary text-primary-foreground font-semibold type-subhead hover:opacity-90 transition-opacity">

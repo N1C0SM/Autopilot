@@ -147,7 +147,7 @@ export function PhoneHome({ heading, onSession, onNutrition, onProgress, name }:
             </>
           );
           return onSession
-            ? <button type="button" onClick={onSession} aria-label={`Empezar ${DEMO_SESSION.title}`} className="group block w-full rounded-2xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background">{body}</button>
+            ? <button type="button" onClick={onSession} aria-label={`Empezar ${DEMO_SESSION.title}`} className="group block w-full rounded-media text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background">{body}</button>
             : <div className="block w-full">{body}</div>;
         })()}
       </div>
