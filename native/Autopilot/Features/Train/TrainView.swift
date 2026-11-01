@@ -62,7 +62,7 @@ struct TrainView: View {
             // Sin tope de ancho: la pantalla aprovecha toda la ventana, como la web en `lg:`.
             .padding(.horizontal, pagePadding)
             .padding(.top, wideLayout ? 32 : 8)
-            .padding(.bottom, wideLayout ? 32 : 16)
+            .padding(.bottom, wideLayout ? 32 : 96)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .screenBackground()

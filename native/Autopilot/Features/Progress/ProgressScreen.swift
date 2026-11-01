@@ -79,7 +79,7 @@ struct ProgressScreen: View {
                         .accessibilityHidden(tab != 3)
                 }
             }
-            .padding(.horizontal, horizontalPadding).padding(.top, 8).padding(.bottom, 16)
+            .padding(.horizontal, horizontalPadding).padding(.top, 8).padding(.bottom, isWide ? 16 : 96)
             // La web va a todo el ancho (solo la barra de pestañas está acotada, y ya lo hace
             // `SegmentedPill`): sin tope de 800 ni centrado.
             .background {

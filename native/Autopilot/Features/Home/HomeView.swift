@@ -77,7 +77,7 @@ struct HomeView: View {
             }
             .padding(.horizontal, horizontalPadding)
             .padding(.top, wideLayout ? 24 : 8)
-            .padding(.bottom, 16)
+            .padding(.bottom, 96)
         }
         .screenBackground()
         .refreshable { await load() }
