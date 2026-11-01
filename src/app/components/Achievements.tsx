@@ -119,7 +119,7 @@ const Achievements = ({ userId }: Props) => {
   const unlocked = achievements.filter((a) => a.unlocked).length;
 
   return (
-    <div className="bg-card rounded-2xl p-6 card-shadow">
+    <div className="bg-card rounded-media p-6 card-shadow">
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2">
           <Award className="w-5 h-5 text-primary" />
@@ -136,7 +136,7 @@ const Achievements = ({ userId }: Props) => {
             key={a.id}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className={`relative flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all duration-300 ${
+            className={`relative flex flex-col items-center gap-1.5 p-3 rounded-media border transition-all duration-300 ${
               a.unlocked
                 ? "border-primary/40 bg-primary/5"
                 : "border-border bg-secondary/20 opacity-50"

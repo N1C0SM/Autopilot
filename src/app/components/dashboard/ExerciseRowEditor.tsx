@@ -47,7 +47,7 @@ const ExerciseRowEditor = ({ ex, index, total, onChange, onMove, onRemove }: Pro
   const reps = typeof ex.reps === "number" ? ex.reps : parseInt(String(ex.reps), 10) || 10;
   const rest = (ex.rest || "90 s").replace(" s", "″");
   return (
-    <li className={cn("rounded-2xl border bg-card/50 backdrop-blur-xl transition-colors", open ? "border-primary/40" : "border-border/60")}>
+    <li className={cn("rounded-media border bg-card/50 backdrop-blur-xl transition-colors", open ? "border-primary/40" : "border-border/60")}>
       <button type="button" aria-expanded={open} onClick={() => { void hapticSelection(); setOpen((v) => !v); }}
         className="flex w-full items-center gap-3 p-3 text-left">
         <ExerciseThumb image={ex.image_url ?? undefined} video={ex.video_url ?? undefined} name={ex.name} size="sm" />
@@ -72,7 +72,7 @@ const ExerciseRowEditor = ({ ex, index, total, onChange, onMove, onRemove }: Pro
                 <button key={r} type="button" aria-pressed={ex.rest === r}
                   onClick={() => { void hapticSelection(); onChange({ ...ex, rest: r }); }}
                   className={cn(
-                    "h-10 rounded-xl border type-footnote font-medium tabular-nums transition-colors md:h-9",
+                    "h-10 rounded-media border type-footnote font-medium tabular-nums transition-colors md:h-9",
                     ex.rest === r ? "border-primary bg-primary/15 text-foreground" : "border-border/70 text-muted-foreground",
                   )}>
                   {r.replace(" s", "″")}
@@ -81,9 +81,9 @@ const ExerciseRowEditor = ({ ex, index, total, onChange, onMove, onRemove }: Pro
             </div>
           </div>
           <div className="flex items-center gap-1 border-t border-border/50 pt-2">
-            <button type="button" aria-label="Subir" disabled={index === 0} onClick={() => onMove(-1)} className="grid h-10 w-10 place-items-center rounded-xl text-muted-foreground disabled:opacity-25"><ArrowUp className="h-4 w-4" /></button>
-            <button type="button" aria-label="Bajar" disabled={index === total - 1} onClick={() => onMove(1)} className="grid h-10 w-10 place-items-center rounded-xl text-muted-foreground disabled:opacity-25"><ArrowDown className="h-4 w-4" /></button>
-            <button type="button" onClick={onRemove} className="ml-auto flex h-10 items-center gap-1.5 rounded-xl px-3 type-footnote text-muted-foreground hover:text-destructive">
+            <button type="button" aria-label="Subir" disabled={index === 0} onClick={() => onMove(-1)} className="grid h-10 w-10 place-items-center rounded-media text-muted-foreground disabled:opacity-25"><ArrowUp className="h-4 w-4" /></button>
+            <button type="button" aria-label="Bajar" disabled={index === total - 1} onClick={() => onMove(1)} className="grid h-10 w-10 place-items-center rounded-media text-muted-foreground disabled:opacity-25"><ArrowDown className="h-4 w-4" /></button>
+            <button type="button" onClick={onRemove} className="ml-auto flex h-10 items-center gap-1.5 rounded-media px-3 type-footnote text-muted-foreground hover:text-destructive">
               <Trash2 className="h-4 w-4" /> Quitar
             </button>
           </div>

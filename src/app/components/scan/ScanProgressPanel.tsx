@@ -139,7 +139,7 @@ export default function ScanProgressPanel({ userId, compact = false }: { userId:
               <ScanImage
                 src={r.current_photo_url}
                 alt={`Scan ${label}`}
-                className={`w-full h-28 rounded-xl mb-2 ${isLast ? "ring-2 ring-primary" : ""}`}
+                className={`w-full h-28 rounded-media mb-2 ${isLast ? "ring-2 ring-primary" : ""}`}
               />
               <div className="type-footnote text-muted-foreground">{label}</div>
               <div className="font-rounded font-bold tabular-nums type-headline">

@@ -617,7 +617,7 @@ const TrainingPlanForm = forwardRef<HTMLDivElement, Props>(({ dayPlans, onChange
       )}
 
       {dayPlans.length > 0 && (
-        <div className="overflow-hidden rounded-2xl bg-card">
+        <div className="overflow-hidden rounded-media bg-card">
           {dayPlans.map((plan, dayIdx) => {
             const isExpanded = expandedDays.has(dayIdx);
             const summary = plan.type === "gimnasio"
@@ -720,7 +720,7 @@ const TrainingPlanForm = forwardRef<HTMLDivElement, Props>(({ dayPlans, onChange
                             return (
                               <div key={exIdx} className="min-w-0 space-y-3 py-4 sep-t">
                                 <div className="flex min-w-0 items-end gap-2">
-                                  <button type="button" onClick={() => { void hapticTap(); setPreview({ name: ex.name, image: ex.image_url, video: ex.video_url }); }} aria-label={`Ver técnica de ${ex.name || "este ejercicio"}`} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-opacity active:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                                  <button type="button" onClick={() => { void hapticTap(); setPreview({ name: ex.name, image: ex.image_url, video: ex.video_url }); }} aria-label={`Ver técnica de ${ex.name || "este ejercicio"}`} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-media transition-opacity active:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
                                     <ExerciseThumb image={ex.image_url} video={ex.video_url} name={ex.name} size="xs" />
                                   </button>
                                   <div className="min-w-0 flex-1">

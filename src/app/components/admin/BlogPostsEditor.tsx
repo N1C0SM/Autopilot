@@ -31,7 +31,7 @@ interface Post {
   review_status?: string | null;
 }
 
-const selectCls = "mt-1.5 w-full h-10 rounded-md border border-input bg-background px-3 type-body sm:text-sm";
+const selectCls = "mt-1.5 w-full h-10 rounded-chip border border-input bg-background px-3 type-body sm:text-sm";
 
 const slugify = (s: string) =>
   s.toLowerCase()
@@ -197,7 +197,7 @@ const BlogPostsEditor = () => {
           </div>
         </div>
 
-        <div className="bg-card rounded-2xl p-6 space-y-4">
+        <div className="bg-card rounded-media p-6 space-y-4">
           <div>
             <Label>Título</Label>
             <Input
@@ -243,9 +243,9 @@ const BlogPostsEditor = () => {
             <Label>Portada</Label>
             <div className="mt-1.5 flex items-start gap-4">
               {editing.cover_url ? (
-                <img loading="lazy" decoding="async" src={editing.cover_url} alt="" className="w-32 h-20 object-cover rounded-lg border border-border" />
+                <img loading="lazy" decoding="async" src={editing.cover_url} alt="" className="w-32 h-20 object-cover rounded-chip border border-border" />
               ) : (
-                <div className="w-32 h-20 rounded-lg bg-secondary flex items-center justify-center">
+                <div className="w-32 h-20 rounded-chip bg-secondary flex items-center justify-center">
                   <ImageIcon className="w-6 h-6 text-muted-foreground" />
                 </div>
               )}
@@ -253,7 +253,7 @@ const BlogPostsEditor = () => {
                 <label>
                   <input type="file" accept="image/*" className="hidden" disabled={uploading}
                     onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadCover(f); }} />
-                  <span className="inline-flex items-center gap-1.5 cursor-pointer type-footnote px-3 py-1.5 rounded-md border border-border hover:bg-secondary">
+                  <span className="inline-flex items-center gap-1.5 cursor-pointer type-footnote px-3 py-1.5 rounded-chip border border-border hover:bg-secondary">
                     {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ImageIcon className="w-3.5 h-3.5" />}
                     {uploading ? "Subiendo..." : "Subir portada"}
                   </span>
@@ -364,7 +364,7 @@ const BlogPostsEditor = () => {
         </Button>
       </div>
 
-      <div className="bg-card rounded-2xl p-5 space-y-3">
+      <div className="bg-card rounded-media p-5 space-y-3">
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-primary" />
           <p className="type-subhead font-semibold">Escribir con IA</p>
@@ -399,7 +399,7 @@ const BlogPostsEditor = () => {
       </div>
 
       {posts.length === 0 ? (
-        <div className="text-center py-16 bg-card rounded-2xl">
+        <div className="text-center py-16 bg-card rounded-media">
           <p className="type-subhead text-muted-foreground mb-3">Aún no hay artículos.</p>
           <Button variant="outline" onClick={createNew}>
             <Plus className="w-4 h-4 mr-1.5" /> Crear el primero
@@ -414,7 +414,7 @@ const BlogPostsEditor = () => {
                 const pub = list.filter((p) => p.published).length;
                 return (
                   <button key={c.slug} type="button" onClick={() => setCatFilter(c.slug)}
-                    className="text-left rounded-2xl bg-card p-4 min-h-[110px] flex flex-col justify-between hover:border-primary/60 transition-colors">
+                    className="text-left rounded-media bg-card p-4 min-h-[110px] flex flex-col justify-between hover:border-primary/60 transition-colors">
                     <span className="font-semibold leading-tight">{c.name}</span>
                     <span className="type-footnote text-muted-foreground mt-3">{list.length} artículos · {pub} publicados</span>
                   </button>
@@ -430,11 +430,11 @@ const BlogPostsEditor = () => {
             .filter((p) => (catFilter === "none" ? !p.category : p.category === catFilter))
             .sort((a, b) => (a.order_index ?? 1e9) - (b.order_index ?? 1e9))
             .map((p) => (
-            <div key={p.id} className="bg-card rounded-2xl p-4 flex items-center gap-3">
+            <div key={p.id} className="bg-card rounded-media p-4 flex items-center gap-3">
               {p.cover_url ? (
-                <img loading="lazy" decoding="async" src={p.cover_url} alt="" className="w-16 h-12 rounded-md object-cover shrink-0" />
+                <img loading="lazy" decoding="async" src={p.cover_url} alt="" className="w-16 h-12 rounded-chip object-cover shrink-0" />
               ) : (
-                <div className="w-16 h-12 rounded-md bg-secondary shrink-0" />
+                <div className="w-16 h-12 rounded-chip bg-secondary shrink-0" />
               )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">

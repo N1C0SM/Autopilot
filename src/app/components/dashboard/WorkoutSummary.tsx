@@ -88,7 +88,7 @@ export function WorkoutSummary({
   ];
 
   // Tarjetas compactas: en la hoja suben un tono sobre su fondo.
-  const tile = cn("min-w-0 rounded-2xl p-3.5", sheet ? "bg-secondary" : "bg-card");
+  const tile = cn("min-w-0 rounded-media p-3.5", sheet ? "bg-secondary" : "bg-card");
   const pageTitle = "type-title2";
 
   const pages: { key: string; label: string; body: ReactNode }[] = [
@@ -154,7 +154,7 @@ export function WorkoutSummary({
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.3, duration: 0.3 }}
-              className="mt-6 rounded-2xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 p-4 ring-1 ring-inset ring-amber-500/30"
+              className="mt-6 rounded-media bg-gradient-to-br from-amber-500/20 to-orange-500/20 p-4 ring-1 ring-inset ring-amber-500/30"
             >
               <div className="flex items-center gap-2 mb-3">
                 <Trophy className="h-6 w-6 text-amber-400" strokeWidth={2} />
@@ -177,7 +177,7 @@ export function WorkoutSummary({
                       initial={{ x: -20, opacity: 0 }}
                       animate={{ x: 0, opacity: 1 }}
                       transition={{ delay: 0.4 + idx * 0.1, duration: 0.3 }}
-                      className="flex items-center justify-between rounded-lg bg-black/10 px-3 py-2"
+                      className="flex items-center justify-between rounded-chip bg-black/10 px-3 py-2"
                     >
                       <span className="type-body font-medium text-amber-50">{exerciseName}</span>
                       <div className="text-right">

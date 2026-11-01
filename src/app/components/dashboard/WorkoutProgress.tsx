@@ -137,7 +137,7 @@ const WorkoutProgress = ({ userId, compact = false }: Props) => {
       {loading ? (
         <div role="status" aria-label="Cargando historial" className={fill}>
           <Skeleton className="mt-4 h-8 w-32" />
-          <Skeleton className={`mt-4 rounded-xl ${compact ? "min-h-[200px] flex-1" : "h-64"}`} />
+          <Skeleton className={`mt-4 rounded-media ${compact ? "min-h-[200px] flex-1" : "h-64"}`} />
         </div>
       ) : loadError ? (
         <div role="alert" className={fill}>
@@ -168,7 +168,7 @@ const WorkoutProgress = ({ userId, compact = false }: Props) => {
           className={compact ? "flex-1 py-8" : "py-8"}
         />
       ) : (
-        <div className={compact ? "mt-3 flex flex-1 flex-col rounded-2xl bg-card p-4" : "mt-3 rounded-2xl bg-card p-4"}>
+        <div className={compact ? "mt-3 flex flex-1 flex-col rounded-media bg-card p-4" : "mt-3 rounded-media bg-card p-4"}>
           <ExerciseProgressChart
             compact={compact}
             exerciseName={selectedExercise}

@@ -801,7 +801,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
       {hasOnboarding && (
         <div className={`order-2 flex flex-col gap-6${hideForAdmin}`}>
           {mealsOutdated && (
-            <div className="rounded-2xl bg-card px-4 py-3" role="status">
+            <div className="rounded-media bg-card px-4 py-3" role="status">
               <p className="type-body font-semibold">Tu plan de comidas está desactualizado</p>
               <p className="mt-1 type-footnote text-muted-foreground">
                 Has cambiado datos que afectan a tus macros. Regenera las comidas para que cuadren con tu nueva dieta y objetivo.

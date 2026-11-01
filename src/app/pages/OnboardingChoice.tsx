@@ -117,7 +117,7 @@ export default function OnboardingChoice() {
                   <div aria-hidden="true" className="relative h-36 w-full overflow-hidden">
                     <img src={o.photo} alt="" decoding="async" className="h-full w-full object-cover object-[50%_30%] transition-transform duration-500 group-hover:scale-[1.03]" />
                     <span className="absolute inset-0 bg-gradient-to-t from-card to-transparent" />
-                    <span className="absolute bottom-3 left-5 flex h-10 w-10 items-center justify-center rounded-xl bg-black/60 text-primary backdrop-blur"><Icon className="h-5 w-5" /></span>
+                    <span className="absolute bottom-3 left-5 flex h-10 w-10 items-center justify-center rounded-media bg-black/60 text-primary backdrop-blur"><Icon className="h-5 w-5" /></span>
                   </div>
                   <div className="flex w-full items-start gap-3 p-5 pt-3">
                     <div className="min-w-0 flex-1">

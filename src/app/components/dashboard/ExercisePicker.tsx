@@ -130,7 +130,7 @@ const ExercisePicker = ({ open, onOpenChange, onPick, existing = [] }: Props) =>
       </div>
       <ul className="-mx-2 mt-2 grid min-h-0 flex-1 auto-rows-min grid-cols-1 gap-0.5 overflow-y-auto overscroll-contain md:grid-cols-2 md:gap-1">
         {rows.length === 0 && Array.from({ length: 8 }).map((_, i) => (
-          <li key={i} className="m-2 h-12 animate-pulse rounded-xl bg-muted/40" />
+          <li key={i} className="m-2 h-12 animate-pulse rounded-media bg-muted/40" />
         ))}
         {list.map((r) => {
           const sel = picked.findIndex((x) => x.id === r.id);
@@ -142,7 +142,7 @@ const ExercisePicker = ({ open, onOpenChange, onPick, existing = [] }: Props) =>
                 aria-pressed={sel >= 0}
                 onClick={() => toggle(r)}
                 className={cn(
-                  "flex min-h-[60px] w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors",
+                  "flex min-h-[60px] w-full items-center gap-3 rounded-media px-2 py-2 text-left transition-colors",
                   sel >= 0 ? "bg-primary/10" : "hover:bg-muted/50 active:bg-muted/60",
                 )}
               >

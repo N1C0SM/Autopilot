@@ -632,7 +632,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                         toast.success(`Plan: ${opt.name}`);
                       }}
                       className={cn(
-                        "flex min-h-[88px] flex-col items-center justify-center rounded-2xl px-2 py-3 text-center transition-[background-color,opacity,transform] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-default",
+                        "flex min-h-[88px] flex-col items-center justify-center rounded-media px-2 py-3 text-center transition-[background-color,opacity,transform] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-default",
                         active ? "bg-primary/15 text-primary" : "bg-card active:scale-[0.97] active:bg-accent disabled:opacity-40",
                       )}
                     >
@@ -776,7 +776,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
           )}
           {profile.payment_status === "paid" && (
             <details onToggle={(event) => setShowGoalDetails(event.currentTarget.open)}>
-              <summary className="flex min-h-11 cursor-pointer list-none items-center gap-3 rounded-2xl bg-card px-4 transition-colors duration-150 active:bg-accent focus-visible:bg-accent focus-visible:outline-none [&::-webkit-details-marker]:hidden">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center gap-3 rounded-media bg-card px-4 transition-colors duration-150 active:bg-accent focus-visible:bg-accent focus-visible:outline-none [&::-webkit-details-marker]:hidden">
                 <Target className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
                 <span className="flex-1 py-[11px] type-body">Físico objetivo</span>
                 <ChevronRight
@@ -829,7 +829,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                     onValueChange={assignTrainer}
                     disabled={trainerSaving}
                   >
-                    <SelectTrigger aria-label="Entrenador responsable" className="rounded-2xl bg-card px-4">
+                    <SelectTrigger aria-label="Entrenador responsable" className="rounded-media bg-card px-4">
                       <SelectValue placeholder="Sin entrenador asignado" />
                     </SelectTrigger>
                     <SelectContent>
@@ -900,7 +900,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                     step="any"
                     value={macros[m.key]}
                     onChange={(e) => setMacros((prev) => ({ ...prev, [m.key]: e.target.value }))}
-                    className="h-14 rounded-2xl text-center font-rounded text-[22px] font-bold tabular-nums md:h-11 md:rounded-xl md:text-lg"
+                    className="h-14 rounded-media text-center font-rounded text-[22px] font-bold tabular-nums md:h-11 md:rounded-media md:text-lg"
                   />
                   <Label htmlFor={`client-${profile.user_id}-${m.key}`} className="mt-1.5 block text-center type-footnote font-normal text-muted-foreground">{m.label}</Label>
                 </div>
@@ -916,7 +916,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
               onChange={(e) => setMealsText(e.target.value)}
               placeholder={"Desayuno: Avena con frutos rojos y batido de proteínas\nAlmuerzo: Pollo a la plancha con arroz y verduras\nCena: Salmón al horno con patata y ensalada"}
               rows={8}
-              className="rounded-2xl"
+              className="rounded-media"
             />
             <p className="px-4 pt-1.5 type-footnote text-muted-foreground">
               Una comida por línea, con el formato «Nombre: Descripción». El texto antes de «:» es el nombre.

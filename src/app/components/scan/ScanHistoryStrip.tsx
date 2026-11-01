@@ -55,7 +55,7 @@ export default function ScanHistoryStrip({ userId }: { userId: string }) {
     <motion.div
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="w-full mb-8 rounded-2xl bg-card/60 backdrop-blur p-5"
+      className="w-full mb-8 rounded-media bg-card/60 backdrop-blur p-5"
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
@@ -79,7 +79,7 @@ export default function ScanHistoryStrip({ userId }: { userId: string }) {
           return (
             <div
               key={r.id}
-              className={`flex-shrink-0 w-24 text-center rounded-xl border ${
+              className={`flex-shrink-0 w-24 text-center rounded-media border ${
                 idx === ordered.length - 1 ? "border-primary/40 bg-primary/5" : "border-border bg-background/40"
               } p-2`}
             >
@@ -87,10 +87,10 @@ export default function ScanHistoryStrip({ userId }: { userId: string }) {
                 <img loading="lazy" decoding="async"
                   src={r.current_photo_url}
                   alt={`Scan ${label}`}
-                  className="w-full h-20 object-cover rounded-md mb-1.5"
+                  className="w-full h-20 object-cover rounded-chip mb-1.5"
                 />
               ) : (
-                <div className="w-full h-20 rounded-md mb-1.5 bg-muted/30" />
+                <div className="w-full h-20 rounded-chip mb-1.5 bg-muted/30" />
               )}
               <div className="type-caption2 uppercase tracking-wider text-muted-foreground">{label}</div>
               <div className="type-body font-bold font-display text-gradient">

@@ -479,7 +479,7 @@ export default function EmailTemplatesEditor() {
                   <TabsTrigger value="css">CSS</TabsTrigger>
                 </TabsList>
               </Tabs>
-              <div className="overflow-hidden rounded-2xl bg-card">
+              <div className="overflow-hidden rounded-media bg-card">
                 {activeTab === "html" ? (
                   <Editor
                     height="min(520px, 60vh)"

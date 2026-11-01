@@ -77,7 +77,7 @@ export const PlanPaywall = ({
                 role="tab"
                 aria-selected={active}
                 onClick={() => { void hapticSelection(); setSelected(key); }}
-                className={`min-h-11 rounded-lg px-3 py-1.5 text-center transition-colors active:scale-[0.97] ${
+                className={`min-h-11 rounded-chip px-3 py-1.5 text-center transition-colors active:scale-[0.97] ${
                   active ? "bg-card" : ""
                 }`}
               >
@@ -97,7 +97,7 @@ export const PlanPaywall = ({
       </div>
 
       {unavailableNote && (
-        <p role="note" className="mt-4 rounded-xl bg-secondary px-4 py-3 text-center type-footnote text-muted-foreground">
+        <p role="note" className="mt-4 rounded-media bg-secondary px-4 py-3 text-center type-footnote text-muted-foreground">
           El plan con entrenador no está disponible todavía. Te ofrecemos {TIERS.training.name} mientras tanto.
         </p>
       )}

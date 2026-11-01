@@ -27,7 +27,7 @@ export function WeightAdjuster({ value, onChange, disabled }: Props) {
         type="button"
         onClick={() => adjust(-5)}
         disabled={disabled}
-        className="flex h-8 w-10 items-center justify-center rounded-lg bg-secondary text-muted-foreground transition-colors active:bg-accent disabled:opacity-40 [touch-action:manipulation]"
+        className="flex h-8 w-10 items-center justify-center rounded-chip bg-secondary text-muted-foreground transition-colors active:bg-accent disabled:opacity-40 [touch-action:manipulation]"
         aria-label="Restar 5 kg"
       >
         <span className="type-caption2 font-semibold tabular-nums">-5</span>
@@ -36,7 +36,7 @@ export function WeightAdjuster({ value, onChange, disabled }: Props) {
         type="button"
         onClick={() => adjust(-2.5)}
         disabled={disabled}
-        className="flex h-8 w-12 items-center justify-center rounded-lg bg-secondary text-muted-foreground transition-colors active:bg-accent disabled:opacity-40 [touch-action:manipulation]"
+        className="flex h-8 w-12 items-center justify-center rounded-chip bg-secondary text-muted-foreground transition-colors active:bg-accent disabled:opacity-40 [touch-action:manipulation]"
         aria-label="Restar 2.5 kg"
       >
         <span className="type-caption2 font-semibold tabular-nums">-2.5</span>
@@ -45,7 +45,7 @@ export function WeightAdjuster({ value, onChange, disabled }: Props) {
         type="button"
         onClick={() => adjust(-1)}
         disabled={disabled}
-        className="flex h-8 w-10 items-center justify-center rounded-lg bg-secondary text-foreground transition-colors active:bg-accent disabled:opacity-40 [touch-action:manipulation]"
+        className="flex h-8 w-10 items-center justify-center rounded-chip bg-secondary text-foreground transition-colors active:bg-accent disabled:opacity-40 [touch-action:manipulation]"
         aria-label="Restar 1 kg"
       >
         <Minus className="h-4 w-4" strokeWidth={2.5} />
@@ -56,7 +56,7 @@ export function WeightAdjuster({ value, onChange, disabled }: Props) {
         type="button"
         onClick={() => adjust(1)}
         disabled={disabled}
-        className="flex h-8 w-10 items-center justify-center rounded-lg bg-secondary text-foreground transition-colors active:bg-accent disabled:opacity-40 [touch-action:manipulation]"
+        className="flex h-8 w-10 items-center justify-center rounded-chip bg-secondary text-foreground transition-colors active:bg-accent disabled:opacity-40 [touch-action:manipulation]"
         aria-label="Sumar 1 kg"
       >
         <Plus className="h-4 w-4" strokeWidth={2.5} />
@@ -65,7 +65,7 @@ export function WeightAdjuster({ value, onChange, disabled }: Props) {
         type="button"
         onClick={() => adjust(2.5)}
         disabled={disabled}
-        className="flex h-8 w-12 items-center justify-center rounded-lg bg-secondary text-muted-foreground transition-colors active:bg-accent disabled:opacity-40 [touch-action:manipulation]"
+        className="flex h-8 w-12 items-center justify-center rounded-chip bg-secondary text-muted-foreground transition-colors active:bg-accent disabled:opacity-40 [touch-action:manipulation]"
         aria-label="Sumar 2.5 kg"
       >
         <span className="type-caption2 font-semibold tabular-nums">+2.5</span>
@@ -74,7 +74,7 @@ export function WeightAdjuster({ value, onChange, disabled }: Props) {
         type="button"
         onClick={() => adjust(5)}
         disabled={disabled}
-        className="flex h-8 w-10 items-center justify-center rounded-lg bg-secondary text-muted-foreground transition-colors active:bg-accent disabled:opacity-40 [touch-action:manipulation]"
+        className="flex h-8 w-10 items-center justify-center rounded-chip bg-secondary text-muted-foreground transition-colors active:bg-accent disabled:opacity-40 [touch-action:manipulation]"
         aria-label="Sumar 5 kg"
       >
         <span className="type-caption2 font-semibold tabular-nums">+5</span>

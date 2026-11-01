@@ -211,7 +211,7 @@ const TrainingPlanView = ({ dayPlans, initialDay, onOpenWorkout }: Props) => {
       <div
         role="group"
         aria-label="Días de la semana"
-        className="flex justify-between gap-1 overflow-x-auto rounded-2xl bg-card p-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="flex justify-between gap-1 overflow-x-auto rounded-media bg-card p-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {DAYS_ORDER.map((day) => {
           const plan = workPlanFor(day);

@@ -173,7 +173,7 @@ export default function RoadmapAdmin() {
     });
   }
   function taskCard(item: Item) {
-    return <article key={item.id} className="rounded-lg bg-card p-4 space-y-3 min-w-0">
+    return <article key={item.id} className="rounded-chip bg-card p-4 space-y-3 min-w-0">
       <div className="flex items-start gap-3">
         <Checkbox className="mt-1 shrink-0" aria-label={`Completar ${item.title}`} checked={item.status === 'done'} disabled={busy} onCheckedChange={value => changeStatus(item, value ? 'done' : 'idea')} />
         <div className="min-w-0 flex-1"><h3 className={`font-semibold break-words ${item.status === 'done' ? 'line-through text-muted-foreground' : ''}`}>{item.title}</h3><p className="type-subhead text-muted-foreground mt-1 break-words">{item.description}</p></div>

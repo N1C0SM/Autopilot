@@ -311,7 +311,7 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
           {sessions.length > 0 && (
             <section className="space-y-3">
               <SectionHeader title="Últimas sesiones" hint={`${sessions.length} registradas`} />
-              <div className="overflow-hidden rounded-2xl bg-card">
+              <div className="overflow-hidden rounded-media bg-card">
                 {sessions.slice(0, 12).map(([key, logs], index) => {
                   const [date, dayLabel] = key.split("|");
                   const open = expandedSession === key;

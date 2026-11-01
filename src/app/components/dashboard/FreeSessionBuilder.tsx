@@ -56,8 +56,8 @@ const FreeSessionBuilder = ({ open, onOpenChange, onStart }: Props) => {
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-2">
         {list.length === 0 ? (
           <button type="button" onClick={() => setPicker(true)}
-            className="flex h-full min-h-[220px] w-full flex-col items-center justify-center gap-3 rounded-3xl text-muted-foreground transition hover:border-primary/50 active:scale-[0.99]">
-            <span className="grid h-14 w-14 place-items-center rounded-2xl bg-primary/12 text-primary"><Plus className="h-6 w-6" /></span>
+            className="flex h-full min-h-[220px] w-full flex-col items-center justify-center gap-3 rounded-card text-muted-foreground transition hover:border-primary/50 active:scale-[0.99]">
+            <span className="grid h-14 w-14 place-items-center rounded-media bg-primary/12 text-primary"><Plus className="h-6 w-6" /></span>
             <span className="type-subhead font-medium text-foreground">Añadir ejercicios</span>
             <span className="type-footnote">Busca por nombre o filtra por músculo</span>
           </button>

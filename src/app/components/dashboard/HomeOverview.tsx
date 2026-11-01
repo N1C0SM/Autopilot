@@ -90,7 +90,7 @@ export const OverviewRow = ({
   value?: ReactNode;
   onClick?: () => void;
 }) => {
-  const className = "flex min-h-[7.5rem] min-w-0 flex-col rounded-2xl bg-card p-4 text-left transition-transform duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  const className = "flex min-h-[7.5rem] min-w-0 flex-col rounded-media bg-card p-4 text-left transition-transform duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
   const inner = (
     <>
       <span className="flex items-start justify-between">
@@ -340,7 +340,7 @@ const HomeOverview = ({
                 if (onStartWorkout) onStartWorkout();
                 else onNavigate("training");
               }}
-              className="group block w-full rounded-2xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background"
+              className="group block w-full rounded-media text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background"
               aria-label={`Empezar ${sessionTitle}`}
             >
               <span className="mt-6 flex flex-col gap-5 md:flex-row md:items-end md:justify-between md:gap-8">
@@ -395,7 +395,7 @@ const HomeOverview = ({
             />
           )}
           {activeWorkout && !activeWorkoutIsToday && (
-            <div className="mt-4 rounded-2xl bg-card px-4 py-3 text-left">
+            <div className="mt-4 rounded-media bg-card px-4 py-3 text-left">
               <p className="type-footnote text-muted-foreground">
                 Tienes una sesión sin terminar del {activeWorkoutDate}.
               </p>

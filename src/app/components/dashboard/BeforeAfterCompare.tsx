@@ -183,7 +183,7 @@ const BeforeAfterCompare = ({ photos: allPhotos, signed, onClose }: Props) => {
         ) : (<>
         <div
           ref={boxRef}
-          className="relative mx-auto aspect-[3/4] h-[45dvh] max-w-full cursor-ew-resize touch-none select-none overflow-hidden rounded-xl bg-secondary"
+          className="relative mx-auto aspect-[3/4] h-[45dvh] max-w-full cursor-ew-resize touch-none select-none overflow-hidden rounded-media bg-secondary"
           onPointerDown={(e) => { dragging.current = true; (e.target as Element).setPointerCapture?.(e.pointerId); move(e.clientX); }}
           onPointerMove={(e) => dragging.current && move(e.clientX)}
           onPointerUp={() => { dragging.current = false; }}

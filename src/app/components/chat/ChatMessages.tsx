@@ -67,17 +67,17 @@ const ChatMessages = ({ messages, onViewMedia, emptyMessage = "Escribe aquí tus
               {msg.media_url && msg.media_type === "image" && (
                 <button type="button" aria-label="Ver foto adjunta"
                   onClick={() => { void hapticTap(); onViewMedia({ url: resolve(msg.media_url), type: "image" }); }}
-                  className="block mb-2 rounded-xl overflow-hidden transition-opacity active:opacity-80"
+                  className="block mb-2 rounded-media overflow-hidden transition-opacity active:opacity-80"
                 >
-                  <ImageWithFallback src={resolve(msg.media_url)} alt="Foto" className="max-h-48 max-w-full rounded-lg object-cover" fallbackClassName="h-36 w-44" />
+                  <ImageWithFallback src={resolve(msg.media_url)} alt="Foto" className="max-h-48 max-w-full rounded-chip object-cover" fallbackClassName="h-36 w-44" />
                 </button>
               )}
               {msg.media_url && msg.media_type === "video" && (
                 <button type="button" aria-label="Ver vídeo adjunto"
                   onClick={() => { void hapticTap(); onViewMedia({ url: resolve(msg.media_url), type: "video" }); }}
-                  className="block mb-2 rounded-xl overflow-hidden relative active:opacity-80"
+                  className="block mb-2 rounded-media overflow-hidden relative active:opacity-80"
                 >
-                  <VideoWithFallback src={resolve(msg.media_url)} className="max-h-48 max-w-full rounded-lg object-cover" fallbackClassName="h-36 w-44" />
+                  <VideoWithFallback src={resolve(msg.media_url)} className="max-h-48 max-w-full rounded-chip object-cover" fallbackClassName="h-36 w-44" />
                   <div className="absolute inset-0 flex items-center justify-center bg-black/30">
                     <Play className="h-10 w-10 text-white" />
                   </div>

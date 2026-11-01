@@ -98,7 +98,7 @@ export function FreeWorkoutPicker({ open, onClose, onAdd, added = [] }: Props) {
 
         {/* Barra de búsqueda */}
         <div className="shrink-0 px-4 pt-3">
-          <div className="flex items-center gap-2 rounded-xl bg-secondary px-3">
+          <div className="flex items-center gap-2 rounded-media bg-secondary px-3">
             <Search className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
             <input
               ref={inputRef}
@@ -172,7 +172,7 @@ export function FreeWorkoutPicker({ open, onClose, onAdd, added = [] }: Props) {
                         void hapticTap();
                         if (!isAdded) onAdd(ex);
                       }}
-                      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors active:bg-secondary disabled:opacity-50"
+                      className="flex w-full items-center gap-3 rounded-media px-3 py-2.5 text-left transition-colors active:bg-secondary disabled:opacity-50"
                       disabled={isAdded}
                       aria-label={`Añadir ${ex.name}${isAdded ? " (ya añadido)" : ""}`}
                     >

@@ -326,7 +326,7 @@ const TrainerManagement = ({ allUsers, trainerIds, adminIds, onRolesChange, onDe
                 {assignableUsers.length === 0 ? (
                   <EmptyState icon={Search} title="No hay usuarios disponibles" className="py-8" />
                 ) : (
-                  <div className="max-h-80 overflow-y-auto rounded-2xl">
+                  <div className="max-h-80 overflow-y-auto rounded-media">
                     <ListGroup>
                       {assignableUsers.slice(0, 30).map((u) => {
                         const previousTrainer = allAssignments.find((a) => a.user_id === u.user_id);
@@ -428,7 +428,7 @@ const TrainerManagement = ({ allUsers, trainerIds, adminIds, onRolesChange, onDe
           {promotableUsers.length === 0 ? (
             <EmptyState icon={Search} title="No hay usuarios disponibles" className="py-8" />
           ) : (
-            <div className="max-h-80 overflow-y-auto rounded-2xl">
+            <div className="max-h-80 overflow-y-auto rounded-media">
               <ListGroup>
                 {promotableUsers.map((u) => (
                   <ListRow

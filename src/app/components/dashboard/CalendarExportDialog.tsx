@@ -245,7 +245,7 @@ const CalendarExportDialog = ({ dayPlans, trigger }: Props) => {
 
           {/* Otras opciones (plegado) */}
           <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
-            <div className="overflow-hidden rounded-2xl bg-secondary">
+            <div className="overflow-hidden rounded-media bg-secondary">
               <CollapsibleTrigger asChild>
                 <button
                   type="button"

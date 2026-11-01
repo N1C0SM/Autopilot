@@ -91,7 +91,7 @@ const UserSidebar = ({
                       onClick={() => onNavigate(item.section)}
                       className={cn(
                         // web: más alto y con más padding
-                        "h-11 rounded-xl px-3.5 gap-3.5 transition-all duration-150",
+                        "h-11 rounded-media px-3.5 gap-3.5 transition-all duration-150",
                         "hover:bg-sidebar-accent/60",
                         "active:scale-[0.97] active:opacity-75",
                         isActive
@@ -151,7 +151,7 @@ const UserSidebar = ({
           return <Row
             {...(canSwitch ? { type: "button" as const, onClick: () => openAccountPicker(), "aria-label": `${profileName}. Cambiar de cuenta` } : {})}
             className={cn(
-              "flex w-[calc(100%-1rem)] items-center gap-3 px-4 py-2.5 rounded-xl mx-2 text-left",
+              "flex w-[calc(100%-1rem)] items-center gap-3 px-4 py-2.5 rounded-media mx-2 text-left",
               "hover:bg-sidebar-accent/40 transition-colors",
               canSwitch ? "cursor-pointer active:opacity-70" : "cursor-default",
               collapsed && "justify-center px-0 mx-0",
@@ -184,7 +184,7 @@ const UserSidebar = ({
             <SidebarMenuButton
               onClick={onSignOut}
               className={cn(
-                "h-10 rounded-xl px-3.5 gap-3.5 transition-all duration-150",
+                "h-10 rounded-media px-3.5 gap-3.5 transition-all duration-150",
                 "text-sidebar-foreground/35 hover:text-destructive hover:bg-destructive/10",
                 "active:opacity-70",
               )}

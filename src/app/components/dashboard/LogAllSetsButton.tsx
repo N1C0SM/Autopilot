@@ -74,7 +74,7 @@ const LogAllSetsButton = ({
         </SheetHeader>
 
         <div className="mt-6 space-y-4">
-          <div className="rounded-2xl bg-card p-4">
+          <div className="rounded-media bg-card p-4">
             <div className="flex justify-between items-center mb-2">
               <span className="type-subhead">Ejercicio</span>
               <span className="type-subhead font-semibold">{exerciseName}</span>
@@ -90,7 +90,7 @@ const LogAllSetsButton = ({
           </div>
 
           {pendingSets > 0 && (
-            <div className="rounded-2xl bg-primary/5 p-4">
+            <div className="rounded-media bg-primary/5 p-4">
               <div className="flex items-start gap-3">
                 <Check className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                 <div>

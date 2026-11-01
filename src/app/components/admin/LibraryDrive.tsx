@@ -500,7 +500,7 @@ const LibraryDrive = () => {
 
   const menuButton = "absolute right-2 top-2 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-secondary transition-colors active:bg-accent";
   const uploadLink = "inline-flex min-h-[44px] cursor-pointer items-center gap-1.5 type-subhead text-primary transition-opacity active:opacity-60";
-  const previewBox = "relative aspect-[3/4] w-full overflow-hidden rounded-2xl bg-card";
+  const previewBox = "relative aspect-[3/4] w-full overflow-hidden rounded-media bg-card";
   const emptyPreview = "flex h-full w-full flex-col items-center justify-center gap-2 type-subhead text-muted-foreground";
 
   if (open) {
@@ -602,7 +602,7 @@ const LibraryDrive = () => {
           </label>
         </div>
         <div
-          className={`${isVideo ? "relative w-full overflow-hidden rounded-2xl bg-card" : previewBox} ${isVideo && !videoRatio ? "aspect-video" : ""}`}
+          className={`${isVideo ? "relative w-full overflow-hidden rounded-media bg-card" : previewBox} ${isVideo && !videoRatio ? "aspect-video" : ""}`}
           style={isVideo && videoRatio ? { aspectRatio: String(videoRatio), maxHeight: "70vh" } : undefined}
         >
           {renderPreview()}
@@ -686,7 +686,7 @@ const LibraryDrive = () => {
                   />
                 </label>
               </div>
-              <div className={`relative w-full overflow-hidden rounded-2xl bg-card ${isVideo ? "aspect-video" : "aspect-[3/4]"}`}>
+              <div className={`relative w-full overflow-hidden rounded-media bg-card ${isVideo ? "aspect-video" : "aspect-[3/4]"}`}>
                 <ImageWithFallback
                   src={covers[open.id]}
                   alt={isVideo ? "Miniatura" : "Portada"}

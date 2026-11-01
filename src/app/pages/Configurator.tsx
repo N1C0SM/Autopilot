@@ -78,7 +78,7 @@ const PhotoChoices = ({ header, options, value, onChange }: {
       {options.map((o) => {
         const on = o.v === value;
         return <button key={o.v} type="button" aria-pressed={on} onClick={() => { void hapticSelection(); onChange(o.v); }}
-          className={cn("relative flex aspect-[4/5] items-end overflow-hidden rounded-2xl bg-card p-3 text-left ring-2 transition-[transform,box-shadow] duration-200 ease-out active:scale-[0.97]", on ? "ring-primary" : "ring-transparent")}>
+          className={cn("relative flex aspect-[4/5] items-end overflow-hidden rounded-media bg-card p-3 text-left ring-2 transition-[transform,box-shadow] duration-200 ease-out active:scale-[0.97]", on ? "ring-primary" : "ring-transparent")}>
           <img src={o.photo} alt="" decoding="async" className="absolute inset-0 h-full w-full object-cover object-[50%_35%]" />
           <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-transparent" />
           <span className="relative type-headline text-white">{o.l}</span>
@@ -94,7 +94,7 @@ const Choices = ({ header, options, value, onChange }: {
 }) => (
   <section>
     {header ? <h2 className="type-group-header px-4 pb-1.5">{header}</h2> : null}
-    <div className="overflow-hidden rounded-2xl bg-card">
+    <div className="overflow-hidden rounded-media bg-card">
       {options.map((o) => {
         const on = o.v === value;
         return (
@@ -333,7 +333,7 @@ const Configurator = () => {
         <div className="h-full rounded-full bg-primary transition-[width] duration-300 ease-ios" style={{ width: `${((step + 1) / titles.length) * 100}%` }} />
       </div>
       {restoredDraft ? (
-        <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl bg-card px-4 py-2">
+        <div className="mt-3 flex items-center justify-between gap-3 rounded-media bg-card px-4 py-2">
           <p className="type-footnote text-muted-foreground">Hemos recuperado tus respuestas anteriores.</p>
           <Button type="button" variant="plain" size="sm" className="h-9 shrink-0 px-3" onClick={restart}>
             Empezar de nuevo
@@ -371,7 +371,7 @@ const Configurator = () => {
 
         {step === 2 && (
           <>
-            <section className="relative overflow-hidden rounded-3xl bg-card p-5 sm:p-6 animate-fade-in">
+            <section className="relative overflow-hidden rounded-card bg-card p-5 sm:p-6 animate-fade-in">
               <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full bg-primary/15 blur-3xl" />
               <p className="type-footnote uppercase tracking-wider text-primary">{t("Tu objetivo", "Vuestro objetivo")}</p>
               <p className="mt-1 type-title2">{label(GOALS, c.goal)} · {label(FOCUS, c.focus)}</p>
@@ -393,7 +393,7 @@ const Configurator = () => {
                   { k: "Sesión", v: label(DURATION, c.minutes) },
                   { k: "Peso", v: c.weight ? `${c.weight} kg` : "—" },
                 ].map((s) => (
-                  <div key={s.k} className="rounded-2xl bg-secondary px-3 py-3 text-center">
+                  <div key={s.k} className="rounded-media bg-secondary px-3 py-3 text-center">
                     <p className="type-headline">{s.v}</p>
                     <p className="mt-0.5 type-caption1 text-muted-foreground">{s.k}</p>
                   </div>

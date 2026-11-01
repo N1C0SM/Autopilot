@@ -1281,7 +1281,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
         <div
           role="tablist"
           aria-label="Elige el día de la semana"
-          className="no-scrollbar mb-4 flex gap-1 overflow-x-auto rounded-2xl bg-card p-1.5"
+          className="no-scrollbar mb-4 flex gap-1 overflow-x-auto rounded-media bg-card p-1.5"
         >
           {DAYS_ORDER.map((day) => {
             const active = day === selectedDay;
@@ -1302,7 +1302,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                   setCompletionReady(false);
                   setSelectedDay(day);
                 }}
-                className={`flex h-[50px] min-w-10 flex-1 shrink-0 flex-col items-center justify-center gap-1 rounded-xl type-footnote transition-colors duration-150 disabled:opacity-40 ${
+                className={`flex h-[50px] min-w-10 flex-1 shrink-0 flex-col items-center justify-center gap-1 rounded-media type-footnote transition-colors duration-150 disabled:opacity-40 ${
                   active
                     ? "bg-primary font-semibold text-primary-foreground"
                     : !hasWork
@@ -1473,7 +1473,39 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
             const loop = vid && isDirectFile(vid) && !prefersReducedMotion ? vid : null;
             return (
               <div className="space-y-2">
-                {/* Carrusel arriba y el movimiento en grande debajo: se ve en qué ejercicio estás. */}
+                <motion.div
+                  key={expandedExercise}
+                  initial={{ opacity: 0.4, x: 0 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.18 }}
+                  drag="x"
+                  dragConstraints={{ left: 0, right: 0 }}
+                  dragElastic={0.35}
+                  onDragEnd={(_, info) => {
+                    const total = currentPlan.exercises?.length || 0;
+                    const swipe = info.offset.x + info.velocity.x * 0.2;
+                    if (swipe < -60 && expandedExercise < total - 1) { setExpandedExercise(expandedExercise + 1); void hapticTap(); }
+                    else if (swipe > 60 && expandedExercise > 0) { setExpandedExercise(expandedExercise - 1); void hapticTap(); }
+                  }}
+                  style={{ touchAction: "pan-y" }}
+                  aria-label="Desliza para cambiar de ejercicio"
+                  className={`relative flex w-full items-center justify-center overflow-hidden rounded-media bg-card md:cursor-grab md:active:cursor-grabbing ${img ? "aspect-[4/3] max-h-[24dvh] [@media(max-height:700px)]:max-h-[14dvh] md:max-h-[34dvh]" : "h-12"}`}>
+                  {img ? (
+                    <img src={img} alt={active.name} draggable={false} decoding="async" fetchPriority="high" loading="eager" className="h-full w-full object-contain" />
+                  ) : (
+                    <Dumbbell className="h-6 w-6 text-muted-foreground/60" strokeWidth={1.75} aria-hidden="true" />
+                  )}
+                  {vid && (
+                    <button
+                      type="button"
+                      aria-label={`Ver vídeo de técnica de ${active.name}`}
+                      onClick={() => { void hapticTap(); setTechnique({ name: active.name, image: img, video: vid, series: active.series != null ? String(active.series) : undefined, reps: active.reps != null ? String(active.reps) : undefined, rest: active.rest, category: active.muscle_group || meta?.muscle_group, type: active.exercise_type || meta?.exercise_type }); }}
+                      className="material absolute inset-0 m-auto flex h-14 w-14 items-center justify-center rounded-full text-foreground transition-opacity active:opacity-60"
+                    >
+                      <Play className="h-5 w-5 fill-current" aria-hidden="true" />
+                    </button>
+                  )}
+                </motion.div>
                 <div role="tablist" aria-label="Ejercicios de la sesión" className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 py-1">
                   {(currentPlan.exercises || []).map((item, idx) => {
                     const m = exerciseMetadata.byId[item.exercise_id] || exerciseMetadata.byName[item.name];
@@ -1540,7 +1572,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
           {!focusMode && (currentPlan.exercises?.length ?? 0) > 0 && (
             <h3 className="px-4 pb-1.5 type-group-header">Ejercicios</h3>
           )}
-          <div className={started && !focusMode ? "space-y-3" : focusMode ? "" : "overflow-hidden rounded-2xl bg-card"}>
+          <div className={started && !focusMode ? "space-y-3" : focusMode ? "" : "overflow-hidden rounded-media bg-card"}>
           {(currentPlan.exercises || []).map((ex, i) => {
             const isExpanded = workoutView === "list" ? openExercises.includes(i) : expandedExercise === i;
             if (focusMode && expandedExercise !== i) return null;
@@ -1591,7 +1623,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
               .join(" → ");
 
             return (
-              <div key={`${selectedDay}-${i}`} className={started && !focusMode ? "overflow-hidden rounded-lg bg-card" : ""}>
+              <div key={`${selectedDay}-${i}`} className={started && !focusMode ? "overflow-hidden rounded-chip bg-card" : ""}>
                 {/* Exercise header: fila de lista en el resumen, título del ejercicio en foco */}
                 <Button
                   variant="ghost"
@@ -1742,7 +1774,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                           </span>
                         </div>
 
-                        <div className="overflow-hidden rounded-2xl bg-card">
+                        <div className="overflow-hidden rounded-media bg-card">
                         {sets.map((set, si) => {
                           const mainError = !set.done ? getWorkoutSetInputError(set) : null;
                           const dropsError = !set.done ? getWorkoutSetDropsInputError(set) : null;
@@ -1765,7 +1797,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                               ? "border-destructive text-destructive"
                               : "border-muted-foreground/40 text-muted-foreground/40";
                           return (
-                          <div key={si} aria-current={si === firstPendingIndex ? "step" : undefined} className={`pl-3 transition-colors duration-300 ${si === firstPendingIndex ? "rounded-lg ring-1 ring-inset ring-primary/50 bg-primary/5" : set.done && !isWarmup ? "rounded-lg bg-success/10" : ""}`}>
+                          <div key={si} aria-current={si === firstPendingIndex ? "step" : undefined} className={`pl-3 transition-colors duration-300 ${si === firstPendingIndex ? "rounded-chip ring-1 ring-inset ring-primary/50 bg-primary/5" : set.done && !isWarmup ? "rounded-chip bg-success/10" : ""}`}>
                             <div className={`py-2 pr-2 ${si > 0 ? "sep-t" : ""}`}>
                             {/* Segmento principal de la serie */}
                             <div className={SET_GRID}>
@@ -2004,9 +2036,9 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                           {Math.floor(restTimer / 60)}:{(restTimer % 60).toString().padStart(2, "0")}
                         </p>
                       </div>
-                      <button type="button" aria-label="Restar 30 segundos" onClick={() => { void hapticSelection(); adjustRest(-30); }} className="h-11 min-w-11 px-2 type-body tabular-nums text-foreground transition-opacity active:opacity-60 [touch-action:manipulation]">−30</button>
-                      <button type="button" aria-label="Sumar 30 segundos" onClick={() => { void hapticSelection(); adjustRest(30); }} className="h-11 min-w-11 px-2 type-body tabular-nums text-foreground transition-opacity active:opacity-60 [touch-action:manipulation]">+30</button>
-                      <button type="button" aria-label="Omitir descanso" onClick={() => { void hapticTap(); setRestTimer(null); }} className="-mr-2 h-11 rounded-lg bg-primary/10 px-3 type-body font-semibold text-primary transition-opacity active:opacity-60 [touch-action:manipulation]">
+                      <button type="button" aria-label="Restar 30 segundos" onClick={() => { void hapticSelection(); adjustRest(-30); }} className="h-11 min-w-11 px-2 type-body tabular-nums text-primary transition-opacity active:opacity-60 [touch-action:manipulation]">−30</button>
+                      <button type="button" aria-label="Sumar 30 segundos" onClick={() => { void hapticSelection(); adjustRest(30); }} className="h-11 min-w-11 px-2 type-body tabular-nums text-primary transition-opacity active:opacity-60 [touch-action:manipulation]">+30</button>
+                      <button type="button" aria-label="Omitir descanso" onClick={() => { void hapticTap(); setRestTimer(null); }} className="-mr-2 h-11 rounded-chip bg-primary/10 px-3 type-body font-semibold text-primary transition-opacity active:opacity-60 [touch-action:manipulation]">
                         Omitir
                       </button>
                     </div>

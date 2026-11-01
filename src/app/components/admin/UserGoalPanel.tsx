@@ -214,7 +214,7 @@ const UserGoalPanel = ({ userId, email }: Props) => {
           {goalUrl ? (
             <PhotoFrame src={goalSignedUrl} alt="Físico objetivo" pendingText="Preparando la foto objetivo…" />
           ) : (
-            <label className={cn("flex aspect-[3/4] w-full cursor-pointer flex-col items-center justify-center rounded-2xl bg-card p-4 text-center transition-colors duration-150 active:bg-accent", uploading && "pointer-events-none")}>
+            <label className={cn("flex aspect-[3/4] w-full cursor-pointer flex-col items-center justify-center rounded-media bg-card p-4 text-center transition-colors duration-150 active:bg-accent", uploading && "pointer-events-none")}>
               <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleUploadGoal(e.target.files[0])} />
               {uploading ? (
                 <Spinner size="lg" className="text-primary" label="Subiendo" />
@@ -265,7 +265,7 @@ const UserGoalPanel = ({ userId, email }: Props) => {
           {latestPhoto ? (
             <PhotoFrame src={latestSignedUrl} alt="Estado actual" pendingText="Preparando la última foto…" />
           ) : (
-            <div className="flex aspect-[3/4] w-full flex-col items-center justify-center rounded-2xl bg-card p-4 text-center">
+            <div className="flex aspect-[3/4] w-full flex-col items-center justify-center rounded-media bg-card p-4 text-center">
               <ImageOff className="h-7 w-7 text-muted-foreground" strokeWidth={1.75} />
               <p className="mt-3 type-footnote text-muted-foreground">Aún no ha subido fotos de progreso</p>
             </div>
@@ -346,7 +346,7 @@ const PhotoFrame = ({ src, alt, pendingText, cover }: { src?: string; alt: strin
   const [failed, setFailed] = useState(false);
   useEffect(() => { setFailed(false); }, [src]);
   return (
-    <div className={cn("flex aspect-[3/4] w-full items-center justify-center overflow-hidden bg-card", cover ? "rounded-2xl" : "rounded-2xl")}>
+    <div className={cn("flex aspect-[3/4] w-full items-center justify-center overflow-hidden bg-card", cover ? "rounded-media" : "rounded-media")}>
       {src && !failed ? (
         <img
           loading="lazy"

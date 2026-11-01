@@ -175,7 +175,7 @@ const ProgressCharts = ({ userId, compact = false }: Props) => {
         <div role="status" aria-label="Cargando historial de peso">
           <Skeleton className="h-14 w-40" />
           <Skeleton className="mt-3 h-5 w-56" />
-          <Skeleton className="mt-6 h-[200px] rounded-xl" />
+          <Skeleton className="mt-6 h-[200px] rounded-media" />
         </div>
       )}
 

@@ -134,7 +134,7 @@ export default function EmailPreview() {
           <div className="mt-20 flex items-center gap-2 type-subhead text-muted-foreground"><Spinner size="sm" /> Cargando…</div>
         ) : (
           <div
-            className="overflow-hidden rounded-2xl bg-white transition-all"
+            className="overflow-hidden rounded-media bg-white transition-all"
             style={{ width: frameWidth, maxWidth: "100%" }}
           >
             <iframe

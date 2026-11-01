@@ -74,11 +74,11 @@ const PRsList = ({ userId }: Props) => {
     return (
       <div role="status" aria-label="Cargando récords personales" className="space-y-8">
         <div>
-          <Skeleton className="h-7 w-7 rounded-lg" />
+          <Skeleton className="h-7 w-7 rounded-chip" />
           <Skeleton className="mt-4 h-14 w-36" />
           <Skeleton className="mt-3 h-5 w-52" />
         </div>
-        <div className="overflow-hidden rounded-2xl bg-card">
+        <div className="overflow-hidden rounded-media bg-card">
           {[0, 1, 2].map((row) => (
             <div key={row} className="flex min-h-[60px] items-center justify-between gap-4 px-4 [&:not(:last-child)]:sep-b">
               <Skeleton className="h-4 w-32" />
@@ -151,7 +151,7 @@ const PRsList = ({ userId }: Props) => {
         {prs.slice(0, 20).map((pr) => (
           <ListRow
             key={pr.id}
-            leading={<span aria-hidden="true" className="block h-11 w-11 overflow-hidden rounded-xl bg-secondary">{images[pr.exercise_name] && <img src={images[pr.exercise_name]} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover object-[50%_30%]" />}</span>}
+            leading={<span aria-hidden="true" className="block h-11 w-11 overflow-hidden rounded-media bg-secondary">{images[pr.exercise_name] && <img src={images[pr.exercise_name]} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover object-[50%_30%]" />}</span>}
             title={pr.exercise_name}
             subtitle={formatDate(pr.achieved_at)}
             trailing={

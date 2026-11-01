@@ -226,7 +226,7 @@ export default function ProgressScan({ onScanned }: { onScanned?: () => void }) 
             <PhotoTile title="Atrás" hint="Opcional" badge="Opcional" image={back} onFile={(f) => pick(f, false)} />
           </div>
 
-          <div className="flex items-start gap-3.5 rounded-2xl bg-card p-[18px]">
+          <div className="flex items-start gap-3.5 rounded-media bg-card p-[18px]">
             <IconTile icon={Target} size="md" />
             <div className="flex flex-col gap-0.5">
               <p className="type-headline">Tu objetivo</p>
@@ -235,7 +235,7 @@ export default function ProgressScan({ onScanned }: { onScanned?: () => void }) 
             </div>
           </div>
 
-          <div className="rounded-2xl bg-card p-[18px]">
+          <div className="rounded-media bg-card p-[18px]">
             <h3 className="type-title3 mb-2">Cómo tomar las fotos</h3>
             <TipRow icon={Ruler} title="Distancia" text="Cámara a 2-3 m, a la altura del ombligo, cuerpo entero y móvil en vertical." />
             <TipRow icon={Sun} title="Luz y fondo" text="Luz natural frontal y uniforme, sin contraluz ni flash, con fondo liso y claro." />
@@ -306,7 +306,7 @@ function PhotoTile({ title, hint, badge, image, onFile }: {
 function TipRow({ icon: Icon, title, text }: { icon: typeof Ruler; title: string; text: string }) {
   return (
     <div className="flex items-start gap-3 py-[7px]">
-      <span aria-hidden="true" className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
+      <span aria-hidden="true" className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-chip bg-primary/15 text-primary">
         <Icon className="h-3.5 w-3.5" strokeWidth={2.5} />
       </span>
       <div className="flex flex-col gap-px">
@@ -323,7 +323,7 @@ const score = (v?: number) => (v == null ? "—" : formatDecimal(v, 1));
 
 function FigureTile({ label, value, hint, accent }: { label: string; value: string; hint?: string; accent?: boolean }) {
   return (
-    <div className="flex min-w-0 flex-col gap-0.5 rounded-2xl bg-card p-4">
+    <div className="flex min-w-0 flex-col gap-0.5 rounded-media bg-card p-4">
       <p className="truncate type-footnote text-muted-foreground">{label}</p>
       <p className={cn("truncate font-rounded text-[28px] font-bold leading-tight tabular-nums", accent ? "text-primary" : "text-foreground")}>{value}</p>
       {hint && <p className="truncate type-footnote text-muted-foreground">{hint}</p>}
@@ -368,7 +368,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-const Panel = ({ children }: { children: ReactNode }) => <div className="rounded-2xl bg-card px-[18px] py-2.5">{children}</div>;
+const Panel = ({ children }: { children: ReactNode }) => <div className="rounded-media bg-card px-[18px] py-2.5">{children}</div>;
 
 export function ScanResultView({ result, onAgain }: { result: ScanResult; onAgain: () => void }) {
   const bc = result.body_composition;
@@ -404,7 +404,7 @@ export function ScanResultView({ result, onAgain }: { result: ScanResult; onAgai
       </div>
 
       {result.summary && (
-        <div className="flex items-start gap-3 rounded-2xl bg-card p-[18px]">
+        <div className="flex items-start gap-3 rounded-media bg-card p-[18px]">
           <Quote className="mt-1 h-4 w-4 shrink-0 fill-primary text-primary" aria-hidden="true" />
           <p className="type-body">{result.summary}</p>
         </div>
@@ -414,7 +414,7 @@ export function ScanResultView({ result, onAgain }: { result: ScanResult; onAgai
         <section className="flex flex-col gap-2.5">
           <h3 className="type-title3">Qué mejorar</h3>
           {result.improvements.map((item, i) => (
-            <div key={i} className="flex items-start gap-3 rounded-2xl bg-card p-4"
+            <div key={i} className="flex items-start gap-3 rounded-media bg-card p-4"
               aria-label={`Mejora ${i + 1}: ${item.label ?? ""}. Prioridad ${item.priority ?? "sin definir"}`}>
               <span aria-hidden="true" className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-primary type-subhead font-bold tabular-nums text-primary-foreground">
                 {i + 1}

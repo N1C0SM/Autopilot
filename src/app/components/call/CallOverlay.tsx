@@ -89,7 +89,7 @@ const CallOverlay = ({
                 autoPlay
                 playsInline
                 muted
-                className="absolute bottom-4 right-4 h-40 w-28 rounded-2xl bg-secondary object-cover sm:h-52 sm:w-36"
+                className="absolute bottom-4 right-4 h-40 w-28 rounded-media bg-secondary object-cover sm:h-52 sm:w-36"
               />
             )}
           </div>

@@ -34,7 +34,7 @@ const MealPhoto = ({ dish, dim }: { dish: string; dim: boolean }) => {
   const src = useMealPhoto(dish);
   if (!src) return null;
   return <span aria-hidden="true" className="shrink-0 py-2">
-    <span className={cn("relative block h-14 w-14 overflow-hidden rounded-xl bg-secondary transition-opacity", dim && "opacity-50")}>
+    <span className={cn("relative block h-14 w-14 overflow-hidden rounded-media bg-secondary transition-opacity", dim && "opacity-50")}>
       <img src={src} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover animate-in fade-in duration-500" />
     </span>
   </span>;
@@ -187,7 +187,7 @@ const MealsList = ({ meals, macros, onOpenProfile, userId, onMealsGenerated }: P
   return (
     <div className="space-y-8">
       {(hasMeals || showTargets) && (
-        <section aria-label="Resumen de hoy" className="rounded-2xl bg-card p-4">
+        <section aria-label="Resumen de hoy" className="rounded-media bg-card p-4">
           <div className="flex items-center gap-5">
             {hasMeals && (
               <ProgressRing

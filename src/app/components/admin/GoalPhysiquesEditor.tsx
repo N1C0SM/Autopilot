@@ -202,7 +202,7 @@ const GoalPhysiquesEditor = () => {
                 key={editing.image_url}
                 src={editing.image_url}
                 alt={editing.name}
-                className="mx-auto h-48 w-36 rounded-2xl"
+                className="mx-auto h-48 w-36 rounded-media"
               />
               <input
                 ref={fileRef}

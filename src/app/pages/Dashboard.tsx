@@ -56,7 +56,7 @@ const FreeSessionBuilder = lazy(() => import("@/app/components/dashboard/FreeSes
 const ExerciseLibrarySheet = lazy(() => import("@/app/components/library/ExerciseLibrarySheet"));
 
 const SectionFallback = () => (
-  <Skeleton className="min-h-40 w-full rounded-2xl bg-card" aria-hidden />
+  <Skeleton className="min-h-40 w-full rounded-media bg-card" aria-hidden />
 );
 
 /** Pantallas que se abren empujando desde una pestaña, no son pestañas. */
@@ -727,7 +727,7 @@ const Dashboard = () => {
               {/* Entrenar queda limpio: las herramientas de la rutina viven solo en «Rutina semanal». */}
               {trainingView === "plan" && !workoutMode && !autoStartWorkout && (
                 // Herramientas de la rutina en su tarjeta: modo del plan a la izquierda, acciones en píldoras.
-                <div className="mb-3 flex w-full items-center gap-2 rounded-2xl bg-card py-2 pl-4 pr-2">
+                <div className="mb-3 flex w-full items-center gap-2 rounded-media bg-card py-2 pl-4 pr-2">
                   <span className="min-w-0 flex-1 truncate type-subhead font-medium">
                     {isManualPlan(dayPlans) ? "Rutina personalizada" : "Piloto automático"}
                   </span>

@@ -69,7 +69,7 @@ export default function NutritionSetup({ userId, onDone }: { userId: string; onD
 
       <section>
         <h3 className="type-group-header px-4 pb-1.5">¿Te gusta cocinar?</h3>
-        <div className="overflow-hidden rounded-2xl bg-card">
+        <div className="overflow-hidden rounded-media bg-card">
           {COOKING.map((o) => {
             const on = o.v === cooking;
             return (

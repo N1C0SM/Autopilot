@@ -30,7 +30,7 @@ const MyTrainerCard = ({ onOpenChat }: { onOpenChat?: () => void }) => {
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-card rounded-2xl p-4 flex items-center gap-4 flex-wrap"
+      className="bg-card rounded-media p-4 flex items-center gap-4 flex-wrap"
     >
       {trainer.photo_url ? (
         <img loading="lazy" decoding="async" src={trainer.photo_url} alt={trainer.name} className="w-12 h-12 rounded-full object-cover" />

@@ -154,7 +154,7 @@ export const ExerciseFocus = ({
         {(exercise?.series || exercise?.reps || exercise?.rest) && (
           <dl className="mt-5 grid grid-cols-3 gap-2.5">
             {stats.map((item) => (
-              <div key={item.label} className="min-w-0 rounded-2xl bg-secondary p-3">
+              <div key={item.label} className="min-w-0 rounded-media bg-secondary p-3">
                 <dt className="type-footnote text-muted-foreground">{item.label}</dt>
                 <dd className="mt-0.5 font-rounded type-title2 tabular-nums">{item.value ?? "—"}</dd>
               </div>
@@ -167,7 +167,7 @@ export const ExerciseFocus = ({
         {(suggestion || best1Rm > 0) && (
           <ul className="mt-7 space-y-2.5">
             {suggestion && (
-              <li className="flex items-start gap-3 rounded-2xl bg-secondary p-3.5">
+              <li className="flex items-start gap-3 rounded-media bg-secondary p-3.5">
                 <IconTile icon={TrendingUp} />
                 <div className="min-w-0">
                   <p className="type-headline">{suggestionTitle}</p>
@@ -176,7 +176,7 @@ export const ExerciseFocus = ({
               </li>
             )}
             {best1Rm > 0 && (
-              <li className="flex items-start gap-3 rounded-2xl bg-secondary p-3.5">
+              <li className="flex items-start gap-3 rounded-media bg-secondary p-3.5">
                 <IconTile icon={Dumbbell} />
                 <div className="min-w-0">
                   <p className="type-headline tabular-nums">{kg(best1Rm)} kg</p>

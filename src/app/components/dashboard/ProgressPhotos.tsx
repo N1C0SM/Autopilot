@@ -542,7 +542,7 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
     const url = signed.get(photo.photo_url);
     return (
       <span className="block min-w-0">
-        <span className="block aspect-[3/4] overflow-hidden rounded-xl bg-secondary">
+        <span className="block aspect-[3/4] overflow-hidden rounded-media bg-secondary">
           {url && !broken.has(photo.photo_url) ? (
             <img
               src={url}
@@ -638,7 +638,7 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
 
       {/* Aún no hay dos fotos del mismo ángulo: aviso con el patrón de la bienvenida */}
       {ready && photos.length > 0 && posePhotos.length < 2 && (
-        <section className="flex items-start gap-3.5 rounded-2xl bg-card p-4">
+        <section className="flex items-start gap-3.5 rounded-media bg-card p-4">
           <IconTile icon={Columns2} />
           <div className="min-w-0 flex-1">
             <h2 className="type-headline">Compara tu evolución</h2>
@@ -791,10 +791,10 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
                   src={signed.get(photos[viewingPhoto].photo_url)}
                   alt={`Foto de progreso del ${formatDate(photos[viewingPhoto].taken_at)}`}
                   onError={() => onImageError(photos[viewingPhoto])}
-                  className="max-h-[75dvh] rounded-xl object-contain"
+                  className="max-h-[75dvh] rounded-media object-contain"
                 />
               ) : (
-                <div className="flex h-[60dvh] w-[80vw] max-w-lg items-center justify-center overflow-hidden rounded-xl bg-secondary">
+                <div className="flex h-[60dvh] w-[80vw] max-w-lg items-center justify-center overflow-hidden rounded-media bg-secondary">
                   <PhotoPlaceholder label={signed.get(photos[viewingPhoto].photo_url) ? failedLabel(photos[viewingPhoto].photo_url, "Preparando la foto…") : "Preparando la foto…"} />
                 </div>
               )}

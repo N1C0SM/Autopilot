@@ -682,7 +682,7 @@ const CalendarView = ({ dayPlans, targetUserId, isAdminMode, targetUserEmail, on
         </Button>
       </div>
 
-      <div className={`fc-themed rounded-2xl bg-card p-2 sm:p-4 ${FC_NATIVE}`}>
+      <div className={`fc-themed rounded-media bg-card p-2 sm:p-4 ${FC_NATIVE}`}>
         <FullCalendar
           ref={calendarRef}
           plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}

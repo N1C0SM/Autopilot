@@ -123,7 +123,7 @@ const PlanEditor = ({ open, onOpenChange, userId, dayPlans, onSaved }: Props) =>
         <button key={d} type="button" role="tab" aria-selected={active}
           onClick={() => { void hapticSelection(); setDay(d); setCopyOpen(false); }}
           className={cn(
-            "flex min-w-[52px] shrink-0 flex-col items-center gap-1 rounded-2xl px-2 py-2 transition-colors",
+            "flex min-w-[52px] shrink-0 flex-col items-center gap-1 rounded-media px-2 py-2 transition-colors",
             active ? "bg-primary/15 text-foreground" : "bg-secondary text-muted-foreground",
           )}>
           <span className="type-footnote font-semibold">{d.slice(0, 3)}</span>
@@ -135,7 +135,7 @@ const PlanEditor = ({ open, onOpenChange, userId, dayPlans, onSaved }: Props) =>
       <button key={d} type="button" role="tab" aria-selected={active}
         onClick={() => { setDay(d); setCopyOpen(false); }}
         className={cn(
-          "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors",
+          "flex w-full items-center gap-3 rounded-media px-3 py-2.5 text-left transition-colors",
           active ? "bg-primary/12 text-foreground" : "text-muted-foreground hover:bg-muted/40",
         )}>
         <span className={cn("h-2 w-2 shrink-0 rounded-full", has ? "bg-primary" : "bg-border")} aria-hidden />
@@ -150,7 +150,7 @@ const PlanEditor = ({ open, onOpenChange, userId, dayPlans, onSaved }: Props) =>
   const detail = (
     <div className="flex min-h-0 flex-1 flex-col">
       {plan?.type === "actividad" ? (
-        <div className="space-y-3 rounded-2xl bg-card p-4">
+        <div className="space-y-3 rounded-media bg-card p-4">
           <p className="type-subhead text-muted-foreground">{day}: {plan.sport || "Actividad"} {plan.duration ? `· ${plan.duration}` : ""}</p>
           <Button type="button" variant="outline" onClick={() => update(() => ({ day, type: "gimnasio", routine_name: "", muscle_focus: "", exercises: [] }))}>
             Convertir en día de fuerza
@@ -173,7 +173,7 @@ const PlanEditor = ({ open, onOpenChange, userId, dayPlans, onSaved }: Props) =>
             )}
           </div>
           {copyOpen && (
-            <div className="mt-2 flex flex-wrap gap-1.5 rounded-2xl/70 p-2">
+            <div className="mt-2 flex flex-wrap gap-1.5 rounded-media/70 p-2">
               {DAYS.filter((d) => d !== day).map((d) => (
                 <button key={d} type="button" onClick={() => copyTo(d)} className="rounded-full bg-secondary px-3 py-2 type-footnote hover:border-primary/50">{d}</button>
               ))}
@@ -182,7 +182,7 @@ const PlanEditor = ({ open, onOpenChange, userId, dayPlans, onSaved }: Props) =>
           <div className="mt-3 min-h-0 flex-1 overflow-y-auto overscroll-contain pb-2">
             {exercises.length === 0 ? (
               <button type="button" onClick={() => setPicker(true)}
-                className="flex min-h-[200px] w-full flex-col items-center justify-center gap-2 rounded-3xl text-muted-foreground hover:border-primary/50">
+                className="flex min-h-[200px] w-full flex-col items-center justify-center gap-2 rounded-card text-muted-foreground hover:border-primary/50">
                 <Plus className="h-6 w-6 text-primary" />
                 <span className="type-subhead font-medium text-foreground">Día de descanso</span>
                 <span className="type-footnote">Añade ejercicios para entrenar el {day.toLowerCase()}</span>

@@ -74,7 +74,7 @@ const IMAGE_ENGINES = [
 
 const URL_INPUT = { inputMode: "url", autoCapitalize: "none", autoCorrect: "off", spellCheck: false } as const;
 const FIELD_LABEL = "mb-1.5 block text-muted-foreground";
-const UPLOAD_CHIP = "pressable inline-flex min-h-[44px] cursor-pointer items-center justify-center gap-1.5 rounded-xl px-4 type-body";
+const UPLOAD_CHIP = "pressable inline-flex min-h-[44px] cursor-pointer items-center justify-center gap-1.5 rounded-media px-4 type-body";
 const BLOCK = "space-y-3 p-4 [&:not(:last-child)]:sep-b";
 
 const Section = ({ title, description, action, children }: { title: string; description?: ReactNode; action?: ReactNode; children: ReactNode }) => (
@@ -768,7 +768,7 @@ const SiteContentEditor = () => {
         description="Sube un vídeo corto (15–45 s, MP4/WebM, máx 100 MB) que se reproducirá en silencio en la portada. Mejora notablemente la conversión."
       >
         {hero.hero_video_url ? (
-          <div className="overflow-hidden rounded-2xl bg-black">
+          <div className="overflow-hidden rounded-media bg-black">
             <video
               key={hero.hero_video_url}
               src={hero.hero_video_url}

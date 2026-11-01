@@ -119,7 +119,7 @@ const ExerciseMedia = ({ video, image, name, pattern, stimulus, load, className 
     return (
       // El héroe es el vídeo con su portada: se ve al abrir la ficha y se
       // reproduce solo si el usuario pulsa play. Nunca en automático.
-      <div className={cn("relative aspect-video w-full overflow-hidden rounded-xl bg-background", className)}>
+      <div className={cn("relative aspect-video w-full overflow-hidden rounded-media bg-background", className)}>
         <video
           src={video}
           poster={image ?? undefined}
@@ -176,7 +176,7 @@ const ExerciseMedia = ({ video, image, name, pattern, stimulus, load, className 
 
   if (image) {
     return (
-      <div className={cn("aspect-video w-full overflow-hidden rounded-xl bg-background", className)}>
+      <div className={cn("aspect-video w-full overflow-hidden rounded-media bg-background", className)}>
         {/* cover: mismo encuadre exacto que el vídeo, para que toda la biblioteca
             se vea igual. El prompt de generación compone dentro de la banda 16:9,
             así que este recorte no corta al atleta. */}
@@ -186,7 +186,7 @@ const ExerciseMedia = ({ video, image, name, pattern, stimulus, load, className 
   }
 
   return (
-    <div className={cn("flex aspect-video w-full flex-col items-center justify-center gap-2 overflow-hidden rounded-xl bg-secondary px-6 text-center", className)}>
+    <div className={cn("flex aspect-video w-full flex-col items-center justify-center gap-2 overflow-hidden rounded-media bg-secondary px-6 text-center", className)}>
       <Video className="h-7 w-7 text-muted-foreground/60" strokeWidth={1.75} aria-hidden="true" />
       <p className="type-footnote text-muted-foreground">{emptyLabel}</p>
     </div>

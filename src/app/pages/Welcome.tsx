@@ -107,15 +107,16 @@ const Welcome = () => {
       <footer className="pb-6 pt-4 space-y-3 max-w-sm mx-auto w-full">
         <button
           type="button"
-          onClick={() => { void hapticTap(); navigate("/onboarding"); }}
-          className="w-full h-[52px] rounded-2xl bg-primary text-primary-foreground type-body font-semibold tracking-[-0.015em] flex items-center justify-center gap-1.5 transition-transform duration-150 ease-out active:scale-[0.98]"
+          onClick={() => { void hapticTap(); navigate("/signup?free=true"); }}
+          className="w-full h-[52px] rounded-media bg-primary text-primary-foreground type-body font-semibold tracking-[-0.015em] flex items-center justify-center gap-1.5 transition-transform duration-150 ease-out active:scale-[0.98]"
+>>>>>>> 031cb1f5 (F3 · app: radios y color suelto normalizados a tokens)
         >
           Crear mi rutina gratis
         </button>
         <button
           type="button"
           onClick={() => { void hapticTap(); navigate("/login"); }}
-          className="w-full h-11 rounded-2xl text-primary font-medium type-subhead transition-colors active:bg-primary/10"
+          className="w-full h-11 rounded-media text-primary font-medium type-subhead transition-colors active:bg-primary/10"
         >
           Ya tengo cuenta
         </button>

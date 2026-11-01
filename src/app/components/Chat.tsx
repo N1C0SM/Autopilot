@@ -16,7 +16,7 @@ import { ImageWithFallback, VideoWithFallback } from "@/app/components/chrome-ch
 import { hapticSelection, hapticTap } from "@/shared/lib/native";
 
 // Same raised thumb as ui/tabs (UISegmentedControl), kept as buttons for aria-pressed semantics.
-const SEGMENT_ACTIVE = "bg-[#636366] font-semibold text-foreground shadow-[0_3px_8px_rgba(0,0,0,0.12),0_3px_1px_rgba(0,0,0,0.04)]";
+const SEGMENT_ACTIVE = "bg-accent font-semibold text-foreground shadow-[0_3px_8px_rgba(0,0,0,0.12),0_3px_1px_rgba(0,0,0,0.04)]";
 
 interface Message {
   id: string;
@@ -228,7 +228,7 @@ const Chat = ({ conversationUserId, isAdmin = false, onRequestVideoCall, callLab
 
   return (
     <>
-      <div className={`flex min-w-0 flex-col overflow-hidden ${layout === "fill" ? "h-full min-h-0 flex-1 bg-background" : "h-[min(42rem,calc(100dvh-12rem))] min-h-[20rem] rounded-2xl bg-card"}`}>
+      <div className={`flex min-w-0 flex-col overflow-hidden ${layout === "fill" ? "h-full min-h-0 flex-1 bg-background" : "h-[min(42rem,calc(100dvh-12rem))] min-h-[20rem] rounded-media bg-card"}`}>
         {/* Header with tabs */}
         <div className="sep-b flex min-h-11 min-w-0 shrink-0 items-center gap-2 px-3 py-2">
           <div className="flex h-9 min-w-0 flex-1 rounded-[9px] bg-[rgba(118,118,128,0.24)] p-0.5 sm:flex-none">
@@ -305,7 +305,7 @@ const Chat = ({ conversationUserId, isAdmin = false, onRequestVideoCall, callLab
         {/* Preview */}
         {previewFile && (
           <div className="flex shrink-0 items-center gap-3 px-4 py-2">
-            <div className="relative h-16 w-16 overflow-hidden rounded-xl bg-secondary">
+            <div className="relative h-16 w-16 overflow-hidden rounded-media bg-secondary">
               {previewFile.type === "image" ? (
                 <ImageWithFallback src={previewFile.url} alt="" className="h-full w-full object-cover" />
               ) : (
@@ -329,7 +329,7 @@ const Chat = ({ conversationUserId, isAdmin = false, onRequestVideoCall, callLab
                     key={i}
                     type="button"
                     onClick={() => { void hapticTap(); setNewMsg(s.text); setAiSuggestions([]); }}
-                    className="min-h-11 w-full break-words rounded-xl bg-secondary px-3 py-2 text-left transition-opacity active:opacity-70"
+                    className="min-h-11 w-full break-words rounded-media bg-secondary px-3 py-2 text-left transition-opacity active:opacity-70"
                   >
                     <div className="type-footnote font-semibold text-muted-foreground">{s.label}</div>
                     <div className="type-subhead text-foreground">{s.text}</div>
@@ -364,10 +364,10 @@ const Chat = ({ conversationUserId, isAdmin = false, onRequestVideoCall, callLab
           </button>
           <div onClick={(e) => e.stopPropagation()} className="max-h-[85dvh] max-w-3xl">
             {viewMedia.type === "image" ? (
-              <ImageWithFallback src={viewMedia.url} alt="" className="max-h-[85dvh] rounded-xl object-contain" fallbackClassName="h-64 w-64" />
+              <ImageWithFallback src={viewMedia.url} alt="" className="max-h-[85dvh] rounded-media object-contain" fallbackClassName="h-64 w-64" />
             ) : (
               // Sin autoPlay: se abre con los controles y el usuario pulsa play
-              <VideoWithFallback src={viewMedia.url} controls className="max-h-[85dvh] rounded-xl" fallbackClassName="h-64 w-64" />
+              <VideoWithFallback src={viewMedia.url} controls className="max-h-[85dvh] rounded-media" fallbackClassName="h-64 w-64" />
             )}
           </div>
         </div>

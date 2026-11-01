@@ -381,13 +381,13 @@ function UsersList({ range }: { range: RangeKey }) {
 
 /** Tarjeta del sistema: sin borde, 22 px. */
 function Card({ className, children }: { className?: string; children: ReactNode }) {
-  return <section className={cn("rounded-2xl bg-card p-5", className)}>{children}</section>;
+  return <section className={cn("rounded-media bg-card p-5", className)}>{children}</section>;
 }
 
 /** Cifra clave en tarjeta; `accent` la marca en dorado (una por pantalla). */
 function Kpi({ label, value, hint, accent }: { label: string; value: ReactNode; hint?: string; accent?: boolean }) {
   return (
-    <div className="flex min-w-0 flex-col rounded-2xl bg-card p-4 lg:p-5">
+    <div className="flex min-w-0 flex-col rounded-media bg-card p-4 lg:p-5">
       <p className="truncate type-footnote text-muted-foreground">{label}</p>
       <p className={cn("mt-2 truncate type-figure text-[34px] lg:text-[40px]", accent && "text-primary")}>{value}</p>
       {hint ? <p className="mt-1 truncate type-footnote text-muted-foreground">{hint}</p> : null}

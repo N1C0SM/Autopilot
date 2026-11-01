@@ -225,7 +225,7 @@ const Dropzone = ({
         }}
       />
       {image ? (
-        <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-card">
+        <div className="relative aspect-[3/4] rounded-media overflow-hidden bg-card">
           <ScanImage src={image} alt={label} className="w-full h-full" />
           <button
             onClick={() => { void hapticTap(); onClear(); }}
@@ -247,7 +247,7 @@ const Dropzone = ({
         <button
           type="button"
           onClick={() => { void hapticTap(); inputRef.current?.click(); }}
-          className="relative aspect-[3/4] w-full rounded-2xl bg-card transition-colors active:bg-accent flex flex-col items-center justify-center gap-3 p-3 sm:p-6 overflow-hidden"
+          className="relative aspect-[3/4] w-full rounded-media bg-card transition-colors active:bg-accent flex flex-col items-center justify-center gap-3 p-3 sm:p-6 overflow-hidden"
         >
           {placeholder && (
             <img
@@ -1334,7 +1334,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                   </div>
                 </div>
               ) : user && routeUserId && !savedObjectiveUrl && !editingObjective ? (
-                <div className="rounded-2xl bg-card p-4">
+                <div className="rounded-media bg-card p-4">
                 <FindingRow
                   icon={Target}
                   title="Tu objetivo"
@@ -1414,7 +1414,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                             setObjectiveImg(p.image_url);
                             setSelectedPresetId(p.id);
                           }}
-                          className={`relative aspect-[3/4] overflow-hidden rounded-2xl bg-card transition-transform duration-150 active:scale-[0.97] ${
+                          className={`relative aspect-[3/4] overflow-hidden rounded-media bg-card transition-transform duration-150 active:scale-[0.97] ${
                             isSel ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""
                           }`}
                         >
@@ -1454,10 +1454,10 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                     <ScanImage
                       src={objectiveImg}
                       alt="tu objetivo"
-                      className="aspect-[3/4] w-28 rounded-xl ring-2 ring-primary ring-offset-2 ring-offset-background"
+                      className="aspect-[3/4] w-28 rounded-media ring-2 ring-primary ring-offset-2 ring-offset-background"
                     />
                   ) : (
-                    <div className="flex min-h-[72px] items-center gap-4 rounded-2xl bg-card px-4 py-3 transition-colors active:bg-accent">
+                    <div className="flex min-h-[72px] items-center gap-4 rounded-media bg-card px-4 py-3 transition-colors active:bg-accent">
                       <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[22%] bg-secondary">
                         <Upload className="h-6 w-6 text-primary" strokeWidth={1.75} />
                       </div>
@@ -1479,7 +1479,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
               {/* Guía para tomar las fotos */}
               <section>
                 <h2 className="type-title3 mb-3">Cómo tomar las fotos</h2>
-                <div className="space-y-5 rounded-2xl bg-card p-4">
+                <div className="space-y-5 rounded-media bg-card p-4">
                   <FindingRow
                     icon={Ruler}
                     title="Distancia"
@@ -1538,7 +1538,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                 </p>
               </div>
 
-              <div className="overflow-hidden rounded-2xl bg-card">
+              <div className="overflow-hidden rounded-media bg-card">
                 {GOALS.map((g) => {
                   const Icon = g.icon;
                   const active = goal === g.id;
@@ -1923,7 +1923,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                     <div className={`mt-4 grid gap-3 ${shots.length > 1 ? "grid-cols-2" : "grid-cols-1 max-w-[240px]"}`}>
                       {shots.map((p) => (
                         <figure key={p.label} className="min-w-0">
-                          <ScanImage src={p.src} alt={p.label.toLowerCase()} className="aspect-[3/4] w-full rounded-2xl" />
+                          <ScanImage src={p.src} alt={p.label.toLowerCase()} className="aspect-[3/4] w-full rounded-media" />
                           <figcaption className={`mt-2 type-subhead ${p.primary ? "font-semibold text-primary" : "text-muted-foreground"}`}>
                             {p.label}
                           </figcaption>
@@ -1977,7 +1977,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                     </TabsList>
                   </Tabs>
                 )}
-                <div className="relative mt-4 aspect-[3/2] overflow-hidden rounded-2xl bg-card">
+                <div className="relative mt-4 aspect-[3/2] overflow-hidden rounded-media bg-card">
                   {futureImg ? (
                     <ScanImage src={futureImg} alt="futuro IA" className="h-full w-full" />
                   ) : simBase ? (

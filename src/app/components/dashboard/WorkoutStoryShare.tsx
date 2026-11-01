@@ -333,7 +333,7 @@ export function WorkoutStoryShare(props: Props) {
   return (
     <div className="flex w-full min-w-0 flex-col gap-3">
       {/* Control segmentado de iOS: qué imagen se comparte. */}
-      {!props.variant && <div className="grid h-10 grid-cols-2 rounded-xl bg-card p-1" role="radiogroup" aria-label="Imagen para compartir">
+      {!props.variant && <div className="grid h-10 grid-cols-2 rounded-media bg-card p-1" role="radiogroup" aria-label="Imagen para compartir">
         {(["resumen", "musculos"] as Variant[]).map((v) => (
           <button
             key={v}
