@@ -15,8 +15,6 @@ import ScrollWords from "@/web/components/ScrollWords";
 import BookShowcase from "@/web/components/BookShowcase";
 import StickySteps from "@/web/components/StickySteps";
 import { Dumbbell, LineChart, SlidersHorizontal } from "lucide-react";
-import DeviceShowcase from "@/web/components/DeviceShowcase";
-import PhoneStory from "@/web/components/PhoneStory";
 import FeatureGallery from "@/web/components/FeatureGallery";
 import Benefits from "@/web/components/Benefits";
 import AppStoreBadges from "@/web/components/AppStoreBadges";
@@ -156,9 +154,6 @@ export default function Index() {
       </div>
     </section>
 
-    {/* 2 · El producto en escena: el teléfono cambia con el scroll */}
-    <PhoneStory />
-
     {/* 3 · Ventajas reales, en bloques editoriales */}
     <Benefits />
 
@@ -167,9 +162,6 @@ export default function Index() {
 
     {/* 5 · Todo lo que incluye, en una galería horizontal */}
     <FeatureGallery />
-
-    {/* 5b · La app en el móvil y en el ordenador */}
-    <DeviceShowcase />
 
     {/* 6 · Cómo funciona, en tres actos */}
     <StickySteps eyebrow="Cómo funciona" steps={[

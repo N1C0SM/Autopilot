@@ -15,7 +15,7 @@ const PlanDifferences = () => {
     { text: "Registro de series, repeticiones y kg", group: "Entrenamiento", free: true, plus: true, coach: true },
     { text: "Historial, peso y récords", group: "Entrenamiento", free: true, plus: true, coach: true },
     { text: "Progresión de cargas automática", group: "Entrenamiento", free: false, plus: true, coach: true },
-    { text: "Calorías y macros para tu objetivo", group: "Nutrición", free: true, plus: true, coach: true },
+    { text: "Calorías y macros para tu objetivo", group: "Nutrición", free: false, plus: true, coach: true },
     { text: "Comidas de cada día según tus gustos", group: "Nutrición", free: false, plus: true, coach: true },
     { text: "Scan corporal con IA", group: "Análisis", free: "Básico", plus: "Completo", coach: "Completo" },
     { text: "Composición, músculos, postura y protocolo del scan", group: "Análisis", free: false, plus: true, coach: true },

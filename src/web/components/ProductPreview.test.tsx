@@ -48,7 +48,7 @@ describe("public product preview", () => {
   it("presents macros as free and has no chat tab", () => {
     render(<ProductPreview onPlans={() => {}} />);
     fireEvent.click(screen.getByRole("tab", { name: "Nutrición" }));
-    expect(screen.getByText("Tus macros, siempre gratis.")).toBeVisible();
+    expect(screen.getByText("Tus macros y comidas, con Plus.")).toBeVisible();
     expect(screen.queryByRole("tab", { name: "Chat" })).toBeNull();
   });
 });

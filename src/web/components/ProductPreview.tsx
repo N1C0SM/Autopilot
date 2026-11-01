@@ -57,15 +57,15 @@ const DEMO_SHOTS: Record<View, string> = {
 const baseSide: Record<View, { title: string; points: string[] }> = {
   home: {
     title: "Abres la app y sabes qué toca hoy.",
-    points: ["Tu sesión de hoy, tus macros y tu último récord en una pantalla.", "Empieza gratis y registra tus entrenamientos sin tarjeta.", "Con Plus, tus comidas de cada día y tu scan completo."],
+    points: ["Tu sesión de hoy y tu último récord en una pantalla.", "Empieza gratis y registra tus entrenamientos sin tarjeta.", "Con Plus, tus macros, tus comidas y tu scan completo."],
   },
   training: {
     title: "Cada serie, un toque.",
     points: ["Peso y repeticiones de cada serie, con foto de cada ejercicio.", "Supersets, calentamiento, bajadas, fallo y RPE.", "El tracker y el progreso están incluidos en el plan Gratis."],
   },
   nutrition: {
-    title: "Tus macros, siempre gratis.",
-    points: ["Calorías, proteína, carbohidratos y grasas para tu objetivo.", "Con Plus, tus comidas de cada día según tus gustos y alergias.", "Los macros están incluidos en el plan Gratis."],
+    title: "Tus macros y comidas, con Plus.",
+    points: ["Calorías, proteína, carbohidratos y grasas para tu objetivo.", "Tus comidas de cada día según tus gustos y alergias.", "Incluido en Plus."],
   },
   chat: {
     title: "Una persona real al otro lado.",
@@ -224,7 +224,7 @@ function ProductPreviewContent({ onPlans, onFree }: { onPlans: () => void; onFre
           <div className="max-w-xl">
             <p className="type-subhead text-primary">Antes de decidir</p>
             <h2 id="preview-heading" className="mt-1 type-title1 sm:text-[40px] sm:leading-[44px]"><ScrollWords text="Prueba cómo sería tu día." /></h2>
-            <p className="mt-3 type-body text-muted-foreground">Así se ve la app por dentro: tu día, cada serie, tus macros y tu progreso. Cambia de pantalla con las pestañas de la demo.</p>
+            <p className="mt-3 type-body text-muted-foreground">Así se ve la app por dentro: tu día, cada serie y tu progreso. Cambia de pantalla con las pestañas de la demo.</p>
           </div>
           <span className="hidden type-footnote text-muted-foreground sm:inline">Capturas reales de la app</span>
         </div>
