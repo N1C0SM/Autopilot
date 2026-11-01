@@ -113,8 +113,9 @@ export default function PublicLayout({ title, description, children }: { title: 
     <main id="contenido" className="reveal-sections min-w-0 scroll-mt-20">{children}</main>
     <footer className="sep-t px-5 pb-[calc(2rem+var(--safe-bottom))] pt-14 sm:px-8 sm:pt-20">
       <div className="container mx-auto max-w-6xl">
-        <div className="grid gap-10 sm:grid-cols-[1.4fr_1fr_1fr_1fr]">
-          <div>
+        {/* En móvil, dos columnas de enlaces y redes en línea: el pie pasa de ~1.100 px a ~600. */}
+        <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-[1.4fr_1fr_1fr_1fr] sm:gap-10">
+          <div className="col-span-2 sm:col-span-1">
             <Link to="/" className="font-rounded text-[28px] font-bold tracking-tight text-primary">Autopilot</Link>
             <p className="mt-3 max-w-xs type-subhead text-muted-foreground">Entrena con plan. Registra cada serie. Mira cómo progresas.</p>
             <Button variant="tinted" asChild className="mt-6"><Link to="/onboarding" onClick={() => void hapticTap()}>Crear mi rutina gratis</Link></Button>
@@ -127,15 +128,15 @@ export default function PublicLayout({ title, description, children }: { title: 
             <p className="type-footnote font-semibold text-foreground">{heading as string}</p>
             <ul className="mt-2">{(links as string[][]).map(([to, label]) => <li key={to}><Link to={to} className="inline-flex min-h-11 items-center type-subhead text-muted-foreground transition-colors hover:text-foreground active:opacity-60">{label}</Link></li>)}</ul>
           </nav>)}
-          <div>
+          <div className="col-span-2 sm:col-span-1">
             <p className="type-footnote font-semibold text-foreground">Síguenos</p>
-            <ul className="mt-2">
+            <ul className="mt-1 flex flex-wrap gap-x-5 sm:mt-2 sm:block">
               {socials.map((l) => <li key={l.key}><a href={l.url} target="_blank" rel="noopener noreferrer me" className="inline-flex min-h-11 items-center type-subhead text-muted-foreground transition-colors hover:text-foreground active:opacity-60">{l.label}</a></li>)}
               <li><Link to="/connect" className="inline-flex min-h-11 items-center type-subhead text-muted-foreground transition-colors hover:text-foreground active:opacity-60">Conectar con IA</Link></li>
             </ul>
           </div>
         </div>
-        <div className="sep-t mt-12 flex flex-col gap-2 pt-6 type-footnote text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+        <div className="sep-t mt-10 flex flex-col gap-1 pt-6 type-footnote text-muted-foreground sm:mt-12 sm:flex-row sm:items-center sm:justify-between">
           <p><span className="font-semibold text-foreground">Autopilot</span> · {new Date().getFullYear()}</p>
           <nav aria-label="Información legal" className="flex flex-wrap gap-x-5">
             {[["aviso-legal", "Aviso legal"], ["terminos", "Términos"], ["privacidad", "Privacidad"], ["cookies", "Cookies"], ["disclaimer-medico", "Información de salud"]].map(([slug, label]) => <Link key={slug} className="inline-flex min-h-11 items-center transition-colors hover:text-foreground active:opacity-60" to={`/legal/${slug}`}>{label}</Link>)}
