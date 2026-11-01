@@ -772,13 +772,15 @@ struct SetLine: View {
             }
             Button { workout.toggleDone(exercise, set: index) } label: {
                 ZStack {
-                    Circle().strokeBorder(set.done ? Palette.gold : Palette.muted.opacity(0.4), lineWidth: 2)
+                    Circle().strokeBorder(set.done ? Palette.gold : Palette.muted.opacity(0.4), lineWidth: 2.5)
                         .background(Circle().fill(set.done ? Palette.gold : .clear))
-                    Image(systemName: "checkmark").font(.inter(size: 14, weight: .heavy))
-                        .foregroundStyle(set.done ? Color.white : Palette.muted.opacity(0.4))
+                    Image(systemName: "checkmark").font(.inter(size: 18, weight: .heavy))
+                        .foregroundStyle(set.done ? Color.black : Palette.muted.opacity(0.4))
+                        .scaleEffect(set.done ? 1 : 0.6)
+                        .animation(.spring(response: 0.25, dampingFraction: 0.6), value: set.done)
                 }
-                .frame(width: 32, height: 32)
-                .frame(width: 44, height: 44)
+                .frame(width: 40, height: 40)
+                .frame(width: 48, height: 48)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
