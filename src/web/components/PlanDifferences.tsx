@@ -9,18 +9,19 @@ const PlanDifferences = () => {
   type Value = boolean | string;
   /** Una fila por característica y el valor de cada plan en la MISMA fila (antes se emparejaban
    *  por posición y, como las listas no iban en el mismo orden, la tabla mezclaba cosas). */
-  const rows: { text: string; free: Value; plus: Value; coach: Value }[] = [
-    { text: "Rutina según tu objetivo, días y material", free: true, plus: true, coach: true },
-    { text: "Registro de series, repeticiones y kg", free: true, plus: true, coach: true },
-    { text: "Historial, peso y récords", free: true, plus: true, coach: true },
-    { text: "Calorías y macros para tu objetivo", free: true, plus: true, coach: true },
-    { text: "Scan corporal con IA", free: "Básico", plus: "Completo", coach: "Completo" },
-    { text: "Composición, músculos, postura y protocolo del scan", free: false, plus: true, coach: true },
-    { text: "Tu yo futuro y comparativa de scans", free: false, plus: true, coach: true },
-    { text: "Comidas de cada día según tus gustos", free: false, plus: true, coach: true },
-    { text: "Progresión de cargas automática", free: false, plus: true, coach: true },
-    { text: "Estadísticas avanzadas", free: false, plus: true, coach: true },
-    { text: "Revisión humana de tu plan", free: false, plus: false, coach: true },
+  type Group = "Entrenamiento" | "Nutrición" | "Análisis" | "Acompañamiento";
+  const rows: { text: string; group: Group; free: Value; plus: Value; coach: Value }[] = [
+    { text: "Rutina según tu objetivo, días y material", group: "Entrenamiento", free: true, plus: true, coach: true },
+    { text: "Registro de series, repeticiones y kg", group: "Entrenamiento", free: true, plus: true, coach: true },
+    { text: "Historial, peso y récords", group: "Entrenamiento", free: true, plus: true, coach: true },
+    { text: "Progresión de cargas automática", group: "Entrenamiento", free: false, plus: true, coach: true },
+    { text: "Calorías y macros para tu objetivo", group: "Nutrición", free: true, plus: true, coach: true },
+    { text: "Comidas de cada día según tus gustos", group: "Nutrición", free: false, plus: true, coach: true },
+    { text: "Scan corporal con IA", group: "Análisis", free: "Básico", plus: "Completo", coach: "Completo" },
+    { text: "Composición, músculos, postura y protocolo del scan", group: "Análisis", free: false, plus: true, coach: true },
+    { text: "Tu yo futuro y comparativa de scans", group: "Análisis", free: false, plus: true, coach: true },
+    { text: "Estadísticas avanzadas", group: "Análisis", free: false, plus: true, coach: true },
+    { text: "Revisión humana de tu plan", group: "Acompañamiento", free: false, plus: false, coach: true },
   ];
   const plans = [
     { key: "free" as const, name: "Free", price: 0, tagline: "Tu rutina, tu registro y tus macros." },
@@ -46,21 +47,48 @@ const PlanDifferences = () => {
           </p>
         </div>
 
-        {/* Móvil: una fila por característica, con cada plan debajo; sin tabla que se salga de la pantalla. */}
-        <ul className="mt-10 overflow-hidden rounded-2xl bg-card md:hidden">
-          {visibleRows.map((row) => (
-            <li key={row.text} className="px-4 py-4 [&:not(:last-child)]:border-b [&:not(:last-child)]:border-border/60">
-              <p className="type-subhead text-foreground">{row.text}</p>
-              <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1">
-                {plans.map((pl) => (
-                  <span key={pl.key} className="inline-flex items-center gap-1.5 type-footnote">
-                    <span className="text-muted-foreground">{pl.name}</span>{cell(row[pl.key], true)}
-                  </span>
+        {/* Móvil: cabecera con los planes una sola vez y una rejilla alineada por columnas.
+            Antes cada fila repetía «Free / Plus» y no había forma de comparar de un vistazo. */}
+        <div className="mt-10 md:hidden">
+          <div
+            className="grid items-end gap-x-3 border-b border-border pb-3"
+            style={{ gridTemplateColumns: `1fr repeat(${plans.length}, minmax(0, 4.5rem))` }}
+          >
+            <p className="type-footnote text-muted-foreground">Incluido en</p>
+            {plans.map((pl) => (
+              <p
+                key={pl.key}
+                className={`text-center type-footnote font-semibold ${pl.price === 0 ? "text-muted-foreground" : "text-primary"}`}
+              >
+                {pl.name}
+              </p>
+            ))}
+          </div>
+
+          {(["Entrenamiento", "Nutrición", "Análisis", "Acompañamiento"] as const).map((group) => {
+            const groupRows = visibleRows.filter((r) => r.group === group);
+            if (!groupRows.length) return null;
+            return (
+              <div key={group}>
+                <p className="pt-5 pb-1 type-footnote font-semibold uppercase tracking-[0.1em] text-muted-foreground">{group}</p>
+                {groupRows.map((row) => (
+                  <div
+                    key={row.text}
+                    className="grid items-center gap-x-3 border-b border-border/60 py-3 last:border-b-0"
+                    style={{ gridTemplateColumns: `1fr repeat(${plans.length}, minmax(0, 4.5rem))` }}
+                  >
+                    <p className="type-subhead text-foreground">{row.text}</p>
+                    {plans.map((pl) => (
+                      <div key={pl.key} className="flex justify-center">
+                        {cell(row[pl.key], true)}
+                      </div>
+                    ))}
+                  </div>
                 ))}
               </div>
-            </li>
-          ))}
-        </ul>
+            );
+          })}
+        </div>
 
         <div className="mt-10 hidden overflow-x-auto md:block">
           <div className="min-w-[800px]">
@@ -98,26 +126,6 @@ const PlanDifferences = () => {
               </tbody>
             </table>
           </div>
-        </div>
-
-        <div className="mt-10 grid gap-6 sm:grid-cols-3 text-center">
-          {plans.map((pl) => (
-            <div key={pl.name} className={`rounded-2xl p-6 ${pl.price === 0 ? "bg-card" : "bg-card border"}`}>
-              <h4 className="type-title3">{pl.name}</h4>
-              <p className="mt-2 type-subhead text-muted-foreground">{pl.tagline}</p>
-              <div className="mt-4 flex items-baseline justify-center gap-1.5">
-                <span className={`type-figure text-[28px] font-bold leading-none tabular-nums ${pl.price === 0 ? "text-primary" : "text-foreground"}`}>
-                  {pl.price === 0 ? "Gratis" : euro(pl.price)}
-                </span>
-                {pl.price > 0 && <span className="type-subhead text-muted-foreground">/mes</span>}
-              </div>
-              <p className="mt-2 type-footnote text-muted-foreground">
-                {pl.price === 0 
-                  ? "Sin tarjeta ni prueba que cancelar" 
-                  : `7 días de prueba. Tras eso: ${euro(pl.price)}/mes. Sin permanencia.`}
-              </p>
-            </div>
-          ))}
         </div>
 
         <p className="mt-8 text-center type-footnote text-muted-foreground">

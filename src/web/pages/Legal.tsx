@@ -11,7 +11,7 @@ const Legal = () => {
   const path = `/legal/${key}`;
 
   return (
-    <Screen title={doc.title} largeTitle>
+    <Screen title={doc.title} largeTitle maxWidth="reading">
       <Helmet>
         <title>{`${doc.title} · Autopilot`}</title>
         <meta name="description" content={doc.summary} />
@@ -25,12 +25,12 @@ const Legal = () => {
       <p className="type-subhead text-muted-foreground">{doc.summary}</p>
       <p className="mt-2 type-footnote text-muted-foreground">Versión {LEGAL_VERSION} · Actualizado {LEGAL_LAST_UPDATED}</p>
 
-      <article className="selectable mt-8 space-y-7">
+      <article className="selectable mt-8 space-y-8">
         {doc.sections.map((s, i) => (
           <section key={i}>
-            {s.heading && <h2 className="mb-2 type-title3">{s.heading}</h2>}
+            {s.heading && <h2 className="mb-3 type-title2">{s.heading}</h2>}
             {s.paragraphs?.map((p, j) => (
-              <p key={j} className="mb-3 type-callout leading-relaxed">{p}</p>
+              <p key={j} className="mb-4 type-callout leading-relaxed last:mb-0">{p}</p>
             ))}
             {s.list && (
               <ul className="list-disc space-y-2 pl-5 type-callout leading-relaxed marker:text-muted-foreground">
@@ -41,7 +41,7 @@ const Legal = () => {
         ))}
       </article>
 
-      <ListGroup header="Otros documentos" className="mt-12">
+      <ListGroup header="Otros documentos" className="mt-14">
         {(Object.keys(LEGAL_DOCS) as LegalSlug[]).map((s) =>
           s === key ? (
             <ListRow key={s} title={<span className="text-primary">{LEGAL_DOCS[s].title}</span>} value="Leyendo" />

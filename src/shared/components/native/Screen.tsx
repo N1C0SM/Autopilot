@@ -26,7 +26,8 @@ interface ScreenProps {
   trailing?: ReactNode;
   footer?: ReactNode;
   centered?: boolean;
-  maxWidth?: "sm" | "md" | "lg" | "full";
+  /** `reading` = columna de lectura (~70 caracteres): documento legal o artículo. */
+  maxWidth?: "sm" | "md" | "lg" | "reading" | "full";
   className?: string;
   contentClassName?: string;
   children: ReactNode;
@@ -36,6 +37,8 @@ const WIDTH: Record<NonNullable<ScreenProps["maxWidth"]>, string> = {
   sm: "max-w-md",
   md: "max-w-xl md:max-w-2xl",
   lg: "max-w-3xl md:max-w-4xl",
+  // 512 px ≈ 70 caracteres con el cuerpo legal de 16 px (`62ch` sobre un contenedor de 17 px daría ~85).
+  reading: "max-w-[36rem]",
   full: "max-w-none",
 };
 
