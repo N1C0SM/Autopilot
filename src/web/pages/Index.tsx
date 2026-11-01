@@ -179,14 +179,14 @@ export default function Index() {
     ]} />
 
     {/* 6b · Demo interactiva */}
-    <section id="demo" aria-label="Demo interactiva" className="scroll-mt-20 pt-14 sm:pt-20">
+    <section id="demo" aria-label="Demo interactiva" className="scroll-mt-20 pt-10 sm:pt-16">
       <Suspense fallback={<div className="h-[560px]" aria-hidden="true" />}>
         <ProductPreview onPlans={() => document.getElementById("precios")?.scrollIntoView({ behavior: "smooth" })} onFree={() => { track("cta_click", { cta: "free_signup", source: "demo" }); navigate("/onboarding"); }} />
       </Suspense>
     </section>
 
     {/* 7 · Plan gratuito y resto de planes */}
-    <section id="precios" ref={pricingRef} aria-labelledby="precios-titulo" className="scroll-mt-20 px-5 py-14 sm:px-8 sm:py-20">
+    <section id="precios" ref={pricingRef} aria-labelledby="precios-titulo" className="scroll-mt-20 px-5 py-10 sm:px-8 sm:py-16">
       <div className="mx-auto max-w-6xl">
         <h2 id="precios-titulo" className="mx-auto max-w-4xl text-center type-display"><ScrollWords text="Empieza gratis." accent="Sin tarjeta." /></h2>
         <p className="mx-auto mt-5 max-w-2xl text-center type-body text-muted-foreground md:text-[21px] md:leading-[28px]">Crea tu rutina, registra tus entrenamientos y sigue tu progreso. {plans.plus && <>{plans.plusName} te dice qué comer y cuánto peso subir. </>}{plans.coach && <>{plans.coachName} añade a Nicolás revisando tu plan.</>}</p>
@@ -203,7 +203,7 @@ export default function Index() {
 
 
     {/* 8 · Confianza: fundador, dudas y CTA final */}
-    <section aria-labelledby="fundador-titulo" className="px-5 py-14 sm:px-8 sm:py-20">
+    <section aria-labelledby="fundador-titulo" className="px-5 py-10 sm:px-8 sm:py-16">
       <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">
         <div>
           <h2 id="fundador-titulo" className="type-display-sm"><ScrollWords text="Quién está detrás" /></h2>

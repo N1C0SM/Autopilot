@@ -18,7 +18,7 @@ export default function PhoneStory() {
     { eyebrow: "Visualiza tu progreso", title: "Mira cómo progresas.", text: suggest ? "Consulta tus registros y tu evolución. La siguiente carga se calcula con ellos." : "Consulta tus registros y entiende tu evolución.", shot: "/app-shots/progreso.jpg", fallback: <PublicProgressScreen /> },
   ];
   // Una pantalla y media por escena en escritorio: tiempo para leer y mirar; en móvil, una.
-  const SCREENS = typeof window !== "undefined" && window.innerWidth >= 768 ? 4.5 : 3.5;
+  const SCREENS = typeof window !== "undefined" && window.innerWidth >= 768 ? 3 : 2.5;
   const [ref, p, pin] = useScrollProgress<HTMLElement>(-1);
   const still = p < 0;
   const t = still ? 0 : pin * scenes.length;

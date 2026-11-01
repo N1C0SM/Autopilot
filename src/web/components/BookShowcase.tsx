@@ -101,7 +101,7 @@ export default function BookShowcase() {
     </section>;
   }
 
-  return <section ref={ref} id="guias" aria-labelledby="guias-titulo" className="overflow-hidden py-24 sm:py-32">
+  return <section ref={ref} id="guias" aria-labelledby="guias-titulo" className="overflow-hidden py-16 sm:py-24">
     {header}
     <div className="mt-14 flex snap-x snap-mandatory gap-5 overflow-x-auto px-5 pb-6 [scrollbar-width:none] sm:justify-center sm:px-8 [&::-webkit-scrollbar]:hidden">
       {(books ?? Array.from({ length: 4 }, () => null)).map((b, i) => b
