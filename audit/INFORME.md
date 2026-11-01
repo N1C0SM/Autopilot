@@ -327,8 +327,26 @@ Capturas base en `audit/antes/`, hojas de contacto en `audit/contacto/`, maqueta
 
 ---
 
-## 10. Pendiente
+## 10. Estado de la implementación
 
-1. **Cuenta admin de QA** (email + contraseña) para crear fixtures Free/Plus/Coach/entrenador con `scripts/verify-live-qa.mjs` y capturar Inicio, Entrenar, Nutrición, Progreso, Ajustes, Drive, las 17 secciones de Admin y el panel de entrenador en los tres tamaños. Con eso se cierra la Fase 1 y se afinan los hallazgos de esas pantallas.
-2. **Decisión de dirección**: ¿apruebas el sistema «Autopilot 2» (tokens y componentes de la sección 6, ya compuestos en `audit/sistema/style-tile.html`) para empezar por F1–F2, o quieres ajustar antes el dorado, la tipografía o la densidad?
-3. Confirmar si el rediseño debe incluir el **espejo nativo** en la misma tanda (F2–F6) o si primero cerramos web y luego Mac/iPhone.
+Sistema «Autopilot 2» aprobado y aplicado por tandas, cada una con su commit y sus
+capturas antes/después. Lo hecho:
+
+| Commit | Qué cierra |
+|---|---|
+| `24f10971` | **F1** · superficies, radios semánticos, `type-caption2` a 12 px, alto contraste, `PageTitle` y `Field`. H16 (suelo de 12–13 px) y H17 (radios) en la app. |
+| `cd8bc547` | **F2** · pie de `Screen` sticky (CTA a 16 px de los campos, no a 200), `.field` píldora, Drive y acceso con la misma forma. **H1** (`/para-entrenadores` sin salida). |
+| `b4f8d6aa` | **F2** · **H5** columna de lectura en Legal (576 px ≈ 62–70 caracteres) y **H6** comparativa de planes con una sola cabecera y grupos en móvil. |
+| `3a0b064b` | **F2** · **H14** pie móvil de 1.100 a ~770 px, redes en línea. |
+| `5c0c41a7` | **F2** · **H21** cabecera pública (logotipo 20/22 px, enlaces 14 px, filete dorado en el activo), **H23** pie legal en dos columnas, **H25** guías con precio y acción alineados, **H15** demo con control de pantallas visible (el auditor pasa de 0 a 4 pestañas). |
+| `92d9dd39` | **F2** · **H24** academia: 12 rutas compactas en móvil (4.670 → 2.172 px), `IconTile` común, portada con respaldo y metadatos en una línea. |
+| `efc9bf32` | **F2** · **H17** los 24 radios sueltos de la web pública pasan a `chip/media/card`. |
+| `ed017af3` | **App** · **H13** (parte): un plan de pago sin macros ya no ofrece subir a Coach; ofrece preparar su nutrición; Coach ve «en camino». |
+
+### Pendiente
+
+1. **Cuenta admin de QA** (email + contraseña) para capturar Inicio, Entrenar, Nutrición, Progreso, Ajustes, Mi calendario, Drive, las 17 secciones de Admin y el panel de entrenador en los tres tamaños. Sin ella no se pueden verificar F3, F4 ni F6, ni el rediseño de las pantallas densas.
+2. **Decisión de producto sobre los macros de Free.** La landing y la tabla de planes prometen macros gratis; la app reserva el plan de nutrición a Plus (`nutritionPlan` en `entitlements.ts`) y bloquea la pestaña. O se construye una vista de macros para Free, o se corrige la promesa en la web. No se toca sin decisión.
+3. **H10 (landing de 15.800 px con cuatro teléfonos y tres CTAs idénticos).** Recortar secciones es una decisión de contenido y SEO: hay que elegir qué se queda.
+4. **H20 (ritmo vertical)** en las secciones ancladas (`PhoneStory`, `FeatureGallery`, `StickySteps`): los huecos grandes vienen del scroll fijado, no del espaciado. Requiere rediseñar la coreografía, no un ajuste de `padding`.
+5. **Espejo nativo** (H2 barra que tapa contenido, H3 verde+rojo+dorado en el registro, H7 Mac sin ancho máximo, H8 récord truncado, H22 registro de Big Shoulders): la app es SwiftUI en `native/`; hace falta compilar y probar en simulador para verificar cada cambio.
