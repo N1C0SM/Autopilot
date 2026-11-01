@@ -413,11 +413,13 @@ struct SectionView: View {
 
     var body: some View {
         #if os(macOS)
-        // La web de escritorio ocupa todo el ancho (`<main>` es `w-full` con `p-4 md:p-8 lg:p-10`,
-        // sin `max-w`): aquí no hay tope de 948, solo el padding del lienzo.
+        // En Mac el contenido no debe estirarse sin límite (como en la web con `max-w-6xl`):
+        // un tope de 1.280 px mantiene la legibilidad en pantallas grandes.
         GeometryReader { geo in
             canvas
                 .padding(.horizontal, section.lucide != nil ? Self.canvasPadding(for: geo.size.width) : 0)
+                .frame(maxWidth: 1280)
+                .frame(maxWidth: .infinity, alignment: .center)
         }
         // El margen del lienzo también es negro: sin esto se veía una franja gris a los lados.
         .background(Palette.background.ignoresSafeArea())

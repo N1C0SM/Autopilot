@@ -772,8 +772,8 @@ struct SetLine: View {
             }
             Button { workout.toggleDone(exercise, set: index) } label: {
                 ZStack {
-                    Circle().strokeBorder(set.done ? Palette.success : Palette.muted.opacity(0.4), lineWidth: 2)
-                        .background(Circle().fill(set.done ? Palette.success : .clear))
+                    Circle().strokeBorder(set.done ? Palette.gold : Palette.muted.opacity(0.4), lineWidth: 2)
+                        .background(Circle().fill(set.done ? Palette.gold : .clear))
                     Image(systemName: "checkmark").font(.inter(size: 14, weight: .heavy))
                         .foregroundStyle(set.done ? Color.white : Palette.muted.opacity(0.4))
                 }
@@ -841,7 +841,7 @@ struct SetLine: View {
         .padding(.leading, 12).padding(.trailing, 8).padding(.vertical, 8)
         .background(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(isCurrent ? Palette.gold.opacity(0.05) : (set.done && !isWarmup ? Palette.success.opacity(0.14) : .clear))
+                .fill(isCurrent ? Palette.gold.opacity(0.05) : (set.done && !isWarmup ? Palette.gold.opacity(0.14) : .clear))
                 .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(isCurrent ? Palette.gold.opacity(0.5) : .clear, lineWidth: 1))
         )
         .overlay(alignment: .top) { if separator && !isCurrent { Rectangle().fill(Palette.separator).frame(height: 0.5).padding(.leading, 12) } }
