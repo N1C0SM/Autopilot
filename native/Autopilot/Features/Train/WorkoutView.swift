@@ -774,7 +774,7 @@ struct SetLine: View {
                 ZStack {
                     Circle().strokeBorder(set.done ? Palette.gold : Palette.muted.opacity(0.4), lineWidth: 2.5)
                         .background(Circle().fill(set.done ? Palette.gold : .clear))
-                    Image(systemName: "checkmark").font(.inter(size: 18, weight: .heavy))
+                    Image(systemName: "checkmark").font(.inter(size: 18, weight: .bold))
                         .foregroundStyle(set.done ? Color.black : Palette.muted.opacity(0.4))
                         .scaleEffect(set.done ? 1 : 0.6)
                         .animation(.spring(response: 0.25, dampingFraction: 0.6), value: set.done)
