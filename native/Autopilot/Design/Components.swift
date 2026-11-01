@@ -137,7 +137,7 @@ struct FloatingTabBar: View {
                         Text(tab.tabTitle).font(.inter(size: 11, weight: .medium)).lineLimit(1)
                     }
                     .foregroundStyle(active ? Color.black : Palette.muted)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(.horizontal, 14).padding(.vertical, 6)
                     .background {
                         if active {
                             Capsule().fill(Palette.gold.opacity(0.9))
@@ -145,7 +145,8 @@ struct FloatingTabBar: View {
                                 .matchedGeometryEffect(id: "pill", in: pill)
                         }
                     }
-                    .contentShape(Capsule())
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(tab.tabTitle)
