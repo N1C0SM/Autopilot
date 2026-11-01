@@ -3,12 +3,21 @@ import CoreText
 
 /// Inter, la misma fuente variable que la web (`@fontsource-variable/inter`), registrada al arrancar.
 enum InterFont {
-    static let name: String = {
-        if let url = Bundle.main.url(forResource: "InterVariable", withExtension: "ttf") {
-            CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
+    // PostScript name de InterVariable.ttf (variable font: el nombre base es «Inter»).
+    static let name: String = "Inter"
+
+    static func register() {
+        guard let url = Bundle.main.url(forResource: "InterVariable", withExtension: "ttf") else {
+            print("[fonts] InterVariable.ttf no está en el bundle")
+            return
         }
-        return "Inter"
-    }()
+        var error: Unmanaged<CFError>?
+        let ok = CTFontManagerRegisterFontsForURL(url as CFURL, .process, &error)
+        if !ok {
+            if let e = error?.takeRetainedValue() { print("[fonts] Inter no se pudo registrar: \(e)") }
+            else { print("[fonts] Inter no se pudo registrar (motivo desconocido)") }
+        }
+    }
 }
 
 /// Escala tipográfica de la web (`type-*`) en Inter; crece con el tamaño de texto (Dynamic Type).
@@ -37,12 +46,22 @@ extension Font {
 
 /// Firma de marca: cifras protagonistas en Big Shoulders (igual que `.type-figure` en la web).
 enum FigureFont {
-    static let name: String = {
-        if let url = Bundle.main.url(forResource: "BigShoulders-Bold", withExtension: "ttf") {
-            CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
+    // El nombre de familia es «Big Shoulders», pero `Font.custom` necesita el nombre
+    // PostScript, que es «BigShoulders-Bold». Por eso antes las cifras salían en Inter.
+    static let name: String = "BigShoulders-Bold"
+
+    static func register() {
+        guard let url = Bundle.main.url(forResource: "BigShoulders-Bold", withExtension: "ttf") else {
+            print("[fonts] BigShoulders-Bold.ttf no está en el bundle")
+            return
         }
-        return "Big Shoulders"
-    }()
+        var error: Unmanaged<CFError>?
+        let ok = CTFontManagerRegisterFontsForURL(url as CFURL, .process, &error)
+        if !ok {
+            if let e = error?.takeRetainedValue() { print("[fonts] BigShoulders no se pudo registrar: \(e)") }
+            else { print("[fonts] BigShoulders no se pudo registrar (motivo desconocido)") }
+        }
+    }
 }
 
 extension Font {

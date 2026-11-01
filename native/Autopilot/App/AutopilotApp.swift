@@ -13,7 +13,11 @@ struct AutopilotApp: App {
                 .preferredColorScheme(.dark)
                 .tint(Palette.gold)
                 .toggleStyle(TrailingSwitchStyle())
-                .task { await session.start() }
+                .task {
+                    InterFont.register()
+                    FigureFont.register()
+                    await session.start()
+                }
         }
         #if os(macOS)
         .defaultSize(width: 1200, height: 820)
