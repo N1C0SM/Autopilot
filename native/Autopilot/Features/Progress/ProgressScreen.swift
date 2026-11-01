@@ -250,12 +250,7 @@ struct ProgressScreen: View {
             }
         }
         .fullScreenCoverCompat(item: $viewing) { p in
-            ZStack {
-                Color.black.ignoresSafeArea()
-                CachedAsyncImage(url: p.url) { $0.resizable().scaledToFit() } placeholder: { BrandLoader() }
-            }
-            .onTapGesture { viewing = nil }
-            .accessibilityLabel("Foto de progreso del \(p.shortDate). Toca para cerrar")
+            ProgressPhotoViewer(photo: p) { viewing = nil }
         }
     }
 
@@ -535,6 +530,274 @@ struct ProgressScreen: View {
     }
 }
 
+// MARK: - Visor de fotos
+
+/// Visor a pantalla completa de una foto de «Físico», como Fotos de Apple: deslizar hacia arriba
+/// sube la foto y abre debajo la información de ese scan (fecha, cifras y resultados); hacia abajo
+/// la esconde y, si ya estaba escondida, cierra el visor. El botón «i» hace lo mismo sin gesto
+/// (Mac, VoiceOver). Mismo contenido y textos que `PhotoInfoPanel` en la web (`ProgressPhotos.tsx`).
+struct ProgressPhotoViewer: View {
+    let photo: ProgressModel.Photo
+    var onClose: () -> Void
+    @State private var showInfo = false
+    /// Recorrido vertical del dedo mientras arrastra (negativo = hacia arriba).
+    @State private var drag: CGFloat = 0
+    @State private var scan: PhotoScanInfo.Load = .loading
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+            GeometryReader { geo in
+                // El panel ocupa algo más de media pantalla, como en Fotos.
+                let panel = max(260, min(geo.size.height * 0.58, 620))
+                // 0 = solo la foto, 1 = información abierta; sigue al dedo mientras arrastra.
+                let progress = min(1, max(0, (showInfo ? 1 : 0) - drag / panel))
+                // Con la información cerrada, arrastrar hacia abajo baja la foto para cerrarla.
+                let pull = showInfo ? 0 : max(0, drag)
+                ZStack(alignment: .top) {
+                    VStack(spacing: 0) {
+                        CachedAsyncImage(url: photo.url) { $0.resizable().scaledToFit() } placeholder: { BrandLoader() }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .offset(y: pull)
+                            .contentShape(Rectangle())
+                            .onTapGesture { if showInfo { setInfo(false) } else { onClose() } }
+                            .gesture(swipe(panel: panel))
+                            .accessibilityElement()
+                            .accessibilityLabel("Foto de progreso del \(photo.longDate)")
+                            .accessibilityHint("Desliza hacia arriba para ver la información")
+                            .accessibilityAction(named: showInfo ? "Ocultar información" : "Ver información") { setInfo(!showInfo) }
+                        infoPanel(panel: panel, bottomInset: geo.safeAreaInsets.bottom)
+                            .frame(height: panel)
+                            .frame(height: panel * progress, alignment: .top)
+                            .clipped()
+                    }
+                    topBar.opacity(pull > 0 ? 0 : 1)
+                }
+            }
+            .ignoresSafeArea(edges: .bottom)
+        }
+        .task(id: photo.id) { scan = await PhotoScanInfo.load(scanId: photo.scanId) }
+    }
+
+    private var topBar: some View {
+        HStack(spacing: 8) {
+            Spacer()
+            roundButton(showInfo ? "info.circle.fill" : "info.circle", label: showInfo ? "Ocultar información" : "Ver información", active: showInfo) {
+                setInfo(!showInfo)
+            }
+            roundButton("xmark", label: "Cerrar visor") { Haptics.tap(); onClose() }
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+    }
+
+    private func roundButton(_ symbol: String, label: String, active: Bool = false, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(active ? Color.black : Color.white)
+                .frame(width: 44, height: 44)
+                .background(active ? Palette.gold : Color.white.opacity(0.15), in: Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+    }
+
+    /// Arriba abre la información; abajo la cierra o, si ya estaba cerrada, cierra el visor.
+    private func swipe(panel: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 10)
+            .onChanged { value in
+                // Solo cuenta el gesto vertical: un deslizamiento lateral no mueve nada.
+                guard abs(value.translation.height) > abs(value.translation.width) else { return }
+                drag = value.translation.height
+            }
+            .onEnded { value in
+                let moved = value.translation.height
+                let flung = value.predictedEndTranslation.height
+                if showInfo {
+                    setInfo(!(moved > panel * 0.25 || flung > panel * 0.5))
+                } else if moved < -panel * 0.2 || flung < -panel * 0.4 {
+                    setInfo(true)
+                } else if moved > 110 || flung > 320 {
+                    onClose()
+                } else {
+                    setInfo(false)
+                }
+            }
+    }
+
+    private func setInfo(_ open: Bool) {
+        if open != showInfo { Haptics.selection() }
+        withAnimation(reduceMotion ? nil : .spring(response: 0.38, dampingFraction: 0.86)) {
+            showInfo = open
+            drag = 0
+        }
+    }
+
+    private var poseLabel: String {
+        switch photo.angle {
+        case "front": "De frente"
+        case "back": "De espalda"
+        default: "Foto de progreso"
+        }
+    }
+
+    private func infoPanel(panel: CGFloat, bottomInset: CGFloat) -> some View {
+        VStack(spacing: 0) {
+            // Asa y fecha: también se arrastran para bajar el panel.
+            VStack(alignment: .leading, spacing: 2) {
+                Capsule().fill(Palette.muted.opacity(0.4)).frame(width: 36, height: 5)
+                    .frame(maxWidth: .infinity).padding(.bottom, 12)
+                    .accessibilityHidden(true)
+                Text(photo.longDate.isEmpty ? "Sin fecha" : photo.longDate).font(.apTitle3)
+                    .accessibilityAddTraits(.isHeader)
+                Text(poseLabel).font(.apSubhead).foregroundStyle(Palette.muted)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 20).padding(.top, 10).padding(.bottom, 16)
+            .contentShape(Rectangle())
+            .gesture(swipe(panel: panel))
+            ScrollView {
+                scanContent
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, bottomInset + 24)
+            }
+            .scrollIndicators(.hidden)
+        }
+        .frame(maxWidth: 640, maxHeight: .infinity, alignment: .top)
+        .background(Palette.card, in: UnevenRoundedRectangle(topLeadingRadius: Radius.hero, topTrailingRadius: Radius.hero, style: .continuous))
+        .frame(maxWidth: .infinity)
+    }
+
+    @ViewBuilder private var scanContent: some View {
+        switch scan {
+        case .loading:
+            BrandLoader().frame(maxWidth: .infinity).padding(.vertical, 24)
+        case .noScan:
+            Text("Esta foto no tiene análisis. Las fotos que guarda cada scan muestran aquí sus resultados.")
+                .font(.apSubhead).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
+        case .failed:
+            Text("No hemos podido cargar el análisis de esta foto.")
+                .font(.apSubhead).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
+        case .loaded(let info):
+            scanDetail(info)
+        }
+    }
+
+    private func scanDetail(_ info: PhotoScanInfo) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Label("Scan", systemImage: "sparkles")
+                .font(.apCaption.weight(.bold)).tracking(1.6).textCase(.uppercase)
+                .foregroundStyle(Palette.gold)
+            if info.physique != nil || info.potential != nil || info.bodyFat != nil {
+                HStack(alignment: .top, spacing: 24) {
+                    if let v = info.physique { figure(NumberText.decimal(v), unit: "/10", label: "Físico") }
+                    if let v = info.potential { figure(NumberText.decimal(v), unit: "/10", label: "Potencial", accent: true) }
+                    if let v = info.bodyFat { figure("~\(Int(v.rounded()))", unit: "%", label: "Grasa estimada") }
+                }
+            }
+            if let text = info.headline { Text(text).font(.apHeadline).fixedSize(horizontal: false, vertical: true) }
+            if let text = info.summary {
+                Text(text).font(.apSubhead).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
+            }
+            if let text = info.bottleneck {
+                (Text("Lo que más te frena: ").foregroundStyle(Palette.muted) + Text(text))
+                    .font(.apSubhead).fixedSize(horizontal: false, vertical: true)
+            }
+            if !info.improvements.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Qué mejorar").font(.apHeadline).accessibilityAddTraits(.isHeader)
+                    ForEach(Array(info.improvements.enumerated()), id: \.offset) { index, item in
+                        HStack(alignment: .top, spacing: 12) {
+                            Text("\(index + 1)")
+                                .font(.apFootnote.weight(.bold).monospacedDigit())
+                                .foregroundStyle(.black)
+                                .frame(width: 24, height: 24)
+                                .background(Palette.gold, in: Circle())
+                                .accessibilityHidden(true)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(item.label ?? "").font(.apSubhead).fixedSize(horizontal: false, vertical: true)
+                                if let priority = item.priority, !priority.isEmpty {
+                                    Text("Prioridad \(priority.lowercased())").font(.apCaption.weight(.semibold)).foregroundStyle(Palette.gold)
+                                }
+                            }
+                        }
+                        .accessibilityElement(children: .combine)
+                    }
+                }
+            }
+            if info.isEmpty {
+                Text("Este análisis no tiene detalles guardados.").font(.apSubhead).foregroundStyle(Palette.muted)
+            }
+            Text("Estimación orientativa a partir de la foto.").font(.apFootnote).foregroundStyle(Palette.muted)
+        }
+    }
+
+    private func figure(_ value: String, unit: String, label: String, accent: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .firstTextBaseline, spacing: 2) {
+                Text(value).font(.apFigureSmall).foregroundStyle(accent ? Palette.gold : Palette.foreground)
+                Text(unit).font(.apFootnote).foregroundStyle(Palette.muted)
+            }
+            .lineLimit(1).minimumScaleFactor(0.7)
+            Text(label).font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(1)
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// Análisis guardado de una foto de scan (`scan_history`), leído al abrir el visor. Nunca vuelve
+/// a ejecutar el Scan. Mismos campos que el panel de la web.
+struct PhotoScanInfo {
+    enum Load { case loading, noScan, failed, loaded(PhotoScanInfo) }
+
+    var physique: Double?
+    var potential: Double?
+    var bodyFat: Double?
+    var headline: String?
+    var summary: String?
+    var bottleneck: String?
+    var improvements: [ScanResult.Improvement]
+
+    var isEmpty: Bool { headline == nil && summary == nil && bottleneck == nil && improvements.isEmpty }
+
+    static func load(scanId: String?) async -> Load {
+        guard let scanId else { return .noScan }
+        /// Un JSON viejo o raro no tumba la fila: sin resultado legible quedan las cifras de las columnas.
+        struct Lossy: Decodable {
+            let value: ScanResult?
+            init(from decoder: Decoder) throws { value = try? ScanResult(from: decoder) }
+        }
+        struct Row: Decodable { let physique: Double?; let potential: Double?; let result: Lossy? }
+        let rows: [Row]
+        do {
+            rows = try await Backend.client.from("scan_history")
+                .select("physique, potential, result")
+                .eq("id", value: scanId)
+                .limit(1)
+                .execute().value
+        } catch {
+            return .failed
+        }
+        guard let row = rows.first else { return .noScan }
+        let r = row.result?.value
+        func text(_ s: String?) -> String? {
+            let t = s?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            return t.isEmpty ? nil : t
+        }
+        return .loaded(PhotoScanInfo(
+            physique: row.physique ?? r?.physique,
+            potential: row.potential ?? r?.potential,
+            bodyFat: r?.body_composition?.body_fat_pct,
+            headline: text(r?.headline_diagnosis),
+            summary: text(r?.summary),
+            bottleneck: text(r?.bottleneck),
+            improvements: Array((r?.improvements ?? []).filter { text($0.label) != nil }.prefix(4))))
+    }
+}
+
 // MARK: - Modelo
 
 /// Estado de la pantalla. Todo lo que se publica ya viene calculado y formateado: la vista no hace trabajo.
@@ -560,6 +823,10 @@ final class ProgressModel: ObservableObject {
         /// Mes y día ya formateados: formatear dentro del `body` cuesta caro al hacer scroll.
         let month: String
         let shortDate: String
+        /// «1 de noviembre de 2026»: cabecera del panel de información del visor.
+        let longDate: String
+        /// Scan que guardó la foto (`scan_history`); `nil` en las fotos subidas a mano.
+        let scanId: String?
     }
 
     /// Fotos agrupadas por mes, en el mismo orden en que llegan del servidor (más recientes primero).
@@ -952,7 +1219,7 @@ final class ProgressModel: ObservableObject {
 
     private nonisolated static func photoRows(userId: UUID) async -> [ProgressCompute.PhotoRow]? {
         let rows: [ProgressCompute.PhotoRow]? = try? await Backend.client.from("progress_photos")
-            .select("id, photo_url, taken_at, created_at, note")
+            .select("id, photo_url, taken_at, created_at, note, scan_history_id")
             .eq("user_id", value: userId)
             .order("taken_at", ascending: false)
             .order("created_at", ascending: false)
@@ -1004,6 +1271,7 @@ private enum ProgressCompute {
     static let dayMonthStyle: Date.FormatStyle = .dateTime.day().month(.abbreviated).locale(Locale(identifier: "es_ES"))
     static let recordDateStyle: Date.FormatStyle = .dateTime.day().month(.abbreviated).year().locale(Locale(identifier: "es_ES"))
     static let monthYearStyle: Date.FormatStyle = .dateTime.month(.wide).year().locale(Locale(identifier: "es_ES"))
+    static let longDateStyle: Date.FormatStyle = .dateTime.day().month(.wide).year().locale(Locale(identifier: "es_ES"))
 
     // MARK: Filas de Supabase
 
@@ -1051,6 +1319,7 @@ private enum ProgressCompute {
         let created_at: String
         /// «Scan · frente» / «Scan · espalda»: de aquí sale el ángulo de la foto.
         let note: String?
+        let scan_history_id: String?
     }
 
     // MARK: Resultados
@@ -1238,7 +1507,9 @@ private enum ProgressCompute {
                 date: date,
                 angle: angle(row.note),
                 month: date.map { monthYearStyle.format($0).progressCapitalizedFirst } ?? "",
-                shortDate: date.map { dayMonthStyle.format($0).replacingOccurrences(of: ".", with: "") } ?? ""))
+                shortDate: date.map { dayMonthStyle.format($0).replacingOccurrences(of: ".", with: "") } ?? "",
+                longDate: date.map { longDateStyle.format($0) } ?? "",
+                scanId: row.scan_history_id))
         }
         // Agrupación por mes en el mismo orden de llegada (la vista ya no filtra en cada redibujado).
         var index: [String: Int] = [:]
