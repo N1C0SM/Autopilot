@@ -18,7 +18,7 @@ export default function StickySteps({ eyebrow, steps }: { eyebrow: string; steps
       {steps.map(({ icon: I, title, text, visual }, i) => <li key={title}><span className="block type-figure text-[96px] font-bold leading-none tabular-nums text-primary">{String(i + 1).padStart(2, "0")}</span><I className="mx-auto mt-2 h-8 w-8 text-muted-foreground" aria-hidden="true" /><h3 className="mt-4 font-rounded text-[40px] font-bold leading-tight">{title}</h3><p className="mx-auto mt-2 max-w-md type-body text-muted-foreground">{text}</p>{visual && <div className="mx-auto mt-6 max-w-xs">{visual}</div>}</li>)}
     </ol>
   </section>;
-  return <section ref={ref} aria-label={eyebrow} style={{ height: `${steps.length * 100}vh` }} data-pinned className="relative">
+  return <section ref={ref} aria-label={eyebrow} style={{ height: `${Math.max(2, steps.length - 1) * 100}vh` }} data-pinned className="relative">
     <ol className="sr-only">{steps.map((s, i) => <li key={s.title}><h3>{i + 1}. {s.title}</h3><p>{s.text}</p></li>)}</ol>
     <div aria-hidden="true" className="sticky top-0 flex h-screen flex-col items-center justify-center px-5 text-center sm:px-8">
       <p className="type-subhead text-primary">{eyebrow}</p>

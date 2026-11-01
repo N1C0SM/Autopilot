@@ -15,7 +15,6 @@ import ScrollWords from "@/web/components/ScrollWords";
 import BookShowcase from "@/web/components/BookShowcase";
 import StickySteps from "@/web/components/StickySteps";
 import { Dumbbell, LineChart, SlidersHorizontal } from "lucide-react";
-import FeatureGallery from "@/web/components/FeatureGallery";
 import Benefits from "@/web/components/Benefits";
 import AppStoreBadges from "@/web/components/AppStoreBadges";
 import HeroPhoneMotion from "@/web/components/HeroPhoneMotion";
@@ -159,9 +158,6 @@ export default function Index() {
 
     {/* 4 · Guías en PDF: de pila a abanico, con precios reales */}
     <BookShowcase />
-
-    {/* 5 · Todo lo que incluye, en una galería horizontal */}
-    <FeatureGallery />
 
     {/* 6 · Cómo funciona, en tres actos */}
     <StickySteps eyebrow="Cómo funciona" steps={[
