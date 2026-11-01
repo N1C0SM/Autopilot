@@ -388,7 +388,7 @@ struct ProgressScreen: View {
                 Label("Tu mejor marca", systemImage: "trophy").font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.gold)
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
                     Text(best.e1rmText).font(.figure(size: 64))
-                        .lineLimit(1).minimumScaleFactor(0.6)
+                        .lineLimit(1).minimumScaleFactor(0.5).allowsTightening(true)
                         .contentTransition(.numericText())
                     Text("kg").font(.apTitle3).foregroundStyle(.white.opacity(0.7))
                 }
@@ -432,7 +432,9 @@ struct ProgressScreen: View {
                 Spacer(minLength: 8)
                 VStack(alignment: .trailing, spacing: 4) {
                     Text("\(pr.weightText) kg × \(pr.reps)").font(.apBody.weight(.semibold).monospacedDigit())
+                        .lineLimit(1).minimumScaleFactor(0.7).allowsTightening(true)
                     Text("1RM ~\(pr.e1rmText) kg").font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted)
+                        .lineLimit(1).minimumScaleFactor(0.7)
                 }
             }
             .padding(.horizontal, 16).padding(.vertical, 14)
