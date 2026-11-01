@@ -3,7 +3,7 @@ import { cn } from "@/shared/lib/utils";
 
 /**
  * Superficie base de la app: tarjeta plana que se separa del fondo por color,
- * sin borde ni sombra. `rounded-2xl bg-card`.
+ * sin borde ni sombra. `rounded-card bg-card`.
  */
 const PADDING: Record<"none" | "sm" | "md", string> = {
   none: "",
@@ -17,7 +17,7 @@ export interface SurfaceProps extends React.HTMLAttributes<HTMLDivElement> {
 
 const Surface = React.forwardRef<HTMLDivElement, SurfaceProps>(
   ({ className, padding = "md", ...props }, ref) => (
-    <div ref={ref} className={cn("rounded-2xl bg-card", PADDING[padding], className)} {...props} />
+    <div ref={ref} className={cn("rounded-card bg-card", PADDING[padding], className)} {...props} />
   ),
 );
 Surface.displayName = "Surface";

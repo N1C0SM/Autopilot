@@ -26,7 +26,7 @@ interface ListGroupProps extends Omit<React.HTMLAttributes<HTMLElement>, "title"
 const ListGroup = ({ header, footer, inset, className, children, ...props }: ListGroupProps) => (
   <section className={className} {...props}>
     {header ? <h2 className="type-group-header px-4 pb-1.5">{header}</h2> : null}
-    <div className={cn("overflow-hidden rounded-2xl", inset ? "bg-secondary" : "bg-card")}>{children}</div>
+    <div className={cn("overflow-hidden rounded-card", inset ? "bg-secondary" : "bg-card")}>{children}</div>
     {footer ? <p className="px-4 pt-1.5 type-footnote text-muted-foreground">{footer}</p> : null}
   </section>
 );

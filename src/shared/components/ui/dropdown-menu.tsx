@@ -25,7 +25,7 @@ const DropdownMenuSubTrigger = React.forwardRef<
   <DropdownMenuPrimitive.SubTrigger
     ref={ref}
     className={cn(
-      "menu-item flex cursor-default select-none items-center gap-2 outline-none data-[state=open]:bg-accent focus:bg-accent md:rounded-md",
+      "menu-item flex cursor-default select-none items-center gap-2 outline-none data-[state=open]:bg-accent focus:bg-accent md:rounded-chip",
       inset && "pl-8",
       className,
     )}
@@ -79,7 +79,7 @@ const DropdownMenuItem = React.forwardRef<
   <DropdownMenuPrimitive.Item
     ref={ref}
     className={cn(
-      "menu-item relative flex cursor-default select-none items-center gap-2 outline-none transition-colors data-[disabled]:pointer-events-none data-[disabled]:opacity-40 focus:bg-accent focus:text-accent-foreground md:rounded-md",
+      "menu-item relative flex cursor-default select-none items-center gap-2 outline-none transition-colors data-[disabled]:pointer-events-none data-[disabled]:opacity-40 focus:bg-accent focus:text-accent-foreground md:rounded-chip",
       inset && "pl-8",
       className,
     )}
@@ -95,7 +95,7 @@ const DropdownMenuCheckboxItem = React.forwardRef<
   <DropdownMenuPrimitive.CheckboxItem
     ref={ref}
     className={cn(
-      "menu-item relative flex cursor-default select-none items-center pl-10 outline-none transition-colors data-[disabled]:pointer-events-none data-[disabled]:opacity-40 focus:bg-accent focus:text-accent-foreground md:rounded-md md:pl-8",
+      "menu-item relative flex cursor-default select-none items-center pl-10 outline-none transition-colors data-[disabled]:pointer-events-none data-[disabled]:opacity-40 focus:bg-accent focus:text-accent-foreground md:rounded-chip md:pl-8",
       className,
     )}
     checked={checked}
@@ -118,7 +118,7 @@ const DropdownMenuRadioItem = React.forwardRef<
   <DropdownMenuPrimitive.RadioItem
     ref={ref}
     className={cn(
-      "menu-item relative flex cursor-default select-none items-center pl-10 outline-none transition-colors data-[disabled]:pointer-events-none data-[disabled]:opacity-40 focus:bg-accent focus:text-accent-foreground md:rounded-md md:pl-8",
+      "menu-item relative flex cursor-default select-none items-center pl-10 outline-none transition-colors data-[disabled]:pointer-events-none data-[disabled]:opacity-40 focus:bg-accent focus:text-accent-foreground md:rounded-chip md:pl-8",
       className,
     )}
     {...props}

@@ -105,7 +105,7 @@ const SelectItem = React.forwardRef<
   <SelectPrimitive.Item
     ref={ref}
     className={cn(
-      "menu-item relative flex w-full cursor-default select-none items-center pl-10 outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-40 focus:bg-accent focus:text-accent-foreground md:rounded-md md:pl-8",
+      "menu-item relative flex w-full cursor-default select-none items-center pl-10 outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-40 focus:bg-accent focus:text-accent-foreground md:rounded-chip md:pl-8",
       className,
     )}
     {...props}

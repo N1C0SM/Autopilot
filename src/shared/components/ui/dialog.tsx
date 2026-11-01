@@ -108,7 +108,7 @@ const DialogContent = React.forwardRef<React.ElementRef<typeof DialogPrimitive.C
           ref={ref}
           className={cn(
             "fixed inset-x-0 bottom-0 z-50 grid max-h-[calc(100dvh-var(--safe-top)-10px)] w-full gap-4 overflow-y-auto overscroll-contain rounded-t-[28px] bg-card px-4 pb-[max(1rem,var(--safe-bottom))] pt-3 shadow-[0_-8px_40px_rgba(0,0,0,0.45)] outline-none data-[state=open]:animate-sheet-up data-[state=closed]:animate-sheet-down",
-            "sm:inset-0 sm:m-auto sm:h-fit sm:max-h-[calc(100dvh-2rem)] sm:max-w-lg sm:rounded-2xl sm:p-6 sm:shadow-2xl sm:duration-200 sm:data-[state=open]:animate-in sm:data-[state=closed]:animate-out sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95",
+            "sm:inset-0 sm:m-auto sm:h-fit sm:max-h-[calc(100dvh-2rem)] sm:max-w-lg sm:rounded-card sm:p-6 sm:shadow-2xl sm:duration-200 sm:data-[state=open]:animate-in sm:data-[state=closed]:animate-out sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95",
             className,
           )}
           style={{ ...drag.style, ...style }}

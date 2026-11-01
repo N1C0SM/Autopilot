@@ -5,7 +5,7 @@ export type SkeletonLineProps = React.HTMLAttributes<HTMLDivElement>;
 
 /** Único gris de carga de la app. */
 const SkeletonLine = ({ className, ...props }: SkeletonLineProps) => (
-  <div className={cn("h-4 animate-pulse rounded-lg bg-secondary/40", className)} {...props} />
+  <div className={cn("h-4 animate-pulse rounded-chip bg-secondary/40", className)} {...props} />
 );
 
 /** Fila de lista en carga: misma altura (56px) que una fila real. */

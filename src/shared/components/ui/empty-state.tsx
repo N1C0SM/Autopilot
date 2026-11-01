@@ -52,7 +52,7 @@ const EmptyState = ({ icon: Icon, title, description, action, className, card, p
     </div>
   </div>
 ) : (
-  <div className={cn("flex flex-col items-center justify-center px-6 py-12 text-center", card && "rounded-2xl bg-card py-10", className)}>
+  <div className={cn("flex flex-col items-center justify-center px-6 py-12 text-center", card && "rounded-card bg-card py-10", className)}>
     {Icon ? (
       <IconTile icon={Icon} size="lg" />
     ) : null}
