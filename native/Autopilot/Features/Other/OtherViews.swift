@@ -262,13 +262,14 @@ struct NutritionView: View {
                 let end = start + parts[i] / total
                 Circle().trim(from: start + gap, to: max(start + gap, end - gap))
                     .stroke(shades[i], style: StrokeStyle(lineWidth: 14, lineCap: .round)).rotationEffect(.degrees(-90))
+                    .animation(.snappy, value: end)
             }
             VStack(spacing: 2) {
-                Text(NumberText.integer(Int(kcal))).font(.figure(size: 40)).lineLimit(1).minimumScaleFactor(0.6)
+                Text(NumberText.integer(Int(kcal))).font(.figure(size: 52)).lineLimit(1).minimumScaleFactor(0.6)
                 Text("kcal").font(.apFootnote).foregroundStyle(Palette.muted)
             }
         }
-        .frame(width: 136, height: 136).padding(7)
+        .frame(width: 180, height: 180)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Objetivo de \(Int(kcal)) kilocalorías: \(Int(p)) g de proteína, \(Int(c)) g de carbohidratos y \(Int(f)) g de grasas")
     }
@@ -281,7 +282,7 @@ struct NutritionView: View {
                 .stroke(Palette.gold, style: StrokeStyle(lineWidth: 14, lineCap: .round)).rotationEffect(.degrees(-90))
                 .animation(reduceMotion ? nil : .snappy, value: doneCount)
             VStack(spacing: 4) {
-                Text("\(doneCount)").font(.figure(size: 44))
+                Text("\(doneCount)").font(.figure(size: 56))
                     .lineLimit(1).minimumScaleFactor(0.6)
                     .contentTransition(.numericText())
                     .animation(reduceMotion ? nil : .snappy, value: doneCount)
@@ -290,7 +291,7 @@ struct NutritionView: View {
                     .lineLimit(1).minimumScaleFactor(0.7)
             }
         }
-        .frame(width: 136, height: 136).padding(7)
+        .frame(width: 180, height: 180)
         .accessibilityElement(children: .ignore).accessibilityLabel("\(doneCount) de \(meals.count) comidas hechas hoy")
     }
 
