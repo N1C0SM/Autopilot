@@ -368,8 +368,23 @@ struct WeeklyRoutineView: View {
         dayStrip(circle: wideLayout ? 48 : 44)
     }
 
-    private func dayStrip(circle: CGFloat) -> some View {
+    private func legendDot(color: Color, label: String) -> some View {
         HStack(spacing: 4) {
+            Circle().fill(color).frame(width: 8, height: 8)
+            Text(label).font(.apCaption).foregroundStyle(Palette.muted)
+        }
+    }
+
+    private func legendCheck(label: String) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: "checkmark").font(.apCaption.weight(.bold)).foregroundStyle(Palette.gold)
+            Text(label).font(.apCaption).foregroundStyle(Palette.muted)
+        }
+    }
+
+    private func dayStrip(circle: CGFloat) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 4) {
             ForEach(DayNames.all, id: \.self) { day in
                 let plan = workPlan(day)
                 let isToday = day == DayNames.today
@@ -380,8 +395,12 @@ struct WeeklyRoutineView: View {
                     withAnimation(reduceMotion ? nil : .snappy) { expanded = day }
                 } label: {
                     VStack(spacing: 3) {
-                        Text(String(day.prefix(3))).font(.apSubhead.weight(isExpanded ? .semibold : .medium))
-                            .lineLimit(1).minimumScaleFactor(0.6)
+                        if isToday && doneToday {
+                            Image(systemName: "checkmark").font(.apSubhead.weight(.bold))
+                        } else {
+                            Text(String(day.prefix(3))).font(.apSubhead.weight(isExpanded ? .semibold : .medium))
+                                .lineLimit(1).minimumScaleFactor(0.6)
+                        }
                         // El punto ocupa su hueco siempre: las iniciales de los 7 días comparten
                         // línea base, haya punto o no.
                         Circle()
@@ -406,6 +425,14 @@ struct WeeklyRoutineView: View {
         }
         .padding(6)
         .background(Palette.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        HStack(spacing: 14) {
+            legendDot(color: Palette.gold, label: "Hoy")
+            legendDot(color: Palette.secondary, label: "Programado")
+            legendDot(color: Palette.muted.opacity(0.4), label: "Descanso")
+            legendCheck(label: "Hecho")
+        }
+        .padding(.horizontal, 6).padding(.bottom, 4)
+        }
         // Control compacto de 7 columnas fijas: se limita el crecimiento del texto para que las
         // iniciales nunca se trunquen con Dynamic Type. El nombre completo del día lo lee VoiceOver.
         .dynamicTypeSize(...DynamicTypeSize.accessibility1)
