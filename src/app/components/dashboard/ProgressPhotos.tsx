@@ -2,8 +2,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { formatDecimal } from "@/shared/lib/numberFormat";
 import { IconTile } from "@/shared/components/ui/icon-tile";
 import { supabase } from "@/shared/integrations/supabase/client";
-import { motion, AnimatePresence } from "framer-motion";
-import { Camera, Trash2, X, ChevronLeft, ChevronRight, Columns2, ImageOff, WifiOff, Sparkles } from "lucide-react";
+import { motion, AnimatePresence, useDragControls, useReducedMotion } from "framer-motion";
+import { Camera, Trash2, X, ChevronLeft, ChevronRight, Columns2, ImageOff, WifiOff, Sparkles, Info } from "lucide-react";
 import BeforeAfterCompare from "@/app/components/dashboard/BeforeAfterCompare";
 import { Button } from "@/shared/components/ui/button";
 import { EmptyState } from "@/shared/components/ui/empty-state";
@@ -22,7 +22,7 @@ import {
 import { toast } from "sonner";
 import { signedUrlsWithExpiry, storagePathFor } from "@/shared/lib/storageSign";
 import { toLocalDateString } from "@/shared/lib/localDates";
-import { evolutionLabel, photoPose } from "@/app/components/progress/progressPhotos";
+import { evolutionLabel, photoPose, photoPoseLabel } from "@/app/components/progress/progressPhotos";
 import { compressImage, toBrowserFriendlyImage } from "@/shared/lib/imageCompression";
 
 interface Photo {
@@ -40,6 +40,8 @@ interface Photo {
     physique: number;
     style: number;
   } | null;
+  /** No se pudo leer el análisis enlazado (red o permisos). */
+  scanFailed?: boolean;
 }
 
 interface Props {
@@ -83,9 +85,29 @@ type ScanData = NonNullable<Photo["scan"]>;
 
 const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
 
-/** Ficha del análisis ya guardado; nunca vuelve a ejecutar el Scan. */
-const ScanSummaryCard = ({ scan, onClose }: { scan: ScanData; onClose: () => void }) => {
-  const r = scan.result ?? {};
+const longDate = (d: string) =>
+  new Date(d + "T00:00:00").toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" });
+
+const Figure = ({ value, unit, label, accent }: { value: string; unit: string; label: string; accent?: boolean }) => (
+  <div>
+    <p className="whitespace-nowrap">
+      <span className={`font-rounded text-[28px] font-bold leading-tight tabular-nums ${accent ? "text-primary" : "text-foreground"}`}>{value}</span>
+      <span className="ml-0.5 type-footnote text-muted-foreground">{unit}</span>
+    </p>
+    <p className="type-footnote text-muted-foreground">{label}</p>
+  </div>
+);
+
+/**
+ * Información de la foto, como en Fotos de Apple: se abre deslizando la foto hacia arriba
+ * (o con «i») y se cierra deslizando hacia abajo. Mismo contenido y textos que
+ * `ProgressPhotoViewer` en la app nativa. Nunca vuelve a ejecutar el Scan.
+ */
+const PhotoInfoPanel = ({ photo, onClose }: { photo: Photo; onClose: () => void }) => {
+  const reduceMotion = useReducedMotion();
+  const dragControls = useDragControls();
+  const scan = photo.scan;
+  const r = scan?.result ?? {};
   const headline = str(r.headline_diagnosis);
   const summary = str(r.summary);
   const bottleneck = str(r.bottleneck);
@@ -97,72 +119,78 @@ const ScanSummaryCard = ({ scan, onClose }: { scan: ScanData; onClose: () => voi
     : [];
   const bc = (r.body_composition ?? {}) as Record<string, unknown>;
   const fat = typeof bc.body_fat_pct === "number" ? bc.body_fat_pct : null;
-  const scores = [
-    { label: "Físico", value: scan.physique },
-    { label: "Potencial", value: scan.potential },
-  ].filter((s) => typeof s.value === "number");
+  const physique = typeof scan?.physique === "number" ? scan.physique : typeof r.physique === "number" ? r.physique : null;
+  const potential = typeof scan?.potential === "number" ? scan.potential : typeof r.potential === "number" ? r.potential : null;
+  const empty = !headline && !summary && !bottleneck && improvements.length === 0;
 
   return (
     <motion.div
       role="region"
-      aria-label="Análisis de esta foto"
-      initial={{ opacity: 0, y: 24 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 24 }}
-      transition={{ type: "spring", stiffness: 380, damping: 34 }}
+      aria-label="Información de la foto"
+      initial={{ y: "100%" }}
+      animate={{ y: 0 }}
+      exit={{ y: "100%" }}
+      transition={reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 380, damping: 38 }}
+      drag="y"
+      dragListener={false}
+      dragControls={dragControls}
+      dragConstraints={{ top: 0, bottom: 0 }}
+      dragElastic={{ top: 0, bottom: 0.6 }}
+      onDragEnd={(_, info) => { if (info.offset.y > 60 || info.velocity.y > 500) onClose(); }}
       onClick={(e) => e.stopPropagation()}
-      className="absolute inset-x-4 bottom-[max(1rem,var(--safe-bottom))] z-20 mx-auto max-h-[60dvh] max-w-md overflow-y-auto rounded-[22px] border border-white/10 bg-black/75 p-5 text-white backdrop-blur-xl"
+      className="absolute inset-x-0 bottom-0 z-20 mx-auto flex h-[58%] max-w-[640px] flex-col rounded-t-[28px] bg-card text-foreground"
     >
-      <div className="mb-3 flex items-center justify-between">
-        <span className="flex items-center gap-1.5 type-caption1 font-medium uppercase tracking-wide text-primary">
-          <Sparkles className="h-3.5 w-3.5" /> Scan
-        </span>
-        <button
-          type="button"
-          aria-label="Cerrar análisis"
-          onClick={onClose}
-          className="flex h-11 w-11 -mr-2 items-center justify-center rounded-full text-white/70 active:bg-white/10"
-        >
-          <X className="h-4 w-4" />
-        </button>
+      {/* Asa y fecha: también se arrastran para bajar el panel. */}
+      <div className="shrink-0 cursor-grab touch-none px-5 pb-4 pt-2.5" onPointerDown={(e) => dragControls.start(e)}>
+        <div aria-hidden="true" className="mx-auto mb-3 h-[5px] w-9 rounded-full bg-muted-foreground/40" />
+        <h2 className="type-title3">{photo.taken_at ? longDate(photo.taken_at) : "Sin fecha"}</h2>
+        <p className="type-subhead text-muted-foreground">{photoPoseLabel(photo.note)}</p>
       </div>
-
-      {(scores.length > 0 || fat !== null) && (
-        <div className="mb-4 flex gap-6">
-          {scores.map((s) => (
-            <div key={s.label}>
-              <p className="type-title2 font-semibold tabular-nums">{formatDecimal(s.value, 1)}</p>
-              <p className="type-caption1 text-white/60">{s.label}</p>
-            </div>
-          ))}
-          {fat !== null && (
-            <div>
-              <p className="type-title2 font-semibold tabular-nums">~{Math.round(fat)}%</p>
-              <p className="type-caption1 text-white/60">Grasa estimada</p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {headline && <p className="mb-2 type-headline">{headline}</p>}
-      {summary && <p className="mb-3 type-subhead text-white/75">{summary}</p>}
-      {bottleneck && (
-        <p className="mb-3 type-subhead"><span className="text-white/60">Lo que más te frena: </span>{bottleneck}</p>
-      )}
-      {improvements.length > 0 && (
-        <ul className="space-y-2 border-t border-white/10 pt-3">
-          {improvements.map((i, idx) => (
-            <li key={idx} className="flex items-start justify-between gap-3 type-subhead">
-              <span>{i.label}</span>
-              {i.priority && <span className="shrink-0 type-caption2 text-white/50">{i.priority}</span>}
-            </li>
-          ))}
-        </ul>
-      )}
-      {!headline && !summary && improvements.length === 0 && (
-        <p className="type-subhead text-white/70">Este análisis no tiene detalles guardados.</p>
-      )}
-      <p className="mt-4 type-caption2 text-white/40">Estimación orientativa a partir de la foto.</p>
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-[calc(1.5rem+var(--safe-bottom,0px))]">
+        {!photo.scan_history_id ? (
+          <p className="type-subhead text-muted-foreground">Esta foto no tiene análisis. Las fotos que guarda cada scan muestran aquí sus resultados.</p>
+        ) : photo.scanFailed ? (
+          <p className="type-subhead text-muted-foreground">No hemos podido cargar el análisis de esta foto.</p>
+        ) : !scan ? (
+          <p className="type-subhead text-muted-foreground">Esta foto no tiene análisis. Las fotos que guarda cada scan muestran aquí sus resultados.</p>
+        ) : (
+          <div className="flex flex-col gap-4">
+            <span className="flex items-center gap-1.5 type-caption2 font-bold uppercase tracking-[0.15em] text-primary">
+              <Sparkles className="h-3.5 w-3.5" aria-hidden="true" /> Scan
+            </span>
+            {(physique !== null || potential !== null || fat !== null) && (
+              <div className="flex gap-6">
+                {physique !== null && <Figure value={formatDecimal(physique, 1)} unit="/10" label="Físico" />}
+                {potential !== null && <Figure value={formatDecimal(potential, 1)} unit="/10" label="Potencial" accent />}
+                {fat !== null && <Figure value={`~${Math.round(fat)}`} unit="%" label="Grasa estimada" />}
+              </div>
+            )}
+            {headline && <p className="type-headline">{headline}</p>}
+            {summary && <p className="type-subhead text-muted-foreground">{summary}</p>}
+            {bottleneck && (
+              <p className="type-subhead"><span className="text-muted-foreground">Lo que más te frena: </span>{bottleneck}</p>
+            )}
+            {improvements.length > 0 && (
+              <section className="flex flex-col gap-3">
+                <h3 className="type-headline">Qué mejorar</h3>
+                {improvements.map((i, idx) => (
+                  <div key={idx} className="flex items-start gap-3">
+                    <span aria-hidden="true" className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary type-footnote font-bold tabular-nums text-primary-foreground">
+                      {idx + 1}
+                    </span>
+                    <div>
+                      <p className="type-subhead">{i.label}</p>
+                      {i.priority && <p className="type-caption2 font-semibold text-primary">Prioridad {i.priority.toLowerCase()}</p>}
+                    </div>
+                  </div>
+                ))}
+              </section>
+            )}
+            {empty && <p className="type-subhead text-muted-foreground">Este análisis no tiene detalles guardados.</p>}
+            <p className="type-footnote text-muted-foreground">Estimación orientativa a partir de la foto.</p>
+          </div>
+        )}
+      </div>
     </motion.div>
   );
 };
@@ -175,8 +203,11 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [viewingPhoto, setViewingPhoto] = useState<number | null>(null);
-  const [showScan, setShowScan] = useState(false);
-  useEffect(() => { setShowScan(false); }, [viewingPhoto]);
+  const [showInfo, setShowInfo] = useState(false);
+  useEffect(() => { setShowInfo(false); }, [viewingPhoto]);
+  const reduceMotion = useReducedMotion();
+  /** Hubo arrastre en la foto: el clic que llega al soltar no cierra el visor. */
+  const draggedRef = useRef(false);
   const [photoToDelete, setPhotoToDelete] = useState<Photo | null>(null);
   const [comparing, setComparing] = useState(false);
   const [refreshAt, setRefreshAt] = useState(0);
@@ -231,15 +262,15 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
       const photosWithScan = await Promise.all(list.map(async (photo) => {
         if (photo.scan_history_id) {
           try {
-            const { data: scan } = await supabase
+            const { data: scan, error: scanError } = await supabase
               .from("scan_history")
               .select("id, result, attractiveness, potential, physique, style")
               .eq("id", photo.scan_history_id)
               .maybeSingle();
-            return { ...photo, scan };
+            return { ...photo, scan, scanFailed: !!scanError };
           } catch (scanError) {
             console.warn("Failed to load scan for photo", photo.id, scanError);
-            return { ...photo, scan: null };
+            return { ...photo, scan: null, scanFailed: true };
           }
         }
         return { ...photo, scan: null };
@@ -486,11 +517,13 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
     }
   };
 
-  // Visor: Escape cierra y las flechas navegan entre fotos.
+  // Visor: Escape cierra, ← → navegan entre fotos y ↑ ↓ abren y cierran la información (como deslizar).
   useEffect(() => {
     if (viewingPhoto === null || photoToDelete) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setViewingPhoto(null);
+      else if (event.key === "ArrowUp") setShowInfo(true);
+      else if (event.key === "ArrowDown") setShowInfo(false);
       else if (event.key === "ArrowLeft") setViewingPhoto((i) => (i === null ? i : Math.max(0, i - 1)));
       else if (event.key === "ArrowRight") {
         setViewingPhoto((i) => (i === null ? i : Math.min(photosRef.current.length - 1, i + 1)));
@@ -705,7 +738,7 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
         </section>
       ))}
 
-      {/* Lightbox */}
+      {/* Visor: como Fotos de Apple, deslizar hacia arriba abre la información y hacia abajo la cierra o cierra el visor. */}
       <AnimatePresence>
         {viewingPhoto !== null && photos[viewingPhoto] && (
           <motion.div
@@ -716,26 +749,23 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black p-4"
-            onClick={() => setViewingPhoto(null)}
+            className="fixed inset-0 z-50 overflow-hidden bg-black"
           >
-            <div className="absolute right-[max(1rem,var(--safe-right))] top-[max(1rem,var(--safe-top))] z-10 flex gap-2">
-              {photos[viewingPhoto].scan && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label="Ver análisis"
-                  aria-pressed={showScan}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    void hapticTap();
-                    setShowScan((v) => !v);
-                  }}
-                  className={showScan ? "bg-primary text-primary-foreground backdrop-blur-md" : "bg-white/15 text-white backdrop-blur-md active:bg-white/25"}
-                >
-                  <Sparkles className="h-5 w-5" />
-                </Button>
-              )}
+            <div className="absolute right-[max(1rem,var(--safe-right))] top-[max(1rem,var(--safe-top))] z-30 flex gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={showInfo ? "Ocultar información" : "Ver información"}
+                aria-pressed={showInfo}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void hapticTap();
+                  setShowInfo((v) => !v);
+                }}
+                className={showInfo ? "bg-primary text-primary-foreground backdrop-blur-md" : "bg-white/15 text-white backdrop-blur-md active:bg-white/25"}
+              >
+                <Info className="h-5 w-5" />
+              </Button>
               <Button
                 variant="ghost"
                 size="icon"
@@ -763,51 +793,84 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
               </Button>
             </div>
 
-            {viewingPhoto > 0 && (
-              <button
-                type="button"
-                aria-label="Foto anterior"
-                onClick={(e) => { e.stopPropagation(); void hapticTap(); setViewingPhoto(viewingPhoto - 1); }}
-                className="absolute left-[max(1rem,var(--safe-left))] flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur-md transition-colors active:bg-white/25"
-              >
-                <ChevronLeft className="h-6 w-6" strokeWidth={1.75} />
-              </button>
-            )}
-
-            {viewingPhoto < photos.length - 1 && (
-              <button
-                type="button"
-                aria-label="Foto siguiente"
-                onClick={(e) => { e.stopPropagation(); void hapticTap(); setViewingPhoto(viewingPhoto + 1); }}
-                className="absolute right-[max(1rem,var(--safe-right))] flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur-md transition-colors active:bg-white/25"
-              >
-                <ChevronRight className="h-6 w-6" strokeWidth={1.75} />
-              </button>
-            )}
-
-            <div className="flex max-h-[85dvh] max-w-lg flex-col items-center" onClick={(e) => e.stopPropagation()}>
-              {signed.get(photos[viewingPhoto].photo_url) && !broken.has(photos[viewingPhoto].photo_url) ? (
-                <img loading="lazy" decoding="async"
-                  src={signed.get(photos[viewingPhoto].photo_url)}
-                  alt={`Foto de progreso del ${formatDate(photos[viewingPhoto].taken_at)}`}
-                  onError={() => onImageError(photos[viewingPhoto])}
-                  className="max-h-[75dvh] rounded-media object-contain"
-                />
-              ) : (
-                <div className="flex h-[60dvh] w-[80vw] max-w-lg items-center justify-center overflow-hidden rounded-media bg-secondary">
-                  <PhotoPlaceholder label={signed.get(photos[viewingPhoto].photo_url) ? failedLabel(photos[viewingPhoto].photo_url, "Preparando la foto…") : "Preparando la foto…"} />
-                </div>
+            {/* Foto: arriba abre la información; abajo la cierra o, si ya estaba cerrada, cierra el visor. */}
+            <motion.div
+              initial={false}
+              animate={{ height: showInfo ? "42%" : "100%" }}
+              transition={reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 380, damping: 38 }}
+              drag="y"
+              dragConstraints={{ top: 0, bottom: 0 }}
+              dragElastic={0.5}
+              dragSnapToOrigin
+              onPointerDown={() => { draggedRef.current = false; }}
+              onDragStart={() => { draggedRef.current = true; }}
+              onDragEnd={(_, info) => {
+                if (info.offset.y < -60 || info.velocity.y < -500) {
+                  if (!showInfo) void hapticTap();
+                  setShowInfo(true);
+                } else if (info.offset.y > 60 || info.velocity.y > 500) {
+                  if (showInfo) setShowInfo(false);
+                  else setViewingPhoto(null);
+                }
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (draggedRef.current) { draggedRef.current = false; return; }
+                if (showInfo) setShowInfo(false);
+                else setViewingPhoto(null);
+              }}
+              aria-description="Desliza hacia arriba para ver la información"
+              className="absolute inset-x-0 top-0 flex items-center justify-center px-4 pb-4 pt-[calc(max(1rem,var(--safe-top))+3.25rem)]"
+            >
+              {viewingPhoto > 0 && (
+                <button
+                  type="button"
+                  aria-label="Foto anterior"
+                  onClick={(e) => { e.stopPropagation(); void hapticTap(); setViewingPhoto(viewingPhoto - 1); }}
+                  className="absolute left-[max(1rem,var(--safe-left))] z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur-md transition-colors active:bg-white/25"
+                >
+                  <ChevronLeft className="h-6 w-6" strokeWidth={1.75} />
+                </button>
               )}
-              <p className="mt-3 type-subhead text-white/70">
-                {formatDate(photos[viewingPhoto].taken_at)}
-              </p>
-            </div>
+
+              {viewingPhoto < photos.length - 1 && (
+                <button
+                  type="button"
+                  aria-label="Foto siguiente"
+                  onClick={(e) => { e.stopPropagation(); void hapticTap(); setViewingPhoto(viewingPhoto + 1); }}
+                  className="absolute right-[max(1rem,var(--safe-right))] z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur-md transition-colors active:bg-white/25"
+                >
+                  <ChevronRight className="h-6 w-6" strokeWidth={1.75} />
+                </button>
+              )}
+
+              <div className="flex h-full min-h-0 max-w-lg flex-col items-center justify-center">
+                {signed.get(photos[viewingPhoto].photo_url) && !broken.has(photos[viewingPhoto].photo_url) ? (
+                  <img decoding="async" draggable={false}
+                    src={signed.get(photos[viewingPhoto].photo_url)}
+                    alt={`Foto de progreso del ${formatDate(photos[viewingPhoto].taken_at)}`}
+                    onError={() => onImageError(photos[viewingPhoto])}
+                    className="min-h-0 max-h-[min(75dvh,100%)] select-none rounded-media object-contain"
+                  />
+                ) : (
+                  <div className="flex h-[60dvh] max-h-full w-[80vw] max-w-lg items-center justify-center overflow-hidden rounded-media bg-secondary">
+                    <PhotoPlaceholder label={signed.get(photos[viewingPhoto].photo_url) ? failedLabel(photos[viewingPhoto].photo_url, "Preparando la foto…") : "Preparando la foto…"} />
+                  </div>
+                )}
+                {!showInfo && (
+                  <p className="mt-3 shrink-0 type-subhead text-white/70">
+                    {formatDate(photos[viewingPhoto].taken_at)}
+                  </p>
+                )}
+              </div>
+            </motion.div>
 
             <AnimatePresence>
-              {showScan && photos[viewingPhoto].scan && (
-                <ScanSummaryCard
-                  scan={photos[viewingPhoto].scan!}
-                  onClose={() => setShowScan(false)}
+              {showInfo && (
+                <PhotoInfoPanel
+                  key={photos[viewingPhoto].id}
+                  photo={photos[viewingPhoto]}
+                  onClose={() => setShowInfo(false)}
                 />
               )}
             </AnimatePresence>

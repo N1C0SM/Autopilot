@@ -443,6 +443,42 @@ describe("paridad web ↔ apps nativas", () => {
     expect(app).toMatch(/\.font\(\.figure\(size: 34\)\)/);
   });
 
+  it("Fotos de Físico: deslizar la foto hacia arriba abre su información, como en Fotos, en la web y en la app", () => {
+    const web = read("src/app/components/dashboard/ProgressPhotos.tsx");
+    const poses = read("src/app/components/progress/progressPhotos.ts");
+    const app = read("native/Autopilot/Features/Progress/ProgressScreen.swift");
+    // La foto enlaza con su scan y el visor lee ese análisis (nunca vuelve a ejecutar el Scan).
+    expect(web).toMatch(/scan_history_id/);
+    expect(app).toMatch(/\.select\("id, photo_url, taken_at, created_at, note, scan_history_id"\)/);
+    expect(app).toMatch(/from\("scan_history"\)\s*\.select\("physique, potential, result"\)/);
+    // Mismo gesto: vertical sobre la foto; arriba abre, abajo cierra o, si ya estaba cerrada, cierra el visor.
+    expect(app).toMatch(/ProgressPhotoViewer\(photo: p\) \{ viewing = nil \}/);
+    expect(app).toMatch(/DragGesture\(minimumDistance: 10\)/);
+    expect(web).toMatch(/drag="y"/);
+    expect(web).toMatch(/if \(showInfo\) setShowInfo\(false\);\s*else setViewingPhoto\(null\);/);
+    // Mismo reparto de pantalla: la foto sube al 42 % y el panel ocupa el 58 %, con esquinas de 28.
+    expect(app).toMatch(/geo\.size\.height \* 0\.58/);
+    expect(app).toMatch(/topLeadingRadius: Radius\.hero/);
+    expect(web).toMatch(/height: showInfo \? "42%" : "100%"/);
+    expect(web).toMatch(/h-\[58%\][^"]*rounded-t-\[28px\]/);
+    // Mismos textos en los dos lados.
+    for (const text of [
+      "Ver información", "Ocultar información", "Cerrar visor", "Desliza hacia arriba para ver la información",
+      "Físico", "Potencial", "Grasa estimada", "Lo que más te frena: ", "Qué mejorar", "Prioridad ",
+      "Esta foto no tiene análisis. Las fotos que guarda cada scan muestran aquí sus resultados.",
+      "No hemos podido cargar el análisis de esta foto.",
+      "Este análisis no tiene detalles guardados.",
+      "Estimación orientativa a partir de la foto.",
+    ]) {
+      expect(web, text).toContain(text);
+      expect(app, text).toContain(text);
+    }
+    for (const text of ["De frente", "De espalda", "Foto de progreso"]) {
+      expect(poses, text).toContain(`"${text}"`);
+      expect(app, text).toContain(`"${text}"`);
+    }
+  });
+
   it("Biblioteca de ejercicios: misma entrada en Entrenar, mismos filtros y mismas secciones de ficha, en la web y en la app", () => {
     const app = read("native/Autopilot/Features/Train/ExerciseLibraryView.swift");
     const swiftArray = (name: string) => {

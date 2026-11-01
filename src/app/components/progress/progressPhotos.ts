@@ -14,3 +14,9 @@ export const evolutionLabel = (fromDate: string, toDate: string) => {
   if (days < 14) return `${days} ${days === 1 ? "día" : "días"} de evolución`;
   return `${Math.round(days / 7)} semanas de evolución`;
 };
+
+/** Subtítulo del panel de información del visor (mismo texto en la app nativa). */
+export const photoPoseLabel = (note?: string | null) => {
+  const pose = photoPose(note);
+  return pose === "front" ? "De frente" : pose === "back" ? "De espalda" : "Foto de progreso";
+};
