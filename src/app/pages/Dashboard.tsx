@@ -627,7 +627,8 @@ const Dashboard = () => {
         </div>
       )}
       {!campaign && !coaching && section === "nutrition" && user && (
-        // Los macros son gratis (como la app): primero los tuyos, y debajo las comidas de Plus.
+        // Los macros son gratis (estimados con los datos del onboarding); las comidas son Plus.
+        // Igual que el nativo: BasicNutrition muestra los macros y MealsPlusCard el upsell.
         <BasicNutrition userId={user.id} onEdit={() => setSection("settings")} onUpgrade={() => void handleCompletePayment("training")} />
       )}
 
@@ -989,7 +990,7 @@ const Dashboard = () => {
         profileName={profileName}
         profileAvatar={profileAvatar}
         userId={user?.id}
-        lockedTabs={!campaign && !coaching ? ["nutrition"] : []}
+        lockedTabs={[]}
         hiddenTabs={hideChat ? ["chat"] : []}
         onSettings={() => setSection("settings")}
         pushedTabs={PUSHED_TABS}
@@ -1022,7 +1023,7 @@ const Dashboard = () => {
             onSignOut={handleSignOut}
             profileName={profileName}
             profileAvatar={profileAvatar}
-            lockedSections={!campaign && !coaching ? ["nutrition"] : []}
+            lockedSections={[]}
             hiddenSections={hideChat ? ["chat"] : []}
           />
         </div>
