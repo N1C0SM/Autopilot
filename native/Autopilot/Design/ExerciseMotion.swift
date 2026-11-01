@@ -224,7 +224,7 @@ struct ExerciseMotionGlyph: View {
 /// el mismo dibujo quieto, con el punto en la posición de mayor tensión.
 struct ExerciseMotionHero: View {
     let spec: ExerciseMotion.Spec
-    @Environment(\.reduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Group {
