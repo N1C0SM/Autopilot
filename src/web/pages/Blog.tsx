@@ -1,10 +1,11 @@
 import PublicLayout from "@/web/components/PublicLayout";
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { Helmet } from "react-helmet-async";
-import { Clock, ArrowRight, ArrowLeft, BookOpen, GraduationCap, BarChart3, Atom, Dumbbell, PersonStanding, CalendarRange, Apple, Moon, HelpCircle, HeartPulse, Brain, Timer } from "lucide-react";
+import { Clock, ArrowRight, ArrowLeft, BookOpen, GraduationCap, BarChart3, Atom, Dumbbell, PersonStanding, CalendarRange, Apple, Moon, HelpCircle, HeartPulse, Brain, Timer, ChevronRight } from "lucide-react";
 import { CATEGORIES, LEVEL_LABEL, EVIDENCE_LABEL, categoryBySlug, type Level, type Evidence } from "@/shared/lib/academy";
+import { IconTile } from "@/shared/components/ui/icon-tile";
 
 interface Post {
   id: string;
@@ -17,6 +18,7 @@ interface Post {
   level: string | null;
   evidence_level: string | null;
   order_index: number | null;
+  cover_url: string | null;
 }
 
 const LEVELS: (Level | "all")[] = ["all", "beginner", "intermediate", "advanced"];
@@ -26,6 +28,28 @@ const ICONS: Record<string, typeof BookOpen> = {
   "sistema-nervioso-fuerza": Brain, programacion: CalendarRange, tecnica: Timer, calistenia: PersonStanding,
   nutricion: Apple, recuperacion: Moon, mitos: HelpCircle, "entrenamiento-avanzado": HeartPulse,
 };
+
+/** Portada del artículo con respaldo: si la imagen falla, queda el número de la lista. */
+function PostCover({ src, index }: { src: string | null; index: number }) {
+  const [failed, setFailed] = useState(false);
+  if (!src || failed) {
+    return (
+      <span aria-hidden="true" className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[14px] bg-secondary type-headline font-semibold text-muted-foreground">
+        {String(index).padStart(2, "0")}
+      </span>
+    );
+  }
+  return (
+    <img
+      src={src}
+      alt=""
+      loading="lazy"
+      decoding="async"
+      onError={() => setFailed(true)}
+      className="h-16 w-16 shrink-0 rounded-[14px] bg-secondary object-cover"
+    />
+  );
+}
 
 const Blog = () => {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -43,7 +67,7 @@ const Blog = () => {
     (async () => {
       const { data } = await supabase
         .from("blog_posts")
-        .select("id, slug, title, excerpt, published_at, reading_minutes, category, level, evidence_level, order_index")
+        .select("id, slug, title, excerpt, published_at, reading_minutes, category, level, evidence_level, order_index, cover_url")
         .eq("published", true)
         .order("order_index", { ascending: true, nullsFirst: false })
         .order("published_at", { ascending: false });
@@ -62,6 +86,14 @@ const Blog = () => {
     return m;
   }, [posts]);
   const uncategorized = useMemo(() => posts.filter((p) => !p.category), [posts]);
+
+  /** Metadatos del artículo en una sola línea: nivel y evidencia. Los minutos quedan
+   *  para la ficha, porque al añadirlos la línea partía y dejaba un «·» suelto. */
+  const metaItems = (p: Post) =>
+    [
+      p.level ? LEVEL_LABEL[p.level as Level] : null,
+      p.evidence_level ? EVIDENCE_LABEL[p.evidence_level as Evidence]?.label : null,
+    ].filter(Boolean) as string[];
 
   const chip = (active: boolean) =>
     `shrink-0 h-9 px-4 rounded-full type-subhead transition-colors ${active ? "bg-foreground text-background font-medium" : "bg-secondary text-muted-foreground hover:text-foreground"}`;
@@ -93,32 +125,45 @@ const Blog = () => {
 
         {cat === "all" ? (
           <>
-          <section aria-label="Rutas de aprendizaje" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {CATEGORIES.map((c, i) => {
+          {/* Móvil: una lista compacta de rutas (12 tarjetas de 200 px eran 2.400 px de
+              scroll). Escritorio: la rejilla de tarjetas. */}
+          <section aria-label="Rutas de aprendizaje" className="overflow-hidden rounded-card bg-card sm:grid sm:grid-cols-2 sm:gap-4 sm:overflow-visible sm:bg-transparent lg:grid-cols-3">
+            {CATEGORIES.map((c) => {
               const Icon = ICONS[c.slug] || BookOpen;
               const n = counts[c.slug] || 0;
+              const lessons = n ? `${n} ${n === 1 ? "lección" : "lecciones"}` : "Próximamente";
               return (
-                <button
-                  key={c.slug}
-                  onClick={() => openCat(c.slug)}
-                  className="group relative text-left overflow-hidden rounded-3xl bg-card p-6 min-h-[200px] flex flex-col justify-between transition-all hover:bg-secondary hover:-translate-y-0.5"
-                >
-                  <div aria-hidden className="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-primary/10 blur-2xl group-hover:bg-primary/20 transition-colors" />
-                  <div className="relative flex items-start justify-between">
-                    <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/15 text-primary">
-                      <Icon className="w-6 h-6" />
+                <Fragment key={c.slug}>
+                  <button
+                    onClick={() => openCat(c.slug)}
+                    className="group flex w-full items-center gap-3 border-b border-border/60 px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-secondary active:bg-accent sm:hidden"
+                  >
+                    <IconTile icon={Icon} size="sm" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate type-headline">{c.name}</span>
+                      <span className="block type-footnote text-muted-foreground">{lessons}</span>
                     </span>
-                    <span className="type-footnote text-muted-foreground">{String(i + 1).padStart(2, "0")}</span>
-                  </div>
-                  <div className="relative mt-6">
-                    <h2 className="font-rounded type-title2">{c.name}</h2>
-                    <p className="type-subhead text-muted-foreground mt-1.5 leading-relaxed line-clamp-2">{c.summary}</p>
-                    <p className="type-footnote text-primary font-medium mt-4 inline-flex items-center gap-1">
-                      {n ? `${n} ${n === 1 ? "lección" : "lecciones"}` : "Próximamente"}
-                      <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                    </p>
-                  </div>
-                </button>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                  </button>
+
+                  <button
+                    onClick={() => openCat(c.slug)}
+                    className="group relative hidden min-h-[200px] flex-col justify-between overflow-hidden rounded-card bg-card p-6 text-left transition-[background-color,transform] duration-200 hover:-translate-y-0.5 hover:bg-secondary sm:flex"
+                  >
+                    <div aria-hidden className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-primary/10 blur-2xl transition-colors group-hover:bg-primary/20" />
+                    <div className="relative">
+                      <IconTile icon={Icon} size="md" />
+                    </div>
+                    <div className="relative mt-6">
+                      <h2 className="font-rounded type-title2">{c.name}</h2>
+                      <p className="mt-1.5 line-clamp-2 type-subhead leading-relaxed text-muted-foreground">{c.summary}</p>
+                      <p className="mt-4 inline-flex items-center gap-1 type-footnote font-medium text-primary">
+                        {lessons}
+                        <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" aria-hidden="true" />
+                      </p>
+                    </div>
+                  </button>
+                </Fragment>
               );
             })}
           </section>
@@ -126,16 +171,15 @@ const Blog = () => {
             <section aria-label="Otros artículos" className="mt-14">
               <h2 className="type-title1 mb-4">Otros artículos</h2>
               <ol className="space-y-3">
-                {uncategorized.map((p) => (
+                {uncategorized.map((p, i) => (
                   <li key={p.id}>
-                    <Link to={`/blog/${p.slug}`} className="group flex items-center gap-4 rounded-2xl bg-card p-4 sm:p-5 hover:bg-secondary transition-colors">
+                    <Link to={`/blog/${p.slug}`} className="group flex items-center gap-4 rounded-media bg-card p-4 transition-colors hover:bg-secondary sm:p-5">
+                      <PostCover src={p.cover_url} index={i + 1} />
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold tracking-tight group-hover:text-primary transition-colors">{p.title}</h3>
-                        <div className="flex flex-wrap items-center gap-2 type-footnote text-muted-foreground mt-1">
-                          {p.level && <span>{LEVEL_LABEL[p.level as Level]}</span>}
-                          {p.evidence_level && <span>· {EVIDENCE_LABEL[p.evidence_level as Evidence]?.label}</span>}
-                          {p.reading_minutes ? <span className="inline-flex items-center gap-1">· <Clock className="w-3 h-3" /> {p.reading_minutes} min</span> : null}
-                        </div>
+                        <p className="mt-1 truncate type-footnote text-muted-foreground">
+                          {metaItems(p).join(" · ")}
+                        </p>
                       </div>
                       <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
                     </Link>
@@ -151,7 +195,7 @@ const Blog = () => {
               <ArrowLeft className="w-4 h-4" /> Todas las rutas
             </button>
             <div className="mb-6">
-              <h2 className="text-3xl sm:text-4xl font-bold font-display tracking-tight">{categoryBySlug(cat)?.name}</h2>
+              <h2 className="type-title1">{categoryBySlug(cat)?.name}</h2>
               <p className="text-muted-foreground mt-2">{categoryBySlug(cat)?.summary}</p>
             </div>
             <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 mb-6" role="group" aria-label="Nivel">
@@ -164,22 +208,20 @@ const Blog = () => {
             {loading ? (
               <p className="text-muted-foreground py-20 text-center">Cargando…</p>
             ) : filtered.length === 0 ? (
-              <div className="py-20 text-center border border-dashed border-border rounded-3xl">
+              <div className="rounded-card border border-dashed border-border py-20 text-center">
                 <p className="text-muted-foreground">Estamos revisando las lecciones de esta ruta. Pronto estarán disponibles.</p>
               </div>
             ) : (
               <ol className="space-y-3">
                 {filtered.map((p, i) => (
                   <li key={p.id}>
-                    <Link to={`/blog/${p.slug}`} className="group flex items-center gap-4 rounded-2xl bg-card p-4 sm:p-5 hover:bg-secondary transition-colors">
-                      <span className="shrink-0 h-10 w-10 rounded-full bg-secondary flex items-center justify-center type-subhead font-semibold">{i + 1}</span>
+                    <Link to={`/blog/${p.slug}`} className="group flex items-center gap-4 rounded-media bg-card p-4 transition-colors hover:bg-secondary sm:p-5">
+                      <PostCover src={p.cover_url} index={i + 1} />
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold tracking-tight group-hover:text-primary transition-colors">{p.title}</h3>
-                        <div className="flex flex-wrap items-center gap-2 type-footnote text-muted-foreground mt-1">
-                          {p.level && <span>{LEVEL_LABEL[p.level as Level]}</span>}
-                          {p.evidence_level && <span>· {EVIDENCE_LABEL[p.evidence_level as Evidence]?.label}</span>}
-                          {p.reading_minutes ? <span className="inline-flex items-center gap-1">· <Clock className="w-3 h-3" /> {p.reading_minutes} min</span> : null}
-                        </div>
+                        <p className="mt-1 truncate type-footnote text-muted-foreground">
+                          {metaItems(p).join(" · ")}
+                        </p>
                       </div>
                       <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
                     </Link>

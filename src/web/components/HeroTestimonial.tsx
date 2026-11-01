@@ -42,7 +42,7 @@ const HeroTestimonial = () => {
             <Star key={i} className="w-2.5 h-2.5 fill-primary text-primary" />
           ))}
         </div>
-        <p className="text-xs text-foreground/85 leading-relaxed line-clamp-2">“{t.text}”</p>
+        <p className="type-footnote text-foreground/85 leading-relaxed line-clamp-2">“{t.text}”</p>
         <p className="type-caption2 text-muted-foreground mt-1 truncate">
           {t.name}
           {t.result ? <span className="text-primary font-semibold"> · {t.result}</span> : null}
