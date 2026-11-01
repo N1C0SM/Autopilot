@@ -251,6 +251,7 @@ struct WorkoutView: View {
         .padding(28)
         .frame(minWidth: 340)
         .presentationDetents([.medium])
+        .presentationDragIndicator(.visible)
         .presentationBackground(Palette.card)
         .interactiveDismissDisabled(workout.saving)
     }
@@ -449,6 +450,7 @@ struct SessionExerciseCard: View {
             Button("Cerrar") { Haptics.tap(); swapSheet = false }.buttonStyle(.pillSecondary).padding(20)
         }
         .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
         .presentationBackground(Palette.card)
     }
 
@@ -707,6 +709,7 @@ struct TechniqueSheet: View {
         }
         .frame(minWidth: 420, minHeight: 520)
         .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
         .presentationBackground(Palette.card)
     }
 }
@@ -868,6 +871,10 @@ struct SetLine: View {
         )
         .overlay(alignment: .top) { if separator && !isCurrent { Rectangle().fill(Palette.separator).frame(height: 0.5).padding(.leading, 12) } }
         .accessibilityAction(named: "Quitar serie") { workout.removeSet(exercise.name, at: index) }
+        // Deslizar a la izquierda para quitar la serie, como en Hevy (y en la web).
+        .swipeToRemove("Quitar serie", enabled: (workout.draft.logs[exercise.name]?.count ?? 0) > 1) {
+            workout.removeSet(exercise.name, at: index)
+        }
         .contextMenu {
             Button(role: .destructive) { Haptics.warning(); workout.removeSet(exercise.name, at: index) } label: {
                 Label("Quitar serie", systemImage: "trash")

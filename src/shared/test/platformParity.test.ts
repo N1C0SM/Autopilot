@@ -526,4 +526,67 @@ describe("paridad web ↔ apps nativas", () => {
     expect(read("src/app/components/admin/ExerciseLibrary.tsx")).toContain("<CatalogImport ");
     expect(read("native/Autopilot/Features/Admin/AdminExercises.swift")).toContain("AdminCatalogImportCard {");
   });
+
+  it("Pestañas como iOS: cada una con su pila y su scroll, título grande que se encoge y tocar la activa vuelve arriba, en la web y en la app", () => {
+    const web = read("src/app/components/mobile/MobileAppShell.tsx");
+    expect(web).toContain("scrollMemory.current[active] = element.scrollTop");
+    expect(web).toContain('scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" })');
+    // iPhone: TabView con una NavigationStack por pestaña y la barra flotante encima (sin la del sistema).
+    const shell = swift.slice(swift.indexOf("private var userTabs: some View"));
+    expect(shell).toContain("TabView(selection: current)");
+    expect(shell).toContain("NavigationStack {");
+    expect(shell).toContain(".toolbar(.hidden, for: .tabBar)");
+    expect(shell).toContain("NotificationCenter.default.post(name: .tabReselected, object: tab)");
+    expect(shell.slice(0, shell.indexOf("private var adminShell"))).not.toContain(".toolbar(.hidden, for: .navigationBar)");
+    expect(swift).toContain(".navigationBarTitleDisplayMode(section == .home ? .inline : .large)");
+    expect(read("native/Autopilot/App/AutopilotApp.swift")).toContain("NavigationBarStyle.apply()");
+    for (const [file, tab] of [
+      ["native/Autopilot/Features/Home/HomeView.swift", "home"],
+      ["native/Autopilot/Features/Train/TrainView.swift", "train"],
+      ["native/Autopilot/Features/Progress/ProgressScreen.swift", "progress"],
+      ["native/Autopilot/Features/Other/OtherViews.swift", "nutrition"],
+    ]) {
+      const src = read(file);
+      expect(src, file).toContain(`.scrollsToTopOnReselect(.${tab})`);
+      expect(src, file).toContain(".id(ScrollTop.id)");
+    }
+  });
+
+  it("Empezar con un toque desde Hoy, como Hevy: la píldora abre el entreno, en la web y en la app", () => {
+    const web = read("src/app/components/dashboard/HomeOverview.tsx");
+    expect(web).toContain("Empezar entreno");
+    expect(web).toContain("if (onStartWorkout) onStartWorkout();");
+    const app = read("native/Autopilot/Features/Home/HomeView.swift");
+    expect(app).toContain('Button(resumable ? "Continuar entreno" : "Empezar entreno") { startToday() }');
+    expect(app).toContain('Button((snapshot?.resumable ?? false) ? "Continuar entreno" : "Empezar entreno") { startToday() }');
+    expect(app).not.toMatch(/Text\("Ver la sesión"\)/);
+  });
+
+  it("Deslizar una serie a la izquierda la quita (siempre queda una), en la web y en la app", () => {
+    const web = read("src/app/components/dashboard/WorkoutTracker.tsx");
+    expect(web).toContain("<SwipeToRemove key={si}");
+    expect(web).toContain("enabled={sets.length > 1} onRemove={() => removeSet(ex.name, si)}");
+    expect(web).toContain("if (sets.length <= 1) return logs;");
+    const app = read("native/Autopilot/Features/Train/WorkoutView.swift");
+    expect(app).toContain('.swipeToRemove("Quitar serie", enabled: (workout.draft.logs[exercise.name]?.count ?? 0) > 1)');
+    expect(read("native/Autopilot/Features/Train/ActiveWorkout.swift")).toContain("sets.count > 1 else { return }");
+    // Mismo gesto: descubre el botón a 88 y quita la fila al pasar de 180.
+    const webSwipe = read("src/app/components/workout-parts/SwipeToRemove.tsx");
+    const appSwipe = read("native/Autopilot/Design/Components.swift");
+    expect(webSwipe).toContain("const REVEAL = 88;");
+    expect(webSwipe).toContain("const FULL_SWIPE = 180;");
+    expect(appSwipe).toContain("private let reveal: CGFloat = 88");
+    expect(appSwipe).toContain("private let fullSwipe: CGFloat = 180");
+  });
+
+  it("Las hojas que se cierran deslizando enseñan la barrita, en la web y en la app", () => {
+    expect(read("src/shared/components/ui/drawer.tsx")).toContain("rounded-full bg-muted-foreground/40");
+    for (const file of [
+      "native/Autopilot/Features/Home/HomeView.swift",
+      "native/Autopilot/Features/Account/AccountView.swift",
+      "native/Autopilot/Features/Auth/WhoIsTrainingView.swift",
+      "native/Autopilot/Features/Auth/LoginView.swift",
+    ]) expect(read(file), file).toContain(".presentationDragIndicator(.visible)");
+    expect(read("native/Autopilot/Features/Train/WorkoutView.swift").split(".presentationDragIndicator(.visible)").length - 1).toBeGreaterThanOrEqual(4);
+  });
 });

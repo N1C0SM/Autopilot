@@ -86,7 +86,9 @@ struct NutritionView: View {
             // Una columna en todas partes, como la web: en iPad/Mac no se estira de lado a lado.
             .frame(maxWidth: 720)
             .frame(maxWidth: .infinity)
+            .id(ScrollTop.id)
         }
+        .scrollsToTopOnReselect(.nutrition)
         .screenBackground()
         .task { await load() }
     }

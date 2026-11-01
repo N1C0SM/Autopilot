@@ -860,6 +860,7 @@ private struct AccountUnlockSheet: View {
         }
         .padding(24)
         .presentationDetents([.medium])
+        .presentationDragIndicator(.visible)
         .presentationBackground(Palette.card)
     }
 

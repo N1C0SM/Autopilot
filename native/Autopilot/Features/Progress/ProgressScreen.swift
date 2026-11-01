@@ -88,7 +88,9 @@ struct ProgressScreen: View {
                 }
             }
             .frame(maxWidth: .infinity)
+            .id(ScrollTop.id)
         }
+        .scrollsToTopOnReselect(.progress)
         .onPreferenceChange(ProgressContentWidthKey.self) { contentWidth = $0 }
         .screenBackground()
         .refreshable {

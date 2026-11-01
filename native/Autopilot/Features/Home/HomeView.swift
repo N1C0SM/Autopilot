@@ -121,7 +121,9 @@ struct HomeView: View {
             .padding(.horizontal, horizontalPadding)
             .padding(.top, wideLayout ? 24 : 8)
             .padding(.bottom, 96)
+            .id(ScrollTop.id)
         }
+        .scrollsToTopOnReselect(.home)
         .screenBackground()
         .refreshable { await load() }
         .task {
@@ -236,10 +238,17 @@ struct HomeView: View {
                 Text(summary).font(.apSubhead.monospacedDigit())
                     .foregroundStyle(Palette.muted).padding(.top, 4)
             }
-            Button { openSheet() } label: { Text("Ver la sesión") }
-                .buttonStyle(.pill)
-                .frame(maxWidth: 224)
-                .padding(.top, 20)
+            // Como la web en escritorio: un toque y empieza el entreno; una actividad abre el detalle.
+            Group {
+                if plan.isGym {
+                    Button((snapshot?.resumable ?? false) ? "Continuar entreno" : "Empezar entreno") { startToday() }
+                } else {
+                    Button("Ver la sesión") { openSheet() }
+                }
+            }
+            .buttonStyle(.pill)
+            .frame(maxWidth: 224)
+            .padding(.top, 20)
         }
         .frame(maxWidth: 448, alignment: .leading)
     }
@@ -396,48 +405,59 @@ struct HomeView: View {
         let parts = plan.title.components(separatedBy: " · ")
         let summary = detail(plan)
         let cover = plan.isGym ? todayCover : nil
-        return Button { openSheet() } label: {
-            VStack(alignment: .leading, spacing: 0) {
-                if let cover {
-                    CachedAsyncImage(url: cover) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 190)
-                        .clipped()
-                        .accessibilityHidden(true)
-                }
+        let resumable = snapshot?.resumable ?? false
+        return VStack(alignment: .leading, spacing: 0) {
+            Button { openSheet() } label: {
                 VStack(alignment: .leading, spacing: 0) {
-                    HStack {
-                        Text(plan.isGym ? "Hoy · entreno" : "Hoy · actividad")
-                            .font(.apCaption.weight(.semibold)).textCase(.uppercase).tracking(0.6)
-                            .foregroundStyle(Palette.gold)
-                        Spacer(minLength: 8)
-                        Image(systemName: "chevron.up").font(.inter(size: 12, weight: .semibold))
-                            .foregroundStyle(Palette.muted.opacity(0.7))
+                    if let cover {
+                        CachedAsyncImage(url: cover) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 190)
+                            .clipped()
+                            .accessibilityHidden(true)
                     }
-                    Text(parts[0]).font(.apTitle1).lineLimit(2).fixedSize(horizontal: false, vertical: true).padding(.top, 6)
-                    if parts.count > 1 {
-                        Text(parts.dropFirst().joined(separator: " · ")).font(.apSubhead).foregroundStyle(Palette.muted)
-                            .lineLimit(2).padding(.top, 2)
+                    VStack(alignment: .leading, spacing: 0) {
+                        HStack {
+                            Text(plan.isGym ? "Hoy · entreno" : "Hoy · actividad")
+                                .font(.apCaption.weight(.semibold)).textCase(.uppercase).tracking(0.6)
+                                .foregroundStyle(Palette.gold)
+                            Spacer(minLength: 8)
+                            Image(systemName: "chevron.up").font(.inter(size: 12, weight: .semibold))
+                                .foregroundStyle(Palette.muted.opacity(0.7))
+                        }
+                        Text(parts[0]).font(.apTitle1).lineLimit(2).fixedSize(horizontal: false, vertical: true).padding(.top, 6)
+                        if parts.count > 1 {
+                            Text(parts.dropFirst().joined(separator: " · ")).font(.apSubhead).foregroundStyle(Palette.muted)
+                                .lineLimit(2).padding(.top, 2)
+                        }
+                        if !summary.isEmpty {
+                            Text(summary).font(.apSubhead.monospacedDigit()).foregroundStyle(Palette.muted).padding(.top, 4)
+                        }
                     }
-                    if !summary.isEmpty {
-                        Text(summary).font(.apSubhead.monospacedDigit()).foregroundStyle(Palette.muted).padding(.top, 4)
-                    }
-                    Text("Ver la sesión")
-                        .font(.apHeadline).foregroundStyle(.black)
-                        .frame(maxWidth: .infinity, minHeight: 50)
-                        .background(Palette.gold, in: Capsule())
-                        .padding(.top, 24)
+                    .padding([.horizontal, .top], 18)
                 }
-                .padding(18)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
             }
-            .frame(maxWidth: .infinity, alignment: .topLeading)
-            .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
-            .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
+            .buttonStyle(.plain)
+            .accessibilityLabel([plan.title, summary].filter { !$0.isEmpty }.joined(separator: ". "))
+            .accessibilityHint("Abre el detalle de la sesión de hoy")
+            // Empezar con un toque, como Hevy y la web (`HomeOverview`): la píldora abre el entreno y
+            // el resto de la tarjeta, el detalle. Una actividad se marca desde el detalle.
+            Group {
+                if plan.isGym {
+                    Button(resumable ? "Continuar entreno" : "Empezar entreno") { startToday() }
+                        .accessibilityHint(resumable ? "Retoma el entreno que dejaste a medias" : "Abre el entreno de hoy para registrar series")
+                } else {
+                    Button("Ver la sesión") { openSheet() }
+                }
+            }
+            .buttonStyle(PillButtonStyle(kind: .primary, height: 50))
+            .padding(.top, 24).padding([.horizontal, .bottom], 18)
         }
-        .buttonStyle(.pressableCard)
-        .accessibilityLabel([plan.title, summary, "Abrir el detalle de la sesión"].filter { !$0.isEmpty }.joined(separator: ". "))
-        .accessibilityHint("Abre el detalle de la sesión de hoy")
-        .accessibilityAddTraits(.isButton)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
         // Gesto nativo: mantener pulsada la tarjeta ofrece atajos sin quitar el toque principal.
         .contextMenu {
             Button { openSheet() } label: { Label("Ver el detalle", systemImage: "list.bullet.rectangle") }
@@ -478,9 +498,11 @@ struct HomeView: View {
     /// El aviso lo recoge Entrenar: cambia de pestaña y abre (o reanuda) el entreno de hoy.
     private func startToday() {
         Haptics.tap()
+        let fromSheet = sheetOpen
         sheetOpen = false
         Task {
-            try? await Task.sleep(for: .milliseconds(450))
+            // Desde la hoja se espera a que se cierre; desde la tarjeta, al instante.
+            if fromSheet { try? await Task.sleep(for: .milliseconds(450)) }
             NotificationCenter.default.post(name: .startTodayWorkout, object: nil)
         }
     }

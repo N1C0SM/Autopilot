@@ -1,9 +1,22 @@
 import SwiftUI
+#if os(iOS)
+import UIKit
+import CoreText
+#endif
 
 @main
 struct AutopilotApp: App {
     @StateObject private var session = SessionModel()
     @StateObject private var accounts = AccountStore.shared
+
+    init() {
+        // Antes que cualquier vista: la barra de navegación ya sale en Inter.
+        InterFont.register()
+        FigureFont.register()
+        #if os(iOS)
+        NavigationBarStyle.apply()
+        #endif
+    }
 
     var body: some Scene {
         WindowGroup {
@@ -13,11 +26,7 @@ struct AutopilotApp: App {
                 .preferredColorScheme(.dark)
                 .tint(Palette.gold)
                 .toggleStyle(TrailingSwitchStyle())
-                .task {
-                    InterFont.register()
-                    FigureFont.register()
-                    await session.start()
-                }
+                .task { await session.start() }
         }
         #if os(macOS)
         .defaultSize(width: 1200, height: 820)
@@ -127,3 +136,37 @@ extension Notification.Name {
     static let restPlus = Notification.Name("autopilot.restPlus")
     static let restMinus = Notification.Name("autopilot.restMinus")
 }
+
+#if os(iOS)
+/// Barra de navegación con la tipografía de la app, como la cabecera de la web (`NavBar`): título
+/// grande en Inter Bold 34 que se encoge al hacer scroll, el pequeño en Inter Semibold 17, transparente
+/// arriba y con material cuando el contenido pasa por debajo (`solid`).
+enum NavigationBarStyle {
+    static func apply() {
+        let large: [NSAttributedString.Key: Any] = [.font: inter(34, weight: 700, style: .largeTitle), .foregroundColor: UIColor.white]
+        let inline: [NSAttributedString.Key: Any] = [.font: inter(17, weight: 600, style: .headline), .foregroundColor: UIColor.white]
+        let standard = UINavigationBarAppearance()
+        standard.configureWithDefaultBackground()
+        standard.largeTitleTextAttributes = large
+        standard.titleTextAttributes = inline
+        let edge = UINavigationBarAppearance()
+        edge.configureWithTransparentBackground()
+        edge.largeTitleTextAttributes = large
+        edge.titleTextAttributes = inline
+        let bar = UINavigationBar.appearance()
+        bar.standardAppearance = standard
+        bar.compactAppearance = standard
+        bar.scrollEdgeAppearance = edge
+    }
+
+    /// Inter es variable: el peso va en el eje «wght». Crece con el tamaño de texto del sistema.
+    private static func inter(_ size: CGFloat, weight: CGFloat, style: UIFont.TextStyle) -> UIFont {
+        let wght = 0x7767_6874 // 'wght'
+        let descriptor = UIFontDescriptor(fontAttributes: [
+            .name: InterFont.name,
+            UIFontDescriptor.AttributeName(rawValue: kCTFontVariationAttribute as String): [wght: weight],
+        ])
+        return UIFontMetrics(forTextStyle: style).scaledFont(for: UIFont(descriptor: descriptor, size: size))
+    }
+}
+#endif
