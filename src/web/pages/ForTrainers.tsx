@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { useAuth } from "@/shared/contexts/AuthContext";
 import { Button } from "@/shared/components/ui/button";
@@ -27,11 +27,9 @@ export default function ForTrainers() {
   const [open, setOpen] = useState(false);
   useEffect(() => { void supabase.rpc("get_trainer_plan_public").then(({ data }) => setPlan(data?.[0] ?? null)); }, []);
   if (plan === undefined) return <Shell><Spinner size="lg" className="mx-auto" /></Shell>;
-  if (!plan) return <Shell>
-    <Squircle><Briefcase className="h-8 w-8 text-primary" strokeWidth={1.75} /></Squircle>
-    <h1 className="mt-5 type-display-sm">Página no disponible</h1>
-    <Button asChild variant="plain" className="mt-4"><Link to="/">Volver al inicio</Link></Button>
-  </Shell>;
+  // Sin plan activo la página no existe: quien llegue por un enlace antiguo vuelve a
+  // precios en vez de encontrarse un callejón sin salida (el pie ya no la enlaza).
+  if (!plan) return <Navigate to="/planes" replace />;
   return (
     <Shell>
       <Squircle><Briefcase className="h-8 w-8 text-primary" strokeWidth={1.75} /></Squircle>

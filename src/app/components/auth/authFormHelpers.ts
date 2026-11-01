@@ -5,7 +5,7 @@ import { cn } from "@/shared/lib/utils";
 export const authFieldInputClass = (withTrailing = false) =>
   cn(
     "min-w-0 flex-1 rounded-none bg-transparent px-0 md:focus-visible:ring-0",
-    "[&:-webkit-autofill]:shadow-[inset_0_0_0_1000px_hsl(var(--card))] [&:-webkit-autofill]:[-webkit-text-fill-color:hsl(var(--foreground))]",
+    "[&:-webkit-autofill]:shadow-[inset_0_0_0_1000px_hsl(var(--secondary))] [&:-webkit-autofill]:[-webkit-text-fill-color:hsl(var(--foreground))]",
     withTrailing ? "pr-0" : "pr-5",
   );
 

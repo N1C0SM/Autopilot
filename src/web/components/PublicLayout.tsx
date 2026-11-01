@@ -20,7 +20,16 @@ export default function PublicLayout({ title, description, children }: { title: 
   const [menuOpen, setMenuOpen] = useState(false);
   const { pathname, hash } = useLocation();
   const [showApp, setShowApp] = useState(false);
+  /** El producto B2B está apagado por defecto: si no hay plan público, no se anuncia. */
+  const [showTrainers, setShowTrainers] = useState(false);
   const [socials, setSocials] = useState<ReturnType<typeof socialLinkList>>([]);
+  useEffect(() => {
+    let alive = true;
+    void supabase.rpc("get_trainer_plan_public").then(({ data }) => {
+      if (alive) setShowTrainers(Array.isArray(data) && data.length > 0);
+    });
+    return () => { alive = false; };
+  }, []);
   useEffect(() => {
     let alive = true;
     void supabase.rpc("get_social_links_public").then(({ data }) => { if (alive) setSocials(socialLinkList(data)); });
@@ -112,7 +121,7 @@ export default function PublicLayout({ title, description, children }: { title: 
             <AppStoreBadges size="compact" align="start" className="mt-5" />
           </div>
           {[
-            ["Producto", [["/como-funciona", "Cómo funciona"], ["/planes", "Planes"], ...(showApp ? [["/app", "App móvil"]] : []), ["/para-entrenadores", "Para entrenadores"]]],
+            ["Producto", [["/como-funciona", "Cómo funciona"], ["/planes", "Planes"], ...(showApp ? [["/app", "App móvil"]] : []), ...(showTrainers ? [["/para-entrenadores", "Para entrenadores"]] : [])]],
             ["Recursos", [["/recursos", "Guías en PDF"], ["/blog", "Blog"], ["/preguntas-frecuentes", "Ayuda"], ["/equipo", "Equipo"]]],
           ].map(([heading, links]) => <nav key={heading as string} aria-label={heading as string}>
             <p className="type-footnote font-semibold text-foreground">{heading as string}</p>

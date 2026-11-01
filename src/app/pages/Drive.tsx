@@ -126,7 +126,7 @@ const Drive = () => {
       <Screen hideBack centered maxWidth="sm" contentClassName="py-6">
         {meta}
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-5 flex h-[72px] w-[72px] items-center justify-center rounded-[22%] bg-card">
+          <div className="mx-auto mb-5 flex h-[72px] w-[72px] items-center justify-center rounded-full bg-card">
             <LockKeyhole className="h-8 w-8 text-primary" strokeWidth={1.75} />
           </div>
           <h1 className="type-title1">Tu biblioteca, en un solo lugar</h1>

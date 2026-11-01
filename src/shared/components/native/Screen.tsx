@@ -102,7 +102,7 @@ const Screen = ({
           paddingTop: hasBar ? "calc(var(--nav-bar-height) + var(--safe-top, 0px))" : "var(--safe-top, 0px)",
           paddingLeft: "max(1rem, var(--safe-left, 0px))",
           paddingRight: "max(1rem, var(--safe-right, 0px))",
-          paddingBottom: footer ? "1rem" : "max(1.5rem, var(--safe-bottom, 0px))",
+          paddingBottom: footer ? 0 : "max(1.5rem, var(--safe-bottom, 0px))",
         }}
       >
         <div
@@ -119,21 +119,21 @@ const Screen = ({
             </h1>
           ) : null}
           {children}
+
+          {/* El pie vive dentro del contenido, pegado con `sticky`: cuando la pantalla
+              sobra queda a 12 px del último campo (antes se iba al fondo y dejaba un
+              hueco de 200 px en escritorio), y cuando el contenido es largo se queda
+              abajo, a mano del pulgar y por encima del teclado. */}
+          {footer ? (
+            <div
+              className="sticky bottom-0 z-10 mt-3 bg-background/92 pt-2 backdrop-blur-sm"
+              style={{ paddingBottom: "max(1rem, var(--safe-bottom, 0px))" }}
+            >
+              {footer}
+            </div>
+          ) : null}
         </div>
       </div>
-
-      {footer ? (
-        <div
-          className={cn("shrink-0 px-4 pt-3", "border-t-[0.5px] border-transparent")}
-          style={{
-            paddingBottom: "max(1rem, var(--safe-bottom, 0px))",
-            paddingLeft: "max(1rem, var(--safe-left, 0px))",
-            paddingRight: "max(1rem, var(--safe-right, 0px))",
-          }}
-        >
-          <div className={cn("mx-auto w-full", WIDTH[maxWidth])}>{footer}</div>
-        </div>
-      ) : null}
     </div>
   );
 };

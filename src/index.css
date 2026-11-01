@@ -401,10 +401,12 @@ body.keyboard-open main {
   
   /* iOS transition timing: 150ms ease for consistent feel */
   * { transition-timing-function: ease-out; }
+  /* Píldora, igual que los botones y las filas de selección: un solo idioma de
+     control en todo el producto. Los textareas la sobrescriben a 18 px. */
   .field {
     height: 44px;
-    padding-inline: 12px;
-    border-radius: 10px;
+    padding-inline: 18px;
+    border-radius: 9999px;
     border-width: 0;
     background-color: hsl(var(--secondary));
     font-size: 17px;

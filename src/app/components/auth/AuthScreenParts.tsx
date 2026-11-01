@@ -102,11 +102,11 @@ export const AuthFieldRow = ({
   trailing?: ReactNode;
   children: ReactNode;
 }) => (
-  <div className="group/field rounded-full bg-card pl-5 ring-2 ring-transparent transition-shadow duration-150 focus-within:ring-primary">
+  <div className="group/field rounded-full bg-secondary pl-5 ring-2 ring-transparent transition-shadow duration-150 focus-within:ring-primary">
     <label htmlFor={htmlFor} className="sr-only">
       {label}
     </label>
-    <div className="flex min-h-12 items-center">
+    <div className="flex min-h-11 items-center">
       {children}
       {trailing}
     </div>
