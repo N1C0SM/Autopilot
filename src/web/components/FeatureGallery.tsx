@@ -58,7 +58,7 @@ export default function FeatureGallery() {
   const pinned = el && !still ? Math.min(1, Math.max(0, -el.getBoundingClientRect().top / Math.max(1, distance))) : 0;
 
   const row = <div ref={rowRef} className={`flex w-max gap-5 px-5 sm:px-8 md:gap-8 md:px-[8vw] ${still ? "" : "will-change-transform"}`} style={still ? undefined : { transform: `translate3d(${-pinned * distance}px,0,0)` }}>
-    {cards.map(({ icon: I, title, text, tag, photo, visual }, i) => photo ? <article key={title} className="relative flex h-[min(24rem,56vh)] w-[min(80vw,26rem)] shrink-0 flex-col justify-end overflow-hidden rounded-[32px] bg-card p-7 md:p-10">
+    {cards.map(({ icon: I, title, text, tag, photo, visual }, i) => photo ? <article key={title} className="relative flex h-[min(20rem,48vh)] w-[min(80vw,26rem)] shrink-0 flex-col justify-end overflow-hidden rounded-[32px] bg-card p-7 md:p-10">
       {/* Foto a sangre con un degradado hacia abajo para que el texto se lea. */}
       <img src={photo} alt="" loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover object-[50%_35%]" />
       <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
@@ -67,7 +67,7 @@ export default function FeatureGallery() {
         <h3 className="mt-1 font-rounded text-[32px] font-bold leading-[1.05] tracking-tight text-white md:text-[44px]">{title}</h3>
         <p className="mt-3 type-body text-white/75">{text}</p>
       </div>
-    </article> : <article key={title} className={`relative flex h-[min(24rem,56vh)] w-[min(80vw,26rem)] shrink-0 flex-col overflow-hidden rounded-[32px] p-7 md:p-10 ${i % 2 ? "bg-primary text-primary-foreground" : "bg-card"}`}>
+    </article> : <article key={title} className={`relative flex h-[min(20rem,48vh)] w-[min(80vw,26rem)] shrink-0 flex-col overflow-hidden rounded-[32px] p-7 md:p-10 ${i % 2 ? "bg-primary text-primary-foreground" : "bg-card"}`}>
       {/* Sin foto, el icono es la imagen de la tarjeta, en proporción con la caja. */}
       <div className="flex min-h-0 flex-1 items-center justify-center" aria-hidden="true">
         {visual ?? <div className={`flex aspect-square w-[46%] items-center justify-center rounded-[28%] ${i % 2 ? "bg-primary-foreground/10" : "bg-primary/10"}`}>
