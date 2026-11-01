@@ -13,7 +13,7 @@ import { useAuth } from "@/shared/contexts/AuthContext";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { Button } from "@/shared/components/ui/button";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Clock, Dumbbell, Lock } from "lucide-react";
+import { Apple, Clock, Dumbbell } from "lucide-react";
 import { Spinner } from "@/shared/components/ui/spinner";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { EmptyState } from "@/shared/components/ui/empty-state";
@@ -132,6 +132,7 @@ const Dashboard = () => {
   // La asignación de entrenador se conserva aunque el chat no forme parte del lanzamiento.
   const [coachAssigned, setCoachAssigned] = useState(cached?.coachAssigned ?? true);
   const [nutrition, setNutrition] = useState(cached?.nutrition ?? false);
+  const [preparingNutrition, setPreparingNutrition] = useState(false);
   const [preparingRoutine, setPreparingRoutine] = useState(false);
   const [subscriptionTier, setSubscriptionTier] = useState<string>(cached?.subscriptionTier ?? "full");
   const [dayPlans, setDayPlans] = useState<DayPlan[]>(cached?.dayPlans ?? []);
@@ -469,17 +470,6 @@ const Dashboard = () => {
     void recalculate();
   }, [campaign, user, planStatus]);
 
-  // Mejorar de Entrenamiento a Completo: portal de Stripe si existe cliente, si no checkout directo.
-  const handleUpgradeToFull = async () => {
-    if (isIOSNative()) return;
-    const { data, error } = await supabase.functions.invoke("customer-portal");
-    if (!error && data?.url) {
-      window.open(data.url, "_blank");
-      return;
-    }
-    await handleCompletePayment("full");
-  };
-
   const handleManageSubscription = async () => {
     const { data, error } = await supabase.functions.invoke("customer-portal");
     if (data?.no_customer) {
@@ -528,10 +518,34 @@ const Dashboard = () => {
 
   const hasPlan = planStatus === "plan_ready";
 
-  const isTrainingOnly = coaching && !nutrition;
   const isTransform = subscriptionTier === "transform";
   const isFull = subscriptionTier === "full";
   const canRequestVideoCall = isTransform || isFull;
+
+  /** Genera macros y comidas con los datos ya guardados (`sync-nutrition-macros`). */
+  const prepareNutrition = async () => {
+    if (preparingNutrition) return;
+    setPreparingNutrition(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("sync-nutrition-macros");
+      if (error) throw error;
+      if (data?.updated) {
+        window.dispatchEvent(new Event("autopilot:nutrition-plan-updated"));
+        await fetchData();
+        toast.success("Tu nutrición está lista");
+        return;
+      }
+      if (data?.reason === "no_weight") {
+        toast.error("Añade tu peso en Ajustes para calcular tus macros.");
+        return;
+      }
+      toast.error("No se ha podido preparar la nutrición. Inténtalo de nuevo.");
+    } catch {
+      toast.error("No se ha podido preparar la nutrición. Revisa tu conexión.");
+    } finally {
+      setPreparingNutrition(false);
+    }
+  };
 
   const requestVideoCall = async () => {
     if (!user) return;
@@ -809,16 +823,35 @@ const Dashboard = () => {
         </Suspense>
       )}
 
-      {!campaign && hasPlan && section === "nutrition" && isTrainingOnly && (
+      {/* Un plan de pago incluye nutrición: si aún no hay macros calculados no es un
+          muro de pago, es que falta generarlos. Antes se pedía subir a Coach. */}
+      {!campaign && hasPlan && section === "nutrition" && coaching && !nutrition && (
         <div className="flex w-full flex-1 flex-col">
-          <EmptyState
-            className="flex-1"
-            icon={Lock}
-            title="Nutrición no incluida en tu plan"
-            description="Tu plan actual es Entrenamiento. Cambia a Completo para desbloquear tu plan de nutrición personalizado."
-          />
-          {!isIOSNative() && (
-            <Button size="lg" onClick={() => { void hapticTap(); void handleUpgradeToFull(); }} className="w-full md:w-auto md:self-center">Elegir {plans.coachName} — {euro(plans.coachPrice)}/mes</Button>
+          {consumerPlan === "coach" ? (
+            // Con Coach la nutrición la prepara la persona, no el botón.
+            <EmptyState
+              className="flex-1"
+              icon={Clock}
+              title="Tu nutrición, en camino"
+              description="Nicolás está preparando tus macros y tus comidas con los datos que nos has dado."
+            />
+          ) : (
+            <>
+              <EmptyState
+                className="flex-1"
+                icon={Apple}
+                title="Tu plan incluye nutrición"
+                description="Con tu peso y tu objetivo calculamos tus macros y tus comidas del día. Puedes ajustarlo cuando quieras en Ajustes."
+              />
+              <div className="flex w-full flex-col gap-2 md:flex-row md:justify-center">
+                <Button size="lg" className="w-full md:w-auto" disabled={preparingNutrition} onClick={() => { void hapticTap(); void prepareNutrition(); }}>
+                  {preparingNutrition ? "Preparando…" : "Preparar mi nutrición"}
+                </Button>
+                <Button variant="plain" size="lg" className="w-full md:w-auto" onClick={() => { void hapticTap(); setSection("settings"); }}>
+                  Revisar mis datos
+                </Button>
+              </div>
+            </>
           )}
         </div>
       )}
