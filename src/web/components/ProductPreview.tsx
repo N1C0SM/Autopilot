@@ -224,12 +224,14 @@ function ProductPreviewContent({ onPlans, onFree }: { onPlans: () => void; onFre
           <div className="max-w-xl">
             <p className="type-subhead text-primary">Antes de decidir</p>
             <h2 id="preview-heading" className="mt-1 type-title1 sm:text-[40px] sm:leading-[44px]"><ScrollWords text="Prueba cómo sería tu día." /></h2>
-            <p className="mt-3 type-body text-muted-foreground">Así se ve la app por dentro: tu día, cada serie, tus macros y tu progreso. Toca las pestañas del teléfono para cambiar de pantalla.</p>
+            <p className="mt-3 type-body text-muted-foreground">Así se ve la app por dentro: tu día, cada serie, tus macros y tu progreso. Cambia de pantalla con las pestañas de la demo.</p>
           </div>
-          <span className="type-footnote text-muted-foreground">Capturas reales de la app</span>
+          <span className="hidden type-footnote text-muted-foreground sm:inline">Capturas reales de la app</span>
         </div>
 
-        <div className="grid items-center gap-10 md:grid-cols-[1fr_22rem] md:gap-16">
+        {/* Alineado arriba, no centrado: el texto arranca a la altura del teléfono en vez
+            de quedar 400 px por debajo de la entradilla. */}
+        <div className="grid items-start gap-10 md:grid-cols-[1fr_22rem] md:gap-16">
           <div className="order-2 md:order-1">
             <h3 className="type-title1">{side[view].title}</h3>
             <ul className="mt-6 space-y-4">
@@ -238,11 +240,18 @@ function ProductPreviewContent({ onPlans, onFree }: { onPlans: () => void; onFre
               ))}
             </ul>
             <p className="mt-6 max-w-md type-footnote text-muted-foreground">{`Capturas reales de la app. Gratis incluye rutina, registro, progreso, macros y scan básico${plans.plus ? `; ${plans.plusName} añade tus comidas y el scan completo por ${euro(plans.plusPrice)}/mes tras la prueba` : ""}.`}</p>
+            {/* Las acciones viven con el texto, no en una fila suelta al pie de la sección. */}
+            <div className="mt-8 flex max-w-md flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:gap-3">
+              {onFree && <Button type="button" variant="tinted" size="lg" onClick={() => { void hapticTap(); onFree(); }}>Crear mi propia rutina gratis</Button>}
+              <Button type="button" variant="plain" size="lg" onClick={() => { void hapticTap(); onPlans(); }}>{plans.campaign ? "Ver qué incluye Free" : "Ver qué incluye cada plan"}</Button>
+            </div>
           </div>
 
-          <div className="order-1 mx-auto w-full max-w-[22rem] md:order-2">
+          <div className="order-1 mx-auto flex w-full max-w-[22rem] flex-col md:order-2">
             {/* Capturas REALES de la app (public/app-shots); las pestañas de abajo cambian de pantalla. */}
-            <PhoneFrame screenClassName="h-[44rem]" chrome={false}>
+            {/* La proporción del marco es la de las capturas (738×1645): no se corta la
+                barra de la app. */}
+            <PhoneFrame screenClassName="aspect-[738/1645]" chrome={false}>
               <img
                 key={view}
                 src={DEMO_SHOTS[view]}
@@ -250,20 +259,31 @@ function ProductPreviewContent({ onPlans, onFree }: { onPlans: () => void; onFre
                 className="h-full w-full object-cover object-top motion-safe:animate-fade-in"
                 decoding="async"
               />
-              <nav aria-label="Secciones de la demo" className="absolute inset-x-3 bottom-4 z-10 grid h-16 grid-cols-4">
+              {/* Zonas táctiles sobre la barra dibujada en la captura: solo puntero, el control
+                  accesible es el visible de abajo. */}
+              <nav aria-hidden="true" className="absolute inset-x-3 bottom-4 z-10 hidden h-16 grid-cols-4 md:grid">
                 {shownViews.map((v) => (
-                  <button key={v.key} type="button" aria-pressed={view === v.key} aria-label={v.label} onClick={() => changeView(v.key as View)}
-                    className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+                  <button key={v.key} type="button" tabIndex={-1} onClick={() => changeView(v.key as View)} className="rounded-full" />
                 ))}
               </nav>
             </PhoneFrame>
+
+            {/* Control visible: las zonas táctiles sobre la barra del teléfono existían pero
+                eran invisibles, así que la demo parecía una imagen fija. */}
+            <div role="tablist" aria-label="Pantallas de la demo" className="order-first mb-4 grid grid-cols-4 gap-1 rounded-full bg-card p-1 md:order-last md:mb-0 md:mt-5">
+              {shownViews.map((v) => (
+                <button key={v.key} type="button" role="tab" aria-selected={view === v.key} onClick={() => changeView(v.key as View)}
+                  className={cn(
+                    "h-9 rounded-full type-footnote font-semibold transition-colors",
+                    view === v.key ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground",
+                  )}>
+                  {v.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
-        <div className="mx-auto mt-12 flex max-w-sm flex-col items-stretch gap-1 sm:max-w-none sm:flex-row sm:items-center sm:justify-center sm:gap-3">
-          {onFree && <Button type="button" variant="tinted" size="lg" className="sm:px-10" onClick={() => { void hapticTap(); onFree(); }}>Crear mi propia rutina gratis</Button>}
-          <Button type="button" variant="plain" size="lg" onClick={() => { void hapticTap(); onPlans(); }}>{plans.campaign ? "Ver qué incluye Free" : "Ver qué incluye cada plan"}</Button>
-        </div>
       </div>
     </section>
   );

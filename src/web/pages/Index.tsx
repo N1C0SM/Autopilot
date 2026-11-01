@@ -55,6 +55,24 @@ export default function Index() {
   const [showSticky, setShowSticky] = useState(false);
   const finalCtaRef = useRef<HTMLDivElement>(null);
   const [finalVisible, setFinalVisible] = useState(false);
+  // Secciones que ya tienen su propio botón principal: con la barra fija encima,
+  // tapaba la pantalla de la demo y el botón de las guías.
+  const [ownCtaInView, setOwnCtaInView] = useState(false);
+  useEffect(() => {
+    if (typeof IntersectionObserver === "undefined") return;
+    const targets = ["demo", "guias"].map((id) => document.getElementById(id)).filter(Boolean) as HTMLElement[];
+    if (!targets.length) return;
+    const visible = new Set<Element>();
+    const io = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) visible.add(entry.target);
+        else visible.delete(entry.target);
+      }
+      setOwnCtaInView(visible.size > 0);
+    }, { rootMargin: "-15% 0px -15% 0px" });
+    targets.forEach((target) => io.observe(target));
+    return () => io.disconnect();
+  }, [destination]);
   useEffect(() => {
     const el = finalCtaRef.current;
     if (!el || typeof IntersectionObserver === "undefined") return;
@@ -209,7 +227,7 @@ export default function Index() {
     </section>
 
     {/* CTA fija en móvil cuando el quiz del hero ya no se ve */}
-    {showSticky && !finalVisible && <div className="fixed inset-x-0 bottom-0 z-40 bg-background/90 px-4 pb-[max(env(safe-area-inset-bottom),12px)] pt-3 backdrop-blur sm:hidden animate-in slide-in-from-bottom-full duration-300">
+    {showSticky && !finalVisible && !ownCtaInView && <div className="fixed inset-x-0 bottom-0 z-40 bg-background/90 px-4 pb-[max(env(safe-area-inset-bottom),12px)] pt-3 backdrop-blur sm:hidden animate-in slide-in-from-bottom-full duration-300">
       <Button variant="hero" size="lg" asChild className="w-full"><Link to="/onboarding" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source: "sticky" }); }}>Crear mi rutina gratis</Link></Button>
     </div>}
   </PublicLayout>;

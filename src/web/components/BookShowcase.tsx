@@ -38,32 +38,26 @@ export default function BookShowcase() {
 
   const info = (b: ShowBook) => {
     const pack = isPack(b);
-    return <>
-      <div className="flex items-center gap-2">
-        {pack && (
-          <span className="inline-block rounded-md bg-primary px-2 py-0.5 type-caption2 font-bold tracking-wider text-primary-foreground uppercase">
-            Pack
-          </span>
-        )}
+    // Título con dos líneas reservadas, precio y una acción con forma de botón: así las
+    // tarjetas de la fila alinean precio y CTA aunque el título ocupe una línea o dos.
+    return <div className="mt-4 flex flex-1 flex-col">
+      {/* Sin distintivo «Pack» aquí: la portada y el título ya lo dicen, y el hueco
+          hacía que el propio título se cortara en dos líneas. */}
+      <div className="flex min-h-[3.1rem] items-start">
         <h3 className="line-clamp-2 type-headline">{b.title}</h3>
       </div>
       <p className="mt-1 type-subhead text-muted-foreground"><span className="font-semibold text-foreground">{b.price || "Gratis"}</span>{pack ? " · Todas las guías" : b.pages ? ` · ${b.pages} págs.` : ""}</p>
-      <span className="mt-2 inline-flex min-h-11 items-center type-subhead text-primary">{pack ? "Ver pack" : "Ver guía"}</span>
-    </>;
-  };
-  const cover = (b: ShowBook) => {
-    const pack = isPack(b);
-    return <div className="transition-transform duration-500 ease-out group-hover:-translate-y-2 group-active:scale-[0.97]">
-      <div className="relative shadow-[0_30px_60px_-20px_rgba(0,0,0,0.6)]">
-        <BookCover title={b.title} src={b.cover} />
-        {pack && (
-          <div className="pointer-events-none absolute left-3 top-3 z-10 rounded-full bg-primary px-3 py-1 text-[11px] font-bold tracking-wider text-primary-foreground shadow-lg uppercase backdrop-blur-sm">
-            Pack Completo
-          </div>
-        )}
-      </div>
+      <span className="mt-auto inline-flex h-9 w-fit items-center rounded-full bg-primary/15 px-4 pt-0 type-footnote font-semibold text-primary transition-colors group-hover:bg-primary/20">{pack ? "Ver pack" : "Ver guía"}</span>
     </div>;
   };
+  // La portada del pack ya viene rotulada: no se repite el distintivo encima.
+  const cover = (b: ShowBook) => (
+    <div className="transition-transform duration-500 ease-out group-hover:-translate-y-2 group-active:scale-[0.97]">
+      <div className="relative shadow-[0_30px_60px_-20px_rgba(0,0,0,0.6)]">
+        <BookCover title={b.title} src={b.cover} />
+      </div>
+    </div>
+  );
 
   const header = <div className="mx-auto max-w-4xl px-5 text-center sm:px-8">
     <p className="type-subhead text-primary">Guías en PDF</p>
@@ -107,11 +101,11 @@ export default function BookShowcase() {
     </section>;
   }
 
-  return <section ref={ref} aria-labelledby="guias-titulo" className="overflow-hidden py-24 sm:py-32">
+  return <section ref={ref} id="guias" aria-labelledby="guias-titulo" className="overflow-hidden py-24 sm:py-32">
     {header}
     <div className="mt-14 flex snap-x snap-mandatory gap-5 overflow-x-auto px-5 pb-6 [scrollbar-width:none] sm:justify-center sm:px-8 [&::-webkit-scrollbar]:hidden">
       {(books ?? Array.from({ length: 4 }, () => null)).map((b, i) => b
-        ? <Link key={b.id} to={`/recursos?guia=${encodeURIComponent(b.id)}`} onClick={() => open(b)} className="group w-[200px] shrink-0 snap-center text-left sm:w-[220px]">{cover(b)}{info(b)}</Link>
+        ? <Link key={b.id} to={`/recursos?guia=${encodeURIComponent(b.id)}`} onClick={() => open(b)} className="group flex w-[200px] shrink-0 snap-center flex-col text-left sm:w-[220px]">{cover(b)}{info(b)}</Link>
         : <div key={i} aria-hidden="true" className="w-[200px] shrink-0 sm:w-[220px]"><div className="aspect-[3/4] animate-pulse rounded-xl bg-card" /></div>)}
     </div>
     {footer}

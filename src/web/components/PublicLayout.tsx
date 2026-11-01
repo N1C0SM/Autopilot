@@ -80,16 +80,32 @@ export default function PublicLayout({ title, description, children }: { title: 
     </Helmet>
     <a href="#contenido" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-2 focus:z-[60] focus:bg-background focus:p-3">Saltar al contenido</a>
     <header className="app-chrome sep-b sticky top-0 z-50 pt-safe">
-      <div className="container mx-auto flex h-14 min-w-0 items-center justify-between gap-3 px-4">
-        <Link to="/" aria-label="Autopilot, inicio" className="inline-flex min-h-11 items-center type-headline text-primary transition-opacity active:opacity-60">Autopilot</Link>
-        <nav aria-label="Navegación principal" className="hidden items-center gap-1 lg:flex">
-          {navigation.map(([to, label]) => <NavLink key={to} to={to} className={({ isActive }) => `inline-flex min-h-11 items-center px-3 type-subhead transition-colors active:opacity-60 ${isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}>{label}</NavLink>)}
-          {showApp && <NavLink to="/app" className="inline-flex min-h-11 items-center px-3 type-subhead text-muted-foreground transition-colors hover:text-foreground active:opacity-60">App móvil</NavLink>}
-          <Button variant="plain" asChild><Link to="/login">Iniciar sesión</Link></Button>
-          <Button variant="tinted" asChild><Link to="/onboarding" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source: "header" }); }}>Crear mi rutina</Link></Button>
+      {/* La cabecera manda por jerarquía, no por tamaño: logotipo con más peso, enlaces
+          de 14 px en gris y un único acento dorado (la acción), con un filete que separa
+          el acceso de la navegación. Antes los siete elementos pesaban lo mismo. */}
+      <div className="container mx-auto flex h-14 min-w-0 items-center justify-between gap-2 px-4 lg:h-16 lg:px-6">
+        <Link to="/" aria-label="Autopilot, inicio" className="inline-flex min-h-11 items-center font-rounded text-[20px] font-bold tracking-tight text-primary transition-opacity active:opacity-60 lg:text-[22px]">Autopilot</Link>
+        <nav aria-label="Navegación principal" className="hidden items-center lg:flex">
+          {navigation.map(([to, label]) => (
+            <NavLink key={to} to={to} className={({ isActive }) => `relative inline-flex min-h-11 items-center px-3 text-[14px] font-medium transition-colors active:opacity-60 ${isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+              {({ isActive }) => (
+                <>
+                  {label}
+                  <span
+                    aria-hidden="true"
+                    className={`absolute inset-x-3 bottom-2 h-[2px] rounded-full bg-primary transition-opacity duration-150 ${isActive ? "opacity-100" : "opacity-0"}`}
+                  />
+                </>
+              )}
+            </NavLink>
+          ))}
+          {showApp && <NavLink to="/app" className="inline-flex min-h-11 items-center px-3 text-[14px] font-medium text-muted-foreground transition-colors hover:text-foreground active:opacity-60">App móvil</NavLink>}
+          <span aria-hidden="true" className="mx-2 h-4 w-px bg-border" />
+          <Button variant="plain" size="sm" asChild><Link to="/login">Iniciar sesión</Link></Button>
+          <Button variant="tinted" size="sm" asChild className="ml-1 px-4"><Link to="/onboarding" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source: "header" }); }}>Crear mi rutina</Link></Button>
         </nav>
-        <div className="flex items-center lg:hidden">
-          <Button variant="plain" asChild><Link to="/onboarding" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source: "header" }); }}>Crear mi rutina</Link></Button>
+        <div className="flex items-center gap-1 lg:hidden">
+          <Button variant="tinted" size="sm" asChild className="h-11 px-4"><Link to="/onboarding" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source: "header" }); }}>Crear mi rutina</Link></Button>
           <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
             <SheetTrigger asChild><Button variant="ghost" size="icon" aria-label="Abrir menú" onClick={() => void hapticTap()}><Menu className="h-6 w-6" strokeWidth={2} /></Button></SheetTrigger>
             <SheetContent className="w-[min(90vw,360px)] overflow-y-auto px-4" onOpenAutoFocus={(e) => e.preventDefault()}>
@@ -136,10 +152,12 @@ export default function PublicLayout({ title, description, children }: { title: 
             </ul>
           </div>
         </div>
-        <div className="sep-t mt-10 flex flex-col gap-1 pt-6 type-footnote text-muted-foreground sm:mt-12 sm:flex-row sm:items-center sm:justify-between">
+        <div className="sep-t mt-10 flex flex-col gap-1 pt-5 type-footnote text-muted-foreground sm:mt-12 sm:flex-row sm:items-center sm:justify-between sm:pt-6">
           <p><span className="font-semibold text-foreground">Autopilot</span> · {new Date().getFullYear()}</p>
-          <nav aria-label="Información legal" className="flex flex-wrap gap-x-5">
-            {[["aviso-legal", "Aviso legal"], ["terminos", "Términos"], ["privacidad", "Privacidad"], ["cookies", "Cookies"], ["disclaimer-medico", "Información de salud"]].map(([slug, label]) => <Link key={slug} className="inline-flex min-h-11 items-center transition-colors hover:text-foreground active:opacity-60" to={`/legal/${slug}`}>{label}</Link>)}
+          {/* Dos columnas en móvil: los cinco enlaces legales quedaban en 3 + 2 con
+              huecos de 44 px y una línea huérfana. */}
+          <nav aria-label="Información legal" className="grid grid-cols-2 gap-x-5 sm:flex sm:flex-wrap sm:gap-x-5">
+            {[["aviso-legal", "Aviso legal"], ["terminos", "Términos"], ["privacidad", "Privacidad"], ["cookies", "Cookies"], ["disclaimer-medico", "Información de salud"]].map(([slug, label]) => <Link key={slug} className="inline-flex min-h-9 items-center transition-colors hover:text-foreground active:opacity-60 sm:min-h-11" to={`/legal/${slug}`}>{label}</Link>)}
           </nav>
         </div>
       </div>

@@ -35,20 +35,20 @@ vi.mock("@/shared/lib/planCatalog", async () => {
 afterEach(cleanup);
 
 describe("public product preview", () => {
-  it("shows real app screenshots and switches them from the phone tabs", () => {
+  it("shows real app screenshots and switches them from the visible tabs", () => {
     render(<ProductPreview onPlans={() => {}} />);
     expect(screen.getByRole("img", { name: /Pantalla Hoy/ })).toHaveAttribute("src", "/app-shots/hoy.jpg");
-    fireEvent.click(screen.getByRole("button", { name: "Nutrición" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Nutrición" }));
     expect(screen.getByRole("img", { name: /Pantalla Nutrición/ })).toHaveAttribute("src", "/app-shots/nutricion.jpg");
-    expect(screen.getByRole("button", { name: "Nutrición" })).toHaveAttribute("aria-pressed", "true");
-    fireEvent.click(screen.getByRole("button", { name: "Entrenar" }));
+    expect(screen.getByRole("tab", { name: "Nutrición" })).toHaveAttribute("aria-selected", "true");
+    fireEvent.click(screen.getByRole("tab", { name: "Entrenar" }));
     expect(screen.getByRole("img", { name: /Pantalla Entrenar/ })).toHaveAttribute("src", "/app-shots/registro.jpg");
   });
 
   it("presents macros as free and has no chat tab", () => {
     render(<ProductPreview onPlans={() => {}} />);
-    fireEvent.click(screen.getByRole("button", { name: "Nutrición" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Nutrición" }));
     expect(screen.getByText("Tus macros, siempre gratis.")).toBeVisible();
-    expect(screen.queryByRole("button", { name: "Chat" })).toBeNull();
+    expect(screen.queryByRole("tab", { name: "Chat" })).toBeNull();
   });
 });
