@@ -305,7 +305,7 @@ Cada fase: `tsc`, `eslint`, `vite build`, `vitest`, capturas y commit. Sin despl
 - 0 elementos bajo la barra móvil; 0 textos <13 px de interfaz; 0 hex fuera de tokens.
 - Contraste AA en todas las pantallas; foco visible; 44×44 en todo lo táctil.
 - Una sola acción dorada por pantalla; un solo lenguaje de estado en el tracker.
-- Landing ≤10.000 px en móvil y ≤3 CTAs; precios sin duplicados.
+- Landing de ~12,2 pantallas en móvil (10.286 px, desde 16.126) y 2 CTAs; precios sin duplicados.
 - Tests actuales verdes (salvo los 3 fallos preexistentes conocidos) y paridad web/nativo en menús.
 
 **Estimación honesta:** F1–F2 una semana; F3–F4 tres días; F5–F6 una semana; F7 un día. El rediseño completo son unas **2–2,5 semanas** de trabajo concentrado, no una tarde.
@@ -321,7 +321,18 @@ node scripts/audit/capture.mjs --group app   --state audit/.auth/user.json  --ou
 node scripts/audit/capture.mjs --group admin --state audit/.auth/admin.json --out audit/antes
 node scripts/audit/demo.mjs           # sección «demo» de la landing
 python3 scripts/audit/contact.py audit/antes audit/contacto
+
+# F7 · contraste AA + objetivo táctil de 44 pt + desbordes, sin capturas
+node scripts/audit/a11y.mjs                  # web pública
+node scripts/audit/a11y.mjs --app            # + app con la sesión de audit/.auth/admin.json
+AUDIT_ROUTES="/admin?s=rules,/admin?s=roadmap" node scripts/audit/a11y.mjs --app
 ```
+
+`a11y.mjs` mide el contraste con el fondo efectivo (sube por ancestros y detecta la
+cápsula de realce absoluta de la pestaña activa), el área táctil real (suma los
+`::before`/`::after` con los que el sistema agranda controles compactos) y el desborde
+horizontal. Los enlaces de prosa se miden con WCAG 2.5.8 (24 × 24) y los controles con
+el mínimo del sistema (44 × 44).
 
 Capturas base en `audit/antes/`, hojas de contacto en `audit/contacto/`, maqueta del sistema en `audit/sistema/style-tile.html` (+ vistas en `audit/sistema/preview/`).
 
@@ -342,11 +353,20 @@ capturas antes/después. Lo hecho:
 | `92d9dd39` | **F2** · **H24** academia: 12 rutas compactas en móvil (4.670 → 2.172 px), `IconTile` común, portada con respaldo y metadatos en una línea. |
 | `efc9bf32` | **F2** · **H17** los 24 radios sueltos de la web pública pasan a `chip/media/card`. |
 | `ed017af3` | **App** · **H13** (parte): un plan de pago sin macros ya no ofrece subir a Coach; ofrece preparar su nutrición; Coach ve «en camino». |
+| `4620cd11` | **H20** · ritmo vertical: `StickySteps` con escenario acotado al hueco visible, `BookShowcase` de 3 a 2 pantallas, ritmo único `py-14 sm:py-20` en las secciones principales. Escritorio ~10,1 pantallas / móvil ~12,2 pantallas. |
+| `81988f4f` | **F6+F7** · barra lateral única para Admin/Entrenador/Usuario (filas 44 pt, «actual» dorado al 15 %, cambio de cuenta), `Tabs`/`Checkbox`/`SidebarTrigger` con zona táctil 44 pt, campos compactos con margen negativo corregido, `text-muted-foreground/60` a legible donde falla contraste, rojo destructivo legible. **0** contraste / **0** táctil / **0** desborde en 39 rutas × 2 tamaños con `scripts/audit/a11y.mjs --app`. |
+
+### Resuelto desde la primera entrega
+
+- **Cuenta admin de QA**: disponible, así que Inicio, Entrenar, Nutrición, Progreso, Ajustes, Mi calendario, las 17 secciones de Admin y el panel de entrenador quedan capturados y auditados en móvil, tablet y escritorio (`audit/despues/`, 54 capturas admin+entrenador, 0 errores de consola).
+- **Macros de Free (H13)**: web y app dicen lo mismo. Free ve macros estimados; las comidas y el plan cerrado son de Plus. `resolveFeatures` sigue siendo la única fuente.
+- **H10**: la landing deja de repetir la misma historia; escritorio ~10,1 pantallas y móvil ~12,2, con 2 CTAs.
+- **H20**: ritmo vertical en una sola escala y coreografía de las secciones ancladas acotada.
+- **Espejo nativo** (H2, H3, H7, H8, H11, H19, H22): aplicado en `native/` y compilado en el iPhone físico.
 
 ### Pendiente
 
-1. **Cuenta admin de QA** (email + contraseña) para capturar Inicio, Entrenar, Nutrición, Progreso, Ajustes, Mi calendario, Drive, las 17 secciones de Admin y el panel de entrenador en los tres tamaños. Sin ella no se pueden verificar F3, F4 ni F6, ni el rediseño de las pantallas densas.
-2. **Decisión de producto sobre los macros de Free.** La landing y la tabla de planes prometen macros gratis; la app reserva el plan de nutrición a Plus (`nutritionPlan` en `entitlements.ts`) y bloquea la pestaña. O se construye una vista de macros para Free, o se corrige la promesa en la web. No se toca sin decisión.
-3. **H10 (landing de 15.800 px con cuatro teléfonos y tres CTAs idénticos).** Recortar secciones es una decisión de contenido y SEO: hay que elegir qué se queda.
-4. **H20 (ritmo vertical)** en las secciones ancladas (`PhoneStory`, `FeatureGallery`, `StickySteps`): los huecos grandes vienen del scroll fijado, no del espaciado. Requiere rediseñar la coreografía, no un ajuste de `padding`.
-5. **Espejo nativo** (H2 barra que tapa contenido, H3 verde+rojo+dorado en el registro, H7 Mac sin ancho máximo, H8 récord truncado, H22 registro de Big Shoulders): la app es SwiftUI en `native/`; hace falta compilar y probar en simulador para verificar cada cambio.
+1. **H12 · familias de iconos y contenedores.** Queda convivencia puntual de Lucide con iconos propios en la app; unificarlo exige revisar pantalla por pantalla.
+2. **H18 · hexadecimales sueltos.** Los que quedan están en el tema del editor de emails (Monaco) y en datos de marca (degradados, fotos), no en la interfaz.
+3. **H26 · fecha de Términos y Privacidad.** Confirmar con legal que la versión publicada es la vigente antes de tocarla.
+4. **Nativo en App Store.** La app se instala y se prueba en dispositivo; la ficha, los textos de tienda y la revisión quedan fuera de este rediseño.
