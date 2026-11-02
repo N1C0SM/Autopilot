@@ -3,6 +3,8 @@ import { Button } from "@/shared/components/ui/button";
 import { ProgressRing } from "@/shared/components/ui/progress-ring";
 import { Tabs, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import ExerciseProgressChart from "@/app/components/dashboard/ExerciseProgressChart";
+import MuscleMap from "@/app/components/MuscleMap";
+import { musclesForExercise } from "@/shared/lib/muscleMapping";
 import { previewExercises, previewHistory } from "@/web/components/previewData";
 
 /** Read-only public examples. Same chart and controls as the actual app; no account writes. */
@@ -20,6 +22,7 @@ export function PublicProgressScreen() {
 
 export function PublicTrainingScreen({ active = false }: { active?: boolean }) {
   const exercise = previewExercises[0];
+  const { primary, synergists } = musclesForExercise(exercise.name, exercise.muscleGroup ?? null);
   return <div className="flex h-full min-h-0 flex-col px-4 pt-2">
     <h2 className="type-large-title">Entrenar</h2>
     <p className="mt-5 type-title1">Fuerza cuerpo completo</p>
@@ -27,6 +30,16 @@ export function PublicTrainingScreen({ active = false }: { active?: boolean }) {
     {active ? <>
       <img src={exercise.image} alt="Sentadilla goblet" className="mt-5 aspect-[4/3] max-h-40 w-full rounded-media bg-card object-contain" loading="lazy" decoding="async" />
       <p className="mt-4 type-title3">{exercise.name}</p>
+      {/* Mapa muscular en la pantalla activa de entrenamiento */}
+      {primary.length > 0 && (
+        <div className="mt-3 flex items-center gap-3 rounded-media bg-secondary px-3 py-2">
+          <MuscleMap primary={primary} synergists={synergists} size={52} />
+          <div className="min-w-0">
+            <p className="type-caption2 text-muted-foreground">Músculo</p>
+            <p className="type-subhead font-semibold">{primary.join(", ")}</p>
+          </div>
+        </div>
+      )}
       <div className="mt-4 grid grid-cols-[24px_52px_minmax(0,1fr)_minmax(0,1fr)_44px] items-center gap-2 type-caption2 text-muted-foreground"><span>#</span><span>Anterior</span><span className="text-center">kg</span><span className="text-center">Reps</span><span /></div>
       {[0, 1, 2].map(i => <div key={i} className="mt-2 grid grid-cols-[24px_52px_minmax(0,1fr)_minmax(0,1fr)_44px] items-center gap-2">
         <span className="type-subhead text-muted-foreground">{i + 1}</span><span className="type-caption2 tabular-nums text-muted-foreground">18 × 10</span>

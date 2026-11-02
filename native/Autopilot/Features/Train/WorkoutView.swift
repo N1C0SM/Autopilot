@@ -676,6 +676,26 @@ struct TechniqueSheet: View {
                 }
                 Text(exercise.name).font(.apTitle1)
                 if let g = exercise.muscle_group { Text(g).font(.apSubhead).foregroundStyle(Palette.muted) }
+
+                // Mapa muscular: mismo comportamiento que en la web (MuscleMap.tsx)
+                let muscles = musclesForExercise(name: exercise.name, muscleGroup: exercise.muscle_group)
+                if !muscles.primary.isEmpty {
+                    HStack(spacing: 16) {
+                        MuscleMapView(primary: muscles.primary, synergists: muscles.synergists, size: 80)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Músculos").font(.apCaption).foregroundStyle(Palette.muted)
+                            Text(muscles.primary.joined(separator: ", ")).font(.apHeadline)
+                            if !muscles.synergists.isEmpty {
+                                Text("Sinergistas: \(muscles.synergists.joined(separator: ", "))")
+                                    .font(.apSubhead).foregroundStyle(Palette.muted)
+                            }
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    .padding(14)
+                    .background(Palette.secondary, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                }
+
                 HStack(spacing: 12) {
                     FigureTile(label: "Series", value: "\(exercise.series)")
                     FigureTile(label: "Reps", value: exercise.reps)
