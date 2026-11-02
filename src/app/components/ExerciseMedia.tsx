@@ -125,6 +125,7 @@ const ExerciseMedia = ({ video, image, name, pattern, stimulus, load, className 
           poster={image ?? undefined}
           playsInline
           controls
+          loop
           preload="metadata"
           onPlay={(e) => {
             if (e.currentTarget.currentTime > 0.2) return;
