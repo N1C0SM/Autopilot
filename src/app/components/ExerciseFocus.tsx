@@ -3,6 +3,7 @@ import { IconTile } from "@/shared/components/ui/icon-tile";
 import { CalendarDays, Dumbbell, TrendingUp } from "lucide-react";
 import ExerciseMedia from "@/app/components/ExerciseMedia";
 import ExerciseTechnique from "@/app/components/ExerciseTechnique";
+import MuscleMap from "@/app/components/MuscleMap";
 import { Dialog, DialogContent, DialogTitle } from "@/shared/components/ui/dialog";
 import { ListGroup, ListRow } from "@/shared/components/ui/list";
 import { Spinner } from "@/shared/components/ui/spinner";
@@ -10,6 +11,7 @@ import { useAuth } from "@/shared/contexts/AuthContext";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { buildExerciseHistory, type WorkoutLogRecord } from "@/shared/lib/workoutMetrics";
 import { getProgressionSuggestion } from "@/shared/lib/workoutProgression";
+import { musclesForExercise } from "@/shared/lib/muscleMapping";
 import type { GymExerciseEntry } from "@/shared/types/training";
 
 // Cifras en formato español: 49,6 kg (no 49.6).
@@ -117,6 +119,11 @@ export const ExerciseFocus = ({
 
   const lastSets = logs[0] ? asSets((logs[0] as WorkoutLogRecord).sets_completed).filter((s) => s.done) : [];
 
+  const { primary: primaryMuscles, synergists: synergistMuscles } = useMemo(
+    () => musclesForExercise(name, exercise?.muscleGroup),
+    [name, exercise?.muscleGroup],
+  );
+
   const stats = [
     { label: "Series", value: exercise?.series },
     { label: "Reps", value: exercise?.reps },
@@ -150,6 +157,22 @@ export const ExerciseFocus = ({
             </p>
           )}
         </div>
+
+        {/* Muscle map — front/back SVG with highlighted muscles */}
+        {primaryMuscles.length > 0 && (
+          <div className="mt-6 flex items-center gap-5 rounded-media bg-secondary p-4">
+            <MuscleMap primary={primaryMuscles} synergists={synergistMuscles} size={90} />
+            <div className="min-w-0">
+              <p className="type-caption1 text-muted-foreground">Músculos</p>
+              <p className="mt-0.5 type-headline">{primaryMuscles.join(", ")}</p>
+              {synergistMuscles.length > 0 && (
+                <p className="mt-0.5 type-subhead text-muted-foreground">
+                  Sinergistas: {synergistMuscles.join(", ")}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
 
         {(exercise?.series || exercise?.reps || exercise?.rest) && (
           <dl className="mt-5 grid grid-cols-3 gap-2.5">

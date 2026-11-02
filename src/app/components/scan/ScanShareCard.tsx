@@ -2,6 +2,7 @@ import { forwardRef } from "react";
 import { formatDecimal } from "@/shared/lib/numberFormat";
 import autopilotLogo from "@/shared/assets/autopilot-logo.png";
 import { BrandMark } from "@/shared/components/ui/brand-mark";
+import { BRAND_GOLD, INK, INK_TEXT } from "@/shared/lib/palette";
 
 export interface ScanShareData {
   physique: number;
@@ -12,10 +13,10 @@ export interface ScanShareData {
   improvements?: { label?: string | null }[] | null;
 }
 
-const MUTED = "#a1a1aa";
+const MUTED = INK_TEXT.secondary;
 // Cifras con la firma de marca (.claude/design/marca.md).
 const FIG = "'Big Shoulders', -apple-system, system-ui, sans-serif";
-const GOLD = "#D6B45B";
+const GOLD = BRAND_GOLD;
 
 /** Story 1080×1920 que se exporta a PNG; mismo lenguaje visual que la story del entreno. */
 const ScanShareCard = forwardRef<HTMLDivElement, { result: ScanShareData; photos: string[] }>(({ result, photos }, ref) => {
@@ -29,8 +30,8 @@ const ScanShareCard = forwardRef<HTMLDivElement, { result: ScanShareData; photos
       style={{
         width: 1080,
         height: 1920,
-        background: "radial-gradient(ellipse 900px 640px at 50% 0%, rgba(214,180,91,0.09) 0%, transparent 70%), linear-gradient(#08090b, #020203)",
-        color: "#fafafa",
+        background: `radial-gradient(ellipse 900px 640px at 50% 0%, rgba(214,180,91,0.09) 0%, transparent 70%), linear-gradient(${INK.base}, ${INK.deep})`,
+        color: INK_TEXT.primary,
         fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', system-ui, sans-serif",
         padding: "82px 76px 70px",
         display: "flex",
@@ -53,7 +54,7 @@ const ScanShareCard = forwardRef<HTMLDivElement, { result: ScanShareData; photos
         {photos.length > 0 && (
           <div style={{ display: "flex", gap: 16, height: photos.length > 1 ? 780 : 900 }}>
             {photos.map((src, i) => (
-              <div key={i} style={{ flex: 1, borderRadius: 44, overflow: "hidden", background: "#111216" }}>
+              <div key={i} style={{ flex: 1, borderRadius: 44, overflow: "hidden", background: INK.card }}>
                 <img loading="eager" decoding="sync" src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               </div>
             ))}
@@ -69,7 +70,7 @@ const ScanShareCard = forwardRef<HTMLDivElement, { result: ScanShareData; photos
           <div style={{ display: "flex", justifyContent: "center", marginTop: 40 }}>
             {stats.map(([label, value, color], i) => (
               <div key={label} style={{ padding: "0 56px", borderLeft: i ? "2px solid rgba(255,255,255,0.12)" : "none" }}>
-                <div style={{ fontFamily: FIG, fontSize: 80, fontWeight: 800, color: color ?? "#fafafa" }}>{value}</div>
+                <div style={{ fontFamily: FIG, fontSize: 80, fontWeight: 800, color: color ?? INK_TEXT.primary }}>{value}</div>
                 <div style={{ fontSize: 28, color: MUTED, fontWeight: 500, marginTop: 4 }}>{label}</div>
               </div>
             ))}
@@ -78,7 +79,7 @@ const ScanShareCard = forwardRef<HTMLDivElement, { result: ScanShareData; photos
 
         {(result.headline_diagnosis || result.summary || focus.length > 0) && (
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 36, fontWeight: 500, lineHeight: 1.3, color: "#e4e4e7" }}>
+            <div style={{ fontSize: 36, fontWeight: 500, lineHeight: 1.3, color: INK_TEXT.body }}>
               {(result.headline_diagnosis ?? result.summary ?? "").slice(0, 110)}
             </div>
             {focus.length > 0 && (
@@ -98,8 +99,8 @@ const ScanShareCard = forwardRef<HTMLDivElement, { result: ScanShareData; photos
         <div aria-hidden style={{ display: "flex", justifyContent: "center", marginBottom: 24, color: GOLD }}>
           <BrandMark size={56} className="text-current" />
         </div>
-        <div style={{ fontSize: 22, color: "#52525b" }}>Lectura orientativa con IA</div>
-        <div style={{ fontSize: 26, color: "#71717a", fontWeight: 500, marginTop: 8 }}>autopilotplan.com/scan</div>
+        <div style={{ fontSize: 22, color: INK_TEXT.faint }}>Lectura orientativa con IA</div>
+        <div style={{ fontSize: 26, color: INK_TEXT.tertiary, fontWeight: 500, marginTop: 8 }}>autopilotplan.com/scan</div>
       </div>
     </div>
   );

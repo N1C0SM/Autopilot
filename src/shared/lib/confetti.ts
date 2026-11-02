@@ -1,3 +1,5 @@
+import { CONFETTI_COLORS } from "@/shared/lib/palette";
+
 /**
  * Celebración de récords personales con confeti dorado.
  * Usa canvas-confetti para una animación ligera y performante.
@@ -32,7 +34,7 @@ export const celebratePersonalRecord = async () => {
       particleCount: 100,
       spread: 70,
       origin: { y: 0.8 },
-      colors: ['#FFD700', '#FFA500', '#FF8C00', '#F59E0B'],
+      colors: [...CONFETTI_COLORS],
       ticks: 200,
       gravity: 1.2,
       scalar: 1.2,
@@ -45,7 +47,7 @@ export const celebratePersonalRecord = async () => {
         angle: 60,
         spread: 55,
         origin: { x: 0, y: 0.8 },
-        colors: ['#FFD700', '#FFA500', '#F59E0B'],
+        colors: [...CONFETTI_COLORS].slice(0, 3),
         ticks: 150,
       });
       fire({
@@ -53,7 +55,7 @@ export const celebratePersonalRecord = async () => {
         angle: 120,
         spread: 55,
         origin: { x: 1, y: 0.8 },
-        colors: ['#FFD700', '#FFA500', '#F59E0B'],
+        colors: [...CONFETTI_COLORS].slice(0, 3),
         ticks: 150,
       });
     }, 250);

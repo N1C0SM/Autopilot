@@ -1,5 +1,4 @@
-import type { ComponentType } from "react";
-import { Barbell, ChartLineUp, ChatCircle, ForkKnife, House, type Icon as PhosphorIcon } from "@phosphor-icons/react";
+import { MessageCircle, Dumbbell, Apple, TrendingUp, Home, type LucideIcon } from "lucide-react";
 import type { UserSection } from "@/app/components/UserSidebar";
 import FloatingMobileNav from "@/app/components/mobile/FloatingMobileNav";
 
@@ -13,22 +12,18 @@ interface Props {
   hiddenTabs?: MobileTab[];
 }
 
-// Iconos como los de iOS: en línea para las pestañas inactivas y rellenos para la activa.
-const glyph = (Icon: PhosphorIcon, weight: "regular" | "fill"): ComponentType<{ className?: string }> =>
-  function TabGlyph({ className }: { className?: string }) {
-    return <Icon className={className} weight={weight} aria-hidden="true" />;
-  };
-
-const TABS: { key: MobileTab; label: string; icon: PhosphorIcon }[] = [
+// Una sola familia de iconos en web y app (Lucide): la pestaña activa se distingue por
+// la cápsula dorada y el trazo más grueso, no por un glifo relleno de otra librería.
+const TABS: { key: MobileTab; label: string; icon: LucideIcon }[] = [
   // Hoy primero y Entrenar segundo: la acción principal queda bajo el pulgar.
-  { key: "home", label: "Hoy", icon: House },
-  { key: "training", label: "Entrenar", icon: Barbell },
-  { key: "nutrition", label: "Nutrición", icon: ForkKnife },
-  { key: "progress", label: "Progreso", icon: ChartLineUp },
-  { key: "chat", label: "Chat", icon: ChatCircle },
+  { key: "home", label: "Hoy", icon: Home },
+  { key: "training", label: "Entrenar", icon: Dumbbell },
+  { key: "nutrition", label: "Nutrición", icon: Apple },
+  { key: "progress", label: "Progreso", icon: TrendingUp },
+  { key: "chat", label: "Chat", icon: MessageCircle },
 ];
 
-const ITEMS = TABS.map((tab) => ({ ...tab, icon: glyph(tab.icon, "regular"), activeIcon: glyph(tab.icon, "fill") }));
+const ITEMS = TABS.map((tab) => ({ ...tab }));
 
 const MobileTabBar = ({ active, onChange, lockedTabs = [], hiddenTabs = [] }: Props) => {
   return (

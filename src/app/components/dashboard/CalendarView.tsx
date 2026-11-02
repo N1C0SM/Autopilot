@@ -1,4 +1,5 @@
 import { getSportSchedules, getCustomActivities } from "@/shared/lib/availability";
+import { ACTIVITY_COLORS } from "@/shared/lib/palette";
 import { IconTile } from "@/shared/components/ui/icon-tile";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import FullCalendar from "@fullcalendar/react";
@@ -108,34 +109,34 @@ interface ScheduleConflict {
 
 // `icon` y `color` son datos que se guardan con la actividad (no se pintan en la interfaz).
 const CATEGORIES = [
-  { value: "boxeo", label: "Boxeo", icon: "🥊", color: "#f97316" },
-  { value: "escalada", label: "Escalada", icon: "🧗", color: "#f97316" },
-  { value: "yoga", label: "Yoga", icon: "🧘", color: "#10b981" },
-  { value: "running", label: "Running", icon: "🏃", color: "#ef4444" },
-  { value: "ciclismo", label: "Ciclismo", icon: "🚴", color: "#06b6d4" },
-  { value: "natacion", label: "Natación", icon: "🏊", color: "#0ea5e9" },
-  { value: "futbol", label: "Fútbol", icon: "⚽", color: "#84cc16" },
-  { value: "tenis", label: "Tenis", icon: "🎾", color: "#eab308" },
-  { value: "padel", label: "Pádel", icon: "🏓", color: "#a855f7" },
-  { value: "danza", label: "Danza", icon: "💃", color: "#ec4899" },
-  { value: "personal", label: "Personal", icon: "📌", color: "#a855f7" },
-  { value: "trabajo", label: "Trabajo", icon: "💼", color: "#64748b" },
-  { value: "otro", label: "Otro", icon: "✨", color: "#f97316" },
+  { value: "boxeo", label: "Boxeo", icon: "🥊", color: ACTIVITY_COLORS.orange },
+  { value: "escalada", label: "Escalada", icon: "🧗", color: ACTIVITY_COLORS.orange },
+  { value: "yoga", label: "Yoga", icon: "🧘", color: ACTIVITY_COLORS.green },
+  { value: "running", label: "Running", icon: "🏃", color: ACTIVITY_COLORS.red },
+  { value: "ciclismo", label: "Ciclismo", icon: "🚴", color: ACTIVITY_COLORS.cyan },
+  { value: "natacion", label: "Natación", icon: "🏊", color: ACTIVITY_COLORS.sky },
+  { value: "futbol", label: "Fútbol", icon: "⚽", color: ACTIVITY_COLORS.lime },
+  { value: "tenis", label: "Tenis", icon: "🎾", color: ACTIVITY_COLORS.yellow },
+  { value: "padel", label: "Pádel", icon: "🏓", color: ACTIVITY_COLORS.purple },
+  { value: "danza", label: "Danza", icon: "💃", color: ACTIVITY_COLORS.pink },
+  { value: "personal", label: "Personal", icon: "📌", color: ACTIVITY_COLORS.purple },
+  { value: "trabajo", label: "Trabajo", icon: "💼", color: ACTIVITY_COLORS.slate },
+  { value: "otro", label: "Otro", icon: "✨", color: ACTIVITY_COLORS.orange },
 ];
 
 // Default day-of-week + hour for auto-seeded sports from onboarding.
 // Uses evenings, staggered so they don't all collide on the same day.
 const SPORT_DEFAULTS: Record<string, { dow: number; hour: number; label: string; icon: string; color: string }> = {
-  boxeo:    { dow: 2, hour: 19, label: "Boxeo",    icon: "🥊", color: "#f97316" },
-  escalada: { dow: 4, hour: 18, label: "Escalada", icon: "🧗", color: "#f97316" },
-  yoga:     { dow: 3, hour: 8,  label: "Yoga",     icon: "🧘", color: "#10b981" },
-  running:  { dow: 6, hour: 9,  label: "Running",  icon: "🏃", color: "#ef4444" },
-  ciclismo: { dow: 6, hour: 10, label: "Ciclismo", icon: "🚴", color: "#06b6d4" },
-  natacion: { dow: 5, hour: 19, label: "Natación", icon: "🏊", color: "#0ea5e9" },
-  futbol:   { dow: 5, hour: 20, label: "Fútbol",   icon: "⚽", color: "#84cc16" },
-  tenis:    { dow: 4, hour: 19, label: "Tenis",    icon: "🎾", color: "#eab308" },
-  padel:    { dow: 4, hour: 20, label: "Pádel",    icon: "🏓", color: "#a855f7" },
-  danza:    { dow: 3, hour: 19, label: "Danza",    icon: "💃", color: "#ec4899" },
+  boxeo:    { dow: 2, hour: 19, label: "Boxeo",    icon: "🥊", color: ACTIVITY_COLORS.orange },
+  escalada: { dow: 4, hour: 18, label: "Escalada", icon: "🧗", color: ACTIVITY_COLORS.orange },
+  yoga:     { dow: 3, hour: 8,  label: "Yoga",     icon: "🧘", color: ACTIVITY_COLORS.green },
+  running:  { dow: 6, hour: 9,  label: "Running",  icon: "🏃", color: ACTIVITY_COLORS.red },
+  ciclismo: { dow: 6, hour: 10, label: "Ciclismo", icon: "🚴", color: ACTIVITY_COLORS.cyan },
+  natacion: { dow: 5, hour: 19, label: "Natación", icon: "🏊", color: ACTIVITY_COLORS.sky },
+  futbol:   { dow: 5, hour: 20, label: "Fútbol",   icon: "⚽", color: ACTIVITY_COLORS.lime },
+  tenis:    { dow: 4, hour: 19, label: "Tenis",    icon: "🎾", color: ACTIVITY_COLORS.yellow },
+  padel:    { dow: 4, hour: 20, label: "Pádel",    icon: "🏓", color: ACTIVITY_COLORS.purple },
+  danza:    { dow: 3, hour: 19, label: "Danza",    icon: "💃", color: ACTIVITY_COLORS.pink },
 };
 
 interface ExternalActivity {
@@ -331,7 +332,7 @@ const CalendarView = ({ dayPlans, targetUserId, isAdminMode, targetUserEmail, on
           start_hour: startHM.h,
           start_minute: startHM.m,
           duration_min: dur,
-          color: "#a855f7", // púrpura para "vida personal"
+          color: ACTIVITY_COLORS.purple, // púrpura para "vida personal"
           icon: "📌",
           note: "Añadido desde tu onboarding · puedes editarlo o moverlo",
         };

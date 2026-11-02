@@ -1,0 +1,2583 @@
+From 58e6837f27275fc757618a8cba607499b57e8ddd Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 31 Oct 2026 15:32:45 +0000
+Subject: [PATCH 1/2] Biblioteca de ejercicios: modelo de datos (fase 1)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Migración que solo añade: ficha completa en exercises (slug, pasos,
+errores, consejos, seguridad, estado, fuente y licencia), catálogos de
+músculos (12 grupos de filtro), equipamiento y modalidades, relaciones,
+medios, favoritos y recientes, con RLS. Los ejercicios actuales conservan
+ids y nombres y quedan publicados; draft/pending solo los ve el admin.
+Un trigger genera el slug y rechaza nombres repetidos al crear o renombrar.
+Pruebas SQL con PGlite.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01BLvZLaGs6gdkiy99s6rQbj
+---
+ AGENTS.md                                     |   1 +
+ src/shared/lib/exerciseLibrary.sql.test.ts    | 168 ++++++++++
+ .../20261031160000_exercise_library.sql       | 308 ++++++++++++++++++
+ 3 files changed, 477 insertions(+)
+ create mode 100644 src/shared/lib/exerciseLibrary.sql.test.ts
+ create mode 100644 supabase/migrations/20261031160000_exercise_library.sql
+
+diff --git a/AGENTS.md b/AGENTS.md
+index 37df755..3f80b85 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -4,6 +4,7 @@
+ - Design language (web, iPhone, Android and Mac are one product): read `.claude/design/README.md` before creating or changing any screen and pass `.claude/design/checklist.md` before release — black + restrained gold, borderless 22/28 px cards, pill buttons/fields, big rounded figures, real photos, shared components only.
+ 
+ 
++- Biblioteca de ejercicios: `exercises` sigue siendo la tabla central (ids y nombres estables, porque las rutinas los referencian por `exercise_id` o por nombre); músculos, equipo y modalidades viven en `muscles`, `equipment` y `exercise_categories_catalog` con tablas de relación, y medios en `exercise_media`. `status` draft/pending solo lo ve el admin; published/archived, cualquier usuario con sesión. Las fichas de wger muestran autor y licencia CC BY-SA. Esquema en la migración `20261031160000_exercise_library.sql`.
+ - Los vídeos de técnica con IA se generan vía la edge function `exercise-video` (AI Gateway, modelo de vídeo por defecto) y se guardan en el bucket público `site-assets` en `exercise-videos/`; el estado del trabajo se guarda en `exercises.video_job_id`.
+ - Campaign access reads the admin-only settings flag through get_free_campaign; shared resolveFeatures opens only software nutrition/progression, checkout endpoints enforce the pause, and billing records remain unchanged.
+ - Consumer plan (free/plus/coach) and role (user/trainer/admin) are separate; capabilities resolve only through `supabase/functions/_shared/entitlements.ts` (`resolveFeatures`) — avoids scattered plan checks.
+diff --git a/src/shared/lib/exerciseLibrary.sql.test.ts b/src/shared/lib/exerciseLibrary.sql.test.ts
+new file mode 100644
+index 0000000..69f86f0
+--- /dev/null
++++ b/src/shared/lib/exerciseLibrary.sql.test.ts
+@@ -0,0 +1,168 @@
++// @vitest-environment node
++import { readFileSync } from "node:fs";
++import { resolve } from "node:path";
++import { afterAll, beforeAll, describe, expect, it } from "vitest";
++import { PGlite } from "@electric-sql/pglite";
++
++const MIGRATION = resolve(__dirname, "../../../supabase/migrations/20261031160000_exercise_library.sql");
++
++const ADMIN = "00000000-0000-0000-0000-00000000000a";
++const ANA = "00000000-0000-0000-0000-000000000001";
++const BEA = "00000000-0000-0000-0000-000000000002";
++const PRESS = "10000000-0000-0000-0000-000000000001";
++const PRESS_DUP = "10000000-0000-0000-0000-000000000002";
++const SQUAT = "10000000-0000-0000-0000-000000000003";
++
++let db: PGlite;
++
++const as = async (userId: string | null) => {
++  await db.exec("RESET ROLE");
++  await db.query("SELECT set_config('request.jwt.claim.sub', $1, false)", [userId ?? ""]);
++  await db.exec(userId ? "SET ROLE authenticated" : "SET ROLE anon");
++};
++const asOwner = () => db.exec("RESET ROLE");
++const names = async () =>
++  (await db.query<{ name: string }>("SELECT name FROM public.exercises ORDER BY name")).rows.map((r) => r.name);
++
++beforeAll(async () => {
++  db = new PGlite();
++  // Estado actual de producción: la tabla tal y como la dejaron las migraciones anteriores.
++  await db.exec(`
++    CREATE ROLE anon; CREATE ROLE authenticated;
++    CREATE SCHEMA auth;
++    CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
++    CREATE TABLE auth.users (id uuid PRIMARY KEY);
++    CREATE TYPE public.app_role AS ENUM ('admin', 'user', 'trainer');
++    CREATE TABLE public.user_roles (user_id uuid, role public.app_role);
++    CREATE FUNCTION public.has_role(_user_id uuid, _role public.app_role) RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER
++      AS $$ SELECT EXISTS (SELECT 1 FROM public.user_roles WHERE user_id = _user_id AND role = _role) $$;
++    CREATE TABLE public.exercises (
++      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
++      name text NOT NULL,
++      muscle_group text,
++      created_at timestamptz NOT NULL DEFAULT now(),
++      image_url text, video_url text,
++      is_stable boolean NOT NULL DEFAULT true,
++      is_progressable boolean NOT NULL DEFAULT true,
++      high_tension boolean NOT NULL DEFAULT true
++    );
++    ALTER TABLE public.exercises ENABLE ROW LEVEL SECURITY;
++    CREATE POLICY "Admins can manage exercises" ON public.exercises FOR ALL TO authenticated
++      USING (has_role(auth.uid(), 'admin'::app_role)) WITH CHECK (has_role(auth.uid(), 'admin'::app_role));
++    CREATE POLICY "Authenticated can view exercises" ON public.exercises FOR SELECT TO authenticated USING (true);
++    GRANT USAGE ON SCHEMA public, auth TO anon, authenticated;
++    GRANT SELECT ON public.exercises TO anon;
++    GRANT SELECT, INSERT, UPDATE, DELETE ON public.exercises TO authenticated;
++
++    INSERT INTO auth.users VALUES ('${ADMIN}'), ('${ANA}'), ('${BEA}');
++    INSERT INTO public.user_roles VALUES ('${ADMIN}', 'admin');
++    -- Dos filas con el mismo nombre normalizado ya existen: la migración no debe fallar por ellas.
++    INSERT INTO public.exercises (id, name, muscle_group, created_at) VALUES
++      ('${PRESS}', 'Press banca', 'Pecho', '2026-01-01'),
++      ('${PRESS_DUP}', 'Press  Banca', 'Pecho', '2026-02-01'),
++      ('${SQUAT}', 'Sentadilla búlgara', 'Piernas', '2026-01-01');
++  `);
++  await db.exec(readFileSync(MIGRATION, "utf8"));
++});
++
++afterAll(async () => {
++  await db?.close();
++});
++
++describe("biblioteca de ejercicios: modelo de datos", () => {
++  it("conserva ids y nombres, y deja los ejercicios actuales publicados con slug único", async () => {
++    await asOwner();
++    const { rows } = await db.query<{ id: string; name: string; slug: string; status: string; source: string }>(
++      "SELECT id, name, slug, status, source FROM public.exercises ORDER BY created_at, id");
++    expect(rows.map((r) => [r.id, r.name])).toEqual([
++      [PRESS, "Press banca"],
++      [SQUAT, "Sentadilla búlgara"],
++      [PRESS_DUP, "Press  Banca"],
++    ]);
++    expect(rows.every((r) => r.status === "published" && r.source === "autopilot")).toBe(true);
++    expect(rows.find((r) => r.id === SQUAT)?.slug).toBe("sentadilla-bulgara");
++    expect(rows.find((r) => r.id === PRESS)?.slug).toBe("press-banca");
++    expect(rows.find((r) => r.id === PRESS_DUP)?.slug).toBe("press-banca-10000000");
++  });
++
++  it("normaliza nombres sin acentos, mayúsculas ni signos", async () => {
++    const { rows } = await db.query<{ k: string }>("SELECT public.exercise_name_key('  Elevación  LATERAL (polea)!') AS k");
++    expect(rows[0].k).toBe("elevacion lateral polea");
++  });
++
++  it("un alta sin slug lo recibe solo, y no se puede repetir un nombre", async () => {
++    await as(ADMIN);
++    await db.exec("INSERT INTO public.exercises (name) VALUES ('Remo con mancuerna')");
++    const { rows } = await db.query<{ slug: string; status: string }>(
++      "SELECT slug, status FROM public.exercises WHERE name = 'Remo con mancuerna'");
++    expect(rows[0]).toEqual({ slug: "remo-con-mancuerna", status: "published" });
++    await expect(db.exec("INSERT INTO public.exercises (name) VALUES ('REMO con  mancuérna')")).rejects.toThrow(/Ya existe/);
++    await expect(db.exec(`UPDATE public.exercises SET name = 'Sentadilla bulgara' WHERE id = '${PRESS}'`)).rejects.toThrow(/Ya existe/);
++    // Los duplicados antiguos se pueden seguir editando mientras no cambie el nombre.
++    await db.exec(`UPDATE public.exercises SET image_url = 'https://x/y.webp' WHERE id = '${PRESS_DUP}'`);
++  });
++
++  it("los usuarios ven publicados y archivados; borradores y pendientes solo el admin", async () => {
++    await as(ADMIN);
++    await db.exec(`
++      INSERT INTO public.exercises (name, status, source) VALUES ('Curl martillo', 'pending', 'wger'), ('Face pull', 'draft', 'wger');
++      UPDATE public.exercises SET status = 'archived' WHERE id = '${SQUAT}';
++    `);
++    expect(await names()).toContain("Curl martillo");
++    await as(ANA);
++    const visible = await names();
++    expect(visible).toContain("Sentadilla búlgara");
++    expect(visible).not.toContain("Curl martillo");
++    expect(visible).not.toContain("Face pull");
++    await expect(db.exec("INSERT INTO public.exercises (name) VALUES ('Truco')")).rejects.toThrow();
++    await as(null);
++    expect(await names()).toEqual([]);
++  });
++
++  it("siembra los catálogos que pide la biblioteca", async () => {
++    await as(ANA);
++    const count = async (table: string) => (await db.query<{ n: number }>(`SELECT count(*)::int AS n FROM public.${table}`)).rows[0].n;
++    expect(await count("muscles")).toBe(25);
++    expect(await count("equipment")).toBe(11);
++    expect(await count("exercise_categories_catalog")).toBe(5);
++    const { rows } = await db.query<{ g: string }>("SELECT DISTINCT filter_group AS g FROM public.muscles WHERE filter_group IS NOT NULL");
++    expect(rows.map((r) => r.g).sort()).toEqual([
++      "Abdomen", "Antebrazos", "Bíceps", "Cuádriceps", "Espalda", "Gemelos", "Glúteos", "Hombros", "Isquiotibiales", "Pecho", "Tríceps",
++    ].sort());
++    await expect(db.exec("INSERT INTO public.muscles (slug, name) VALUES ('x', 'X')")).rejects.toThrow();
++  });
++
++  it("músculos, equipo, relaciones y medios: el admin los gestiona y el usuario solo ve lo aprobado", async () => {
++    await as(ADMIN);
++    await db.exec(`
++      INSERT INTO public.exercise_muscles (exercise_id, muscle_id, role)
++        SELECT '${PRESS}', id, CASE slug WHEN 'pectoral' THEN 'primary' ELSE 'secondary' END FROM public.muscles WHERE slug IN ('pectoral', 'triceps');
++      INSERT INTO public.exercise_equipment (exercise_id, equipment_id) SELECT '${PRESS}', id FROM public.equipment WHERE slug = 'barra';
++      INSERT INTO public.exercise_relations (exercise_id, related_id, kind) VALUES ('${PRESS}', '${PRESS_DUP}', 'variant');
++      INSERT INTO public.exercise_media (exercise_id, kind, url, status) VALUES
++        ('${PRESS}', 'loop', 'https://x/press.mp4', 'approved'),
++        ('${PRESS}', 'image', 'https://wger.de/press.png', 'pending');
++    `);
++    await expect(db.exec(`INSERT INTO public.exercise_relations VALUES ('${PRESS}', '${PRESS}', 'alternative')`)).rejects.toThrow();
++    await as(ANA);
++    const muscles = await db.query<{ slug: string; role: string }>(
++      `SELECT m.slug, em.role FROM public.exercise_muscles em JOIN public.muscles m ON m.id = em.muscle_id WHERE em.exercise_id = '${PRESS}' ORDER BY m.slug`);
++    expect(muscles.rows).toEqual([{ slug: "pectoral", role: "primary" }, { slug: "triceps", role: "secondary" }]);
++    const media = await db.query<{ url: string }>(`SELECT url FROM public.exercise_media WHERE exercise_id = '${PRESS}'`);
++    expect(media.rows).toEqual([{ url: "https://x/press.mp4" }]);
++    await expect(db.exec(`INSERT INTO public.exercise_media (exercise_id, kind, url) VALUES ('${PRESS}', 'image', 'https://x/z.png')`)).rejects.toThrow();
++  });
++
++  it("favoritos y recientes: cada usuario solo ve y escribe los suyos", async () => {
++    await as(ANA);
++    await db.exec(`INSERT INTO public.exercise_favorites (user_id, exercise_id) VALUES ('${ANA}', '${PRESS}')`);
++    await db.exec(`INSERT INTO public.exercise_recent (user_id, exercise_id) VALUES ('${ANA}', '${PRESS}')
++                   ON CONFLICT (user_id, exercise_id) DO UPDATE SET viewed_at = now()`);
++    await expect(db.exec(`INSERT INTO public.exercise_favorites (user_id, exercise_id) VALUES ('${BEA}', '${PRESS}')`)).rejects.toThrow();
++    await as(BEA);
++    expect((await db.query("SELECT * FROM public.exercise_favorites")).rows).toEqual([]);
++    expect((await db.query("SELECT * FROM public.exercise_recent")).rows).toEqual([]);
++    await as(ANA);
++    expect((await db.query<{ exercise_id: string }>("SELECT exercise_id FROM public.exercise_favorites")).rows).toEqual([{ exercise_id: PRESS }]);
++  });
++});
+diff --git a/supabase/migrations/20261031160000_exercise_library.sql b/supabase/migrations/20261031160000_exercise_library.sql
+new file mode 100644
+index 0000000..a15c204
+--- /dev/null
++++ b/supabase/migrations/20261031160000_exercise_library.sql
+@@ -0,0 +1,308 @@
++-- Biblioteca de ejercicios · fase 1: modelo de datos.
++-- Solo añade: `exercises` conserva sus ids, nombres y columnas, así que las
++-- rutinas guardadas (por exercise_id o por nombre) y el planificador siguen igual.
++-- Los ejercicios que ya existen quedan como `published` y fuente `autopilot`.
++
++-- ─── Clave normalizada del nombre: minúsculas, sin acentos ni signos ───
++-- Sirve para el slug y para impedir duplicados ("Press Banca" = "press  banca").
++CREATE OR REPLACE FUNCTION public.exercise_name_key(_name text)
++RETURNS text
++LANGUAGE sql
++IMMUTABLE
++PARALLEL SAFE
++SET search_path = ''
++AS $$
++  SELECT btrim(regexp_replace(
++    translate(lower(coalesce(_name, '')), 'áàäâãåéèëêíìïîóòöôõúùüûñçý', 'aaaaaaeeeeiiiiooooouuuuncy'),
++    '[^a-z0-9]+', ' ', 'g'))
++$$;
++
++-- ─── Ficha completa ───
++ALTER TABLE public.exercises
++  ADD COLUMN IF NOT EXISTS slug text,
++  ADD COLUMN IF NOT EXISTS alt_names text[] NOT NULL DEFAULT '{}',
++  ADD COLUMN IF NOT EXISTS description text,
++  ADD COLUMN IF NOT EXISTS instructions text[] NOT NULL DEFAULT '{}',
++  ADD COLUMN IF NOT EXISTS common_mistakes text[] NOT NULL DEFAULT '{}',
++  ADD COLUMN IF NOT EXISTS tips text[] NOT NULL DEFAULT '{}',
++  ADD COLUMN IF NOT EXISTS safety_notes text[] NOT NULL DEFAULT '{}',
++  ADD COLUMN IF NOT EXISTS mechanic text,
++  ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'published',
++  ADD COLUMN IF NOT EXISTS source text NOT NULL DEFAULT 'autopilot',
++  ADD COLUMN IF NOT EXISTS source_ref text,
++  ADD COLUMN IF NOT EXISTS source_url text,
++  ADD COLUMN IF NOT EXISTS license text,
++  ADD COLUMN IF NOT EXISTS license_author text,
++  ADD COLUMN IF NOT EXISTS reviewed_at timestamptz,
++  ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
++
++ALTER TABLE public.exercises
++  ADD CONSTRAINT exercises_status_check CHECK (status IN ('draft', 'pending', 'published', 'archived')),
++  ADD CONSTRAINT exercises_mechanic_check CHECK (mechanic IS NULL OR mechanic IN ('compound', 'isolation'));
++
++COMMENT ON COLUMN public.exercises.status IS
++  'draft/pending: solo admin (importados o sin validar). published: visible en la biblioteca y usable por el planificador. archived: fuera de la biblioteca, pero las rutinas que lo usan lo siguen leyendo.';
++COMMENT ON COLUMN public.exercises.source IS
++  'Origen de la ficha: autopilot (propia) o wger. Si no es propia, license y license_author se muestran en la ficha.';
++
++-- Slug estable para los ejercicios actuales; los repetidos llevan sufijo del id.
++WITH base AS (
++  SELECT id,
++         nullif(replace(public.exercise_name_key(name), ' ', '-'), '') AS s,
++         row_number() OVER (PARTITION BY public.exercise_name_key(name) ORDER BY created_at, id) AS n
++  FROM public.exercises
++  WHERE slug IS NULL
++)
++UPDATE public.exercises e
++SET slug = coalesce(b.s, 'ejercicio') || CASE WHEN b.n > 1 OR b.s IS NULL THEN '-' || left(e.id::text, 8) ELSE '' END
++FROM base b
++WHERE b.id = e.id;
++
++CREATE UNIQUE INDEX IF NOT EXISTS exercises_slug_key ON public.exercises (slug);
++CREATE INDEX IF NOT EXISTS exercises_name_key_idx ON public.exercises (public.exercise_name_key(name));
++CREATE INDEX IF NOT EXISTS exercises_status_idx ON public.exercises (status);
++
++-- Slug automático, updated_at y ningún nombre repetido en altas o renombres.
++-- Los duplicados que ya existieran no bloquean nada: solo se comprueba al cambiar el nombre.
++CREATE OR REPLACE FUNCTION public.exercises_before_write()
++RETURNS trigger
++LANGUAGE plpgsql
++SET search_path = public
++AS $$
++DECLARE
++  base_slug text;
++BEGIN
++  IF TG_OP = 'INSERT' OR NEW.name IS DISTINCT FROM OLD.name THEN
++    IF EXISTS (
++      SELECT 1 FROM public.exercises
++      WHERE public.exercise_name_key(name) = public.exercise_name_key(NEW.name) AND id <> NEW.id
++    ) THEN
++      RAISE EXCEPTION 'Ya existe un ejercicio llamado "%"', NEW.name USING ERRCODE = 'unique_violation';
++    END IF;
++  END IF;
++
++  IF NEW.slug IS NULL OR btrim(NEW.slug) = '' THEN
++    base_slug := coalesce(nullif(replace(public.exercise_name_key(NEW.name), ' ', '-'), ''), 'ejercicio');
++    NEW.slug := base_slug;
++    IF EXISTS (SELECT 1 FROM public.exercises WHERE slug = base_slug AND id <> NEW.id) THEN
++      NEW.slug := base_slug || '-' || left(NEW.id::text, 8);
++    END IF;
++  END IF;
++
++  NEW.updated_at := now();
++  RETURN NEW;
++END;
++$$;
++
++DROP TRIGGER IF EXISTS exercises_before_write ON public.exercises;
++CREATE TRIGGER exercises_before_write
++  BEFORE INSERT OR UPDATE ON public.exercises
++  FOR EACH ROW EXECUTE FUNCTION public.exercises_before_write();
++
++-- ─── Catálogos ───
++CREATE TABLE IF NOT EXISTS public.muscles (
++  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
++  slug text NOT NULL UNIQUE,
++  name text NOT NULL,
++  filter_group text CHECK (filter_group IN (
++    'Pecho', 'Espalda', 'Hombros', 'Bíceps', 'Tríceps', 'Antebrazos', 'Abdomen',
++    'Cuádriceps', 'Isquiotibiales', 'Glúteos', 'Gemelos', 'Cuerpo completo')),
++  sort integer NOT NULL DEFAULT 0
++);
++COMMENT ON COLUMN public.muscles.filter_group IS
++  'Grupo del filtro de la biblioteca. NULL = el músculo se muestra en la ficha pero no tiene filtro propio.';
++
++CREATE TABLE IF NOT EXISTS public.equipment (
++  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
++  slug text NOT NULL UNIQUE,
++  name text NOT NULL,
++  sort integer NOT NULL DEFAULT 0
++);
++
++CREATE TABLE IF NOT EXISTS public.exercise_categories_catalog (
++  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
++  slug text NOT NULL UNIQUE,
++  name text NOT NULL,
++  sort integer NOT NULL DEFAULT 0
++);
++COMMENT ON TABLE public.exercise_categories_catalog IS 'Modalidades de la biblioteca (Gimnasio, Calistenia, Funcional, Híbrido, Movilidad).';
++
++INSERT INTO public.muscles (slug, name, filter_group, sort) VALUES
++  ('pectoral', 'Pectoral mayor', 'Pecho', 10),
++  ('serrato', 'Serrato anterior', 'Pecho', 11),
++  ('dorsal', 'Dorsal ancho', 'Espalda', 20),
++  ('trapecio', 'Trapecio', 'Espalda', 21),
++  ('romboides', 'Romboides', 'Espalda', 22),
++  ('erectores', 'Erectores espinales', 'Espalda', 23),
++  ('deltoides-anterior', 'Deltoides anterior', 'Hombros', 30),
++  ('deltoides-lateral', 'Deltoides lateral', 'Hombros', 31),
++  ('deltoides-posterior', 'Deltoides posterior', 'Hombros', 32),
++  ('manguito-rotador', 'Manguito rotador', 'Hombros', 33),
++  ('biceps', 'Bíceps braquial', 'Bíceps', 40),
++  ('braquial', 'Braquial', 'Bíceps', 41),
++  ('triceps', 'Tríceps braquial', 'Tríceps', 50),
++  ('antebrazo', 'Antebrazo', 'Antebrazos', 60),
++  ('recto-abdominal', 'Recto abdominal', 'Abdomen', 70),
++  ('oblicuos', 'Oblicuos', 'Abdomen', 71),
++  ('flexores-cadera', 'Flexores de cadera', 'Abdomen', 72),
++  ('cuadriceps', 'Cuádriceps', 'Cuádriceps', 80),
++  ('aductores', 'Aductores', 'Cuádriceps', 81),
++  ('isquiotibiales', 'Isquiotibiales', 'Isquiotibiales', 90),
++  ('gluteo-mayor', 'Glúteo mayor', 'Glúteos', 100),
++  ('gluteo-medio', 'Glúteo medio', 'Glúteos', 101),
++  ('gemelos', 'Gemelos', 'Gemelos', 110),
++  ('soleo', 'Sóleo', 'Gemelos', 111),
++  ('cuello', 'Cuello', NULL, 120)
++ON CONFLICT (slug) DO NOTHING;
++
++INSERT INTO public.equipment (slug, name, sort) VALUES
++  ('peso-corporal', 'Peso corporal', 10),
++  ('mancuernas', 'Mancuernas', 20),
++  ('barra', 'Barra', 30),
++  ('maquinas', 'Máquinas', 40),
++  ('poleas', 'Poleas', 50),
++  ('kettlebell', 'Kettlebell', 60),
++  ('bandas', 'Bandas elásticas', 70),
++  ('anillas', 'Anillas', 80),
++  ('barra-dominadas', 'Barra de dominadas', 90),
++  ('paralelas', 'Paralelas', 100),
++  ('otros', 'Otros', 110)
++ON CONFLICT (slug) DO NOTHING;
++
++INSERT INTO public.exercise_categories_catalog (slug, name, sort) VALUES
++  ('gimnasio', 'Gimnasio', 10),
++  ('calistenia', 'Calistenia', 20),
++  ('funcional', 'Entrenamiento funcional', 30),
++  ('hibrido', 'Entrenamiento híbrido', 40),
++  ('movilidad', 'Movilidad', 50)
++ON CONFLICT (slug) DO NOTHING;
++
++-- ─── Relaciones ───
++CREATE TABLE IF NOT EXISTS public.exercise_muscles (
++  exercise_id uuid NOT NULL REFERENCES public.exercises(id) ON DELETE CASCADE,
++  muscle_id uuid NOT NULL REFERENCES public.muscles(id) ON DELETE CASCADE,
++  role text NOT NULL DEFAULT 'primary' CHECK (role IN ('primary', 'secondary')),
++  PRIMARY KEY (exercise_id, muscle_id)
++);
++CREATE INDEX IF NOT EXISTS exercise_muscles_muscle_idx ON public.exercise_muscles (muscle_id);
++
++CREATE TABLE IF NOT EXISTS public.exercise_equipment (
++  exercise_id uuid NOT NULL REFERENCES public.exercises(id) ON DELETE CASCADE,
++  equipment_id uuid NOT NULL REFERENCES public.equipment(id) ON DELETE CASCADE,
++  PRIMARY KEY (exercise_id, equipment_id)
++);
++CREATE INDEX IF NOT EXISTS exercise_equipment_equipment_idx ON public.exercise_equipment (equipment_id);
++
++CREATE TABLE IF NOT EXISTS public.exercise_categories (
++  exercise_id uuid NOT NULL REFERENCES public.exercises(id) ON DELETE CASCADE,
++  category_id uuid NOT NULL REFERENCES public.exercise_categories_catalog(id) ON DELETE CASCADE,
++  PRIMARY KEY (exercise_id, category_id)
++);
++CREATE INDEX IF NOT EXISTS exercise_categories_category_idx ON public.exercise_categories (category_id);
++
++-- Variante (misma técnica con otro agarre/equipo) o alternativa (sustituto equivalente).
++CREATE TABLE IF NOT EXISTS public.exercise_relations (
++  exercise_id uuid NOT NULL REFERENCES public.exercises(id) ON DELETE CASCADE,
++  related_id uuid NOT NULL REFERENCES public.exercises(id) ON DELETE CASCADE,
++  kind text NOT NULL CHECK (kind IN ('variant', 'alternative')),
++  PRIMARY KEY (exercise_id, related_id, kind),
++  CHECK (exercise_id <> related_id)
++);
++CREATE INDEX IF NOT EXISTS exercise_relations_related_idx ON public.exercise_relations (related_id);
++
++-- Fotos, clips en bucle y vídeos con su fuente y licencia. Solo se muestran los aprobados.
++CREATE TABLE IF NOT EXISTS public.exercise_media (
++  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
++  exercise_id uuid NOT NULL REFERENCES public.exercises(id) ON DELETE CASCADE,
++  kind text NOT NULL CHECK (kind IN ('image', 'loop', 'video')),
++  url text NOT NULL,
++  source text NOT NULL DEFAULT 'autopilot',
++  source_url text,
++  license text,
++  license_author text,
++  status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
++  sort integer NOT NULL DEFAULT 0,
++  created_at timestamptz NOT NULL DEFAULT now()
++);
++CREATE INDEX IF NOT EXISTS exercise_media_exercise_idx ON public.exercise_media (exercise_id, sort);
++
++-- ─── Datos de cada usuario ───
++CREATE TABLE IF NOT EXISTS public.exercise_favorites (
++  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
++  exercise_id uuid NOT NULL REFERENCES public.exercises(id) ON DELETE CASCADE,
++  created_at timestamptz NOT NULL DEFAULT now(),
++  PRIMARY KEY (user_id, exercise_id)
++);
++
++CREATE TABLE IF NOT EXISTS public.exercise_recent (
++  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
++  exercise_id uuid NOT NULL REFERENCES public.exercises(id) ON DELETE CASCADE,
++  viewed_at timestamptz NOT NULL DEFAULT now(),
++  PRIMARY KEY (user_id, exercise_id)
++);
++CREATE INDEX IF NOT EXISTS exercise_recent_user_idx ON public.exercise_recent (user_id, viewed_at DESC);
++
++-- ─── RLS ───
++-- Los usuarios con sesión ven los publicados y los archivados (las rutinas antiguas
++-- los siguen leyendo); borradores y pendientes solo los ve el admin (su política FOR ALL).
++DROP POLICY IF EXISTS "Authenticated can view exercises" ON public.exercises;
++CREATE POLICY "Authenticated can view live exercises"
++  ON public.exercises FOR SELECT TO authenticated
++  USING (status IN ('published', 'archived'));
++
++ALTER TABLE public.muscles ENABLE ROW LEVEL SECURITY;
++ALTER TABLE public.equipment ENABLE ROW LEVEL SECURITY;
++ALTER TABLE public.exercise_categories_catalog ENABLE ROW LEVEL SECURITY;
++ALTER TABLE public.exercise_muscles ENABLE ROW LEVEL SECURITY;
++ALTER TABLE public.exercise_equipment ENABLE ROW LEVEL SECURITY;
++ALTER TABLE public.exercise_categories ENABLE ROW LEVEL SECURITY;
++ALTER TABLE public.exercise_relations ENABLE ROW LEVEL SECURITY;
++ALTER TABLE public.exercise_media ENABLE ROW LEVEL SECURITY;
++ALTER TABLE public.exercise_favorites ENABLE ROW LEVEL SECURITY;
++ALTER TABLE public.exercise_recent ENABLE ROW LEVEL SECURITY;
++
++CREATE POLICY "Authenticated can view muscles" ON public.muscles FOR SELECT TO authenticated USING (true);
++CREATE POLICY "Admins manage muscles" ON public.muscles FOR ALL TO authenticated
++  USING (public.has_role(auth.uid(), 'admin'::public.app_role)) WITH CHECK (public.has_role(auth.uid(), 'admin'::public.app_role));
++
++CREATE POLICY "Authenticated can view equipment" ON public.equipment FOR SELECT TO authenticated USING (true);
++CREATE POLICY "Admins manage equipment" ON public.equipment FOR ALL TO authenticated
++  USING (public.has_role(auth.uid(), 'admin'::public.app_role)) WITH CHECK (public.has_role(auth.uid(), 'admin'::public.app_role));
++
++CREATE POLICY "Authenticated can view exercise categories" ON public.exercise_categories_catalog FOR SELECT TO authenticated USING (true);
++CREATE POLICY "Admins manage exercise categories" ON public.exercise_categories_catalog FOR ALL TO authenticated
++  USING (public.has_role(auth.uid(), 'admin'::public.app_role)) WITH CHECK (public.has_role(auth.uid(), 'admin'::public.app_role));
++
++CREATE POLICY "Authenticated can view exercise muscles" ON public.exercise_muscles FOR SELECT TO authenticated USING (true);
++CREATE POLICY "Admins manage exercise muscles" ON public.exercise_muscles FOR ALL TO authenticated
++  USING (public.has_role(auth.uid(), 'admin'::public.app_role)) WITH CHECK (public.has_role(auth.uid(), 'admin'::public.app_role));
++
++CREATE POLICY "Authenticated can view exercise equipment" ON public.exercise_equipment FOR SELECT TO authenticated USING (true);
++CREATE POLICY "Admins manage exercise equipment" ON public.exercise_equipment FOR ALL TO authenticated
++  USING (public.has_role(auth.uid(), 'admin'::public.app_role)) WITH CHECK (public.has_role(auth.uid(), 'admin'::public.app_role));
++
++CREATE POLICY "Authenticated can view exercise category links" ON public.exercise_categories FOR SELECT TO authenticated USING (true);
++CREATE POLICY "Admins manage exercise category links" ON public.exercise_categories FOR ALL TO authenticated
++  USING (public.has_role(auth.uid(), 'admin'::public.app_role)) WITH CHECK (public.has_role(auth.uid(), 'admin'::public.app_role));
++
++CREATE POLICY "Authenticated can view exercise relations" ON public.exercise_relations FOR SELECT TO authenticated USING (true);
++CREATE POLICY "Admins manage exercise relations" ON public.exercise_relations FOR ALL TO authenticated
++  USING (public.has_role(auth.uid(), 'admin'::public.app_role)) WITH CHECK (public.has_role(auth.uid(), 'admin'::public.app_role));
++
++CREATE POLICY "Authenticated can view approved exercise media" ON public.exercise_media FOR SELECT TO authenticated USING (status = 'approved');
++CREATE POLICY "Admins manage exercise media" ON public.exercise_media FOR ALL TO authenticated
++  USING (public.has_role(auth.uid(), 'admin'::public.app_role)) WITH CHECK (public.has_role(auth.uid(), 'admin'::public.app_role));
++
++CREATE POLICY "Users manage own exercise favorites" ON public.exercise_favorites FOR ALL TO authenticated
++  USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
++
++CREATE POLICY "Users manage own recent exercises" ON public.exercise_recent FOR ALL TO authenticated
++  USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
++
++GRANT SELECT ON public.muscles, public.equipment, public.exercise_categories_catalog,
++  public.exercise_muscles, public.exercise_equipment, public.exercise_categories,
++  public.exercise_relations, public.exercise_media TO authenticated;
++GRANT INSERT, UPDATE, DELETE ON public.muscles, public.equipment, public.exercise_categories_catalog,
++  public.exercise_muscles, public.exercise_equipment, public.exercise_categories,
++  public.exercise_relations, public.exercise_media TO authenticated;
++GRANT SELECT, INSERT, UPDATE, DELETE ON public.exercise_favorites, public.exercise_recent TO authenticated;
+-- 
+2.43.0
+
+
+From 8b3cc25b31246042eaf6c6dc21f65d7b7f249303 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 31 Oct 2026 15:45:42 +0000
+Subject: [PATCH 2/2] Biblioteca de ejercicios: buscador, filtros, favoritos y
+ ficha (fase 2)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Se abre desde Entrenar («Ejercicios», junto a «Editar») en la web, el iPhone y el Mac:
+búsqueda instantánea sin acentos y con erratas, filtros combinables por 12 grupos
+musculares, 11 equipos y 5 modalidades, recientes, favoritos, grupos visuales y una
+ficha con músculos, pasos, errores, consejos, seguridad, variantes, alternativas
+parecidas y la atribución de wger. Si la migración aún no está aplicada, usa las
+columnas de siempre. El test de paridad comprueba listas y secciones en los dos lados.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01BLvZLaGs6gdkiy99s6rQbj
+---
+ .../Features/Train/ExerciseLibraryView.swift  | 680 ++++++++++++++++++
+ .../Autopilot/Features/Train/TrainView.swift  |  23 +-
+ .../library/ExerciseLibrarySheet.tsx          | 328 +++++++++
+ src/app/pages/Dashboard.tsx                   |  11 +-
+ src/shared/hooks/useExerciseLibrary.test.ts   |  37 +
+ src/shared/hooks/useExerciseLibrary.ts        | 156 ++++
+ src/shared/integrations/supabase/types.ts     | 342 +++++++++
+ src/shared/lib/exerciseLibrary.test.ts        |  65 ++
+ src/shared/lib/exerciseLibrary.ts             | 182 +++++
+ src/shared/test/platformParity.test.ts        |  26 +
+ 10 files changed, 1846 insertions(+), 4 deletions(-)
+ create mode 100644 native/Autopilot/Features/Train/ExerciseLibraryView.swift
+ create mode 100644 src/app/components/library/ExerciseLibrarySheet.tsx
+ create mode 100644 src/shared/hooks/useExerciseLibrary.test.ts
+ create mode 100644 src/shared/hooks/useExerciseLibrary.ts
+ create mode 100644 src/shared/lib/exerciseLibrary.test.ts
+ create mode 100644 src/shared/lib/exerciseLibrary.ts
+
+diff --git a/native/Autopilot/Features/Train/ExerciseLibraryView.swift b/native/Autopilot/Features/Train/ExerciseLibraryView.swift
+new file mode 100644
+index 0000000..bf6c511
+--- /dev/null
++++ b/native/Autopilot/Features/Train/ExerciseLibraryView.swift
+@@ -0,0 +1,680 @@
++import SwiftUI
++import Supabase
++
++/// Biblioteca de ejercicios. Mismas listas, reglas y pantallas que la web
++/// (`src/shared/lib/exerciseLibrary.ts` y `src/app/components/library/ExerciseLibrarySheet.tsx`).
++enum ExerciseLibraryCatalog {
++    static let groups = ["Pecho", "Espalda", "Hombros", "Bíceps", "Tríceps", "Antebrazos", "Abdomen",
++                         "Cuádriceps", "Isquiotibiales", "Glúteos", "Gemelos", "Cuerpo completo"]
++    static let equipment = ["Peso corporal", "Mancuernas", "Barra", "Máquinas", "Poleas", "Kettlebell",
++                            "Bandas elásticas", "Anillas", "Barra de dominadas", "Paralelas", "Otros"]
++    static let modalities = ["Gimnasio", "Calistenia", "Entrenamiento funcional", "Entrenamiento híbrido", "Movilidad"]
++    static let detailSections = ["Cómo se hace", "Músculos", "Errores frecuentes", "Consejos", "Seguridad", "Variantes", "Alternativas"]
++
++    static let legacyGroups: [String: [String]] = [
++        "Pecho": ["Pecho"], "Serrato": ["Pecho"],
++        "Espalda": ["Espalda"], "Trapecios": ["Espalda"], "Romboides": ["Espalda"], "Lumbares": ["Espalda"],
++        "Hombros": ["Hombros"], "Bíceps": ["Bíceps"], "Tríceps": ["Tríceps"], "Antebrazos": ["Antebrazos"],
++        "Core": ["Abdomen"], "Abdomen": ["Abdomen"],
++        "Piernas": ["Cuádriceps"], "Cuádriceps": ["Cuádriceps"], "Aductores": ["Cuádriceps"],
++        "Isquiotibiales": ["Isquiotibiales"], "Glúteos": ["Glúteos"], "Abductores": ["Glúteos"], "Gemelos": ["Gemelos"],
++        "Cuerpo completo": ["Cuerpo completo"], "Cardio": ["Cuerpo completo"],
++    ]
++    static let legacyModalities: [String: [String]] = [
++        "Gimnasio": ["Gimnasio"], "Calistenia": ["Calistenia"], "Mixto": ["Entrenamiento híbrido"],
++    ]
++    static let levels = [1: "Básico", 2: "Intermedio", 3: "Avanzado"]
++
++    /// Igual que `public.exercise_name_key`: minúsculas, sin acentos ni signos.
++    static func nameKey(_ value: String) -> String {
++        let folded = value.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: Locale(identifier: "es")).lowercased()
++        let mapped = folded.unicodeScalars.map { CharacterSet.alphanumerics.contains($0) && $0.isASCII ? Character($0) : " " }
++        return String(mapped).split(separator: " ").joined(separator: " ")
++    }
++
++    private static func withinOneEdit(_ a: [Character], _ b: [Character]) -> Bool {
++        if abs(a.count - b.count) > 1 { return false }
++        var i = 0, j = 0, edits = 0
++        while i < a.count && j < b.count {
++            if a[i] == b[j] { i += 1; j += 1; continue }
++            edits += 1
++            if edits > 1 { return false }
++            if a.count > b.count { i += 1 } else if a.count < b.count { j += 1 } else { i += 1; j += 1 }
++        }
++        return edits + (a.count - i) + (b.count - j) <= 1
++    }
++
++    private static func fuzzyPrefix(_ token: String, _ word: String) -> Bool {
++        if word.hasPrefix(token) { return true }
++        guard token.count >= 4 else { return false }
++        let t = Array(token), w = Array(word)
++        return [-1, 0, 1].contains { d in withinOneEdit(t, Array(w.prefix(max(0, t.count + d)))) }
++    }
++
++    static func matchScore(_ e: LibraryExercise, _ query: String) -> Int {
++        let q = nameKey(query)
++        if q.isEmpty { return 1 }
++        let tokens = q.split(separator: " ").map(String.init)
++        var best = 0
++        for label in [e.name] + e.altNames {
++            let key = nameKey(label)
++            let words = key.split(separator: " ").map(String.init)
++            if key.hasPrefix(q) { best = max(best, 4); continue }
++            if tokens.allSatisfy({ t in words.contains { $0.hasPrefix(t) } }) { best = max(best, 3); continue }
++            if key.contains(q) { best = max(best, 2); continue }
++            if tokens.allSatisfy({ t in words.contains { fuzzyPrefix(t, $0) } }) { best = max(best, 1) }
++        }
++        return best
++    }
++
++    static func isFullBody(_ e: LibraryExercise) -> Bool { e.groups.contains("Cuerpo completo") || Set(e.groups).count >= 3 }
++
++    /// Filtros combinables: Y entre facetas, O dentro de cada faceta. Con texto, por relevancia.
++    static func filter(_ items: [LibraryExercise], _ f: LibraryFilters) -> [LibraryExercise] {
++        let groups = f.groups.filter { $0 != "Cuerpo completo" }
++        let wantsFullBody = f.groups.contains("Cuerpo completo")
++        func facet(_ values: [String], _ selected: [String]) -> Bool { selected.isEmpty || selected.contains { values.contains($0) } }
++        return items.compactMap { e -> (LibraryExercise, Int)? in
++            let groupOk = f.groups.isEmpty || (!groups.isEmpty && facet(e.groups, groups)) || (wantsFullBody && isFullBody(e))
++            guard groupOk, facet(e.equipment, f.equipment), facet(e.modalities, f.modalities) else { return nil }
++            let score = matchScore(e, f.query)
++            return score > 0 ? (e, score) : nil
++        }
++        .sorted { $0.1 != $1.1 ? $0.1 > $1.1 : $0.0.name.compare($1.0.name, locale: Locale(identifier: "es")) == .orderedAscending }
++        .map(\.0)
++    }
++
++    /// Parecidos: mismo grupo principal, mismo patrón y equipo compartido.
++    static func similar(_ target: LibraryExercise, _ items: [LibraryExercise], limit: Int = 6) -> [LibraryExercise] {
++        let main = target.groups.first
++        return items.filter { $0.id != target.id }.map { e -> (LibraryExercise, Int) in
++            let group = (main != nil && e.groups.first == main) ? 3 : (e.groups.contains { target.groups.contains($0) } ? 1 : 0)
++            let pattern = (target.pattern != nil && e.pattern == target.pattern) ? 2 : 0
++            let equip = e.equipment.contains { target.equipment.contains($0) } ? 1 : 0
++            return (e, group + pattern + equip)
++        }
++        .filter { $0.1 >= 3 }
++        .sorted { $0.1 != $1.1 ? $0.1 > $1.1 : $0.0.name.compare($1.0.name, locale: Locale(identifier: "es")) == .orderedAscending }
++        .prefix(limit).map(\.0)
++    }
++}
++
++struct LibraryExercise: Identifiable, Hashable {
++    let id: String
++    let name: String
++    let altNames: [String]
++    let groups: [String]
++    let primaryMuscles: [String]
++    let secondaryMuscles: [String]
++    let equipment: [String]
++    let modalities: [String]
++    let pattern: String?
++    let level: Int?
++    let image: String?
++    let video: String?
++    let description: String?
++    let instructions: [String]
++    let mistakes: [String]
++    let tips: [String]
++    let safety: [String]
++    let source: String
++    let license: String?
++    let licenseAuthor: String?
++    let sourceUrl: String?
++
++    var subtitle: String { [primaryMuscles.first ?? groups.first, equipment.first].compactMap { $0 }.joined(separator: " · ") }
++    /// Atribución obligatoria para fichas de terceros (CC BY-SA).
++    var attribution: String? {
++        guard source != "autopilot" else { return nil }
++        return ["Fuente: \(source == "wger" ? "wger.de" : source)", licenseAuthor, license].compactMap { $0 }.joined(separator: " · ")
++    }
++}
++
++struct LibraryFilters: Equatable {
++    var query = ""
++    var groups: [String] = []
++    var equipment: [String] = []
++    var modalities: [String] = []
++    var activeCount: Int { groups.count + equipment.count + modalities.count }
++}
++
++@MainActor
++final class ExerciseLibraryModel: ObservableObject {
++    @Published var items: [LibraryExercise]?
++    @Published var failed = false
++    @Published var favorites: Set<String> = []
++    @Published var recent: [String] = []
++    @Published var personal = false
++
++    private static var cache: [LibraryExercise]?
++    private static let base = "id, name, muscle_group, exercise_type, movement_pattern, level, image_url, video_url"
++    private static let full = base + ", slug, alt_names, description, instructions, common_mistakes, tips, safety_notes, source, license, license_author, source_url, "
++        + "exercise_muscles(role, muscles(name, filter_group, sort)), exercise_equipment(equipment(name, sort)), "
++        + "exercise_categories(exercise_categories_catalog(name))"
++
++    private struct Row: Decodable {
++        struct Muscle: Decodable { let name: String; let filter_group: String?; let sort: Int? }
++        struct MuscleLink: Decodable { let role: String; let muscles: Muscle? }
++        struct Named: Decodable { let name: String; let sort: Int? }
++        struct EquipmentLink: Decodable { let equipment: Named? }
++        struct CategoryLink: Decodable { let exercise_categories_catalog: Named? }
++        let id: String; let name: String
++        let muscle_group: String?; let exercise_type: String?; let movement_pattern: String?; let level: Int?
++        let image_url: String?; let video_url: String?
++        let alt_names: [String]?; let description: String?; let instructions: [String]?
++        let common_mistakes: [String]?; let tips: [String]?; let safety_notes: [String]?
++        let source: String?; let license: String?; let license_author: String?; let source_url: String?
++        let exercise_muscles: [MuscleLink]?; let exercise_equipment: [EquipmentLink]?; let exercise_categories: [CategoryLink]?
++
++        func toExercise() -> LibraryExercise {
++            func uniq(_ v: [String?]) -> [String] { var seen = Set<String>(); return v.compactMap { $0 }.filter { seen.insert($0).inserted } }
++            let links = (exercise_muscles ?? []).filter { $0.muscles != nil }.sorted {
++                $0.role == $1.role ? ($0.muscles?.sort ?? 0) < ($1.muscles?.sort ?? 0) : $0.role == "primary"
++            }
++            let primary = links.filter { $0.role == "primary" }
++            let linkedGroups = uniq(primary.map { $0.muscles?.filter_group })
++            let modalities = uniq((exercise_categories ?? []).map { $0.exercise_categories_catalog?.name })
++            return LibraryExercise(
++                id: id, name: name, altNames: alt_names ?? [],
++                groups: linkedGroups.isEmpty ? ExerciseLibraryCatalog.legacyGroups[muscle_group ?? ""] ?? [] : linkedGroups,
++                primaryMuscles: uniq(primary.map { $0.muscles?.name }),
++                secondaryMuscles: uniq(links.filter { $0.role != "primary" }.map { $0.muscles?.name }),
++                equipment: uniq((exercise_equipment ?? []).sorted { ($0.equipment?.sort ?? 0) < ($1.equipment?.sort ?? 0) }.map { $0.equipment?.name }),
++                modalities: modalities.isEmpty ? ExerciseLibraryCatalog.legacyModalities[exercise_type ?? ""] ?? [] : modalities,
++                pattern: movement_pattern, level: level, image: image_url, video: video_url,
++                description: description, instructions: instructions ?? [], mistakes: common_mistakes ?? [],
++                tips: tips ?? [], safety: safety_notes ?? [], source: source ?? "autopilot",
++                license: license, licenseAuthor: license_author, sourceUrl: source_url)
++        }
++    }
++
++    private struct ExerciseRef: Decodable { let exercise_id: String }
++
++    /// Toda la biblioteca publicada, por páginas de 1.000 (el límite de PostgREST).
++    private func fetchAll(_ select: String, published: Bool) async throws -> [Row] {
++        var rows: [Row] = []
++        var from = 0
++        while true {
++            let page: [Row]
++            if published {
++                page = try await Backend.client.from("exercises").select(select).eq("status", value: "published")
++                    .order("name").range(from: from, to: from + 999).execute().value
++            } else {
++                page = try await Backend.client.from("exercises").select(select)
++                    .order("name").range(from: from, to: from + 999).execute().value
++            }
++            rows += page
++            if page.count < 1000 { return rows }
++            from += 1000
++        }
++    }
++
++    func load(userId: UUID?) async {
++        if items == nil, let cached = Self.cache { items = cached }
++        if Self.cache == nil {
++            do {
++                let rows: [Row]
++                do { rows = try await fetchAll(Self.full, published: true) }
++                // Sin la migración de la biblioteca: mismos ejercicios, filtros por su grupo de siempre.
++                catch { rows = try await fetchAll(Self.base, published: false) }
++                let list = rows.map { $0.toExercise() }
++                Self.cache = list
++                items = list
++                failed = false
++            } catch {
++                failed = items == nil
++            }
++        }
++        guard let userId else { return }
++        let uid = userId.uuidString.lowercased()
++        do {
++            let fav: [ExerciseRef] = try await Backend.client.from("exercise_favorites").select("exercise_id")
++                .eq("user_id", value: uid).execute().value
++            let rec: [ExerciseRef] = try await Backend.client.from("exercise_recent").select("exercise_id")
++                .eq("user_id", value: uid).order("viewed_at", ascending: false).limit(12).execute().value
++            favorites = Set(fav.map(\.exercise_id))
++            recent = rec.map(\.exercise_id)
++            personal = true
++        } catch {
++            personal = false
++        }
++    }
++
++    func retry(userId: UUID?) async { Self.cache = nil; items = nil; failed = false; await load(userId: userId) }
++
++    func toggleFavorite(_ id: String, userId: UUID?) async {
++        guard let userId else { return }
++        let uid = userId.uuidString.lowercased()
++        let wasOn = favorites.contains(id)
++        if wasOn { favorites.remove(id) } else { favorites.insert(id) }
++        do {
++            if wasOn {
++                try await Backend.client.from("exercise_favorites").delete().eq("user_id", value: uid).eq("exercise_id", value: id).execute()
++            } else {
++                try await Backend.client.from("exercise_favorites").insert(["user_id": uid, "exercise_id": id]).execute()
++            }
++        } catch {
++            if wasOn { favorites.insert(id) } else { favorites.remove(id) }
++        }
++    }
++
++    func markViewed(_ id: String, userId: UUID?) {
++        recent = Array(([id] + recent.filter { $0 != id }).prefix(12))
++        guard personal, let userId else { return }
++        let row = ["user_id": userId.uuidString.lowercased(), "exercise_id": id, "viewed_at": ISO8601DateFormatter().string(from: Date())]
++        Task { try? await Backend.client.from("exercise_recent").upsert(row, onConflict: "user_id,exercise_id").execute() }
++    }
++
++    func variants(of id: String) async -> [String] {
++        struct R: Decodable { let related_id: String }
++        let rows: [R] = (try? await Backend.client.from("exercise_relations").select("related_id")
++            .eq("exercise_id", value: id).eq("kind", value: "variant").execute().value) ?? []
++        return rows.map(\.related_id)
++    }
++}
++
++/// Lista con buscador, filtros, recientes, favoritos y grupos musculares.
++struct ExerciseLibraryView: View {
++    let userId: UUID?
++    @StateObject private var model = ExerciseLibraryModel()
++    @State private var filters = LibraryFilters()
++    @State private var facet: String?
++    @State private var path: [LibraryExercise] = []
++    @Environment(\.dismiss) private var dismiss
++
++    private var items: [LibraryExercise] { model.items ?? [] }
++    private var browsing: Bool { filters.query.trimmingCharacters(in: .whitespaces).isEmpty && filters.activeCount == 0 }
++    private let facets: [(key: String, label: String, options: [String])] = [
++        ("groups", "Grupo", ExerciseLibraryCatalog.groups),
++        ("equipment", "Equipo", ExerciseLibraryCatalog.equipment),
++        ("modalities", "Modalidad", ExerciseLibraryCatalog.modalities),
++    ]
++
++    var body: some View {
++        NavigationStack(path: $path) {
++            ScrollView {
++                VStack(alignment: .leading, spacing: 12) {
++                    searchField
++                    facetRow
++                    if let facet, let options = facets.first(where: { $0.key == facet })?.options {
++                        FlowRow { ForEach(options, id: \.self) { chip($0, facet: facet) } }
++                            .transition(.opacity)
++                    }
++                    content.padding(.top, 4)
++                }
++                .padding(.horizontal, 20).padding(.bottom, 24)
++            }
++            .screenBackground()
++            .navigationTitle("Ejercicios")
++            #if os(iOS)
++            .navigationBarTitleDisplayMode(.large)
++            #endif
++            .toolbar {
++                ToolbarItem(placement: .cancellationAction) {
++                    Button("Cerrar") { dismiss() }.foregroundStyle(Palette.gold)
++                }
++            }
++            .navigationDestination(for: LibraryExercise.self) { e in
++                ExerciseDetailView(exercise: e, model: model, userId: userId) { path.append($0) }
++            }
++        }
++        .task { await model.load(userId: userId) }
++    }
++
++    private var searchField: some View {
++        HStack(spacing: 8) {
++            Image("lu-search").resizable().frame(width: 16, height: 16).foregroundStyle(Palette.muted)
++            TextField("Buscar ejercicio", text: $filters.query)
++                .font(.apBody).textFieldStyle(.plain).autocorrectionDisabled()
++                .accessibilityLabel("Buscar ejercicio")
++            if !filters.query.isEmpty {
++                Button { filters.query = "" } label: { Image("lu-x").resizable().frame(width: 16, height: 16).foregroundStyle(Palette.muted) }
++                    .buttonStyle(.plain).accessibilityLabel("Borrar búsqueda")
++            }
++        }
++        .padding(.horizontal, 16).frame(height: 44)
++        .background(Palette.card, in: Capsule())
++    }
++
++    private func selected(_ key: String) -> [String] {
++        switch key { case "groups": filters.groups; case "equipment": filters.equipment; default: filters.modalities }
++    }
++
++    private func toggle(_ value: String, facet key: String) {
++        func flip(_ list: inout [String]) { if let i = list.firstIndex(of: value) { list.remove(at: i) } else { list.append(value) } }
++        switch key { case "groups": flip(&filters.groups); case "equipment": flip(&filters.equipment); default: flip(&filters.modalities) }
++    }
++
++    private var facetRow: some View {
++        ScrollView(.horizontal, showsIndicators: false) {
++            HStack(spacing: 8) {
++                ForEach(facets, id: \.key) { f in
++                    let count = selected(f.key).count
++                    Button {
++                        Haptics.selection()
++                        withAnimation(.easeOut(duration: 0.2)) { facet = facet == f.key ? nil : f.key }
++                    } label: {
++                        Text(count > 0 ? "\(f.label) · \(count)" : f.label)
++                            .font(.apFootnote.weight(.semibold))
++                            .foregroundStyle(count > 0 ? Palette.gold : Palette.foreground)
++                            .padding(.horizontal, 16).frame(height: 36)
++                            .background(count > 0 ? Palette.gold.opacity(0.15) : Palette.secondary, in: Capsule())
++                    }
++                    .buttonStyle(.plain)
++                }
++                if filters.activeCount > 0 {
++                    Button("Quitar filtros") { filters = LibraryFilters(query: filters.query) }
++                        .font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.muted).buttonStyle(.plain)
++                }
++            }
++        }
++    }
++
++    private func chip(_ value: String, facet key: String) -> some View {
++        let on = selected(key).contains(value)
++        return Button { Haptics.selection(); toggle(value, facet: key) } label: {
++            Text(value).font(.apSubhead.weight(.medium))
++                .foregroundStyle(on ? Palette.gold : Palette.foreground)
++                .padding(.horizontal, 16).frame(height: 40)
++                .background(on ? Palette.gold.opacity(0.15) : Palette.card, in: Capsule())
++        }
++        .buttonStyle(.plain)
++        .accessibilityAddTraits(on ? .isSelected : [])
++    }
++
++    @ViewBuilder private var content: some View {
++        if model.failed {
++            VStack(spacing: 12) {
++                Text("No se pudo cargar la biblioteca.").font(.apSubhead).foregroundStyle(Palette.muted)
++                Button("Reintentar") { Task { await model.retry(userId: userId) } }.buttonStyle(.pillSecondary)
++            }
++            .frame(maxWidth: .infinity).padding(.vertical, 40)
++        } else if model.items == nil {
++            VStack(spacing: 12) {
++                ForEach(0..<6, id: \.self) { _ in RoundedRectangle(cornerRadius: 16).fill(Palette.card).frame(height: 56) }
++            }
++        } else if browsing {
++            browse
++        } else {
++            let results = ExerciseLibraryCatalog.filter(items, filters)
++            if results.isEmpty {
++                Text("Ningún ejercicio coincide. Prueba con otro nombre o quita algún filtro.")
++                    .font(.apSubhead).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
++                    .frame(maxWidth: .infinity).padding(.vertical, 40)
++            } else {
++                Text("\(results.count) \(results.count == 1 ? "ejercicio" : "ejercicios")").font(.apFootnote).foregroundStyle(Palette.muted)
++                ExerciseRows(items: results, favorites: model.favorites) { open($0) }
++            }
++        }
++    }
++
++    private func open(_ e: LibraryExercise) {
++        Haptics.tap()
++        model.markViewed(e.id, userId: userId)
++        path.append(e)
++    }
++
++    private var browse: some View {
++        let byId = Dictionary(uniqueKeysWithValues: items.map { ($0.id, $0) })
++        let recent = model.recent.compactMap { byId[$0] }
++        let favorites = items.filter { model.favorites.contains($0.id) }
++        let tiles = ExerciseLibraryCatalog.groups.compactMap { g -> (String, Int, String?)? in
++            var f = LibraryFilters(); f.groups = [g]
++            let members = ExerciseLibraryCatalog.filter(items, f)
++            return members.isEmpty ? nil : (g, members.count, members.first { $0.image != nil }?.image)
++        }
++        return VStack(alignment: .leading, spacing: 24) {
++            if !recent.isEmpty {
++                LibrarySectionTitle("Recientes")
++                ScrollView(.horizontal, showsIndicators: false) {
++                    HStack(alignment: .top, spacing: 12) {
++                        ForEach(recent) { e in
++                            Button { open(e) } label: {
++                                VStack(alignment: .leading, spacing: 6) {
++                                    ExerciseThumbView(url: e.image, width: 112, height: 63)
++                                    Text(e.name).font(.apFootnote.weight(.medium)).lineLimit(2).multilineTextAlignment(.leading)
++                                }
++                                .frame(width: 112, alignment: .leading)
++                            }
++                            .buttonStyle(.plain)
++                        }
++                    }
++                }
++            }
++            if !favorites.isEmpty {
++                LibrarySectionTitle("Favoritos")
++                ExerciseRows(items: favorites, favorites: []) { open($0) }
++            }
++            LibrarySectionTitle("Grupos musculares")
++            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
++                ForEach(tiles, id: \.0) { tile in
++                    Button { Haptics.selection(); filters.groups = [tile.0] } label: { groupTile(tile.0, count: tile.1, image: tile.2) }
++                        .buttonStyle(PressableCardStyle())
++                }
++            }
++        }
++    }
++
++    private func groupTile(_ name: String, count: Int, image: String?) -> some View {
++        ZStack(alignment: .bottomLeading) {
++            Palette.card
++            if let image, let url = URL(string: image) {
++                CachedAsyncImage(url: url, maxSide: 500) { $0.resizable().scaledToFill() } placeholder: { Palette.card }
++                    .opacity(0.7)
++            }
++            LinearGradient(colors: [.black.opacity(0.8), .black.opacity(0.2), .clear], startPoint: .bottom, endPoint: .top)
++            VStack(alignment: .leading, spacing: 2) {
++                Text(name).font(.apHeadline).foregroundStyle(.white)
++                Text("\(count) \(count == 1 ? "ejercicio" : "ejercicios")").font(.apFootnote).foregroundStyle(.white.opacity(0.7))
++            }
++            .padding(12)
++        }
++        .aspectRatio(4 / 3, contentMode: .fit)
++        .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
++    }
++}
++
++private struct LibrarySectionTitle: View {
++    let text: String
++    init(_ text: String) { self.text = text }
++    var body: some View {
++        Text(text.uppercased()).font(.apFootnote.weight(.semibold)).tracking(0.5).foregroundStyle(Palette.muted)
++    }
++}
++
++private struct ExerciseThumbView: View {
++    let url: String?
++    var width: CGFloat = 48
++    var height: CGFloat = 48
++    var body: some View {
++        Group {
++            if let url, let u = URL(string: url) {
++                CachedAsyncImage(url: u, maxSide: 200) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
++            } else {
++                ZStack { Palette.secondary; Image("lu-dumbbell").resizable().frame(width: 18, height: 18).foregroundStyle(Palette.muted) }
++            }
++        }
++        .frame(width: width, height: height)
++        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
++        .accessibilityHidden(true)
++    }
++}
++
++private struct ExerciseRows: View {
++    let items: [LibraryExercise]
++    let favorites: Set<String>
++    let onOpen: (LibraryExercise) -> Void
++    var body: some View {
++        LazyVStack(spacing: 0) {
++            ForEach(Array(items.enumerated()), id: \.element.id) { index, e in
++                Button { onOpen(e) } label: {
++                    HStack(spacing: 12) {
++                        ExerciseThumbView(url: e.image)
++                        VStack(alignment: .leading, spacing: 2) {
++                            Text(e.name).font(.apBody.weight(.medium)).lineLimit(1)
++                            Text(e.subtitle).font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(1)
++                        }
++                        .frame(maxWidth: .infinity, alignment: .leading)
++                        if favorites.contains(e.id) {
++                            Image(systemName: "heart.fill").font(.footnote).foregroundStyle(Palette.gold).accessibilityLabel("Favorito")
++                        }
++                    }
++                    .padding(.vertical, 10).contentShape(Rectangle())
++                }
++                .buttonStyle(.plain)
++                if index < items.count - 1 { Divider().overlay(Palette.separator) }
++            }
++        }
++    }
++}
++
++/// Ficha: clip en bucle (o foto, o placeholder), datos clave y secciones con contenido.
++struct ExerciseDetailView: View {
++    let exercise: LibraryExercise
++    @ObservedObject var model: ExerciseLibraryModel
++    let userId: UUID?
++    let onOpen: (LibraryExercise) -> Void
++    @State private var variantIds: [String] = []
++
++    private var all: [LibraryExercise] { model.items ?? [] }
++    private var variants: [LibraryExercise] { variantIds.compactMap { id in all.first { $0.id == id } } }
++    private var alternatives: [LibraryExercise] {
++        ExerciseLibraryCatalog.similar(exercise, all).filter { a in !variantIds.contains(a.id) }
++    }
++    private var chips: [String] {
++        [exercise.primaryMuscles.first ?? exercise.groups.first, exercise.equipment.first,
++         exercise.level.flatMap { ExerciseLibraryCatalog.levels[$0] }].compactMap { $0 }
++    }
++
++    var body: some View {
++        ScrollView {
++            VStack(alignment: .leading, spacing: 16) {
++                hero
++                HStack(alignment: .top, spacing: 12) {
++                    VStack(alignment: .leading, spacing: 2) {
++                        Text(exercise.name).font(.apTitle2)
++                        if !exercise.altNames.isEmpty {
++                            Text(exercise.altNames.joined(separator: " · ")).font(.apSubhead).foregroundStyle(Palette.muted)
++                        }
++                    }
++                    .frame(maxWidth: .infinity, alignment: .leading)
++                    if model.personal {
++                        let on = model.favorites.contains(exercise.id)
++                        Button {
++                            Haptics.selection()
++                            Task { await model.toggleFavorite(exercise.id, userId: userId) }
++                        } label: {
++                            Image(systemName: on ? "heart.fill" : "heart").font(.title3)
++                                .foregroundStyle(on ? Palette.gold : Palette.foreground)
++                                .frame(width: 40, height: 40).background(Palette.secondary, in: Circle())
++                        }
++                        .buttonStyle(.plain)
++                        .accessibilityLabel(on ? "Quitar de favoritos" : "Añadir a favoritos")
++                    }
++                }
++                if !chips.isEmpty {
++                    FlowRow {
++                        ForEach(chips, id: \.self) { c in
++                            Text(c).font(.apFootnote.weight(.medium)).padding(.horizontal, 12).padding(.vertical, 6)
++                                .background(Palette.secondary, in: Capsule())
++                        }
++                    }
++                }
++                sections.padding(.top, 8)
++            }
++            .padding(.horizontal, 20).padding(.bottom, 32)
++        }
++        .screenBackground()
++        .navigationTitle(exercise.name)
++        #if os(iOS)
++        .navigationBarTitleDisplayMode(.inline)
++        #endif
++        .task(id: exercise.id) { variantIds = await model.variants(of: exercise.id) }
++    }
++
++    @ViewBuilder private var hero: some View {
++        let shape = RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
++        ZStack {
++            Palette.card
++            if let image = exercise.image, let url = URL(string: image) {
++                CachedAsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { Palette.card }
++            }
++            if let video = exercise.video, let url = URL(string: video), ["mp4", "mov", "m4v"].contains(url.pathExtension.lowercased()) {
++                LoopingVideo(url: url)
++            } else if exercise.image == nil {
++                VStack(spacing: 8) {
++                    Image("lu-dumbbell").resizable().frame(width: 28, height: 28).foregroundStyle(Palette.muted)
++                    Text("Demostración en preparación").font(.apFootnote).foregroundStyle(Palette.muted)
++                }
++            }
++        }
++        .aspectRatio(16 / 9, contentMode: .fit)
++        .clipShape(shape)
++        .accessibilityLabel(exercise.name)
++    }
++
++    private func list(_ items: [String], numbered: Bool = false) -> some View {
++        VStack(alignment: .leading, spacing: 8) {
++            ForEach(Array(items.enumerated()), id: \.offset) { i, t in
++                HStack(alignment: .firstTextBaseline, spacing: 12) {
++                    Text(numbered ? "\(i + 1)" : "·").font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.gold).frame(width: 18, alignment: .leading)
++                    Text(t).font(.apSubhead).frame(maxWidth: .infinity, alignment: .leading)
++                }
++            }
++        }
++        .padding(16).frame(maxWidth: .infinity, alignment: .leading)
++        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
++    }
++
++    @ViewBuilder private var sections: some View {
++        let e = exercise
++        VStack(alignment: .leading, spacing: 24) {
++            if !e.instructions.isEmpty || e.description != nil {
++                section("Cómo se hace") {
++                    if !e.instructions.isEmpty { list(e.instructions, numbered: true) }
++                    else if let d = e.description {
++                        Text(d).font(.apSubhead).padding(16).frame(maxWidth: .infinity, alignment: .leading)
++                            .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
++                    }
++                }
++            }
++            if !e.primaryMuscles.isEmpty || !e.groups.isEmpty {
++                section("Músculos") {
++                    VStack(alignment: .leading, spacing: 4) {
++                        (Text("Principal: ").foregroundStyle(Palette.muted) + Text((e.primaryMuscles.isEmpty ? e.groups : e.primaryMuscles).joined(separator: ", ")))
++                        if !e.secondaryMuscles.isEmpty {
++                            Text("Secundarios: ").foregroundStyle(Palette.muted) + Text(e.secondaryMuscles.joined(separator: ", "))
++                        }
++                    }
++                    .font(.apSubhead).padding(16).frame(maxWidth: .infinity, alignment: .leading)
++                    .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
++                }
++            }
++            if !e.mistakes.isEmpty { section("Errores frecuentes") { list(e.mistakes) } }
++            if !e.tips.isEmpty { section("Consejos") { list(e.tips) } }
++            if !e.safety.isEmpty { section("Seguridad") { list(e.safety) } }
++            if !variants.isEmpty { section("Variantes") { ExerciseRows(items: variants, favorites: model.favorites, onOpen: open) } }
++            if !alternatives.isEmpty { section("Alternativas") { ExerciseRows(items: alternatives, favorites: model.favorites, onOpen: open) } }
++            if let credit = e.attribution {
++                if let s = e.sourceUrl, let url = URL(string: s) {
++                    Link(credit, destination: url).font(.apCaption).foregroundStyle(Palette.muted)
++                } else {
++                    Text(credit).font(.apCaption).foregroundStyle(Palette.muted)
++                }
++            }
++        }
++    }
++
++    private func open(_ e: LibraryExercise) {
++        Haptics.tap()
++        model.markViewed(e.id, userId: userId)
++        onOpen(e)
++    }
++
++    private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
++        VStack(alignment: .leading, spacing: 8) {
++            LibrarySectionTitle(title)
++            content()
++        }
++    }
++}
+diff --git a/native/Autopilot/Features/Train/TrainView.swift b/native/Autopilot/Features/Train/TrainView.swift
+index fcc2346..07a4bf2 100644
+--- a/native/Autopilot/Features/Train/TrainView.swift
++++ b/native/Autopilot/Features/Train/TrainView.swift
+@@ -12,6 +12,7 @@ struct TrainView: View {
+     /// Día con un entreno a medias guardado (su acción pasa a ser «Continuar entreno»).
+     @State private var resumableDay: String?
+     @State private var editing = false
++    @State private var library = false
+ 
+     /// Paridad con la web responsive: la misma pantalla en todas partes, con más aire y una
+     /// portada de sesión a todo el ancho en iPad/Mac. El iPhone se queda exactamente igual.
+@@ -82,6 +83,13 @@ struct TrainView: View {
+             PlanEditorView(original: model.days) { saved in model.days = saved }
+                 .presentationBackground(Palette.background)
+         }
++        .sheet(isPresented: $library) {
++            ExerciseLibraryView(userId: session.userId)
++                .presentationBackground(Palette.background)
++                #if os(macOS)
++                .frame(minWidth: 680, minHeight: 720)
++                #endif
++        }
+         #if os(iOS)
+         .fullScreenCover(item: $active) { workout in workoutStack(workout) }
+         #else
+@@ -100,11 +108,24 @@ struct TrainView: View {
+ 
+     // MARK: Cargar y abrir la sesión de la rutina
+ 
+-    /// Barra de la rutina (como la web): modo del plan y «Editar» para crear o cambiar tu rutina.
++    /// Barra de la rutina (como la web): modo del plan, «Ejercicios» (biblioteca) y «Editar» para crear o cambiar tu rutina.
+     private var routineBar: some View {
+         HStack(spacing: 8) {
+             Text(model.days.contains { $0.custom == true } ? "Rutina personalizada" : "Piloto automático")
+                 .font(.apSubhead.weight(.medium)).frame(maxWidth: .infinity, alignment: .leading)
++            Button { Haptics.tap(); library = true } label: {
++                Label("Ejercicios", image: "lu-book-open")
++                    #if os(iOS)
++                    .labelStyle(.iconOnly).frame(width: 36)
++                    #else
++                    .labelStyle(.titleOnly).padding(.horizontal, 14)
++                    #endif
++                    .font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.gold)
++                    .frame(height: 36)
++                    .background(Palette.secondary, in: Capsule())
++            }
++            .buttonStyle(.plain)
++            .accessibilityLabel("Ejercicios")
+             Button { Haptics.tap(); editing = true } label: {
+                 Label("Editar", image: "lu-settings").labelStyle(.titleOnly)
+                     .font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.gold)
+diff --git a/src/app/components/library/ExerciseLibrarySheet.tsx b/src/app/components/library/ExerciseLibrarySheet.tsx
+new file mode 100644
+index 0000000..82d199b
+--- /dev/null
++++ b/src/app/components/library/ExerciseLibrarySheet.tsx
+@@ -0,0 +1,328 @@
++import { useEffect, useMemo, useState } from "react";
++import { ChevronLeft, Heart, Search, X } from "lucide-react";
++import { supabase } from "@/shared/integrations/supabase/client";
++import ResponsiveSheet from "@/app/components/dashboard/ResponsiveSheet";
++import ExerciseMedia, { ExerciseThumb } from "@/app/components/ExerciseMedia";
++import { ChipGroup } from "@/shared/components/ui/chip-group";
++import { useExerciseLibrary } from "@/shared/hooks/useExerciseLibrary";
++import {
++  EMPTY_FILTERS, EQUIPMENT, FILTER_GROUPS, MODALITIES, activeFilterCount, attribution, filterLibrary,
++  similarExercises, subtitle, type LibraryExercise, type LibraryFilters,
++} from "@/shared/lib/exerciseLibrary";
++import { hapticSelection, hapticTap } from "@/shared/lib/native";
++import { cn } from "@/shared/lib/utils";
++import { LEVELS } from "@/shared/types/training";
++
++type Facet = "groups" | "equipment" | "modalities";
++const FACETS: { key: Facet; label: string; options: readonly string[] }[] = [
++  { key: "groups", label: "Grupo", options: FILTER_GROUPS },
++  { key: "equipment", label: "Equipo", options: EQUIPMENT },
++  { key: "modalities", label: "Modalidad", options: MODALITIES },
++];
++
++/** Biblioteca de ejercicios: lista con buscador y filtros, y la ficha de cada ejercicio. */
++const ExerciseLibrarySheet = ({ open, onOpenChange, userId }: {
++  open: boolean;
++  onOpenChange: (open: boolean) => void;
++  userId: string;
++}) => {
++  const lib = useExerciseLibrary(userId, open);
++  const [filters, setFilters] = useState<LibraryFilters>(EMPTY_FILTERS);
++  const [facet, setFacet] = useState<Facet | null>(null);
++  const [selected, setSelected] = useState<LibraryExercise | null>(null);
++
++  useEffect(() => { if (!open) { setSelected(null); setFacet(null); } }, [open]);
++
++  const items = useMemo(() => lib.items ?? [], [lib.items]);
++  const results = useMemo(() => filterLibrary(items, filters), [items, filters]);
++  const byId = useMemo(() => new Map(items.map((e) => [e.id, e])), [items]);
++  const browsing = !filters.query.trim() && activeFilterCount(filters) === 0;
++
++  const openExercise = (e: LibraryExercise) => {
++    void hapticTap();
++    setSelected(e);
++    lib.markViewed(e.id);
++  };
++  const toggle = (key: Facet, value: string) =>
++    setFilters((f) => ({ ...f, [key]: f[key].includes(value) ? f[key].filter((v) => v !== value) : [...f[key], value] }));
++
++  return (
++    <ResponsiveSheet open={open} onOpenChange={onOpenChange} title="Ejercicios" desktopClassName="h-[88dvh] sm:max-w-2xl">
++      {selected ? (
++        <ExerciseDetail
++          exercise={selected}
++          all={items}
++          favorite={lib.favorites.has(selected.id)}
++          canFavorite={lib.personal}
++          onFavorite={() => void lib.toggleFavorite(selected.id)}
++          onBack={() => setSelected(null)}
++          onOpen={openExercise}
++          byId={byId}
++        />
++      ) : (
++        <div className="flex min-h-0 flex-1 flex-col">
++          <label className="flex h-11 shrink-0 items-center gap-2 rounded-full bg-card px-4">
++            <Search className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
++            <input
++              value={filters.query}
++              onChange={(e) => setFilters((f) => ({ ...f, query: e.target.value }))}
++              placeholder="Buscar ejercicio"
++              aria-label="Buscar ejercicio"
++              className="min-w-0 flex-1 bg-transparent type-body outline-none placeholder:text-muted-foreground"
++            />
++            {filters.query && (
++              <button type="button" aria-label="Borrar búsqueda" onClick={() => setFilters((f) => ({ ...f, query: "" }))}>
++                <X className="h-4 w-4 text-muted-foreground" aria-hidden />
++              </button>
++            )}
++          </label>
++
++          <div className="mt-3 flex shrink-0 gap-2 overflow-x-auto pb-1">
++            {FACETS.map(({ key, label }) => {
++              const count = filters[key].length;
++              return (
++                <button
++                  key={key}
++                  type="button"
++                  aria-expanded={facet === key}
++                  onClick={() => { void hapticSelection(); setFacet((f) => (f === key ? null : key)); }}
++                  className={cn(
++                    "flex h-9 shrink-0 items-center gap-1.5 rounded-full px-4 type-footnote font-semibold transition active:opacity-60",
++                    count ? "bg-primary/15 text-primary" : "bg-secondary text-foreground",
++                  )}
++                >
++                  {label}{count ? ` · ${count}` : ""}
++                </button>
++              );
++            })}
++            {activeFilterCount(filters) > 0 && (
++              <button type="button" onClick={() => setFilters((f) => ({ ...EMPTY_FILTERS, query: f.query }))} className="h-9 shrink-0 px-2 type-footnote font-semibold text-muted-foreground">
++                Quitar filtros
++              </button>
++            )}
++          </div>
++
++          {facet && (
++            <div className="mt-3 shrink-0 motion-safe:animate-fade-in">
++              <ChipGroup
++                options={FACETS.find((f) => f.key === facet)!.options}
++                isOn={(v) => filters[facet].includes(v)}
++                onToggle={(v) => toggle(facet, v)}
++              />
++            </div>
++          )}
++
++          <div className="-mx-1 mt-4 min-h-0 flex-1 overflow-y-auto px-1 pb-6">
++            {lib.error ? (
++              <div className="py-10 text-center">
++                <p className="type-subhead text-muted-foreground">No se pudo cargar la biblioteca.</p>
++                <button type="button" onClick={lib.retry} className="mt-3 h-10 rounded-full bg-secondary px-5 type-subhead font-semibold text-primary">Reintentar</button>
++              </div>
++            ) : !lib.items ? (
++              <div className="space-y-3" aria-busy="true">
++                {Array.from({ length: 6 }, (_, i) => <div key={i} className="h-14 animate-pulse rounded-2xl bg-card" />)}
++              </div>
++            ) : browsing ? (
++              <Browse
++                items={items}
++                recent={lib.recent.map((id) => byId.get(id)).filter((e): e is LibraryExercise => !!e)}
++                favorites={items.filter((e) => lib.favorites.has(e.id))}
++                onOpen={openExercise}
++                onGroup={(g) => { void hapticSelection(); setFilters((f) => ({ ...f, groups: [g] })); }}
++              />
++            ) : results.length === 0 ? (
++              <p className="py-10 text-center type-subhead text-muted-foreground">Ningún ejercicio coincide. Prueba con otro nombre o quita algún filtro.</p>
++            ) : (
++              <>
++                <p className="mb-2 px-1 type-footnote text-muted-foreground">{results.length} {results.length === 1 ? "ejercicio" : "ejercicios"}</p>
++                <ExerciseList items={results} favorites={lib.favorites} onOpen={openExercise} />
++              </>
++            )}
++          </div>
++        </div>
++      )}
++    </ResponsiveSheet>
++  );
++};
++
++const ExerciseList = ({ items, favorites, onOpen }: {
++  items: LibraryExercise[];
++  favorites?: Set<string>;
++  onOpen: (e: LibraryExercise) => void;
++}) => (
++  <ul className="divide-y divide-border/40">
++    {items.map((e) => (
++      <li key={e.id}>
++        <button type="button" onClick={() => onOpen(e)} className="flex w-full items-center gap-3 py-2.5 text-left transition active:opacity-60">
++          <ExerciseThumb image={e.image} name={e.name} size="md" />
++          <span className="min-w-0 flex-1">
++            <span className="block truncate type-body font-medium">{e.name}</span>
++            <span className="block truncate type-footnote text-muted-foreground">{subtitle(e)}</span>
++          </span>
++          {favorites?.has(e.id) && <Heart className="h-4 w-4 shrink-0 fill-primary text-primary" aria-label="Favorito" />}
++        </button>
++      </li>
++    ))}
++  </ul>
++);
++
++const SectionTitle = ({ children }: { children: string }) => (
++  <h3 className="mb-2 px-1 type-footnote font-semibold uppercase tracking-wide text-muted-foreground">{children}</h3>
++);
++
++/** Sin búsqueda: recientes, favoritos y los grupos musculares con foto real. */
++const Browse = ({ items, recent, favorites, onOpen, onGroup }: {
++  items: LibraryExercise[];
++  recent: LibraryExercise[];
++  favorites: LibraryExercise[];
++  onOpen: (e: LibraryExercise) => void;
++  onGroup: (group: string) => void;
++}) => {
++  const groups = FILTER_GROUPS.map((g) => {
++    const members = filterLibrary(items, { ...EMPTY_FILTERS, groups: [g] });
++    return { g, count: members.length, image: members.find((e) => e.image)?.image ?? null };
++  }).filter((x) => x.count > 0);
++  return (
++    <div className="space-y-6">
++      {recent.length > 0 && (
++        <section>
++          <SectionTitle>Recientes</SectionTitle>
++          <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-1">
++            {recent.map((e) => (
++              <button key={e.id} type="button" onClick={() => onOpen(e)} className="w-28 shrink-0 text-left transition active:opacity-60">
++                <ExerciseThumb image={e.image} name={e.name} aspect="video" className="w-28" />
++                <span className="mt-1.5 line-clamp-2 type-footnote font-medium">{e.name}</span>
++              </button>
++            ))}
++          </div>
++        </section>
++      )}
++      {favorites.length > 0 && (
++        <section>
++          <SectionTitle>Favoritos</SectionTitle>
++          <ExerciseList items={favorites} onOpen={onOpen} />
++        </section>
++      )}
++      <section>
++        <SectionTitle>Grupos musculares</SectionTitle>
++        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
++          {groups.map(({ g, count, image }) => (
++            <button key={g} type="button" onClick={() => onGroup(g)} className="relative aspect-[4/3] overflow-hidden rounded-[22px] bg-card text-left transition active:scale-[0.98]">
++              {image && <img src={image} alt="" loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover opacity-70" />}
++              <span className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" aria-hidden />
++              <span className="absolute bottom-3 left-3 right-3">
++                <span className="block type-headline font-semibold text-white">{g}</span>
++                <span className="block type-footnote text-white/70">{count} {count === 1 ? "ejercicio" : "ejercicios"}</span>
++              </span>
++            </button>
++          ))}
++        </div>
++      </section>
++    </div>
++  );
++};
++
++const Bullets = ({ items, numbered }: { items: string[]; numbered?: boolean }) => {
++  const List = numbered ? "ol" : "ul";
++  return (
++    <List className="space-y-2 rounded-[22px] bg-card p-4">
++      {items.map((t, i) => (
++        <li key={i} className="flex gap-3 type-subhead">
++          <span className="w-5 shrink-0 font-semibold text-primary">{numbered ? i + 1 : "·"}</span>
++          <span className="min-w-0 flex-1">{t}</span>
++        </li>
++      ))}
++    </List>
++  );
++};
++
++/** Ficha: héroe (clip, foto o placeholder), datos clave y secciones con contenido. */
++const ExerciseDetail = ({ exercise: e, all, byId, favorite, canFavorite, onFavorite, onBack, onOpen }: {
++  exercise: LibraryExercise;
++  all: LibraryExercise[];
++  byId: Map<string, LibraryExercise>;
++  favorite: boolean;
++  canFavorite: boolean;
++  onFavorite: () => void;
++  onBack: () => void;
++  onOpen: (e: LibraryExercise) => void;
++}) => {
++  const [variants, setVariants] = useState<LibraryExercise[]>([]);
++  useEffect(() => {
++    let alive = true;
++    setVariants([]);
++    void supabase.from("exercise_relations").select("related_id").eq("exercise_id", e.id).eq("kind", "variant")
++      .then(({ data, error }) => {
++        if (!alive || error) return;
++        setVariants((data ?? []).map((r) => byId.get(r.related_id)).filter((x): x is LibraryExercise => !!x));
++      });
++    return () => { alive = false; };
++  }, [e.id, byId]);
++  const alternatives = useMemo(() => similarExercises(e, all).filter((x) => !variants.some((v) => v.id === x.id)), [e, all, variants]);
++  const level = LEVELS.find((l) => l.value === e.level)?.label;
++  const chips = [e.primaryMuscles[0] ?? e.groups[0], e.equipment[0], level].filter(Boolean) as string[];
++  const credit = attribution(e);
++
++  return (
++    <div className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1 pb-8 motion-safe:animate-fade-in">
++      <button type="button" onClick={onBack} className="mb-3 flex h-9 items-center gap-1 rounded-full pr-3 type-subhead font-semibold text-primary active:opacity-60">
++        <ChevronLeft className="h-5 w-5" aria-hidden /> Ejercicios
++      </button>
++      <ExerciseMedia video={e.video} image={e.image} name={e.name} emptyLabel="Demostración en preparación" className="rounded-[28px]" />
++      <div className="mt-4 flex items-start gap-3">
++        <div className="min-w-0 flex-1">
++          <h2 className="type-title2 font-bold tracking-tight">{e.name}</h2>
++          {e.altNames.length > 0 && <p className="mt-0.5 type-subhead text-muted-foreground">{e.altNames.join(" · ")}</p>}
++        </div>
++        {canFavorite && (
++          <button
++            type="button"
++            aria-pressed={favorite}
++            aria-label={favorite ? "Quitar de favoritos" : "Añadir a favoritos"}
++            onClick={() => { void hapticSelection(); onFavorite(); }}
++            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary transition active:scale-95"
++          >
++            <Heart className={cn("h-5 w-5", favorite ? "fill-primary text-primary" : "text-foreground")} aria-hidden />
++          </button>
++        )}
++      </div>
++      {chips.length > 0 && (
++        <div className="mt-3 flex flex-wrap gap-2">
++          {chips.map((c) => <span key={c} className="rounded-full bg-secondary px-3 py-1.5 type-footnote font-medium">{c}</span>)}
++        </div>
++      )}
++
++      <div className="mt-6 space-y-6">
++        {(e.instructions.length > 0 || e.description) && (
++          <section>
++            <SectionTitle>Cómo se hace</SectionTitle>
++            {e.instructions.length > 0
++              ? <Bullets items={e.instructions} numbered />
++              : <p className="rounded-[22px] bg-card p-4 type-subhead">{e.description}</p>}
++          </section>
++        )}
++        {(e.primaryMuscles.length > 0 || e.groups.length > 0) && (
++          <section>
++            <SectionTitle>Músculos</SectionTitle>
++            <div className="rounded-[22px] bg-card p-4 type-subhead">
++              <p><span className="text-muted-foreground">Principal: </span>{(e.primaryMuscles.length ? e.primaryMuscles : e.groups).join(", ")}</p>
++              {e.secondaryMuscles.length > 0 && <p className="mt-1"><span className="text-muted-foreground">Secundarios: </span>{e.secondaryMuscles.join(", ")}</p>}
++            </div>
++          </section>
++        )}
++        {e.mistakes.length > 0 && <section><SectionTitle>Errores frecuentes</SectionTitle><Bullets items={e.mistakes} /></section>}
++        {e.tips.length > 0 && <section><SectionTitle>Consejos</SectionTitle><Bullets items={e.tips} /></section>}
++        {e.safety.length > 0 && <section><SectionTitle>Seguridad</SectionTitle><Bullets items={e.safety} /></section>}
++        {variants.length > 0 && <section><SectionTitle>Variantes</SectionTitle><ExerciseList items={variants} onOpen={onOpen} /></section>}
++        {alternatives.length > 0 && <section><SectionTitle>Alternativas</SectionTitle><ExerciseList items={alternatives} onOpen={onOpen} /></section>}
++        {credit && (
++          <p className="px-1 type-caption1 text-muted-foreground">
++            {e.sourceUrl ? <a href={e.sourceUrl} target="_blank" rel="noreferrer" className="underline-offset-2 hover:underline">{credit}</a> : credit}
++          </p>
++        )}
++      </div>
++    </div>
++  );
++};
++
++export default ExerciseLibrarySheet;
+diff --git a/src/app/pages/Dashboard.tsx b/src/app/pages/Dashboard.tsx
+index 8dda1c7..ce60dd5 100644
+--- a/src/app/pages/Dashboard.tsx
++++ b/src/app/pages/Dashboard.tsx
+@@ -1,4 +1,4 @@
+-import { Play, PencilLine } from "lucide-react";
++import { BookOpen, Play, PencilLine } from "lucide-react";
+ import { generatePlanGuarded, isManualPlan } from "@/shared/lib/planShield";
+ import { DASHBOARD_CHAT_ENABLED } from "@/shared/lib/releaseScope";
+ import { readActiveWorkout } from "@/shared/lib/activeWorkout";
+@@ -53,6 +53,7 @@ const Recursos = lazy(() => import("@/web/pages/Recursos"));
+ const ProgressScan = lazy(() => import("@/app/components/scan/ProgressScan"));
+ const PlanEditor = lazy(() => import("@/app/components/dashboard/PlanEditor"));
+ const FreeSessionBuilder = lazy(() => import("@/app/components/dashboard/FreeSessionBuilder"));
++const ExerciseLibrarySheet = lazy(() => import("@/app/components/library/ExerciseLibrarySheet"));
+ 
+ const SectionFallback = () => (
+   <Skeleton className="min-h-40 w-full rounded-2xl bg-card" aria-hidden />
+@@ -185,6 +186,7 @@ const Dashboard = () => {
+   const [planFocusDay, setPlanFocusDay] = useState<string | undefined>();
+   const [editorOpen, setEditorOpen] = useState(false);
+   const [freeOpen, setFreeOpen] = useState(false);
++  const [libraryOpen, setLibraryOpen] = useState(false);
+   const [freePlans, setFreePlans] = useState<DayPlan[] | null>(null);
+   const [trainingView, setTrainingView] = useState<"tracker" | "plan">(() => {
+     const fromParam = searchParams.get("view");
+@@ -719,7 +721,9 @@ const Dashboard = () => {
+                     {[
+                       { label: "Libre", aria: "Modo libre", Icon: Play, on: () => setFreeOpen(true) },
+                       { label: "Editar", aria: "Editar rutina", Icon: PencilLine, on: () => setEditorOpen(true) },
+-                    ].map(({ label, aria, Icon, on }) => (
++                      // Biblioteca: en móvil solo el icono, para que el modo del plan no se corte.
++                      { label: "Ejercicios", aria: "Ejercicios", Icon: BookOpen, on: () => setLibraryOpen(true), compact: true },
++                    ].map(({ label, aria, Icon, on, compact }) => (
+                       <button
+                         key={label}
+                         type="button"
+@@ -728,7 +732,7 @@ const Dashboard = () => {
+                         className="flex h-9 items-center gap-1.5 rounded-full bg-secondary px-3 type-footnote font-semibold text-primary transition active:opacity-50"
+                       >
+                         <Icon className="h-4 w-4 shrink-0" aria-hidden />
+-                        {label}
++                        <span className={compact ? "hidden sm:inline" : undefined}>{label}</span>
+                       </button>
+                     ))}
+                   </div>
+@@ -784,6 +788,7 @@ const Dashboard = () => {
+             dayPlans={dayPlans}
+             onSaved={(p) => { setDayPlans(p); setTrainingView("plan"); }}
+           />
++          <ExerciseLibrarySheet open={libraryOpen} onOpenChange={setLibraryOpen} userId={user.id} />
+           <FreeSessionBuilder
+             open={freeOpen}
+             onOpenChange={setFreeOpen}
+diff --git a/src/shared/hooks/useExerciseLibrary.test.ts b/src/shared/hooks/useExerciseLibrary.test.ts
+new file mode 100644
+index 0000000..f096319
+--- /dev/null
++++ b/src/shared/hooks/useExerciseLibrary.test.ts
+@@ -0,0 +1,37 @@
++import { describe, expect, it } from "vitest";
++import { toLibraryExercise } from "./useExerciseLibrary";
++
++const base = {
++  id: "1", name: "Press banca", muscle_group: "Pecho", exercise_type: "Gimnasio", movement_pattern: "Empuje",
++  level: 2, image_url: "https://x/p.webp", video_url: null,
++};
++
++describe("índice de la biblioteca", () => {
++  it("ordena músculos (principal primero) y saca grupos, equipo y modalidad de las relaciones", () => {
++    const e = toLibraryExercise({
++      ...base,
++      source: "wger", license: "CC BY-SA 4.0", license_author: "ana",
++      exercise_muscles: [
++        { role: "secondary", muscles: { name: "Tríceps braquial", filter_group: "Tríceps", sort: 50 } },
++        { role: "primary", muscles: { name: "Pectoral mayor", filter_group: "Pecho", sort: 10 } },
++        { role: "secondary", muscles: { name: "Deltoides anterior", filter_group: "Hombros", sort: 30 } },
++      ],
++      exercise_equipment: [{ equipment: { name: "Barra", sort: 30 } }, { equipment: { name: "Peso corporal", sort: 10 } }],
++      exercise_categories: [{ exercise_categories_catalog: { name: "Gimnasio" } }],
++    });
++    expect(e.groups).toEqual(["Pecho"]);
++    expect(e.primaryMuscles).toEqual(["Pectoral mayor"]);
++    expect(e.secondaryMuscles).toEqual(["Deltoides anterior", "Tríceps braquial"]);
++    expect(e.equipment).toEqual(["Peso corporal", "Barra"]);
++    expect(e.modalities).toEqual(["Gimnasio"]);
++    expect(e.source).toBe("wger");
++  });
++
++  it("sin la migración aplicada usa el grupo y el tipo de siempre", () => {
++    const e = toLibraryExercise({ ...base, muscle_group: "Core", exercise_type: "Mixto" });
++    expect(e.groups).toEqual(["Abdomen"]);
++    expect(e.modalities).toEqual(["Entrenamiento híbrido"]);
++    expect(e.source).toBe("autopilot");
++    expect(e.instructions).toEqual([]);
++  });
++});
+diff --git a/src/shared/hooks/useExerciseLibrary.ts b/src/shared/hooks/useExerciseLibrary.ts
+new file mode 100644
+index 0000000..bafa4a8
+--- /dev/null
++++ b/src/shared/hooks/useExerciseLibrary.ts
+@@ -0,0 +1,156 @@
++import { useCallback, useEffect, useState } from "react";
++import { supabase } from "@/shared/integrations/supabase/client";
++import { legacyGroups, legacyModalities, type LibraryExercise } from "@/shared/lib/exerciseLibrary";
++
++type MuscleLink = { role: string; muscles: { name: string; filter_group: string | null; sort: number } | null };
++type Row = {
++  id: string;
++  name: string;
++  slug?: string | null;
++  alt_names?: string[] | null;
++  muscle_group: string | null;
++  exercise_type: string | null;
++  movement_pattern: string | null;
++  level: number | null;
++  image_url: string | null;
++  video_url: string | null;
++  description?: string | null;
++  instructions?: string[] | null;
++  common_mistakes?: string[] | null;
++  tips?: string[] | null;
++  safety_notes?: string[] | null;
++  source?: string | null;
++  license?: string | null;
++  license_author?: string | null;
++  source_url?: string | null;
++  exercise_muscles?: MuscleLink[] | null;
++  exercise_equipment?: { equipment: { name: string; sort: number } | null }[] | null;
++  exercise_categories?: { exercise_categories_catalog: { name: string } | null }[] | null;
++};
++
++const BASE = "id, name, muscle_group, exercise_type, movement_pattern, level, image_url, video_url";
++const FULL = `${BASE}, slug, alt_names, description, instructions, common_mistakes, tips, safety_notes, source, license, license_author, source_url, `
++  + "exercise_muscles(role, muscles(name, filter_group, sort)), exercise_equipment(equipment(name, sort)), "
++  + "exercise_categories(exercise_categories_catalog(name))";
++const PAGE = 1000;
++
++const uniq = (values: (string | null | undefined)[]) => [...new Set(values.filter((v): v is string => !!v))];
++
++export const toLibraryExercise = (r: Row): LibraryExercise => {
++  const links = [...(r.exercise_muscles ?? [])]
++    .filter((m) => m.muscles)
++    .sort((a, b) => (a.role === b.role ? (a.muscles?.sort ?? 0) - (b.muscles?.sort ?? 0) : a.role === "primary" ? -1 : 1));
++  const primary = links.filter((m) => m.role === "primary");
++  const linkedGroups = uniq(primary.map((m) => m.muscles?.filter_group));
++  const modalities = uniq((r.exercise_categories ?? []).map((c) => c.exercise_categories_catalog?.name));
++  return {
++    id: r.id,
++    slug: r.slug ?? null,
++    name: r.name,
++    altNames: r.alt_names ?? [],
++    groups: linkedGroups.length ? linkedGroups : legacyGroups(r.muscle_group),
++    primaryMuscles: uniq(primary.map((m) => m.muscles?.name)),
++    secondaryMuscles: uniq(links.filter((m) => m.role !== "primary").map((m) => m.muscles?.name)),
++    equipment: uniq([...(r.exercise_equipment ?? [])]
++      .sort((a, b) => (a.equipment?.sort ?? 0) - (b.equipment?.sort ?? 0))
++      .map((e) => e.equipment?.name)),
++    modalities: modalities.length ? modalities : legacyModalities(r.exercise_type),
++    pattern: r.movement_pattern,
++    level: r.level,
++    image: r.image_url,
++    video: r.video_url,
++    description: r.description ?? null,
++    instructions: r.instructions ?? [],
++    mistakes: r.common_mistakes ?? [],
++    tips: r.tips ?? [],
++    safety: r.safety_notes ?? [],
++    source: r.source ?? "autopilot",
++    license: r.license ?? null,
++    licenseAuthor: r.license_author ?? null,
++    sourceUrl: r.source_url ?? null,
++  };
++};
++
++/** Toda la biblioteca publicada, por páginas (PostgREST corta en 1.000 filas). */
++async function fetchCatalog(): Promise<LibraryExercise[]> {
++  const load = async (select: string, published: boolean) => {
++    const rows: Row[] = [];
++    for (let from = 0; ; from += PAGE) {
++      let query = supabase.from("exercises").select(select).order("name").range(from, from + PAGE - 1);
++      if (published) query = query.eq("status", "published");
++      const { data, error } = await query;
++      if (error) throw error;
++      const page = (data ?? []) as unknown as Row[];
++      rows.push(...page);
++      if (page.length < PAGE) return rows;
++    }
++  };
++  try {
++    return (await load(FULL, true)).map(toLibraryExercise);
++  } catch {
++    // Sin la migración de la biblioteca todavía: mismos ejercicios, filtros por su grupo de siempre.
++    return (await load(BASE, false)).map(toLibraryExercise);
++  }
++}
++
++let cache: Promise<LibraryExercise[]> | null = null;
++
++/** Índice de la biblioteca (una descarga por sesión) + favoritos y recientes del usuario. */
++export function useExerciseLibrary(userId: string | null | undefined, enabled = true) {
++  const [items, setItems] = useState<LibraryExercise[] | null>(null);
++  const [error, setError] = useState(false);
++  const [favorites, setFavorites] = useState<Set<string>>(new Set());
++  const [recent, setRecent] = useState<string[]>([]);
++  const [personal, setPersonal] = useState(false);
++
++  useEffect(() => {
++    if (!enabled) return;
++    let alive = true;
++    cache ??= fetchCatalog();
++    cache.then((list) => { if (alive) { setItems(list); setError(false); } })
++      .catch(() => { cache = null; if (alive) setError(true); });
++    return () => { alive = false; };
++  }, [enabled]);
++
++  useEffect(() => {
++    if (!enabled || !userId) return;
++    let alive = true;
++    void (async () => {
++      const [fav, rec] = await Promise.all([
++        supabase.from("exercise_favorites").select("exercise_id").eq("user_id", userId),
++        supabase.from("exercise_recent").select("exercise_id").eq("user_id", userId).order("viewed_at", { ascending: false }).limit(12),
++      ]);
++      if (!alive || fav.error || rec.error) return;
++      setFavorites(new Set((fav.data ?? []).map((r) => r.exercise_id)));
++      setRecent((rec.data ?? []).map((r) => r.exercise_id));
++      setPersonal(true);
++    })();
++    return () => { alive = false; };
++  }, [enabled, userId]);
++
++  const toggleFavorite = useCallback(async (exerciseId: string) => {
++    if (!userId) return;
++    const wasOn = favorites.has(exerciseId);
++    const flip = (on: boolean) => setFavorites((prev) => {
++      const next = new Set(prev);
++      if (on) next.add(exerciseId); else next.delete(exerciseId);
++      return next;
++    });
++    flip(!wasOn);
++    const { error: err } = wasOn
++      ? await supabase.from("exercise_favorites").delete().eq("user_id", userId).eq("exercise_id", exerciseId)
++      : await supabase.from("exercise_favorites").insert({ user_id: userId, exercise_id: exerciseId });
++    if (err) flip(wasOn);
++  }, [favorites, userId]);
++
++  const markViewed = useCallback((exerciseId: string) => {
++    setRecent((prev) => [exerciseId, ...prev.filter((id) => id !== exerciseId)].slice(0, 12));
++    if (!userId || !personal) return;
++    void supabase.from("exercise_recent")
++      .upsert({ user_id: userId, exercise_id: exerciseId, viewed_at: new Date().toISOString() }, { onConflict: "user_id,exercise_id" });
++  }, [personal, userId]);
++
++  const retry = useCallback(() => { cache = null; setError(false); setItems(null); cache = fetchCatalog(); cache.then(setItems).catch(() => { cache = null; setError(true); }); }, []);
++
++  return { items, error, retry, favorites, recent, personal, toggleFavorite, markViewed };
++}
+diff --git a/src/shared/integrations/supabase/types.ts b/src/shared/integrations/supabase/types.ts
+index 49b826c..a480408 100644
+--- a/src/shared/integrations/supabase/types.ts
++++ b/src/shared/integrations/supabase/types.ts
+@@ -409,6 +409,276 @@ export type Database = {
+         }
+         Relationships: []
+       }
++      equipment: {
++        Row: {
++          id: string
++          slug: string
++          name: string
++          sort: number
++        }
++        Insert: {
++          id?: string
++          slug: string
++          name: string
++          sort?: number
++        }
++        Update: {
++          id?: string
++          slug?: string
++          name?: string
++          sort?: number
++        }
++        Relationships: []
++      }
++      exercise_categories: {
++        Row: {
++          exercise_id: string
++          category_id: string
++        }
++        Insert: {
++          exercise_id: string
++          category_id: string
++        }
++        Update: {
++          exercise_id?: string
++          category_id?: string
++        }
++        Relationships: [
++          {
++            foreignKeyName: "exercise_categories_exercise_id_fkey"
++            columns: ["exercise_id"]
++            isOneToOne: false
++            referencedRelation: "exercises"
++            referencedColumns: ["id"]
++          },
++          {
++            foreignKeyName: "exercise_categories_category_id_fkey"
++            columns: ["category_id"]
++            isOneToOne: false
++            referencedRelation: "exercise_categories_catalog"
++            referencedColumns: ["id"]
++          },
++        ]
++      }
++      exercise_categories_catalog: {
++        Row: {
++          id: string
++          slug: string
++          name: string
++          sort: number
++        }
++        Insert: {
++          id?: string
++          slug: string
++          name: string
++          sort?: number
++        }
++        Update: {
++          id?: string
++          slug?: string
++          name?: string
++          sort?: number
++        }
++        Relationships: []
++      }
++      exercise_equipment: {
++        Row: {
++          exercise_id: string
++          equipment_id: string
++        }
++        Insert: {
++          exercise_id: string
++          equipment_id: string
++        }
++        Update: {
++          exercise_id?: string
++          equipment_id?: string
++        }
++        Relationships: [
++          {
++            foreignKeyName: "exercise_equipment_exercise_id_fkey"
++            columns: ["exercise_id"]
++            isOneToOne: false
++            referencedRelation: "exercises"
++            referencedColumns: ["id"]
++          },
++          {
++            foreignKeyName: "exercise_equipment_equipment_id_fkey"
++            columns: ["equipment_id"]
++            isOneToOne: false
++            referencedRelation: "equipment"
++            referencedColumns: ["id"]
++          },
++        ]
++      }
++      exercise_favorites: {
++        Row: {
++          user_id: string
++          exercise_id: string
++          created_at: string
++        }
++        Insert: {
++          user_id: string
++          exercise_id: string
++          created_at?: string
++        }
++        Update: {
++          user_id?: string
++          exercise_id?: string
++          created_at?: string
++        }
++        Relationships: [
++          {
++            foreignKeyName: "exercise_favorites_exercise_id_fkey"
++            columns: ["exercise_id"]
++            isOneToOne: false
++            referencedRelation: "exercises"
++            referencedColumns: ["id"]
++          },
++        ]
++      }
++      exercise_media: {
++        Row: {
++          id: string
++          exercise_id: string
++          kind: string
++          url: string
++          source: string
++          source_url: string | null
++          license: string | null
++          license_author: string | null
++          status: string
++          sort: number
++          created_at: string
++        }
++        Insert: {
++          id?: string
++          exercise_id: string
++          kind: string
++          url: string
++          source?: string
++          source_url?: string | null
++          license?: string | null
++          license_author?: string | null
++          status?: string
++          sort?: number
++          created_at?: string
++        }
++        Update: {
++          id?: string
++          exercise_id?: string
++          kind?: string
++          url?: string
++          source?: string
++          source_url?: string | null
++          license?: string | null
++          license_author?: string | null
++          status?: string
++          sort?: number
++          created_at?: string
++        }
++        Relationships: [
++          {
++            foreignKeyName: "exercise_media_exercise_id_fkey"
++            columns: ["exercise_id"]
++            isOneToOne: false
++            referencedRelation: "exercises"
++            referencedColumns: ["id"]
++          },
++        ]
++      }
++      exercise_muscles: {
++        Row: {
++          exercise_id: string
++          muscle_id: string
++          role: string
++        }
++        Insert: {
++          exercise_id: string
++          muscle_id: string
++          role?: string
++        }
++        Update: {
++          exercise_id?: string
++          muscle_id?: string
++          role?: string
++        }
++        Relationships: [
++          {
++            foreignKeyName: "exercise_muscles_exercise_id_fkey"
++            columns: ["exercise_id"]
++            isOneToOne: false
++            referencedRelation: "exercises"
++            referencedColumns: ["id"]
++          },
++          {
++            foreignKeyName: "exercise_muscles_muscle_id_fkey"
++            columns: ["muscle_id"]
++            isOneToOne: false
++            referencedRelation: "muscles"
++            referencedColumns: ["id"]
++          },
++        ]
++      }
++      exercise_recent: {
++        Row: {
++          user_id: string
++          exercise_id: string
++          viewed_at: string
++        }
++        Insert: {
++          user_id: string
++          exercise_id: string
++          viewed_at?: string
++        }
++        Update: {
++          user_id?: string
++          exercise_id?: string
++          viewed_at?: string
++        }
++        Relationships: [
++          {
++            foreignKeyName: "exercise_recent_exercise_id_fkey"
++            columns: ["exercise_id"]
++            isOneToOne: false
++            referencedRelation: "exercises"
++            referencedColumns: ["id"]
++          },
++        ]
++      }
++      exercise_relations: {
++        Row: {
++          exercise_id: string
++          related_id: string
++          kind: string
++        }
++        Insert: {
++          exercise_id: string
++          related_id: string
++          kind: string
++        }
++        Update: {
++          exercise_id?: string
++          related_id?: string
++          kind?: string
++        }
++        Relationships: [
++          {
++            foreignKeyName: "exercise_relations_exercise_id_fkey"
++            columns: ["exercise_id"]
++            isOneToOne: false
++            referencedRelation: "exercises"
++            referencedColumns: ["id"]
++          },
++          {
++            foreignKeyName: "exercise_relations_related_id_fkey"
++            columns: ["related_id"]
++            isOneToOne: false
++            referencedRelation: "exercises"
++            referencedColumns: ["id"]
++          },
++        ]
++      }
+       exercise_user_preferences: {
+         Row: {
+           created_at: string
+@@ -468,6 +738,22 @@ export type Database = {
+           video_job_id: string | null
+           video_priority: number | null
+           video_url: string | null
++          slug: string
++          alt_names: string[]
++          description: string | null
++          instructions: string[]
++          common_mistakes: string[]
++          tips: string[]
++          safety_notes: string[]
++          mechanic: string | null
++          status: string
++          source: string
++          source_ref: string | null
++          source_url: string | null
++          license: string | null
++          license_author: string | null
++          reviewed_at: string | null
++          updated_at: string
+         }
+         Insert: {
+           alternative_id?: string | null
+@@ -497,6 +783,22 @@ export type Database = {
+           video_job_id?: string | null
+           video_priority?: number | null
+           video_url?: string | null
++          slug?: string
++          alt_names?: string[]
++          description?: string | null
++          instructions?: string[]
++          common_mistakes?: string[]
++          tips?: string[]
++          safety_notes?: string[]
++          mechanic?: string | null
++          status?: string
++          source?: string
++          source_ref?: string | null
++          source_url?: string | null
++          license?: string | null
++          license_author?: string | null
++          reviewed_at?: string | null
++          updated_at?: string
+         }
+         Update: {
+           alternative_id?: string | null
+@@ -526,6 +828,22 @@ export type Database = {
+           video_job_id?: string | null
+           video_priority?: number | null
+           video_url?: string | null
++          slug?: string
++          alt_names?: string[]
++          description?: string | null
++          instructions?: string[]
++          common_mistakes?: string[]
++          tips?: string[]
++          safety_notes?: string[]
++          mechanic?: string | null
++          status?: string
++          source?: string
++          source_ref?: string | null
++          source_url?: string | null
++          license?: string | null
++          license_author?: string | null
++          reviewed_at?: string | null
++          updated_at?: string
+         }
+         Relationships: [
+           {
+@@ -785,6 +1103,30 @@ export type Database = {
+         }
+         Relationships: []
+       }
++      muscles: {
++        Row: {
++          id: string
++          slug: string
++          name: string
++          filter_group: string | null
++          sort: number
++        }
++        Insert: {
++          id?: string
++          slug: string
++          name: string
++          filter_group?: string | null
++          sort?: number
++        }
++        Update: {
++          id?: string
++          slug?: string
++          name?: string
++          filter_group?: string | null
++          sort?: number
++        }
++        Relationships: []
++      }
+       notifications: {
+         Row: {
+           created_at: string
+diff --git a/src/shared/lib/exerciseLibrary.test.ts b/src/shared/lib/exerciseLibrary.test.ts
+new file mode 100644
+index 0000000..885657a
+--- /dev/null
++++ b/src/shared/lib/exerciseLibrary.test.ts
+@@ -0,0 +1,65 @@
++import { describe, expect, it } from "vitest";
++import {
++  EMPTY_FILTERS, attribution, filterLibrary, legacyGroups, nameKey, similarExercises, subtitle,
++  type LibraryExercise,
++} from "./exerciseLibrary";
++
++const ex = (name: string, over: Partial<LibraryExercise> = {}): LibraryExercise => ({
++  id: name, slug: nameKey(name).replace(/ /g, "-"), name, altNames: [], groups: [], primaryMuscles: [], secondaryMuscles: [],
++  equipment: [], modalities: [], pattern: null, level: null, image: null, video: null, description: null,
++  instructions: [], mistakes: [], tips: [], safety: [], source: "autopilot", license: null, licenseAuthor: null, sourceUrl: null,
++  ...over,
++});
++
++const bench = ex("Press banca", { groups: ["Pecho", "Tríceps"], primaryMuscles: ["Pectoral mayor"], equipment: ["Barra"], modalities: ["Gimnasio"], pattern: "Empuje" });
++const dbBench = ex("Press con mancuernas", { groups: ["Pecho"], equipment: ["Mancuernas"], modalities: ["Gimnasio"], pattern: "Empuje" });
++const pushup = ex("Flexiones", { altNames: ["Push-up"], groups: ["Pecho"], equipment: ["Peso corporal"], modalities: ["Calistenia"], pattern: "Empuje" });
++const squat = ex("Sentadilla búlgara", { groups: ["Cuádriceps", "Glúteos"], equipment: ["Mancuernas"], modalities: ["Gimnasio"], pattern: "Sentadilla" });
++const burpee = ex("Burpee", { groups: ["Pecho", "Cuádriceps", "Abdomen"], equipment: ["Peso corporal"], modalities: ["Entrenamiento funcional"] });
++const all = [squat, pushup, bench, burpee, dbBench];
++
++describe("biblioteca de ejercicios", () => {
++  it("normaliza igual que la clave SQL", () => {
++    expect(nameKey("  Elevación  LATERAL (polea)!")).toBe("elevacion lateral polea");
++  });
++
++  it("sin filtros devuelve todo en orden alfabético", () => {
++    expect(filterLibrary(all, EMPTY_FILTERS).map((e) => e.name)).toEqual([
++      "Burpee", "Flexiones", "Press banca", "Press con mancuernas", "Sentadilla búlgara",
++    ]);
++  });
++
++  it("busca sin acentos, por nombre alternativo y con una errata", () => {
++    const names = (query: string) => filterLibrary(all, { ...EMPTY_FILTERS, query }).map((e) => e.name);
++    expect(names("bulgara")).toEqual(["Sentadilla búlgara"]);
++    expect(names("push")).toEqual(["Flexiones"]);
++    expect(names("sentadila")).toEqual(["Sentadilla búlgara"]);
++    expect(names("press man")).toEqual(["Press con mancuernas"]);
++    expect(names("zzz")).toEqual([]);
++  });
++
++  it("combina filtros: Y entre facetas, O dentro de cada una", () => {
++    const names = (f: Partial<typeof EMPTY_FILTERS>) => filterLibrary(all, { ...EMPTY_FILTERS, ...f }).map((e) => e.name);
++    expect(names({ groups: ["Pecho"], equipment: ["Mancuernas", "Barra"] })).toEqual(["Press banca", "Press con mancuernas"]);
++    expect(names({ groups: ["Pecho"], modalities: ["Calistenia"] })).toEqual(["Flexiones"]);
++    expect(names({ groups: ["Cuerpo completo"] })).toEqual(["Burpee"]);
++  });
++
++  it("propone parecidos por grupo principal, patrón y equipo", () => {
++    expect(similarExercises(bench, all).map((e) => e.name)).toEqual(["Flexiones", "Press con mancuernas", "Burpee"]);
++    expect(similarExercises(squat, all)).toEqual([]);
++  });
++
++  it("los ejercicios antiguos se filtran por su grupo de siempre", () => {
++    expect(legacyGroups("Core")).toEqual(["Abdomen"]);
++    expect(legacyGroups("Piernas")).toEqual(["Cuádriceps"]);
++    expect(legacyGroups(null)).toEqual([]);
++  });
++
++  it("muestra subtítulo y la atribución obligatoria de wger", () => {
++    expect(subtitle(bench)).toBe("Pectoral mayor · Barra");
++    expect(attribution(bench)).toBeNull();
++    expect(attribution(ex("Remo", { source: "wger", licenseAuthor: "deusinvictus", license: "CC BY-SA 4.0" })))
++      .toBe("Fuente: wger.de · deusinvictus · CC BY-SA 4.0");
++  });
++});
+diff --git a/src/shared/lib/exerciseLibrary.ts b/src/shared/lib/exerciseLibrary.ts
+new file mode 100644
+index 0000000..0ef88ca
+--- /dev/null
++++ b/src/shared/lib/exerciseLibrary.ts
+@@ -0,0 +1,182 @@
++/**
++ * Biblioteca de ejercicios: lógica pura (sin red) compartida por la web y por las
++ * pruebas. La app nativa replica las mismas listas y reglas en ExerciseLibraryView.swift.
++ */
++
++export const FILTER_GROUPS = [
++  "Pecho", "Espalda", "Hombros", "Bíceps", "Tríceps", "Antebrazos", "Abdomen",
++  "Cuádriceps", "Isquiotibiales", "Glúteos", "Gemelos", "Cuerpo completo",
++] as const;
++
++export const EQUIPMENT = [
++  "Peso corporal", "Mancuernas", "Barra", "Máquinas", "Poleas", "Kettlebell",
++  "Bandas elásticas", "Anillas", "Barra de dominadas", "Paralelas", "Otros",
++] as const;
++
++export const MODALITIES = [
++  "Gimnasio", "Calistenia", "Entrenamiento funcional", "Entrenamiento híbrido", "Movilidad",
++] as const;
++
++/** Secciones de la ficha, en orden. La app nativa usa los mismos títulos (test de paridad). */
++export const DETAIL_SECTIONS = [
++  "Cómo se hace", "Músculos", "Errores frecuentes", "Consejos", "Seguridad", "Variantes", "Alternativas",
++] as const;
++
++export type LibraryExercise = {
++  id: string;
++  slug: string | null;
++  name: string;
++  altNames: string[];
++  /** Grupos del filtro: primero los del músculo principal. */
++  groups: string[];
++  primaryMuscles: string[];
++  secondaryMuscles: string[];
++  equipment: string[];
++  modalities: string[];
++  pattern: string | null;
++  level: number | null;
++  image: string | null;
++  video: string | null;
++  description: string | null;
++  instructions: string[];
++  mistakes: string[];
++  tips: string[];
++  safety: string[];
++  source: string;
++  license: string | null;
++  licenseAuthor: string | null;
++  sourceUrl: string | null;
++};
++
++export type LibraryFilters = {
++  query: string;
++  groups: string[];
++  equipment: string[];
++  modalities: string[];
++};
++
++export const EMPTY_FILTERS: LibraryFilters = { query: "", groups: [], equipment: [], modalities: [] };
++
++/** Igual que `public.exercise_name_key` en SQL: minúsculas, sin acentos ni signos. */
++export const nameKey = (value: string | null | undefined): string =>
++  (value ?? "")
++    .toLowerCase()
++    .normalize("NFD")
++    .replace(/[̀-ͯ]/g, "")
++    .replace(/[^a-z0-9]+/g, " ")
++    .trim();
++
++/** Ejercicios que aún no tienen músculos enlazados: su `muscle_group` antiguo da el grupo del filtro. */
++const LEGACY_GROUPS: Record<string, string[]> = {
++  Pecho: ["Pecho"], Serrato: ["Pecho"],
++  Espalda: ["Espalda"], Trapecios: ["Espalda"], Romboides: ["Espalda"], Lumbares: ["Espalda"],
++  Hombros: ["Hombros"], Bíceps: ["Bíceps"], Tríceps: ["Tríceps"], Antebrazos: ["Antebrazos"],
++  Core: ["Abdomen"], Abdomen: ["Abdomen"],
++  Piernas: ["Cuádriceps"], Cuádriceps: ["Cuádriceps"], Aductores: ["Cuádriceps"],
++  Isquiotibiales: ["Isquiotibiales"], Glúteos: ["Glúteos"], Abductores: ["Glúteos"], Gemelos: ["Gemelos"],
++  "Cuerpo completo": ["Cuerpo completo"], Cardio: ["Cuerpo completo"],
++};
++export const legacyGroups = (muscleGroup: string | null | undefined): string[] =>
++  (muscleGroup && LEGACY_GROUPS[muscleGroup]) || [];
++
++const LEGACY_MODALITIES: Record<string, string[]> = {
++  Gimnasio: ["Gimnasio"], Calistenia: ["Calistenia"], Mixto: ["Entrenamiento híbrido"],
++};
++export const legacyModalities = (exerciseType: string | null | undefined): string[] =>
++  (exerciseType && LEGACY_MODALITIES[exerciseType]) || [];
++
++/** Distancia de edición ≤ 1 (una letra cambiada, de más o de menos). */
++const withinOneEdit = (a: string, b: string): boolean => {
++  if (Math.abs(a.length - b.length) > 1) return false;
++  let i = 0;
++  let j = 0;
++  let edits = 0;
++  while (i < a.length && j < b.length) {
++    if (a[i] === b[j]) { i++; j++; continue; }
++    if (++edits > 1) return false;
++    if (a.length > b.length) i++;
++    else if (a.length < b.length) j++;
++    else { i++; j++; }
++  }
++  return edits + (a.length - i) + (b.length - j) <= 1;
++};
++
++/** «sentadila» encuentra «sentadilla»: el principio de la palabra con una errata como mucho (desde 4 letras). */
++const fuzzyPrefix = (token: string, word: string): boolean =>
++  word.startsWith(token) ||
++  (token.length >= 4 && [-1, 0, 1].some((d) => withinOneEdit(token, word.slice(0, token.length + d))));
++
++/** 0 = no coincide; más alto = mejor coincidencia. */
++export const matchScore = (exercise: LibraryExercise, query: string): number => {
++  const q = nameKey(query);
++  if (!q) return 1;
++  const tokens = q.split(" ");
++  let best = 0;
++  for (const label of [exercise.name, ...exercise.altNames]) {
++    const key = nameKey(label);
++    const words = key.split(" ");
++    if (key.startsWith(q)) { best = Math.max(best, 4); continue; }
++    const all = tokens.every((t) => words.some((w) => w.startsWith(t)));
++    if (all) { best = Math.max(best, 3); continue; }
++    if (key.includes(q)) { best = Math.max(best, 2); continue; }
++    if (tokens.every((t) => words.some((w) => fuzzyPrefix(t, w)))) best = Math.max(best, 1);
++  }
++  return best;
++};
++
++export const isFullBody = (exercise: LibraryExercise): boolean =>
++  exercise.groups.includes("Cuerpo completo") ||
++  new Set(exercise.groups).size >= 3;
++
++const matchesFacet = (values: string[], selected: string[]) =>
++  selected.length === 0 || selected.some((s) => values.includes(s));
++
++/** Filtros combinables: Y entre facetas, O dentro de cada faceta. Con texto, ordena por relevancia. */
++export function filterLibrary(items: LibraryExercise[], filters: LibraryFilters): LibraryExercise[] {
++  const groups = filters.groups.filter((g) => g !== "Cuerpo completo");
++  const wantsFullBody = filters.groups.includes("Cuerpo completo");
++  const scored: { item: LibraryExercise; score: number }[] = [];
++  for (const item of items) {
++    const groupOk = filters.groups.length === 0
++      || (groups.length > 0 && matchesFacet(item.groups, groups))
++      || (wantsFullBody && isFullBody(item));
++    if (!groupOk) continue;
++    if (!matchesFacet(item.equipment, filters.equipment)) continue;
++    if (!matchesFacet(item.modalities, filters.modalities)) continue;
++    const score = matchScore(item, filters.query);
++    if (score > 0) scored.push({ item, score });
++  }
++  return scored
++    .sort((a, b) => b.score - a.score || a.item.name.localeCompare(b.item.name, "es"))
++    .map((s) => s.item);
++}
++
++export const activeFilterCount = (f: LibraryFilters) => f.groups.length + f.equipment.length + f.modalities.length;
++
++/** Parecidos: mismo grupo principal, mismo patrón y equipo compartido, en ese orden de peso. */
++export function similarExercises(target: LibraryExercise, items: LibraryExercise[], limit = 6): LibraryExercise[] {
++  const mainGroup = target.groups[0];
++  return items
++    .filter((e) => e.id !== target.id)
++    .map((e) => ({
++      e,
++      score: (mainGroup && e.groups[0] === mainGroup ? 3 : e.groups.some((g) => target.groups.includes(g)) ? 1 : 0)
++        + (target.pattern && e.pattern === target.pattern ? 2 : 0)
++        + (e.equipment.some((q) => target.equipment.includes(q)) ? 1 : 0),
++    }))
++    .filter((x) => x.score >= 3)
++    .sort((a, b) => b.score - a.score || a.e.name.localeCompare(b.e.name, "es"))
++    .slice(0, limit)
++    .map((x) => x.e);
++}
++
++/** Línea corta bajo el nombre: músculo principal · equipo. */
++export const subtitle = (e: LibraryExercise): string =>
++  [e.primaryMuscles[0] ?? e.groups[0], e.equipment[0]].filter(Boolean).join(" · ");
++
++/** Texto de atribución obligatorio para fichas de terceros (CC BY-SA). */
++export const attribution = (e: LibraryExercise): string | null => {
++  if (e.source === "autopilot") return null;
++  const source = e.source === "wger" ? "wger.de" : e.source;
++  return [`Fuente: ${source}`, e.licenseAuthor, e.license].filter(Boolean).join(" · ");
++};
+diff --git a/src/shared/test/platformParity.test.ts b/src/shared/test/platformParity.test.ts
+index cf91000..a6103ab 100644
+--- a/src/shared/test/platformParity.test.ts
++++ b/src/shared/test/platformParity.test.ts
+@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
+ import { resolve } from "node:path";
+ import { describe, expect, it } from "vitest";
+ import { ADMIN_NAV_GROUPS } from "@/app/components/admin/adminNav";
++import { DETAIL_SECTIONS, EQUIPMENT, FILTER_GROUPS, MODALITIES } from "@/shared/lib/exerciseLibrary";
+ 
+ /**
+  * Web y apps nativas son un solo producto: web grande = Mac, web pequeña = iPhone.
+@@ -427,4 +428,29 @@ describe("paridad web ↔ apps nativas", () => {
+     expect(view).toContain("type-figure");
+     expect(app).toMatch(/\.font\(\.figure\(size: 34\)\)/);
+   });
++
++  it("Biblioteca de ejercicios: misma entrada en Entrenar, mismos filtros y mismas secciones de ficha, en la web y en la app", () => {
++    const app = read("native/Autopilot/Features/Train/ExerciseLibraryView.swift");
++    const swiftArray = (name: string) => {
++      const m = app.match(new RegExp(`static let ${name} = \\[([^\\]]*)\\]`));
++      return [...(m?.[1] ?? "").matchAll(/"([^"]+)"/g)].map((x) => x[1]);
++    };
++    expect(swiftArray("groups")).toEqual([...FILTER_GROUPS]);
++    expect(swiftArray("equipment")).toEqual([...EQUIPMENT]);
++    expect(swiftArray("modalities")).toEqual([...MODALITIES]);
++    expect(swiftArray("detailSections")).toEqual([...DETAIL_SECTIONS]);
++    expect(FILTER_GROUPS).toHaveLength(12);
++    expect(EQUIPMENT).toHaveLength(11);
++    expect(MODALITIES).toHaveLength(5);
++    // Se abre desde la barra de la rutina, junto a «Editar», en los dos lados.
++    expect(read("src/app/pages/Dashboard.tsx")).toMatch(/label: "Ejercicios",[^}]*setLibraryOpen\(true\)/);
++    const train = read("native/Autopilot/Features/Train/TrainView.swift");
++    expect(train).toMatch(/Label\("Ejercicios", image: "lu-book-open"\)/);
++    expect(train).toContain("ExerciseLibraryView(userId: session.userId)");
++    const web = read("src/app/components/library/ExerciseLibrarySheet.tsx");
++    for (const text of ["Demostración en preparación", "Recientes", "Favoritos", "Quitar filtros"]) {
++      expect(web).toContain(text);
++      expect(app).toContain(text);
++    }
++  });
+ });
+-- 
+2.43.0
+

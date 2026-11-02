@@ -5,6 +5,7 @@ import ScanAnalyzing from "@/app/components/scan/ScanAnalyzing";
 import { formatDecimal } from "@/shared/lib/numberFormat";
 import { compressImage, toBrowserFriendlyImage } from "@/shared/lib/imageCompression";
 import { IconTile } from "@/shared/components/ui/icon-tile";
+import { INK } from "@/shared/lib/palette";
 import React, { useState, useRef, useEffect } from "react";
 import { toPng } from "html-to-image";
 import { motion, AnimatePresence } from "framer-motion";
@@ -511,7 +512,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
     } catch { /* Best-effort browser feature; the primary flow remains available. */ }
     try {
       // skipFonts: en la app de iPhone descargar fuentes externas bloquea la captura.
-      const opts = { cacheBust: false, skipFonts: true, backgroundColor: "#070709" };
+      const opts = { cacheBust: false, skipFonts: true, backgroundColor: INK.scanCanvas };
       await toPng(shareRef.current, { ...opts, pixelRatio: 1 }).catch(() => null);
       for (const ratio of [1, 0.85, 0.75]) {
         const url = await toPng(shareRef.current, { ...opts, pixelRatio: ratio });

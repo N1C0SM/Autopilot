@@ -1,0 +1,1002 @@
+From e2854c4743bf68801007acc75b1c1c7d3cefccdd Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 31 Oct 2026 19:36:17 +0000
+Subject: [PATCH] =?UTF-8?q?Biblioteca:=20cat=C3=A1logo=20base=20con=20la?=
+ =?UTF-8?q?=20identidad=20de=20Autopilot=20(fase=203)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Importa los DATOS (MIT) de hasaneyldrm/exercises-dataset fijados a un commit, nunca sus
+GIF ni imágenes (© Gym visual). Admin → Biblioteca (web y app): revisar, importar como
+borrador (1.283 fichas sin variantes repetidas ni nombres que ya existen), redactar con
+IA con la voz de Autopilot (nombre en español, pasos, errores, consejos, seguridad,
+músculos; ≈10 créditos en total) y publicar. Lo importado no entra en el planificador
+hasta revisarlo. Las fichas solo citan autor cuando la licencia lo exige (CC BY).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01BLvZLaGs6gdkiy99s6rQbj
+---
+ AGENTS.md                                     |   2 +-
+ .../Features/Admin/AdminCatalogImport.swift   | 121 +++++++
+ .../Features/Admin/AdminExercises.swift       |   2 +
+ .../Features/Train/ExerciseLibraryView.swift  |   3 +-
+ .../admin-library/CatalogImport.tsx           | 127 ++++++++
+ src/app/components/admin/ExerciseLibrary.tsx  |   3 +
+ src/shared/lib/exerciseCatalog.test.ts        |  66 ++++
+ src/shared/lib/exerciseLibrary.sql.test.ts    |   4 +
+ src/shared/lib/exerciseLibrary.ts             |   3 +-
+ src/shared/test/platformParity.test.ts        |  23 ++
+ .../functions/_shared/exercise-catalog.ts     | 181 +++++++++++
+ supabase/functions/exercise-import/index.ts   | 299 ++++++++++++++++++
+ .../20261031160000_exercise_library.sql       |   2 +
+ 13 files changed, 833 insertions(+), 3 deletions(-)
+ create mode 100644 native/Autopilot/Features/Admin/AdminCatalogImport.swift
+ create mode 100644 src/app/components/admin-library/CatalogImport.tsx
+ create mode 100644 src/shared/lib/exerciseCatalog.test.ts
+ create mode 100644 supabase/functions/_shared/exercise-catalog.ts
+ create mode 100644 supabase/functions/exercise-import/index.ts
+
+diff --git a/AGENTS.md b/AGENTS.md
+index 3f80b85..91e38ad 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -4,7 +4,7 @@
+ - Design language (web, iPhone, Android and Mac are one product): read `.claude/design/README.md` before creating or changing any screen and pass `.claude/design/checklist.md` before release — black + restrained gold, borderless 22/28 px cards, pill buttons/fields, big rounded figures, real photos, shared components only.
+ 
+ 
+-- Biblioteca de ejercicios: `exercises` sigue siendo la tabla central (ids y nombres estables, porque las rutinas los referencian por `exercise_id` o por nombre); músculos, equipo y modalidades viven en `muscles`, `equipment` y `exercise_categories_catalog` con tablas de relación, y medios en `exercise_media`. `status` draft/pending solo lo ve el admin; published/archived, cualquier usuario con sesión. Las fichas de wger muestran autor y licencia CC BY-SA. Esquema en la migración `20261031160000_exercise_library.sql`.
++- Biblioteca de ejercicios: `exercises` sigue siendo la tabla central (ids y nombres estables, porque las rutinas los referencian por `exercise_id` o por nombre); músculos, equipo y modalidades viven en `muscles`, `equipment` y `exercise_categories_catalog` con tablas de relación, y medios en `exercise_media`. `status` draft/pending solo lo ve el admin; published/archived, cualquier usuario con sesión. Las fichas de wger muestran autor y licencia CC BY-SA. Esquema en la migración `20261031160000_exercise_library.sql`. El catálogo base sale de los DATOS (MIT) de github.com/hasaneyldrm/exercises-dataset, fijados a un commit, vía la edge function `exercise-import` (Admin → Biblioteca: revisar, importar como borrador, redactar con IA con la voz de Autopilot, publicar); nunca sus GIF ni imágenes (© Gym visual): cada ficha se muestra como de Autopilot y su visual es propio. Lo importado entra con `is_stable/is_progressable/high_tension` a false para que el planificador no lo use sin revisión.
+ - Los vídeos de técnica con IA se generan vía la edge function `exercise-video` (AI Gateway, modelo de vídeo por defecto) y se guardan en el bucket público `site-assets` en `exercise-videos/`; el estado del trabajo se guarda en `exercises.video_job_id`.
+ - Campaign access reads the admin-only settings flag through get_free_campaign; shared resolveFeatures opens only software nutrition/progression, checkout endpoints enforce the pause, and billing records remain unchanged.
+ - Consumer plan (free/plus/coach) and role (user/trainer/admin) are separate; capabilities resolve only through `supabase/functions/_shared/entitlements.ts` (`resolveFeatures`) — avoids scattered plan checks.
+diff --git a/native/Autopilot/Features/Admin/AdminCatalogImport.swift b/native/Autopilot/Features/Admin/AdminCatalogImport.swift
+new file mode 100644
+index 0000000..e34ad0b
+--- /dev/null
++++ b/native/Autopilot/Features/Admin/AdminCatalogImport.swift
+@@ -0,0 +1,121 @@
++import SwiftUI
++import Supabase
++
++/// Admin → Biblioteca: importar el catálogo base (datos abiertos MIT, sin imágenes de terceros),
++/// redactarlo con IA con la voz de Autopilot y publicarlo. Igual que `CatalogImport.tsx` en la web.
++struct AdminCatalogImportCard: View {
++    var onChanged: () -> Void
++
++    struct Counts: Decodable { var draft: Int; var pending: Int; var published: Int; var draftCredits: Double }
++    struct Preview: Decodable { var total: Int; var variants: Int; var alreadyImported: Int; var nameTaken: Int; var toImport: Int }
++    private struct Imported: Decodable { var imported: Int }
++    private struct Body: Encodable { let action: String; var limit: Int? = nil }
++
++    @State private var counts: Counts?
++    @State private var preview: Preview?
++    @State private var busy = false
++    @State private var drafting: (done: Int, total: Int)?
++    @State private var stopDrafting = false
++    @State private var confirmPublish = false
++    @State private var message: String?
++
++    var body: some View {
++        Card(padding: 16) {
++            Text("Catálogo base").font(.apHeadline)
++            Text("Ejercicios con datos abiertos (licencia MIT), sin imágenes de terceros. Entran como borrador, la IA los reescribe con la voz de Autopilot y los publicas tú. El planificador no los usa hasta que los marques como aptos.")
++                .font(.apFootnote).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
++            if let c = counts {
++                Text("Borrador \(c.draft) · Pendientes de revisar \(c.pending) · Publicados \(c.published)").font(.apFootnote)
++            }
++            if let p = preview {
++                Text("\(p.toImport) nuevos de \(p.total) · \(p.variants) variantes repetidas · \(p.alreadyImported + p.nameTaken) ya están en tu biblioteca")
++                    .font(.apFootnote).foregroundStyle(Palette.muted)
++            }
++            if let d = drafting {
++                Text("Redactando \(d.done) de \(d.total)").font(.apFootnote).foregroundStyle(Palette.muted)
++                ProgressView(value: Double(d.done), total: Double(max(d.total, 1))).tint(Palette.gold)
++                    .accessibilityLabel("Progreso de la redacción")
++            }
++            if let m = message { Text(m).font(.apFootnote).foregroundStyle(Palette.muted) }
++
++            VStack(alignment: .leading, spacing: 10) {
++                if let p = preview, p.toImport > 0 {
++                    Button("Importar \(p.toImport) como borrador") { run { try await importAll() } }
++                        .buttonStyle(.pill).disabled(busy)
++                } else {
++                    Button("Revisar importación") { run { preview = try await call(Body(action: "preview")) } }
++                        .buttonStyle(.pillSecondary).disabled(busy)
++                }
++                if drafting != nil {
++                    Button("Parar") { Haptics.tap(); stopDrafting = true }.buttonStyle(.pillSecondary)
++                } else {
++                    Button("Redactar con IA (\(counts?.draft ?? 0)) · ≈\(credits) créditos") { run { try await draftAll() } }
++                        .buttonStyle(.pillSecondary).disabled(busy || (counts?.draft ?? 0) == 0)
++                }
++                if confirmPublish {
++                    Button("Confirmar: publicar \(counts?.pending ?? 0)") { run { try await publish() } }
++                        .buttonStyle(.pill).disabled(busy)
++                } else {
++                    Button("Publicar redactados (\(counts?.pending ?? 0))") { Haptics.tap(); confirmPublish = true }
++                        .buttonStyle(.pillSecondary).disabled(busy || (counts?.pending ?? 0) == 0)
++                }
++            }
++            .frame(maxWidth: 320, alignment: .leading)
++        }
++        .task { counts = try? await call(Body(action: "status")) }
++    }
++
++    private var credits: String {
++        (counts?.draftCredits ?? 0).formatted(.number.precision(.fractionLength(0...1)).locale(Locale(identifier: "es")))
++    }
++
++    private func call<T: Decodable>(_ body: Body) async throws -> T {
++        do {
++            return try await Backend.client.functions.invoke("exercise-import", options: FunctionInvokeOptions(body: body))
++        } catch FunctionsError.httpError(_, let data) {
++            struct E: Decodable { var error: String }
++            throw NSError(domain: "exercise-import", code: 0, userInfo: [
++                NSLocalizedDescriptionKey: (try? JSONDecoder().decode(E.self, from: data))?.error ?? "No se pudo completar",
++            ])
++        }
++    }
++
++    private func run(_ work: @escaping () async throws -> Void) {
++        Haptics.tap()
++        busy = true
++        message = nil
++        Task {
++            do { try await work() } catch { message = error.localizedDescription }
++            busy = false
++        }
++    }
++
++    private func importAll() async throws {
++        let r: Imported = try await call(Body(action: "import"))
++        counts = try await call(Body(action: "status"))
++        preview = nil
++        message = "\(r.imported) ejercicios importados como borrador"
++        onChanged()
++    }
++
++    private func draftAll() async throws {
++        stopDrafting = false
++        let total = counts?.draft ?? 0
++        drafting = (0, total)
++        defer { drafting = nil; onChanged() }
++        while let c = counts, c.draft > 0, !stopDrafting {
++            let next: Counts = try await call(Body(action: "draft", limit: 25))
++            counts = next
++            drafting = (total - next.draft, total)
++            // Si una tanda no avanza, los que quedan fallan siempre: no se repite en bucle.
++            if next.draft >= c.draft { message = "\(next.draft) borradores no se pudieron redactar"; break }
++        }
++    }
++
++    private func publish() async throws {
++        counts = try await call(Body(action: "publish"))
++        confirmPublish = false
++        message = "Ejercicios publicados"
++        onChanged()
++    }
++}
+diff --git a/native/Autopilot/Features/Admin/AdminExercises.swift b/native/Autopilot/Features/Admin/AdminExercises.swift
+index c3b1063..e5fecb5 100644
+--- a/native/Autopilot/Features/Admin/AdminExercises.swift
++++ b/native/Autopilot/Features/Admin/AdminExercises.swift
+@@ -95,6 +95,8 @@ struct AdminExercisesView: View {
+                         }
+                     }
+ 
++                    AdminCatalogImportCard { Task { await load() } }
++
+                     HStack {
+                         Image(systemName: "magnifyingglass").foregroundStyle(Palette.muted)
+                             .accessibilityHidden(true)
+diff --git a/native/Autopilot/Features/Train/ExerciseLibraryView.swift b/native/Autopilot/Features/Train/ExerciseLibraryView.swift
+index 158526b..c2f885f 100644
+--- a/native/Autopilot/Features/Train/ExerciseLibraryView.swift
++++ b/native/Autopilot/Features/Train/ExerciseLibraryView.swift
+@@ -125,7 +125,8 @@ struct LibraryExercise: Identifiable, Hashable {
+     var subtitle: String { [primaryMuscles.first ?? groups.first, equipment.first].compactMap { $0 }.joined(separator: " · ") }
+     /// Atribución obligatoria para fichas de terceros (CC BY-SA).
+     var attribution: String? {
+-        guard source != "autopilot" else { return nil }
++        // Solo las licencias que exigen citar al autor en la ficha (CC BY / BY-SA); lo demás se ve como de Autopilot.
++        guard source != "autopilot", (license ?? "").uppercased().hasPrefix("CC BY") else { return nil }
+         return ["Fuente: \(source == "wger" ? "wger.de" : source)", licenseAuthor, license].compactMap { $0 }.joined(separator: " · ")
+     }
+ }
+diff --git a/src/app/components/admin-library/CatalogImport.tsx b/src/app/components/admin-library/CatalogImport.tsx
+new file mode 100644
+index 0000000..f0b657e
+--- /dev/null
++++ b/src/app/components/admin-library/CatalogImport.tsx
+@@ -0,0 +1,127 @@
++import { useEffect, useRef, useState } from "react";
++import { toast } from "sonner";
++import { supabase } from "@/shared/integrations/supabase/client";
++import { Button } from "@/shared/components/ui/button";
++import { Progress } from "@/shared/components/ui/progress";
++import { functionErrorMessage } from "@/shared/lib/runtimeValues";
++import { hapticTap } from "@/shared/lib/native";
++
++/** Respuesta de `exercise-import` (los recuentos van siempre; el resto según la acción). */
++type Counts = { draft: number; pending: number; published: number; draftCredits: number };
++type Preview = Counts & { total: number; variants: number; alreadyImported: number; nameTaken: number; toImport: number };
++
++const CATALOG_IMPORT_COPY = {
++  title: "Catálogo base",
++  body: "Ejercicios con datos abiertos (licencia MIT), sin imágenes de terceros. Entran como borrador, la IA los reescribe con la voz de Autopilot y los publicas tú. El planificador no los usa hasta que los marques como aptos.",
++  preview: "Revisar importación",
++  draft: "Redactar con IA",
++  publish: "Publicar redactados",
++} as const;
++
++const call = async <T,>(body: Record<string, unknown>) => {
++  const { data, error } = await supabase.functions.invoke<T>("exercise-import", { body });
++  if (error) throw new Error(await functionErrorMessage(error, "No se pudo completar"));
++  return data as T;
++};
++
++/** Admin → Biblioteca: importar el catálogo base, redactarlo con IA y publicarlo. */
++export default function CatalogImport({ onChanged }: { onChanged: () => void }) {
++  const [counts, setCounts] = useState<Counts | null>(null);
++  const [preview, setPreview] = useState<Preview | null>(null);
++  const [busy, setBusy] = useState<string | null>(null);
++  const [drafting, setDrafting] = useState<{ done: number; total: number } | null>(null);
++  const [confirmPublish, setConfirmPublish] = useState(false);
++  const cancel = useRef(false);
++
++  useEffect(() => { call<Counts>({ action: "status" }).then(setCounts).catch(() => setCounts(null)); }, []);
++
++  const run = async (label: string, fn: () => Promise<void>) => {
++    void hapticTap();
++    setBusy(label);
++    try { await fn(); } catch (e) { toast.error(e instanceof Error ? e.message : "No se pudo completar"); } finally { setBusy(null); }
++  };
++
++  const review = () => run("preview", async () => setPreview(await call<Preview>({ action: "preview" })));
++
++  const importAll = () => run("import", async () => {
++    const r = await call<Preview & { imported: number }>({ action: "import" });
++    setCounts(r); setPreview(null); onChanged();
++    toast.success(`${r.imported} ejercicios importados como borrador`);
++  });
++
++  const draftAll = () => run("draft", async () => {
++    cancel.current = false;
++    const total = counts?.draft ?? 0;
++    let current = counts;
++    setDrafting({ done: 0, total });
++    try {
++      while (current && current.draft > 0 && !cancel.current) {
++        const before = current.draft;
++        current = await call<Counts>({ action: "draft", limit: 25 });
++        setCounts(current);
++        setDrafting({ done: total - current.draft, total });
++        // Si una tanda no avanza, los que quedan fallan siempre: no se repite en bucle.
++        if (current.draft >= before) { toast.error(`${current.draft} borradores no se pudieron redactar`); break; }
++      }
++    } finally {
++      setDrafting(null); onChanged();
++    }
++  });
++
++  const publish = () => run("publish", async () => {
++    const r = await call<Counts & { published: number }>({ action: "publish" });
++    setCounts(r); setConfirmPublish(false); onChanged();
++    toast.success("Ejercicios publicados");
++  });
++
++  return (
++    <section aria-labelledby="catalog-import-title" className="space-y-3 rounded-[22px] bg-card p-5">
++      <h2 id="catalog-import-title" className="type-headline">{CATALOG_IMPORT_COPY.title}</h2>
++      <p className="type-footnote text-muted-foreground">{CATALOG_IMPORT_COPY.body}</p>
++      {counts && (
++        <p className="type-footnote" role="status">
++          Borrador {counts.draft} · Pendientes de revisar {counts.pending} · Publicados {counts.published}
++        </p>
++      )}
++
++      {preview && (
++        <p className="type-footnote text-muted-foreground" role="status">
++          {preview.toImport} nuevos de {preview.total} · {preview.variants} variantes repetidas · {preview.alreadyImported + preview.nameTaken} ya están en tu biblioteca
++        </p>
++      )}
++
++      {drafting && (
++        <div className="space-y-2">
++          <p className="type-footnote text-muted-foreground" role="status">Redactando {drafting.done} de {drafting.total}</p>
++          <Progress value={(drafting.done / Math.max(drafting.total, 1)) * 100} aria-label="Progreso de la redacción" />
++        </div>
++      )}
++
++      <div className="flex flex-wrap gap-2">
++        {preview && preview.toImport > 0 ? (
++          <Button type="button" size="sm" disabled={!!busy} onClick={importAll}>
++            Importar {preview.toImport} como borrador
++          </Button>
++        ) : (
++          <Button type="button" size="sm" variant="secondary" disabled={!!busy} onClick={review}>
++            {busy === "preview" ? "Revisando…" : CATALOG_IMPORT_COPY.preview}
++          </Button>
++        )}
++        {drafting ? (
++          <Button type="button" size="sm" variant="secondary" onClick={() => { void hapticTap(); cancel.current = true; }}>Parar</Button>
++        ) : (
++          <Button type="button" size="sm" variant="secondary" disabled={!!busy || !counts?.draft} onClick={draftAll}>
++            {CATALOG_IMPORT_COPY.draft} ({counts?.draft ?? 0}) · ≈{counts?.draftCredits ?? 0} créditos
++          </Button>
++        )}
++        {confirmPublish ? (
++          <Button type="button" size="sm" disabled={!!busy} onClick={publish}>Confirmar: publicar {counts?.pending ?? 0}</Button>
++        ) : (
++          <Button type="button" size="sm" variant="secondary" disabled={!!busy || !counts?.pending} onClick={() => { void hapticTap(); setConfirmPublish(true); }}>
++            {CATALOG_IMPORT_COPY.publish} ({counts?.pending ?? 0})
++          </Button>
++        )}
++      </div>
++    </section>
++  );
++}
+diff --git a/src/app/components/admin/ExerciseLibrary.tsx b/src/app/components/admin/ExerciseLibrary.tsx
+index a75199a..26fb79a 100644
+--- a/src/app/components/admin/ExerciseLibrary.tsx
++++ b/src/app/components/admin/ExerciseLibrary.tsx
+@@ -36,6 +36,7 @@ import { hapticSelection, hapticTap } from "@/shared/lib/native";
+ import { cn } from "@/shared/lib/utils";
+ import { skipAutoFocusOnTouch } from "@/app/components/admin-library/touchAutoFocus";
+ import { WithImageFallback } from "@/app/components/admin-library/WithImageFallback";
++import CatalogImport from "@/app/components/admin-library/CatalogImport";
+ 
+ /**
+  * Versión del estilo visual actual. Debe coincidir con MEDIA_STYLE_VERSION de la
+@@ -1070,6 +1071,8 @@ const ExerciseLibrary = () => {
+         </div>
+       )}
+ 
++      <CatalogImport onChanged={() => void fetchExercises()} />
++
+       {!mediaColumnsReady && (
+         <p role="status" className="type-footnote text-muted-foreground">
+           Faltan las columnas de medios en la base de datos: aplica supabase db push para activar la generación y el marcado de estilos y errores.
+diff --git a/src/shared/lib/exerciseCatalog.test.ts b/src/shared/lib/exerciseCatalog.test.ts
+new file mode 100644
+index 0000000..090c858
+--- /dev/null
++++ b/src/shared/lib/exerciseCatalog.test.ts
+@@ -0,0 +1,66 @@
++import { describe, expect, it } from "vitest";
++import {
++  DATASET_URL, catalogNameKey, cleanName, draftCredits, mapEquipment, mapModalities, mapMuscles, planImport, toDraft,
++  type DatasetRow,
++} from "../../../supabase/functions/_shared/exercise-catalog";
++import { attribution, nameKey } from "./exerciseLibrary";
++
++const row = (id: string, name: string, over: Partial<DatasetRow> = {}): DatasetRow => ({
++  id, name, body_part: "chest", equipment: "barbell", target: "pectorals", secondary_muscles: [],
++  instruction_steps: { es: ["Paso uno.", " Paso dos. "] }, ...over,
++});
++
++describe("catálogo base (datos MIT, visual propio)", () => {
++  it("solo descarga los datos, fijados a un commit, nunca las imágenes ni los GIF", () => {
++    expect(DATASET_URL).toMatch(/\/[0-9a-f]{40}\/data\/exercises\.json$/);
++  });
++
++  it("normaliza nombres igual que la biblioteca", () => {
++    for (const n of ["Elevación lateral (polea)", "Close-grip press", "Ñandú 3/4"]) expect(catalogNameKey(n)).toBe(nameKey(n));
++    expect(cleanName("barbell upright row v. 3")).toBe("barbell upright row");
++    expect(cleanName("star jump (male)")).toBe("star jump");
++  });
++
++  it("pasa músculos, equipo y modalidad a los de Autopilot", () => {
++    expect(mapMuscles(row("1", "dumbbell lateral raise", { target: "delts", secondary_muscles: ["Shoulders", "traps", "feet"] })))
++      .toEqual({ primary: ["deltoides-lateral"], secondary: ["deltoides-anterior", "trapecio"] });
++    expect(mapMuscles(row("2", "face pull", { target: "delts" })).primary).toEqual(["deltoides-posterior"]);
++    expect(mapEquipment(row("3", "pull-up", { equipment: "body weight" }))).toEqual(["Peso corporal", "Barra de dominadas"]);
++    expect(mapEquipment(row("4", "chest dip", { equipment: "weighted" }))).toEqual(["Otros", "Paralelas"]);
++    expect(mapEquipment(row("5", "lever chest press", { equipment: "leverage machine" }))).toEqual(["Máquinas"]);
++    expect(mapModalities(row("6", "pull-up", { equipment: "body weight" }))).toEqual(["Calistenia"]);
++    expect(mapModalities(row("7", "kettlebell swing", { equipment: "kettlebell" }))).toEqual(["Entrenamiento funcional"]);
++    expect(mapModalities(row("8", "seated glute stretch", { equipment: "body weight" }))).toEqual(["Movilidad"]);
++    expect(mapModalities(row("9", "run", { body_part: "cardio", equipment: "body weight" }))).toEqual(["Entrenamiento funcional"]);
++    expect(mapModalities(row("10", "barbell bench press"))).toEqual(["Gimnasio"]);
++  });
++
++  it("crea el borrador con los pasos en español y el grupo de siempre", () => {
++    expect(toDraft(row("0025", "barbell bench press"))).toMatchObject({
++      source_ref: "0025", name: "Barbell bench press", instructions: ["Paso uno.", "Paso dos."],
++      muscle_group: "Pecho", exercise_type: "Gimnasio", primary: ["pectoral"], equipment: ["Barra"], modalities: ["Gimnasio"],
++    });
++  });
++
++  it("una ficha por ejercicio: sin variantes, sin repetir importaciones ni nombres que ya existen", () => {
++    const plan = planImport([
++      row("0003", "barbell upright row v. 2"), row("0002", "barbell upright row"), row("0004", "barbell upright row v. 3"),
++      row("0010", "dumbbell close grip press"), row("0011", "dumbbell close-grip press"),
++      row("0020", "burpee", { body_part: "cardio", equipment: "body weight" }),
++      row("0030", "star jump (male)", { body_part: "cardio", equipment: "body weight" }),
++      row("0040", "barbell bench press"),
++    ], { refs: ["0040"], names: ["Burpee"] });
++    expect(plan.drafts.map((d) => [d.source_ref, d.name])).toEqual([
++      ["0002", "Barbell upright row"], ["0010", "Dumbbell close grip press"], ["0030", "Star jump"],
++    ]);
++    expect(plan).toMatchObject({ total: 8, variants: 3, alreadyImported: 1, nameTaken: ["Burpee"] });
++  });
++
++  it("las fichas importadas se muestran como de Autopilot, sin marca ajena", () => {
++    expect(attribution({ source: "exercises-dataset", license: "MIT", licenseAuthor: "x" } as Parameters<typeof attribution>[0])).toBeNull();
++  });
++
++  it("estima el coste de redactar con IA", () => {
++    expect(draftCredits(1288)).toBeCloseTo(9.7, 1);
++  });
++});
+diff --git a/src/shared/lib/exerciseLibrary.sql.test.ts b/src/shared/lib/exerciseLibrary.sql.test.ts
+index 69f86f0..23f2453 100644
+--- a/src/shared/lib/exerciseLibrary.sql.test.ts
++++ b/src/shared/lib/exerciseLibrary.sql.test.ts
+@@ -100,6 +100,10 @@ describe("biblioteca de ejercicios: modelo de datos", () => {
+     await expect(db.exec(`UPDATE public.exercises SET name = 'Sentadilla bulgara' WHERE id = '${PRESS}'`)).rejects.toThrow(/Ya existe/);
+     // Los duplicados antiguos se pueden seguir editando mientras no cambie el nombre.
+     await db.exec(`UPDATE public.exercises SET image_url = 'https://x/y.webp' WHERE id = '${PRESS_DUP}'`);
++    // Cada ejercicio de un catálogo importado entra una sola vez.
++    await db.exec("INSERT INTO public.exercises (name, source, source_ref, status) VALUES ('Barbell curl', 'exercises-dataset', '0031', 'draft')");
++    await expect(db.exec("INSERT INTO public.exercises (name, source, source_ref) VALUES ('Curl con barra', 'exercises-dataset', '0031')"))
++      .rejects.toThrow(/exercises_source_ref_key/);
+   });
+ 
+   it("los usuarios ven publicados y archivados; borradores y pendientes solo el admin", async () => {
+diff --git a/src/shared/lib/exerciseLibrary.ts b/src/shared/lib/exerciseLibrary.ts
+index 0ef88ca..b98dab2 100644
+--- a/src/shared/lib/exerciseLibrary.ts
++++ b/src/shared/lib/exerciseLibrary.ts
+@@ -175,8 +175,9 @@ export const subtitle = (e: LibraryExercise): string =>
+   [e.primaryMuscles[0] ?? e.groups[0], e.equipment[0]].filter(Boolean).join(" · ");
+ 
+ /** Texto de atribución obligatorio para fichas de terceros (CC BY-SA). */
++/** Solo las licencias que exigen citar al autor en la ficha (CC BY / BY-SA); lo demás se ve como de Autopilot. */
+ export const attribution = (e: LibraryExercise): string | null => {
+-  if (e.source === "autopilot") return null;
++  if (e.source === "autopilot" || !/^CC BY/i.test(e.license ?? "")) return null;
+   const source = e.source === "wger" ? "wger.de" : e.source;
+   return [`Fuente: ${source}`, e.licenseAuthor, e.license].filter(Boolean).join(" · ");
+ };
+diff --git a/src/shared/test/platformParity.test.ts b/src/shared/test/platformParity.test.ts
+index a6103ab..d125480 100644
+--- a/src/shared/test/platformParity.test.ts
++++ b/src/shared/test/platformParity.test.ts
+@@ -453,4 +453,27 @@ describe("paridad web ↔ apps nativas", () => {
+       expect(app).toContain(text);
+     }
+   });
++
++  it("Admin → Biblioteca: el catálogo base se importa, redacta y publica igual en la web y en la app", () => {
++    const web = read("src/app/components/admin-library/CatalogImport.tsx");
++    const app = read("native/Autopilot/Features/Admin/AdminCatalogImport.swift");
++    for (const text of [
++      "Catálogo base",
++      "Ejercicios con datos abiertos (licencia MIT), sin imágenes de terceros. Entran como borrador, la IA los reescribe con la voz de Autopilot y los publicas tú. El planificador no los usa hasta que los marques como aptos.",
++      "Revisar importación", "Redactar con IA", "Publicar redactados", "como borrador", "variantes repetidas", "ya están en tu biblioteca",
++      "Pendientes de revisar", "no se pudieron redactar",
++    ]) {
++      expect(web).toContain(text);
++      expect(app).toContain(text);
++    }
++    for (const action of ["status", "preview", "import", "draft", "publish"]) {
++      expect(web).toContain(`action: "${action}"`);
++      expect(app).toContain(`action: "${action}"`);
++    }
++    // Las fichas importadas no llevan marca ajena: solo CC BY / BY-SA obliga a citar en la ficha.
++    expect(read("src/shared/lib/exerciseLibrary.ts")).toContain('!/^CC BY/i.test(e.license ?? "")');
++    expect(read("native/Autopilot/Features/Train/ExerciseLibraryView.swift")).toContain('(license ?? "").uppercased().hasPrefix("CC BY")');
++    expect(read("src/app/components/admin/ExerciseLibrary.tsx")).toContain("<CatalogImport ");
++    expect(read("native/Autopilot/Features/Admin/AdminExercises.swift")).toContain("AdminCatalogImportCard {");
++  });
+ });
+diff --git a/supabase/functions/_shared/exercise-catalog.ts b/supabase/functions/_shared/exercise-catalog.ts
+new file mode 100644
+index 0000000..6281121
+--- /dev/null
++++ b/supabase/functions/_shared/exercise-catalog.ts
+@@ -0,0 +1,181 @@
++/**
++ * Catálogo base de la biblioteca: los DATOS (MIT) de github.com/hasaneyldrm/exercises-dataset,
++ * fijados a un commit. Nunca sus imágenes ni GIF (© Gym visual, sin licencia nuestra): el visual
++ * de cada ejercicio es propio de Autopilot. Puro y sin Deno, para usarlo en la función y en los tests.
++ */
++
++export const DATASET = {
++  repo: "https://github.com/hasaneyldrm/exercises-dataset",
++  commit: "7455efae41b330c265e7cd4b78dfa848e7ce5ebd",
++  source: "exercises-dataset",
++  license: "MIT",
++  author: "Hasan Emir Yıldırım",
++} as const;
++export const DATASET_URL = `https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/${DATASET.commit}/data/exercises.json`;
++
++export type DatasetRow = {
++  id: string;
++  name: string;
++  body_part?: string | null;
++  equipment?: string | null;
++  target?: string | null;
++  secondary_muscles?: string[] | null;
++  instruction_steps?: { es?: string[] | null } | null;
++};
++
++export type CatalogDraft = {
++  source_ref: string;
++  name: string;
++  alt_names: string[];
++  instructions: string[];
++  muscle_group: string | null;
++  exercise_type: string;
++  primary: string[];
++  secondary: string[];
++  equipment: string[];
++  modalities: string[];
++};
++
++/** Igual que `public.exercise_name_key` (SQL) y `nameKey` de la web. */
++export const catalogNameKey = (name: string | null | undefined) =>
++  (name ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
++    .replace(/[^a-z0-9]+/g, " ").trim();
++
++/** Variantes que son el mismo ejercicio: «(male)», «v. 2», «(back pov)»… */
++const VARIANT = /\((?:male|female|back pov|side pov|version \d+)\)|\bv\. ?\d+\b/gi;
++export const cleanName = (name: string) => name.replace(VARIANT, "").replace(/\s+/g, " ").trim();
++export const datasetKey = (name: string) => catalogNameKey(cleanName(name).replace(/-/g, " "));
++const sentence = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
++
++const TARGET: Record<string, string[]> = {
++  abs: ["recto-abdominal"], pectorals: ["pectoral"], biceps: ["biceps"], glutes: ["gluteo-mayor"],
++  triceps: ["triceps"], "upper back": ["romboides"], lats: ["dorsal"], calves: ["gemelos"],
++  quads: ["cuadriceps"], forearms: ["antebrazo"], hamstrings: ["isquiotibiales"], spine: ["erectores"],
++  traps: ["trapecio"], adductors: ["aductores"], "serratus anterior": ["serrato"], abductors: ["gluteo-medio"],
++  "levator scapulae": ["cuello"], "cardiovascular system": [],
++};
++const SECONDARY: Record<string, string> = {
++  shoulders: "deltoides-anterior", deltoids: "deltoides-anterior", "rear deltoids": "deltoides-posterior",
++  hamstrings: "isquiotibiales", forearms: "antebrazo", wrists: "antebrazo", "wrist flexors": "antebrazo",
++  "wrist extensors": "antebrazo", "grip muscles": "antebrazo", hands: "antebrazo", triceps: "triceps",
++  biceps: "biceps", brachialis: "braquial", quadriceps: "cuadriceps", calves: "gemelos", soleus: "soleo",
++  glutes: "gluteo-mayor", core: "recto-abdominal", abdominals: "recto-abdominal", "lower abs": "recto-abdominal",
++  obliques: "oblicuos", "hip flexors": "flexores-cadera", chest: "pectoral", "upper chest": "pectoral",
++  "lower back": "erectores", rhomboids: "romboides", "upper back": "romboides", trapezius: "trapecio",
++  traps: "trapecio", back: "dorsal", lats: "dorsal", "latissimus dorsi": "dorsal",
++  "rotator cuff": "manguito-rotador", sternocleidomastoid: "cuello", groin: "aductores", "inner thighs": "aductores",
++};
++/** Grupo de siempre (columna `muscle_group`) para que lo antiguo siga funcionando. */
++const LEGACY_GROUP: Record<string, string> = {
++  abs: "Core", pectorals: "Pecho", biceps: "Bíceps", glutes: "Glúteos", delts: "Hombros", triceps: "Tríceps",
++  "upper back": "Espalda", lats: "Espalda", calves: "Gemelos", quads: "Piernas", forearms: "Antebrazos",
++  "cardiovascular system": "Cardio", hamstrings: "Isquiotibiales", spine: "Lumbares", traps: "Trapecios",
++  adductors: "Aductores", "serratus anterior": "Serrato", abductors: "Abductores", "levator scapulae": "Cuello",
++};
++
++const deltHead = (name: string) =>
++  /rear|reverse fly|face pull|bent.?over.*(raise|fly)/i.test(name) ? "deltoides-posterior"
++    : /lateral|side raise|upright row/i.test(name) ? "deltoides-lateral" : "deltoides-anterior";
++
++export function mapMuscles(row: DatasetRow) {
++  const target = (row.target ?? "").toLowerCase();
++  const primary = target === "delts" ? [deltHead(row.name)] : (TARGET[target] ?? []);
++  const secondary = [...new Set((row.secondary_muscles ?? [])
++    .map((m) => SECONDARY[m.toLowerCase()])
++    .filter((m): m is string => !!m && !primary.includes(m)))];
++  return { primary, secondary };
++}
++
++const CALISTHENICS = /pull.?up|chin.?up|push.?up|\bdips?\b|lever|planche|muscle.?up|handstand|pistol|l.?sit|dragon flag|human flag|hanging|inverted row|pike/i;
++
++export function mapEquipment(row: DatasetRow): string[] {
++  const eq = (row.equipment ?? "").toLowerCase();
++  const name = row.name;
++  const out = new Set<string>();
++  if (eq === "body weight") out.add("Peso corporal");
++  else if (eq === "dumbbell") out.add("Mancuernas");
++  else if (["barbell", "ez barbell", "olympic barbell", "trap bar"].includes(eq)) out.add("Barra");
++  else if (eq === "cable" || (eq === "rope" && /cable/i.test(name))) out.add("Poleas");
++  else if (eq === "kettlebell") out.add("Kettlebell");
++  else if (eq === "band" || eq === "resistance band") out.add("Bandas elásticas");
++  else if (/machine|assisted|ergometer|stationary bike/.test(eq)) out.add("Máquinas");
++  else if (eq) out.add("Otros");
++  if (["body weight", "weighted", "assisted"].includes(eq)) {
++    if (/pull.?up|chin.?up|hanging|muscle.?up|lever/i.test(name)) out.add("Barra de dominadas");
++    if (/\bdips?\b|parallel bars/i.test(name)) out.add("Paralelas");
++    if (/\brings?\b/i.test(name)) out.add("Anillas");
++  }
++  return [...out];
++}
++
++export function mapModalities(row: DatasetRow): string[] {
++  const eq = (row.equipment ?? "").toLowerCase();
++  const name = row.name;
++  if (/stretch/i.test(name)) return ["Movilidad"];
++  if ((row.body_part ?? "").toLowerCase() === "cardio") return ["Entrenamiento funcional"];
++  const out = new Set<string>();
++  if (/kettlebell|medicine ball|sled|tire|hammer/.test(eq) || (eq === "rope" && !/cable/i.test(name))
++    || /burpee|swing|clean|snatch|thruster|farmer|carry|battle/i.test(name)) out.add("Entrenamiento funcional");
++  if (["body weight", "weighted"].includes(eq) || (eq === "assisted" && CALISTHENICS.test(name))) out.add("Calistenia");
++  else if (eq && !out.size) out.add("Gimnasio");
++  return [...out];
++}
++
++const legacyType = (modalities: string[]) =>
++  modalities.length === 1 && modalities[0] === "Calistenia" ? "Calistenia"
++    : modalities.length === 1 && modalities[0] === "Gimnasio" ? "Gimnasio" : "Mixto";
++
++export function toDraft(row: DatasetRow): CatalogDraft {
++  const { primary, secondary } = mapMuscles(row);
++  const modalities = mapModalities(row);
++  const name = sentence(cleanName(row.name));
++  return {
++    source_ref: row.id,
++    name,
++    alt_names: [],
++    instructions: (row.instruction_steps?.es ?? []).map((s) => s.trim()).filter(Boolean),
++    muscle_group: LEGACY_GROUP[(row.target ?? "").toLowerCase()] ?? null,
++    exercise_type: legacyType(modalities),
++    primary,
++    secondary,
++    equipment: mapEquipment(row),
++    modalities,
++  };
++}
++
++export type ImportPlan = {
++  drafts: CatalogDraft[];
++  total: number;
++  variants: number;
++  alreadyImported: number;
++  nameTaken: string[];
++};
++
++/**
++ * Qué entra: una ficha por ejercicio (las variantes «v. 2», «(male)»… cuentan como uno), nada que ya
++ * se importara (por `source_ref`) y nada cuyo nombre ya exista en la biblioteca.
++ */
++export function planImport(rows: DatasetRow[], existing: { refs: Iterable<string>; names: Iterable<string> }): ImportPlan {
++  const refs = new Set(existing.refs);
++  const names = new Set([...existing.names].map(catalogNameKey));
++  const groups = new Map<string, DatasetRow[]>();
++  for (const row of [...rows].sort((a, b) => a.id.localeCompare(b.id))) {
++    const key = datasetKey(row.name);
++    groups.set(key, [...(groups.get(key) ?? []), row]);
++  }
++  const plan: ImportPlan = { drafts: [], total: rows.length, variants: rows.length - groups.size, alreadyImported: 0, nameTaken: [] };
++  for (const group of groups.values()) {
++    if (group.some((r) => refs.has(r.id))) { plan.alreadyImported++; continue; }
++    const pick = group.find((r) => cleanName(r.name) === r.name) ?? group[0];
++    const draft = toDraft(pick);
++    const key = catalogNameKey(draft.name);
++    if (names.has(key)) { plan.nameTaken.push(draft.name); continue; }
++    names.add(key);
++    plan.drafts.push(draft);
++  }
++  return plan;
++}
++
++/** Coste aproximado de redactar N fichas con google/gemini-2.5-flash (precios de GET /v1/models). */
++export const DRAFT_CREDITS_PER_EXERCISE = 0.0075;
++export const draftCredits = (count: number) => Math.ceil(count * DRAFT_CREDITS_PER_EXERCISE * 10) / 10;
+diff --git a/supabase/functions/exercise-import/index.ts b/supabase/functions/exercise-import/index.ts
+new file mode 100644
+index 0000000..121ec85
+--- /dev/null
++++ b/supabase/functions/exercise-import/index.ts
+@@ -0,0 +1,299 @@
++import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.95.0/cors";
++import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.95.0";
++import { aiFetch } from "../_shared/ai-provider.ts";
++import {
++  DATASET, DATASET_URL, catalogNameKey, draftCredits, planImport, type CatalogDraft, type DatasetRow,
++} from "../_shared/exercise-catalog.ts";
++
++/**
++ * Catálogo base de la biblioteca (solo admin):
++ * - preview: qué entraría, sin escribir nada.
++ * - import: crea los ejercicios nuevos como borrador (solo los ve el admin; el planificador no los usa).
++ * - draft: la IA reescribe N borradores con la voz de Autopilot (nombre en español, pasos, errores, consejos,
++ *   seguridad) y los deja pendientes de revisión. Si el nombre ya existe, no duplica: añade el nombre
++ *   original como alternativo del existente y archiva el borrador para que no vuelva a importarse.
++ * - publish: publica los pendientes revisados.
++ */
++const json = (b: unknown, status = 200) =>
++  new Response(JSON.stringify(b), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
++
++const MUSCLES = [
++  "pectoral", "serrato", "dorsal", "trapecio", "romboides", "erectores", "deltoides-anterior", "deltoides-lateral",
++  "deltoides-posterior", "manguito-rotador", "biceps", "braquial", "triceps", "antebrazo", "recto-abdominal", "oblicuos",
++  "flexores-cadera", "cuadriceps", "aductores", "isquiotibiales", "gluteo-mayor", "gluteo-medio", "gemelos", "soleo", "cuello",
++];
++const PATTERNS = ["Empuje", "Tirón", "Sentadilla", "Bisagra", "Core"];
++const MAX_DRAFT = 25;
++
++type Svc = SupabaseClient;
++type Catalogs = { muscles: Map<string, string>; equipment: Map<string, string>; categories: Map<string, string> };
++
++async function pagedNames(svc: Svc) {
++  const out: { id: string; name: string; alt_names: string[] | null; source: string | null; source_ref: string | null }[] = [];
++  for (let from = 0; ; from += 1000) {
++    const { data, error } = await svc.from("exercises").select("id, name, alt_names, source, source_ref").range(from, from + 999);
++    if (error) throw error;
++    out.push(...(data ?? []));
++    if ((data ?? []).length < 1000) return out;
++  }
++}
++
++async function catalogs(svc: Svc): Promise<Catalogs> {
++  const [m, e, c] = await Promise.all([
++    svc.from("muscles").select("id, slug"),
++    svc.from("equipment").select("id, name"),
++    svc.from("exercise_categories_catalog").select("id, name"),
++  ]);
++  if (m.error || e.error || c.error) throw m.error ?? e.error ?? c.error;
++  return {
++    muscles: new Map((m.data ?? []).map((r) => [r.slug, r.id])),
++    equipment: new Map((e.data ?? []).map((r) => [r.name, r.id])),
++    categories: new Map((c.data ?? []).map((r) => [r.name, r.id])),
++  };
++}
++
++async function loadPlan(svc: Svc) {
++  const res = await fetch(DATASET_URL);
++  if (!res.ok) throw new Error(`No se pudo leer el catálogo (${res.status})`);
++  const rows = (await res.json()) as DatasetRow[];
++  const existing = await pagedNames(svc);
++  return planImport(rows, {
++    refs: existing.filter((e) => e.source === DATASET.source && e.source_ref).map((e) => e.source_ref!),
++    names: existing.flatMap((e) => [e.name, ...(e.alt_names ?? [])]),
++  });
++}
++
++async function counts(svc: Svc) {
++  const count = async (status: string) => {
++    const { count: n } = await svc.from("exercises").select("id", { count: "exact", head: true })
++      .eq("source", DATASET.source).eq("status", status);
++    return n ?? 0;
++  };
++  const [draft, pending, published] = await Promise.all([count("draft"), count("pending"), count("published")]);
++  return { draft, pending, published, draftCredits: draftCredits(draft) };
++}
++
++async function importDrafts(svc: Svc, drafts: CatalogDraft[]) {
++  const cat = await catalogs(svc);
++  let inserted = 0;
++  for (let i = 0; i < drafts.length; i += 100) {
++    const chunk = drafts.slice(i, i + 100);
++    const { data, error } = await svc.from("exercises").insert(chunk.map((d) => ({
++      name: d.name,
++      alt_names: d.alt_names,
++      instructions: d.instructions,
++      muscle_group: d.muscle_group,
++      exercise_type: d.exercise_type,
++      status: "draft",
++      source: DATASET.source,
++      source_ref: d.source_ref,
++      source_url: DATASET.repo,
++      license: DATASET.license,
++      license_author: DATASET.author,
++      // Fuera del planificador hasta que un admin lo revise.
++      is_stable: false,
++      is_progressable: false,
++      high_tension: false,
++    }))).select("id, source_ref");
++    if (error) throw error;
++    const ids = new Map((data ?? []).map((r) => [r.source_ref, r.id]));
++    const muscles: { exercise_id: string; muscle_id: string; role: string }[] = [];
++    const equipment: { exercise_id: string; equipment_id: string }[] = [];
++    const categories: { exercise_id: string; category_id: string }[] = [];
++    for (const d of chunk) {
++      const id = ids.get(d.source_ref);
++      if (!id) continue;
++      for (const s of d.primary) { const m = cat.muscles.get(s); if (m) muscles.push({ exercise_id: id, muscle_id: m, role: "primary" }); }
++      for (const s of d.secondary) { const m = cat.muscles.get(s); if (m) muscles.push({ exercise_id: id, muscle_id: m, role: "secondary" }); }
++      for (const n of d.equipment) { const e = cat.equipment.get(n); if (e) equipment.push({ exercise_id: id, equipment_id: e }); }
++      for (const n of d.modalities) { const c = cat.categories.get(n); if (c) categories.push({ exercise_id: id, category_id: c }); }
++    }
++    const results = await Promise.all([
++      muscles.length ? svc.from("exercise_muscles").insert(muscles) : null,
++      equipment.length ? svc.from("exercise_equipment").insert(equipment) : null,
++      categories.length ? svc.from("exercise_categories").insert(categories) : null,
++    ]);
++    const failed = results.find((r) => r?.error);
++    if (failed?.error) throw failed.error;
++    inserted += data?.length ?? 0;
++  }
++  return inserted;
++}
++
++/** Cambia los músculos de un ejercicio por los que propone la IA. */
++async function relinkMuscles(svc: Svc, cat: Catalogs, id: string, primary: string[], secondary: string[]) {
++  const rows = [
++    ...primary.map((s) => ({ exercise_id: id, muscle_id: cat.muscles.get(s), role: "primary" })),
++    ...secondary.filter((s) => !primary.includes(s)).map((s) => ({ exercise_id: id, muscle_id: cat.muscles.get(s), role: "secondary" })),
++  ].filter((r) => r.muscle_id);
++  if (!rows.some((r) => r.role === "primary")) return;
++  await svc.from("exercise_muscles").delete().eq("exercise_id", id);
++  await svc.from("exercise_muscles").insert(rows);
++}
++
++const SYSTEM = [
++  "Eres el editor de la biblioteca de ejercicios de Autopilot, una app de entrenamiento en español de España.",
++  "Escribes fichas propias con la voz de Autopilot: tuteo, frases cortas y claras, tono directo y cercano, sin emojis, sin marcas ni menciones a otras apps.",
++  "Partes del nombre en inglés y de unos pasos orientativos, pero redactas todo con tus palabras.",
++  "El nombre es el que se usa en un gimnasio español (mantén anglicismos habituales como «Hip thrust» o «Face pull»); en alt_names pon el nombre original en inglés y otros nombres comunes.",
++  "Responde siempre llamando a write_exercise.",
++].join(" ");
++
++const TOOL = {
++  type: "function",
++  function: {
++    name: "write_exercise",
++    description: "Ficha del ejercicio",
++    parameters: {
++      type: "object",
++      properties: {
++        name: { type: "string", description: "Nombre en español, máximo 60 caracteres, sin la palabra «ejercicio»" },
++        alt_names: { type: "array", items: { type: "string" }, maxItems: 4 },
++        description: { type: "string", description: "Una o dos frases: qué es y para qué sirve" },
++        instructions: { type: "array", items: { type: "string" }, minItems: 3, maxItems: 7, description: "Pasos en orden, uno por frase" },
++        common_mistakes: { type: "array", items: { type: "string" }, minItems: 2, maxItems: 4 },
++        tips: { type: "array", items: { type: "string" }, minItems: 2, maxItems: 3 },
++        safety_notes: { type: "array", items: { type: "string" }, minItems: 1, maxItems: 2 },
++        mechanic: { type: "string", enum: ["compound", "isolation"] },
++        level: { type: "integer", description: "1 básico, 2 intermedio, 3 avanzado" },
++        movement_pattern: { type: "string", enum: [...PATTERNS, ""], description: "Vacío si no encaja" },
++        primary_muscles: { type: "array", items: { type: "string", enum: MUSCLES }, maxItems: 3 },
++        secondary_muscles: { type: "array", items: { type: "string", enum: MUSCLES }, maxItems: 5 },
++      },
++      required: ["name", "alt_names", "description", "instructions", "common_mistakes", "tips", "safety_notes", "mechanic", "level", "primary_muscles", "secondary_muscles"],
++    },
++  },
++};
++
++const strings = (v: unknown, max: number) =>
++  (Array.isArray(v) ? v : []).filter((s): s is string => typeof s === "string" && s.trim() !== "").map((s) => s.trim()).slice(0, max);
++
++async function writeOne(svc: Svc, cat: Catalogs, names: Map<string, string>, ex: {
++  id: string; name: string; instructions: string[] | null; muscle_group: string | null;
++}) {
++  const resp = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
++    method: "POST",
++    headers: { Authorization: `Bearer ${Deno.env.get("LOVABLE_API_KEY") ?? ""}`, "Content-Type": "application/json" },
++    body: JSON.stringify({
++      model: "google/gemini-2.5-flash",
++      messages: [
++        { role: "system", content: SYSTEM },
++        { role: "user", content: `Ejercicio: "${ex.name}". Grupo: ${ex.muscle_group ?? "—"}. Pasos orientativos:\n- ${(ex.instructions ?? []).join("\n- ")}` },
++      ],
++      tools: [TOOL],
++      tool_choice: { type: "function", function: { name: "write_exercise" } },
++    }),
++  });
++  if (resp.status === 402) throw Object.assign(new Error("Sin créditos de IA"), { status: 402 });
++  if (resp.status === 429) throw Object.assign(new Error("Límite de IA, prueba en un minuto"), { status: 429 });
++  if (!resp.ok) throw new Error(`IA ${resp.status}`);
++  const data = await resp.json();
++  const args = data.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
++  if (!args) throw new Error("La IA no devolvió la ficha");
++  const f = JSON.parse(args);
++  const name = String(f.name ?? "").trim().slice(0, 60);
++  if (!name) throw new Error("Ficha sin nombre");
++
++  const key = catalogNameKey(name);
++  const taken = names.get(key);
++  if (taken && taken !== ex.id) {
++    // Ya existe: el nombre original sirve para encontrarlo, y el borrador queda archivado (no se reimporta).
++    const { data: other } = await svc.from("exercises").select("alt_names").eq("id", taken).maybeSingle();
++    const alts = [...new Set([...(other?.alt_names ?? []), ex.name])];
++    await svc.from("exercises").update({ alt_names: alts }).eq("id", taken);
++    await svc.from("exercises").update({ status: "archived" }).eq("id", ex.id);
++    return "duplicate";
++  }
++  names.set(key, ex.id); // antes de esperar a la base: otra ficha en paralelo no puede quedarse el mismo nombre
++
++  const level = [1, 2, 3].includes(Number(f.level)) ? Number(f.level) : 2;
++  const { error } = await svc.from("exercises").update({
++    name,
++    slug: "", // el trigger lo vuelve a crear a partir del nombre en español
++    alt_names: [...new Set([ex.name, ...strings(f.alt_names, 4)])].filter((n) => catalogNameKey(n) !== catalogNameKey(name)),
++    description: typeof f.description === "string" ? f.description.trim() : null,
++    instructions: strings(f.instructions, 7),
++    common_mistakes: strings(f.common_mistakes, 4),
++    tips: strings(f.tips, 3),
++    safety_notes: strings(f.safety_notes, 2),
++    mechanic: f.mechanic === "isolation" ? "isolation" : "compound",
++    level,
++    movement_pattern: PATTERNS.includes(f.movement_pattern) ? f.movement_pattern : null,
++    status: "pending",
++  }).eq("id", ex.id);
++  if (error) { names.delete(key); throw error; }
++  const pick = (v: unknown, max: number) => strings(v, max).filter((s) => MUSCLES.includes(s));
++  await relinkMuscles(svc, cat, ex.id, pick(f.primary_muscles, 3), pick(f.secondary_muscles, 5));
++  return "written";
++}
++
++Deno.serve(async (req) => {
++  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
++  try {
++    const token = (req.headers.get("Authorization") || "").replace("Bearer ", "");
++    const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
++      global: { headers: { Authorization: `Bearer ${token}` } },
++    });
++    const { data: { user } } = await sb.auth.getUser(token);
++    if (!user) return json({ error: "Unauthorized" }, 401);
++    const { data: isAdmin } = await sb.rpc("has_role", { _user_id: user.id, _role: "admin" });
++    if (!isAdmin) return json({ error: "Forbidden" }, 403);
++
++    const { action, limit } = await req.json().catch(() => ({}));
++    const svc = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
++
++    if (action === "preview" || action === "import") {
++      const plan = await loadPlan(svc);
++      const imported = action === "import" ? await importDrafts(svc, plan.drafts) : 0;
++      return json({
++        total: plan.total,
++        variants: plan.variants,
++        alreadyImported: plan.alreadyImported,
++        nameTaken: plan.nameTaken.length,
++        toImport: action === "import" ? 0 : plan.drafts.length,
++        imported,
++        ...(await counts(svc)),
++      });
++    }
++
++    if (action === "draft") {
++      const n = Math.min(Math.max(Number(limit) || 10, 1), MAX_DRAFT);
++      const { data: batch, error } = await svc.from("exercises").select("id, name, instructions, muscle_group")
++        .eq("source", DATASET.source).eq("status", "draft").order("name").limit(n);
++      if (error) throw error;
++      const cat = await catalogs(svc);
++      const names = new Map((await pagedNames(svc)).map((e) => [catalogNameKey(e.name), e.id]));
++      let written = 0, duplicates = 0, failed = 0;
++      let stop: { status: number; message: string } | null = null;
++      const queue = [...(batch ?? [])];
++      // 5 a la vez: cabe en el tiempo de una llamada y no satura la IA.
++      await Promise.all(Array.from({ length: 5 }, async () => {
++        for (let ex = queue.shift(); ex && !stop; ex = queue.shift()) {
++          try {
++            (await writeOne(svc, cat, names, ex)) === "written" ? written++ : duplicates++;
++          } catch (e) {
++            const status = (e as { status?: number }).status;
++            if (status === 402 || status === 429) stop = { status, message: (e as Error).message };
++            else { console.error("draft", ex.id, e); failed++; }
++          }
++        }
++      }));
++      const result = { written, duplicates, failed, ...(await counts(svc)) };
++      return stop ? json({ error: stop.message, ...result }, stop.status) : json(result);
++    }
++
++    if (action === "publish") {
++      const { data, error } = await svc.from("exercises")
++        .update({ status: "published", reviewed_at: new Date().toISOString() })
++        .eq("source", DATASET.source).eq("status", "pending").select("id");
++      if (error) throw error;
++      return json({ published: data?.length ?? 0, ...(await counts(svc)) });
++    }
++
++    if (action === "status") return json(await counts(svc));
++    return json({ error: "Acción no válida" }, 400);
++  } catch (e) {
++    console.error(e);
++    return json({ error: e instanceof Error ? e.message : "unknown" }, 500);
++  }
++});
+diff --git a/supabase/migrations/20261031160000_exercise_library.sql b/supabase/migrations/20261031160000_exercise_library.sql
+index a15c204..c8f863e 100644
+--- a/supabase/migrations/20261031160000_exercise_library.sql
++++ b/supabase/migrations/20261031160000_exercise_library.sql
+@@ -61,6 +61,8 @@ WHERE b.id = e.id;
+ CREATE UNIQUE INDEX IF NOT EXISTS exercises_slug_key ON public.exercises (slug);
+ CREATE INDEX IF NOT EXISTS exercises_name_key_idx ON public.exercises (public.exercise_name_key(name));
+ CREATE INDEX IF NOT EXISTS exercises_status_idx ON public.exercises (status);
++-- Una sola ficha por ejercicio de cada catálogo importado (la importación se puede repetir sin duplicar).
++CREATE UNIQUE INDEX IF NOT EXISTS exercises_source_ref_key ON public.exercises (source, source_ref) WHERE source_ref IS NOT NULL;
+ 
+ -- Slug automático, updated_at y ningún nombre repetido en altas o renombres.
+ -- Los duplicados que ya existieran no bloquean nada: solo se comprueba al cambiar el nombre.
+-- 
+2.43.0
+

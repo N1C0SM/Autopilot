@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { isIOSNative } from "@/shared/lib/platform";
 import { hapticTap } from "@/shared/lib/native";
+import { STORE_BADGE } from "@/shared/lib/palette";
 
 interface Props {
   className?: string;
@@ -28,20 +29,20 @@ const PlayGlyph = ({ className = "" }: { className?: string }) => (
   <svg viewBox="0 0 512 512" aria-hidden className={className}>
     <defs>
       <linearGradient id="pg-blue" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stopColor="#00d4ff" />
-        <stop offset="100%" stopColor="#0087ff" />
+        <stop offset="0%" stopColor={STORE_BADGE.appleTop} />
+        <stop offset="100%" stopColor={STORE_BADGE.appleBottom} />
       </linearGradient>
       <linearGradient id="pg-red" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stopColor="#ff5b3a" />
-        <stop offset="100%" stopColor="#e60023" />
+        <stop offset="0%" stopColor={STORE_BADGE.playTop} />
+        <stop offset="100%" stopColor={STORE_BADGE.playBottom} />
       </linearGradient>
       <linearGradient id="pg-green" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stopColor="#00e676" />
-        <stop offset="100%" stopColor="#00b34a" />
+        <stop offset="0%" stopColor={STORE_BADGE.googleTop} />
+        <stop offset="100%" stopColor={STORE_BADGE.googleBottom} />
       </linearGradient>
       <linearGradient id="pg-yellow" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stopColor="#ffd233" />
-        <stop offset="100%" stopColor="#ffab00" />
+        <stop offset="0%" stopColor={STORE_BADGE.podcastTop} />
+        <stop offset="100%" stopColor={STORE_BADGE.podcastBottom} />
       </linearGradient>
     </defs>
     <path fill="url(#pg-blue)" d="M60 40c-8 5-13 14-13 26v380c0 12 5 21 13 26l217-217L60 40z" />

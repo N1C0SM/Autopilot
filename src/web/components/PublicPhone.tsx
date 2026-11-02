@@ -4,7 +4,6 @@ import { ProgressRing } from "@/shared/components/ui/progress-ring";
 import { OverviewRow } from "@/app/components/dashboard/HomeOverview";
 import type { PlanAvailability } from "@/shared/lib/planCatalogCore";
 import { Button } from "@/shared/components/ui/button";
-import { Barbell, ChartLineUp, ForkKnife, House } from "@phosphor-icons/react";
 import { previewExercises } from "@/web/components/previewData";
 import { cn } from "@/shared/lib/utils";
 
@@ -56,16 +55,15 @@ export function PhoneTabBar({ tabs, active, onSelect, label = "Secciones de la d
     "relative flex h-14 min-w-0 w-full flex-col px-0 py-0 [&_svg]:size-6 hover:bg-transparent items-center justify-center gap-0.5 rounded-full type-caption2 font-medium text-[11px] leading-tight transition-[background-color,transform] duration-150 ease-out active:scale-[0.94]",
     isActive ? "bg-primary/90 text-primary-foreground" : "text-muted-foreground",
   );
-  const glyphs = { home: House, training: Barbell, nutrition: ForkKnife, progress: ChartLineUp };
   return (
     <nav className="absolute inset-x-3 bottom-5 z-10 rounded-full bg-card p-1" role="group" aria-label={label}>
       <div className={cn("grid", cols)}>
-        {tabs.map(({ key, label: text, icon: Icon }) => { const Glyph = glyphs[key as keyof typeof glyphs]; return (
+        {tabs.map(({ key, label: text, icon: Icon }) => (
           <Button variant="ghost" key={key} type="button" aria-pressed={active === key} onClick={() => onSelect(key)} className={item(active === key)}>
-            {Glyph ? <Glyph className="h-6 w-6" weight={active === key ? "fill" : "regular"} /> : <Icon className="h-6 w-6" />}
+            <Icon className="h-6 w-6" strokeWidth={active === key ? 2.4 : 2} aria-hidden="true" />
             <span className="max-w-full truncate px-0.5">{text}</span>
           </Button>
-        ); })}
+        ))}
       </div>
     </nav>
   );

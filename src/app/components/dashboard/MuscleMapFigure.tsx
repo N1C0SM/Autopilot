@@ -1,5 +1,6 @@
 import { useId } from "react";
 import { anteriorData, posteriorData, type BodyRegion } from "@/shared/assets/bodyMapData";
+import { SHADING } from "@/shared/lib/palette";
 
 export type MuscleSide = "front" | "back";
 
@@ -87,9 +88,9 @@ export function MuscleMapFigure({ side, muscles, intensityFor }: Props) {
       <defs>
         {/* Luz cenital: la parte de arriba de cada músculo brilla un poco más. */}
         <linearGradient id={`${id}-shade`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#fff" stopOpacity="0.22" />
-          <stop offset="0.55" stopColor="#fff" stopOpacity="0" />
-          <stop offset="1" stopColor="#000" stopOpacity="0.28" />
+          <stop offset="0" stopColor={SHADING.highlight} stopOpacity="0.22" />
+          <stop offset="0.55" stopColor={SHADING.highlight} stopOpacity="0" />
+          <stop offset="1" stopColor={SHADING.shadow} stopOpacity="0.28" />
         </linearGradient>
         <filter id={`${id}-glow`} x="-30%" y="-30%" width="160%" height="160%">
           <feGaussianBlur stdDeviation="1.6" result="blur" />

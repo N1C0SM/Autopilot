@@ -1,0 +1,859 @@
+From e33ca903f4933e0a060bbc944f88135dfe5c7c27 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sun, 1 Nov 2026 10:59:14 +0000
+Subject: [PATCH] =?UTF-8?q?Familiar=20como=20Hevy:=20pesta=C3=B1as=20iOS,?=
+ =?UTF-8?q?=20empezar=20con=20un=20toque,=20deslizar=20para=20quitar=20ser?=
+ =?UTF-8?q?ie?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- main: quita el marcador de conflicto suelto en Welcome.tsx.
+- iPhone: TabView con una NavigationStack por pestaña y la barra flotante encima.
+  Cada pestaña recuerda su scroll y su pantalla, el título grande nativo (Inter)
+  se encoge al hacer scroll y tocar la pestaña activa cierra Ajustes o vuelve
+  arriba, como ya hacía la web estrecha (MobileAppShell).
+- Hoy (iPhone y Mac): la píldora «Empezar entreno» abre el entreno con un toque,
+  como la web; el resto de la tarjeta sigue abriendo el detalle.
+- Entreno: deslizar una serie a la izquierda la quita (siempre queda una), en la
+  web (SwipeToRemove) y en la app (swipeToRemove), con el mismo recorrido.
+- Hojas que se cierran deslizando: barrita visible.
+- Test de paridad: 4 casos nuevos.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01BLvZLZQWTAX8bVMtDtJF6c
+---
+ native/Autopilot/App/AutopilotApp.swift       | 53 ++++++++++-
+ native/Autopilot/Design/Components.swift      | 94 ++++++++++++++++++-
+ .../Features/Account/AccountView.swift        |  1 +
+ .../Autopilot/Features/Auth/LoginView.swift   |  1 +
+ .../Features/Auth/WhoIsTrainingView.swift     |  1 +
+ native/Autopilot/Features/Home/HomeView.swift | 90 +++++++++++-------
+ .../Autopilot/Features/Other/OtherViews.swift |  2 +
+ .../Features/Progress/ProgressScreen.swift    |  2 +
+ .../Autopilot/Features/Shell/RootView.swift   | 90 ++++++++++--------
+ .../Autopilot/Features/Train/TrainView.swift  |  8 +-
+ .../Features/Train/WorkoutView.swift          |  7 ++
+ .../components/dashboard/WorkoutTracker.tsx   | 14 ++-
+ .../workout-parts/SwipeToRemove.tsx           | 86 +++++++++++++++++
+ src/app/pages/Welcome.tsx                     |  1 -
+ src/shared/test/platformParity.test.ts        | 63 +++++++++++++
+ 15 files changed, 431 insertions(+), 82 deletions(-)
+ create mode 100644 src/app/components/workout-parts/SwipeToRemove.tsx
+
+diff --git a/native/Autopilot/App/AutopilotApp.swift b/native/Autopilot/App/AutopilotApp.swift
+index 8136be6..449375d 100644
+--- a/native/Autopilot/App/AutopilotApp.swift
++++ b/native/Autopilot/App/AutopilotApp.swift
+@@ -1,10 +1,23 @@
+ import SwiftUI
++#if os(iOS)
++import UIKit
++import CoreText
++#endif
+ 
+ @main
+ struct AutopilotApp: App {
+     @StateObject private var session = SessionModel()
+     @StateObject private var accounts = AccountStore.shared
+ 
++    init() {
++        // Antes que cualquier vista: la barra de navegación ya sale en Inter.
++        InterFont.register()
++        FigureFont.register()
++        #if os(iOS)
++        NavigationBarStyle.apply()
++        #endif
++    }
++
+     var body: some Scene {
+         WindowGroup {
+             RootView()
+@@ -13,11 +26,7 @@ struct AutopilotApp: App {
+                 .preferredColorScheme(.dark)
+                 .tint(Palette.gold)
+                 .toggleStyle(TrailingSwitchStyle())
+-                .task {
+-                    InterFont.register()
+-                    FigureFont.register()
+-                    await session.start()
+-                }
++                .task { await session.start() }
+         }
+         #if os(macOS)
+         .defaultSize(width: 1200, height: 820)
+@@ -127,3 +136,37 @@ extension Notification.Name {
+     static let restPlus = Notification.Name("autopilot.restPlus")
+     static let restMinus = Notification.Name("autopilot.restMinus")
+ }
++
++#if os(iOS)
++/// Barra de navegación con la tipografía de la app, como la cabecera de la web (`NavBar`): título
++/// grande en Inter Bold 34 que se encoge al hacer scroll, el pequeño en Inter Semibold 17, transparente
++/// arriba y con material cuando el contenido pasa por debajo (`solid`).
++enum NavigationBarStyle {
++    static func apply() {
++        let large: [NSAttributedString.Key: Any] = [.font: inter(34, weight: 700, style: .largeTitle), .foregroundColor: UIColor.white]
++        let inline: [NSAttributedString.Key: Any] = [.font: inter(17, weight: 600, style: .headline), .foregroundColor: UIColor.white]
++        let standard = UINavigationBarAppearance()
++        standard.configureWithDefaultBackground()
++        standard.largeTitleTextAttributes = large
++        standard.titleTextAttributes = inline
++        let edge = UINavigationBarAppearance()
++        edge.configureWithTransparentBackground()
++        edge.largeTitleTextAttributes = large
++        edge.titleTextAttributes = inline
++        let bar = UINavigationBar.appearance()
++        bar.standardAppearance = standard
++        bar.compactAppearance = standard
++        bar.scrollEdgeAppearance = edge
++    }
++
++    /// Inter es variable: el peso va en el eje «wght». Crece con el tamaño de texto del sistema.
++    private static func inter(_ size: CGFloat, weight: CGFloat, style: UIFont.TextStyle) -> UIFont {
++        let wght = 0x7767_6874 // 'wght'
++        let descriptor = UIFontDescriptor(fontAttributes: [
++            .name: InterFont.name,
++            UIFontDescriptor.AttributeName(rawValue: kCTFontVariationAttribute as String): [wght: weight],
++        ])
++        return UIFontMetrics(forTextStyle: style).scaledFont(for: UIFont(descriptor: descriptor, size: size))
++    }
++}
++#endif
+diff --git a/native/Autopilot/Design/Components.swift b/native/Autopilot/Design/Components.swift
+index f74cce9..42731a3 100644
+--- a/native/Autopilot/Design/Components.swift
++++ b/native/Autopilot/Design/Components.swift
+@@ -114,11 +114,102 @@ struct HeaderButtons: View {
+     }
+ }
+ 
++extension Notification.Name {
++    /// Se ha vuelto a tocar la pestaña activa (`object` = `AppSection`).
++    static let tabReselected = Notification.Name("tabReselected")
++}
++
++/// Ancla del principio de cada pestaña para volver arriba al tocarla otra vez.
++enum ScrollTop { static let id = "scroll-top" }
++
++extension View {
++    /// En la raíz de cada pestaña: tocar la pestaña activa la lleva al principio (y el título grande vuelve).
++    /// El contenido del `ScrollView` lleva `.id(ScrollTop.id)`.
++    func scrollsToTopOnReselect(_ section: AppSection) -> some View { modifier(ScrollToTopOnReselect(section: section)) }
++}
++
++private struct ScrollToTopOnReselect: ViewModifier {
++    let section: AppSection
++    @Environment(\.accessibilityReduceMotion) private var reduceMotion
++
++    func body(content: Content) -> some View {
++        ScrollViewReader { proxy in
++            content.onReceive(NotificationCenter.default.publisher(for: .tabReselected)) { note in
++                guard note.object as? AppSection == section else { return }
++                withAnimation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.9)) {
++                    proxy.scrollTo(ScrollTop.id, anchor: .top)
++                }
++            }
++        }
++    }
++}
++
++extension View {
++    /// Deslizar a la izquierda descubre «Quitar», y deslizar del todo quita la fila, como Hevy y las
++    /// listas de iOS (en la web, `SwipeToRemove`). Solo cuenta el gesto horizontal: el scroll sigue igual.
++    func swipeToRemove(_ label: String, enabled: Bool = true, onRemove: @escaping () -> Void) -> some View {
++        modifier(SwipeToRemove(label: label, enabled: enabled, onRemove: onRemove))
++    }
++}
++
++private struct SwipeToRemove: ViewModifier {
++    let label: String
++    let enabled: Bool
++    let onRemove: () -> Void
++    @State private var offset: CGFloat = 0
++    @State private var isOpen = false
++    @Environment(\.accessibilityReduceMotion) private var reduceMotion
++    private let reveal: CGFloat = 88
++    private let fullSwipe: CGFloat = 180
++
++    func body(content: Content) -> some View {
++        content
++            .offset(x: offset)
++            .background(alignment: .trailing) {
++                if offset < 0 {
++                    Button(action: remove) {
++                        Image(systemName: "trash.fill").font(.inter(size: 17, weight: .semibold))
++                            .foregroundStyle(Palette.foreground)
++                            .frame(width: max(-offset, 44)).frame(maxHeight: .infinity)
++                    }
++                    .buttonStyle(.plain)
++                    .background(Palette.destructive, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
++                    .accessibilityLabel(label)
++                }
++            }
++            .simultaneousGesture(drag, including: enabled ? .all : .subviews)
++    }
++
++    private var drag: some Gesture {
++        DragGesture(minimumDistance: 20)
++            .onChanged { v in
++                guard abs(v.translation.width) > abs(v.translation.height) * 1.5 else { return }
++                offset = min(0, (isOpen ? -reveal : 0) + v.translation.width)
++            }
++            .onEnded { v in
++                let horizontal = abs(v.translation.width) > abs(v.translation.height) * 1.5
++                let end = (isOpen ? -reveal : 0) + v.translation.width
++                if horizontal && end < -fullSwipe { remove(); return }
++                if horizontal { isOpen = end < -reveal / 2 }
++                withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.85)) { offset = isOpen ? -reveal : 0 }
++            }
++    }
++
++    private func remove() {
++        Haptics.warning()
++        isOpen = false
++        offset = 0
++        onRemove()
++    }
++}
++
+ /// Barra flotante de la web (FloatingMobileNav + MobileTabBar): iconos Phosphor (normal / relleno),
+ /// 68 pt de alto, píldora activa dorada al 90 % y texto negro, inactivas en gris.
+ struct FloatingTabBar: View {
+     let tabs: [AppSection]
+     @Binding var selection: AppSection
++    /// Tocar la pestaña ya activa: vuelve atrás o al principio, como en iOS y en la web (`MobileAppShell`).
++    var onReselect: (AppSection) -> Void = { _ in }
+     @Namespace private var pill
+     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+ 
+@@ -127,7 +218,8 @@ struct FloatingTabBar: View {
+             ForEach(tabs) { tab in
+                 let active = tab == selection
+                 Button {
+-                    if active { Haptics.tap() } else { Haptics.selection() }
++                    if active { Haptics.tap(); onReselect(tab); return }
++                    Haptics.selection()
+                     // Con «Reducir movimiento» la píldora cambia de sitio al instante (sin spring).
+                     withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.85)) { selection = tab }
+                 } label: {
+diff --git a/native/Autopilot/Features/Account/AccountView.swift b/native/Autopilot/Features/Account/AccountView.swift
+index 4e50675..1dd9634 100644
+--- a/native/Autopilot/Features/Account/AccountView.swift
++++ b/native/Autopilot/Features/Account/AccountView.swift
+@@ -860,6 +860,7 @@ private struct AccountUnlockSheet: View {
+         }
+         .padding(24)
+         .presentationDetents([.medium])
++        .presentationDragIndicator(.visible)
+         .presentationBackground(Palette.card)
+     }
+ 
+diff --git a/native/Autopilot/Features/Auth/LoginView.swift b/native/Autopilot/Features/Auth/LoginView.swift
+index 4b95a82..ae94c14 100644
+--- a/native/Autopilot/Features/Auth/LoginView.swift
++++ b/native/Autopilot/Features/Auth/LoginView.swift
+@@ -194,6 +194,7 @@ struct ForgotPasswordSheet: View {
+         .frame(maxWidth: .infinity)
+         .screenBackground()
+         .presentationDetents([.medium, .large])
++        .presentationDragIndicator(.visible)
+         .onChange(of: error) { _, text in
+             if let text { A11y.announce("Error: \(text)") }
+         }
+diff --git a/native/Autopilot/Features/Auth/WhoIsTrainingView.swift b/native/Autopilot/Features/Auth/WhoIsTrainingView.swift
+index 01fbc5f..b4eb54b 100644
+--- a/native/Autopilot/Features/Auth/WhoIsTrainingView.swift
++++ b/native/Autopilot/Features/Auth/WhoIsTrainingView.swift
+@@ -118,6 +118,7 @@ struct WhoIsTrainingView: View {
+         .padding(28)
+         .frame(minWidth: 320)
+         .presentationDetents([.medium])
++        .presentationDragIndicator(.visible)
+         .presentationBackground(Palette.card)
+         .onAppear { if !A11y.voiceOver { passwordFocused = true } }
+     }
+diff --git a/native/Autopilot/Features/Home/HomeView.swift b/native/Autopilot/Features/Home/HomeView.swift
+index 4a60432..ededb6a 100644
+--- a/native/Autopilot/Features/Home/HomeView.swift
++++ b/native/Autopilot/Features/Home/HomeView.swift
+@@ -78,7 +78,9 @@ struct HomeView: View {
+             .padding(.horizontal, horizontalPadding)
+             .padding(.top, wideLayout ? 24 : 8)
+             .padding(.bottom, 96)
++            .id(ScrollTop.id)
+         }
++        .scrollsToTopOnReselect(.home)
+         .screenBackground()
+         .refreshable { await load() }
+         .task {
+@@ -193,10 +195,17 @@ struct HomeView: View {
+                 Text(summary).font(.apSubhead.monospacedDigit())
+                     .foregroundStyle(Palette.muted).padding(.top, 4)
+             }
+-            Button { openSheet() } label: { Text("Ver la sesión") }
+-                .buttonStyle(.pill)
+-                .frame(maxWidth: 224)
+-                .padding(.top, 20)
++            // Como la web en escritorio: un toque y empieza el entreno; una actividad abre el detalle.
++            Group {
++                if plan.isGym {
++                    Button((snapshot?.resumable ?? false) ? "Continuar entreno" : "Empezar entreno") { startToday() }
++                } else {
++                    Button("Ver la sesión") { openSheet() }
++                }
++            }
++            .buttonStyle(.pill)
++            .frame(maxWidth: 224)
++            .padding(.top, 20)
+         }
+         .frame(maxWidth: 448, alignment: .leading)
+     }
+@@ -350,40 +359,49 @@ struct HomeView: View {
+     private func startCard(_ plan: DayPlan) -> some View {
+         let parts = plan.title.components(separatedBy: " · ")
+         let summary = detail(plan)
+-        return Button { openSheet() } label: {
+-            VStack(alignment: .leading, spacing: 0) {
+-                HStack {
+-                    Text(plan.isGym ? "Hoy · entreno" : "Hoy · actividad")
+-                        .font(.apCaption.weight(.semibold)).textCase(.uppercase).tracking(0.6)
+-                        .foregroundStyle(Palette.gold)
+-                    Spacer(minLength: 8)
+-                    Image(systemName: "chevron.up").font(.inter(size: 12, weight: .semibold))
+-                        .foregroundStyle(Palette.muted.opacity(0.7))
+-                }
+-                Text(parts[0]).font(.apTitle1).lineLimit(2).fixedSize(horizontal: false, vertical: true).padding(.top, 6)
+-                if parts.count > 1 {
+-                    Text(parts.dropFirst().joined(separator: " · ")).font(.apSubhead).foregroundStyle(Palette.muted)
+-                        .lineLimit(2).padding(.top, 2)
+-                }
+-                if !summary.isEmpty {
+-                    Text(summary).font(.apSubhead.monospacedDigit()).foregroundStyle(Palette.muted).padding(.top, 4)
++        let resumable = snapshot?.resumable ?? false
++        return VStack(alignment: .leading, spacing: 0) {
++            Button { openSheet() } label: {
++                VStack(alignment: .leading, spacing: 0) {
++                    HStack {
++                        Text(plan.isGym ? "Hoy · entreno" : "Hoy · actividad")
++                            .font(.apCaption.weight(.semibold)).textCase(.uppercase).tracking(0.6)
++                            .foregroundStyle(Palette.gold)
++                        Spacer(minLength: 8)
++                        Image(systemName: "chevron.up").font(.inter(size: 12, weight: .semibold))
++                            .foregroundStyle(Palette.muted.opacity(0.7))
++                    }
++                    Text(parts[0]).font(.apTitle1).lineLimit(2).fixedSize(horizontal: false, vertical: true).padding(.top, 6)
++                    if parts.count > 1 {
++                        Text(parts.dropFirst().joined(separator: " · ")).font(.apSubhead).foregroundStyle(Palette.muted)
++                            .lineLimit(2).padding(.top, 2)
++                    }
++                    if !summary.isEmpty {
++                        Text(summary).font(.apSubhead.monospacedDigit()).foregroundStyle(Palette.muted).padding(.top, 4)
++                    }
+                 }
+-                // Píldora dorada, igual que la acción principal de la hoja y el resto de la app
+-                // (`PillButtonStyle`): una sola forma de «botón» en toda la app.
+-                Text("Ver la sesión")
+-                    .font(.apHeadline).foregroundStyle(.black)
+-                    .frame(maxWidth: .infinity, minHeight: 50)
+-                    .background(Palette.gold, in: Capsule())
++                .frame(maxWidth: .infinity, alignment: .leading)
++                .contentShape(Rectangle())
++            }
++            .buttonStyle(.plain)
++            .accessibilityLabel([plan.title, summary].filter { !$0.isEmpty }.joined(separator: ". "))
++            .accessibilityHint("Abre el detalle de la sesión de hoy")
++            // Empezar con un toque, como Hevy y la web (`HomeOverview`): la píldora abre el entreno y
++            // el resto de la tarjeta, el detalle. Una actividad se marca desde el detalle.
++            if plan.isGym {
++                Button(resumable ? "Continuar entreno" : "Empezar entreno") { startToday() }
++                    .buttonStyle(PillButtonStyle(kind: .primary, height: 50))
++                    .accessibilityHint(resumable ? "Retoma el entreno que dejaste a medias" : "Abre el entreno de hoy para registrar series")
++                    .padding(.top, 24)
++            } else {
++                Button("Ver la sesión") { openSheet() }
++                    .buttonStyle(PillButtonStyle(kind: .primary, height: 50))
+                     .padding(.top, 24)
+             }
+-            .padding(18)
+-            .frame(maxWidth: .infinity, minHeight: Self.cardMinHeight, alignment: .topLeading)
+-            .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
+         }
+-        .buttonStyle(.pressableCard)
+-        .accessibilityLabel([plan.title, summary, "Abrir el detalle de la sesión"].filter { !$0.isEmpty }.joined(separator: ". "))
+-        .accessibilityHint("Abre el detalle de la sesión de hoy")
+-        .accessibilityAddTraits(.isButton)
++        .padding(18)
++        .frame(maxWidth: .infinity, minHeight: Self.cardMinHeight, alignment: .topLeading)
++        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
+         // Gesto nativo: mantener pulsada la tarjeta ofrece atajos sin quitar el toque principal.
+         .contextMenu {
+             Button { openSheet() } label: { Label("Ver el detalle", systemImage: "list.bullet.rectangle") }
+@@ -424,9 +442,11 @@ struct HomeView: View {
+     /// El aviso lo recoge Entrenar: cambia de pestaña y abre (o reanuda) el entreno de hoy.
+     private func startToday() {
+         Haptics.tap()
++        let fromSheet = sheetOpen
+         sheetOpen = false
+         Task {
+-            try? await Task.sleep(for: .milliseconds(450))
++            // Desde la hoja se espera a que se cierre; desde la tarjeta, al instante.
++            if fromSheet { try? await Task.sleep(for: .milliseconds(450)) }
+             NotificationCenter.default.post(name: .startTodayWorkout, object: nil)
+         }
+     }
+diff --git a/native/Autopilot/Features/Other/OtherViews.swift b/native/Autopilot/Features/Other/OtherViews.swift
+index 365aa73..9ba1642 100644
+--- a/native/Autopilot/Features/Other/OtherViews.swift
++++ b/native/Autopilot/Features/Other/OtherViews.swift
+@@ -86,7 +86,9 @@ struct NutritionView: View {
+             // Una columna en todas partes, como la web: en iPad/Mac no se estira de lado a lado.
+             .frame(maxWidth: 720)
+             .frame(maxWidth: .infinity)
++            .id(ScrollTop.id)
+         }
++        .scrollsToTopOnReselect(.nutrition)
+         .screenBackground()
+         .task { await load() }
+     }
+diff --git a/native/Autopilot/Features/Progress/ProgressScreen.swift b/native/Autopilot/Features/Progress/ProgressScreen.swift
+index 7fca25a..9243686 100644
+--- a/native/Autopilot/Features/Progress/ProgressScreen.swift
++++ b/native/Autopilot/Features/Progress/ProgressScreen.swift
+@@ -88,7 +88,9 @@ struct ProgressScreen: View {
+                 }
+             }
+             .frame(maxWidth: .infinity)
++            .id(ScrollTop.id)
+         }
++        .scrollsToTopOnReselect(.progress)
+         .onPreferenceChange(ProgressContentWidthKey.self) { contentWidth = $0 }
+         .screenBackground()
+         .refreshable {
+diff --git a/native/Autopilot/Features/Shell/RootView.swift b/native/Autopilot/Features/Shell/RootView.swift
+index 09d2fe6..5b33ce0 100644
+--- a/native/Autopilot/Features/Shell/RootView.swift
++++ b/native/Autopilot/Features/Shell/RootView.swift
+@@ -128,7 +128,8 @@ struct MainShell: View {
+     @EnvironmentObject private var session: SessionModel
+     @Environment(\.horizontalSizeClass) private var sizeClass
+     @State private var selection: AppSection?
+-    @State private var showSettings = false
++    /// Pestaña en la que se ha abierto Ajustes (desde el avatar): cada pestaña tiene su propia pila.
++    @State private var settingsTab: AppSection?
+     @EnvironmentObject private var accounts: AccountStore
+     /// Sección visible del panel de Admin en iPhone y estado del cajón lateral.
+     @State private var adminSection: AppSection = .adminDashboard
+@@ -174,42 +175,7 @@ struct MainShell: View {
+             if sizeClass == .compact && session.role == .admin {
+                 adminShell
+             } else if sizeClass == .compact && session.role == .user {
+-                // Como la web en el móvil: cabecera con campana y avatar, y barra flotante abajo.
+-                // La barra reserva su espacio: el final de cada pantalla queda siempre por encima de ella.
+-                NavigationStack {
+-                    SectionView(section: selection ?? .home, onNavigate: { selection = $0 })
+-                        .toolbar(.hidden, for: .navigationBar)
+-                        // Cabecera de la web (MobileHeader): campana y avatar en círculos, «Hoy» centrado
+-                        // y en el resto de pestañas el título grande a la izquierda.
+-                        .safeAreaInset(edge: .top, spacing: 0) {
+-                            let current = selection ?? .home
+-                            VStack(alignment: .leading, spacing: 4) {
+-                                ZStack {
+-                                    // El saludo con la fecha ya dice que es hoy: sin título duplicado.
+-                                    HStack { Spacer(); HeaderButtons(initial: initial, avatar: accounts.accounts.first { $0.id == session.userIdString }?.avatar) { showSettings = true } }
+-                                }
+-                                .frame(height: 44)
+-                                if current != .home {
+-                                    Text(current.navTitle).font(.inter(.largeTitle).weight(.bold))
+-                                        .accessibilityAddTraits(.isHeader)
+-                                }
+-                            }
+-                            .padding(.horizontal, 16).padding(.bottom, 6)
+-                            .background(Palette.background)
+-                        }
+-                        .navigationDestination(isPresented: $showSettings) { AccountView().navigationTitle("Ajustes") }
+-                        .safeAreaInset(edge: .bottom, spacing: 0) {
+-                            FloatingTabBar(tabs: AppSection.userTabs, selection: Binding(get: { selection ?? .home }, set: { selection = $0 }))
+-                                .padding(.bottom, 4).padding(.top, 8)
+-                                .shadow(color: .black.opacity(0.5), radius: 12, y: 8)
+-                                // Tapa lo que hay entre la barra y el borde: nada asoma por debajo.
+-                                .background(
+-                                    LinearGradient(colors: [.black.opacity(0), .black.opacity(0.95), .black], startPoint: .top, endPoint: .center)
+-                                        .padding(.top, -24)
+-                                        .ignoresSafeArea(edges: .bottom)
+-                                )
+-                        }
+-                }
++                userTabs
+             } else {
+                 split
+             }
+@@ -281,6 +247,52 @@ struct MainShell: View {
+     }
+ 
+     #if os(iOS)
++    /// iPhone: una pila por pestaña, como `UITabBarController` y la web (`MobileAppShell`). Cada pestaña
++    /// recuerda su scroll y su pantalla, el título grande se encoge al hacer scroll y volver a tocar la
++    /// pestaña activa cierra Ajustes o vuelve al principio.
++    private var userTabs: some View {
++        let current = Binding(get: { AppSection.userTabs.contains(selection ?? .home) ? selection ?? .home : .home },
++                              set: { selection = $0 })
++        return TabView(selection: current) {
++            ForEach(AppSection.userTabs) { tab in
++                NavigationStack {
++                    SectionView(section: tab, onNavigate: { target in
++                        if AppSection.userTabs.contains(target) { selection = target } else if target == .settings { settingsTab = tab }
++                    })
++                        .toolbar {
++                            ToolbarItem(placement: .topBarTrailing) {
++                                HeaderButtons(initial: initial, avatar: accounts.accounts.first { $0.id == session.userIdString }?.avatar) {
++                                    settingsTab = tab
++                                }
++                            }
++                        }
++                        .navigationDestination(isPresented: Binding(get: { settingsTab == tab }, set: { if !$0 { settingsTab = nil } })) {
++                            AccountView().navigationTitle("Ajustes").toolbar(.hidden, for: .tabBar)
++                        }
++                        .toolbar(.hidden, for: .tabBar)
++                }
++                // La barra reserva su espacio: el final de cada pantalla queda siempre por encima de ella.
++                .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: 80) }
++                .tag(tab)
++            }
++        }
++        .overlay(alignment: .bottom) {
++            FloatingTabBar(tabs: AppSection.userTabs, selection: current) { tab in
++                if settingsTab == tab { settingsTab = nil }
++                else { NotificationCenter.default.post(name: .tabReselected, object: tab) }
++            }
++            .padding(.bottom, 4).padding(.top, 8)
++            .shadow(color: .black.opacity(0.5), radius: 12, y: 8)
++            // Tapa lo que hay entre la barra y el borde: nada asoma por debajo.
++            .background(
++                LinearGradient(colors: [.black.opacity(0), .black.opacity(0.95), .black], startPoint: .top, endPoint: .center)
++                    .padding(.top, -24)
++                    .ignoresSafeArea(edges: .bottom)
++            )
++            .ignoresSafeArea(.keyboard)
++        }
++    }
++
+     /// Admin en iPhone: contenido a pantalla completa y la barra lateral como cajón
+     /// (hamburguesa). Al elegir una sección el cajón se cierra y cambia el contenido.
+     private var adminShell: some View {
+@@ -408,6 +420,7 @@ struct MainShell: View {
+ /// Contenido de cada sección.
+ struct SectionView: View {
+     @EnvironmentObject private var session: SessionModel
++    @Environment(\.horizontalSizeClass) private var sizeClass
+     let section: AppSection
+     var onNavigate: (AppSection) -> Void = { _ in }
+ 
+@@ -470,7 +483,8 @@ struct SectionView: View {
+         .navigationTitle(section.deskTitle)
+         .navigationSubtitle(section.deskHint ?? "")
+         #else
+-        .navigationTitle(section.navTitle)
++        // En el iPhone, Inicio no repite «Hoy»: el saludo con la fecha ya lo dice (como la web).
++        .navigationTitle(section == .home && sizeClass == .compact ? "" : section.navTitle)
+         #endif
+         #if os(iOS)
+         .navigationBarTitleDisplayMode(section == .home ? .inline : .large)
+diff --git a/native/Autopilot/Features/Train/TrainView.swift b/native/Autopilot/Features/Train/TrainView.swift
+index d5e7eaa..bdd6193 100644
+--- a/native/Autopilot/Features/Train/TrainView.swift
++++ b/native/Autopilot/Features/Train/TrainView.swift
+@@ -9,6 +9,7 @@ struct TrainView: View {
+     @StateObject private var model = PlanModel()
+     @State private var active: ActiveWorkout?
+     @State private var starting = false
++    @State private var openingToday = false
+     /// Día con un entreno a medias guardado (su acción pasa a ser «Continuar entreno»).
+     @State private var resumableDay: String?
+     @State private var editing = false
+@@ -64,7 +65,9 @@ struct TrainView: View {
+             .padding(.top, wideLayout ? 32 : 8)
+             .padding(.bottom, wideLayout ? 32 : 96)
+             .frame(maxWidth: .infinity, alignment: .leading)
++            .id(ScrollTop.id)
+         }
++        .scrollsToTopOnReselect(.train)
+         .screenBackground()
+         .refreshable { await load() }
+         .task {
+@@ -179,7 +182,10 @@ struct TrainView: View {
+ 
+     /// Aviso «Empezar entreno de hoy» (menú del Mac): abre la sesión de hoy si toca.
+     private func openToday() async {
+-        guard active == nil else { return }
++        // Con las pestañas vivas, el aviso puede llegar dos veces (desde Inicio y desde la barra).
++        guard active == nil, !openingToday else { return }
++        openingToday = true
++        defer { openingToday = false }
+         // Si hay un borrador de hoy, se reanuda aunque el plan aún no haya cargado.
+         if let idString = session.userIdString,
+            let draft = ActiveWorkout.restore(userId: idString), draft.day.day == DayNames.today {
+diff --git a/native/Autopilot/Features/Train/WorkoutView.swift b/native/Autopilot/Features/Train/WorkoutView.swift
+index 505a760..e4b9b90 100644
+--- a/native/Autopilot/Features/Train/WorkoutView.swift
++++ b/native/Autopilot/Features/Train/WorkoutView.swift
+@@ -251,6 +251,7 @@ struct WorkoutView: View {
+         .padding(28)
+         .frame(minWidth: 340)
+         .presentationDetents([.medium])
++        .presentationDragIndicator(.visible)
+         .presentationBackground(Palette.card)
+         .interactiveDismissDisabled(workout.saving)
+     }
+@@ -449,6 +450,7 @@ struct SessionExerciseCard: View {
+             Button("Cerrar") { Haptics.tap(); swapSheet = false }.buttonStyle(.pillSecondary).padding(20)
+         }
+         .presentationDetents([.medium, .large])
++        .presentationDragIndicator(.visible)
+         .presentationBackground(Palette.card)
+     }
+ 
+@@ -687,6 +689,7 @@ struct TechniqueSheet: View {
+         }
+         .frame(minWidth: 420, minHeight: 520)
+         .presentationDetents([.large])
++        .presentationDragIndicator(.visible)
+         .presentationBackground(Palette.card)
+     }
+ }
+@@ -848,6 +851,10 @@ struct SetLine: View {
+         )
+         .overlay(alignment: .top) { if separator && !isCurrent { Rectangle().fill(Palette.separator).frame(height: 0.5).padding(.leading, 12) } }
+         .accessibilityAction(named: "Quitar serie") { workout.removeSet(exercise.name, at: index) }
++        // Deslizar a la izquierda para quitar la serie, como en Hevy (y en la web).
++        .swipeToRemove("Quitar serie", enabled: (workout.draft.logs[exercise.name]?.count ?? 0) > 1) {
++            workout.removeSet(exercise.name, at: index)
++        }
+         .contextMenu {
+             Button(role: .destructive) { Haptics.warning(); workout.removeSet(exercise.name, at: index) } label: {
+                 Label("Quitar serie", systemImage: "trash")
+diff --git a/src/app/components/dashboard/WorkoutTracker.tsx b/src/app/components/dashboard/WorkoutTracker.tsx
+index 784ca9e..ba01a19 100644
+--- a/src/app/components/dashboard/WorkoutTracker.tsx
++++ b/src/app/components/dashboard/WorkoutTracker.tsx
+@@ -28,6 +28,7 @@ import { parsePositiveWeight } from "@/shared/lib/weight";
+ import { WorkoutSummary } from "@/app/components/dashboard/WorkoutSummary";
+ import { ExerciseSwap } from "@/app/components/dashboard/ExerciseSwap";
+ import { formatTrainingTitle } from "@/shared/lib/trainingDisplay";
++import SwipeToRemove from "@/app/components/workout-parts/SwipeToRemove";
+ import { hapticImpact, hapticNotify, hapticSelection, hapticSignature, hapticTap } from "@/shared/lib/native";
+ import SwipeSetEntry from "@/app/components/dashboard/SwipeSetEntry";
+ import LogAllSetsButton from "@/app/components/dashboard/LogAllSetsButton";
+@@ -637,6 +638,15 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
+     mutateSet(exerciseName, setIndex, (set) => updateWorkoutSetDrop(set, dropIndex, patch));
+   };
+ 
++  // Quitar una serie (deslizando la fila, como Hevy y el iPhone); siempre queda al menos una.
++  const removeSet = (exerciseName: string, setIndex: number) => {
++    setExerciseLogs((logs) => {
++      const sets = logs[exerciseName] || [];
++      if (sets.length <= 1) return logs;
++      return { ...logs, [exerciseName]: sets.filter((_, index) => index !== setIndex) };
++    });
++  };
++
+   const removeDrop = (exerciseName: string, setIndex: number, dropIndex: number) => {
+     mutateSet(exerciseName, setIndex, (set) => removeWorkoutSetDrop(set, dropIndex));
+     void hapticTap();
+@@ -1798,7 +1808,8 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
+                               ? "border-destructive text-destructive"
+                               : "border-muted-foreground/40 text-muted-foreground/40";
+                           return (
+-                          <div key={si} aria-current={si === firstPendingIndex ? "step" : undefined} className={`pl-3 transition-colors duration-300 ${si === firstPendingIndex ? "rounded-chip ring-1 ring-inset ring-primary/50 bg-primary/5" : set.done && !isWarmup ? "rounded-chip bg-primary/10" : ""}`}>
++                          <SwipeToRemove key={si} label={`Quitar la serie ${si + 1} de ${ex.name}`} enabled={sets.length > 1} onRemove={() => removeSet(ex.name, si)}>
++                          <div aria-current={si === firstPendingIndex ? "step" : undefined} className={`pl-3 transition-colors duration-300 ${si === firstPendingIndex ? "rounded-chip ring-1 ring-inset ring-primary/50 bg-primary/5" : set.done && !isWarmup ? "rounded-chip bg-primary/10" : ""}`}>
+                             <div className={`py-2 pr-2 ${si > 0 ? "sep-t" : ""}`}>
+                             {/* Segmento principal de la serie */}
+                             <div className={SET_GRID}>
+@@ -1984,6 +1995,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
+                             {inputError && <p className="mt-2 type-footnote text-destructive">{inputError}</p>}
+                             </div>
+                           </div>
++                          </SwipeToRemove>
+                           );
+                         })}
+                         </div>
+diff --git a/src/app/components/workout-parts/SwipeToRemove.tsx b/src/app/components/workout-parts/SwipeToRemove.tsx
+new file mode 100644
+index 0000000..7296a30
+--- /dev/null
++++ b/src/app/components/workout-parts/SwipeToRemove.tsx
+@@ -0,0 +1,86 @@
++import { useRef, useState, type PointerEvent, type ReactNode } from "react";
++import { animate, motion, useDragControls, useMotionValue, useReducedMotion } from "framer-motion";
++import { Trash2 } from "lucide-react";
++import { hapticNotify } from "@/shared/lib/native";
++
++const REVEAL = 88;
++const FULL_SWIPE = 180;
++
++interface Props {
++  /** Texto del botón para lectores de pantalla, p. ej. «Quitar serie». */
++  label: string;
++  enabled?: boolean;
++  onRemove: () => void;
++  children: ReactNode;
++}
++
++/**
++ * Deslizar a la izquierda descubre «Quitar» y deslizar del todo quita la fila, como Hevy y el
++ * iPhone (`swipeToRemove` en `Components.swift`). Solo cuenta el gesto horizontal: el scroll
++ * vertical sigue igual. Con ratón no arranca encima de un campo, para poder seleccionar texto.
++ */
++const SwipeToRemove = ({ label, enabled = true, onRemove, children }: Props) => {
++  const x = useMotionValue(0);
++  const controls = useDragControls();
++  const reduceMotion = useReducedMotion();
++  const [open, setOpen] = useState(false);
++  const startX = useRef(0);
++
++  const settle = (target: number) => {
++    setOpen(target !== 0);
++    if (reduceMotion) x.set(target);
++    else void animate(x, target, { type: "spring", stiffness: 520, damping: 42 });
++  };
++
++  const remove = () => {
++    void hapticNotify("warning");
++    setOpen(false);
++    x.set(0);
++    onRemove();
++  };
++
++  const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
++    if (!enabled) return;
++    const target = event.target as HTMLElement;
++    if (event.pointerType === "mouse" && target.closest("input, textarea, button, select")) return;
++    controls.start(event);
++  };
++
++  return (
++    <div className="relative overflow-hidden">
++      {enabled && <button
++        type="button"
++        onClick={remove}
++        aria-label={label}
++        // Con teclado también se llega: al enfocarlo, la fila se aparta y lo deja a la vista.
++        onFocus={() => { if (!open) settle(-REVEAL); }}
++        onBlur={() => settle(0)}
++        className="absolute inset-y-0 right-0 flex w-[88px] items-center justify-center bg-destructive text-destructive-foreground"
++      >
++        <Trash2 className="h-[18px] w-[18px]" aria-hidden="true" />
++      </button>}
++      <motion.div
++        drag="x"
++        dragListener={false}
++        dragControls={controls}
++        dragDirectionLock
++        dragMomentum={false}
++        dragConstraints={{ left: -REVEAL, right: 0 }}
++        dragElastic={{ left: 0.6, right: 0 }}
++        onPointerDown={onPointerDown}
++        onDragStart={() => { startX.current = x.get(); }}
++        onDragEnd={(_, info) => {
++          const travelled = startX.current + info.offset.x;
++          if (travelled < -FULL_SWIPE) { remove(); return; }
++          settle(travelled < -REVEAL / 2 ? -REVEAL : 0);
++        }}
++        style={{ x, touchAction: "pan-y" }}
++        className="relative bg-card"
++      >
++        {children}
++      </motion.div>
++    </div>
++  );
++};
++
++export default SwipeToRemove;
+diff --git a/src/app/pages/Welcome.tsx b/src/app/pages/Welcome.tsx
+index 196abaf..b79d44d 100644
+--- a/src/app/pages/Welcome.tsx
++++ b/src/app/pages/Welcome.tsx
+@@ -109,7 +109,6 @@ const Welcome = () => {
+           type="button"
+           onClick={() => { void hapticTap(); navigate("/signup?free=true"); }}
+           className="w-full h-[52px] rounded-media bg-primary text-primary-foreground type-body font-semibold tracking-[-0.015em] flex items-center justify-center gap-1.5 transition-transform duration-150 ease-out active:scale-[0.98]"
+->>>>>>> 031cb1f5 (F3 · app: radios y color suelto normalizados a tokens)
+         >
+           Crear mi rutina gratis
+         </button>
+diff --git a/src/shared/test/platformParity.test.ts b/src/shared/test/platformParity.test.ts
+index 6314fd8..82e8e72 100644
+--- a/src/shared/test/platformParity.test.ts
++++ b/src/shared/test/platformParity.test.ts
+@@ -526,4 +526,67 @@ describe("paridad web ↔ apps nativas", () => {
+     expect(read("src/app/components/admin/ExerciseLibrary.tsx")).toContain("<CatalogImport ");
+     expect(read("native/Autopilot/Features/Admin/AdminExercises.swift")).toContain("AdminCatalogImportCard {");
+   });
++
++  it("Pestañas como iOS: cada una con su pila y su scroll, título grande que se encoge y tocar la activa vuelve arriba, en la web y en la app", () => {
++    const web = read("src/app/components/mobile/MobileAppShell.tsx");
++    expect(web).toContain("scrollMemory.current[active] = element.scrollTop");
++    expect(web).toContain('scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" })');
++    // iPhone: TabView con una NavigationStack por pestaña y la barra flotante encima (sin la del sistema).
++    const shell = swift.slice(swift.indexOf("private var userTabs: some View"));
++    expect(shell).toContain("TabView(selection: current)");
++    expect(shell).toContain("NavigationStack {");
++    expect(shell).toContain(".toolbar(.hidden, for: .tabBar)");
++    expect(shell).toContain("NotificationCenter.default.post(name: .tabReselected, object: tab)");
++    expect(shell.slice(0, shell.indexOf("private var adminShell"))).not.toContain(".toolbar(.hidden, for: .navigationBar)");
++    expect(swift).toContain(".navigationBarTitleDisplayMode(section == .home ? .inline : .large)");
++    expect(read("native/Autopilot/App/AutopilotApp.swift")).toContain("NavigationBarStyle.apply()");
++    for (const [file, tab] of [
++      ["native/Autopilot/Features/Home/HomeView.swift", "home"],
++      ["native/Autopilot/Features/Train/TrainView.swift", "train"],
++      ["native/Autopilot/Features/Progress/ProgressScreen.swift", "progress"],
++      ["native/Autopilot/Features/Other/OtherViews.swift", "nutrition"],
++    ]) {
++      const src = read(file);
++      expect(src, file).toContain(`.scrollsToTopOnReselect(.${tab})`);
++      expect(src, file).toContain(".id(ScrollTop.id)");
++    }
++  });
++
++  it("Empezar con un toque desde Hoy, como Hevy: la píldora abre el entreno, en la web y en la app", () => {
++    const web = read("src/app/components/dashboard/HomeOverview.tsx");
++    expect(web).toContain("Empezar entreno");
++    expect(web).toContain("if (onStartWorkout) onStartWorkout();");
++    const app = read("native/Autopilot/Features/Home/HomeView.swift");
++    expect(app).toContain('Button(resumable ? "Continuar entreno" : "Empezar entreno") { startToday() }');
++    expect(app).toContain('Button((snapshot?.resumable ?? false) ? "Continuar entreno" : "Empezar entreno") { startToday() }');
++    expect(app).not.toMatch(/Text\("Ver la sesión"\)/);
++  });
++
++  it("Deslizar una serie a la izquierda la quita (siempre queda una), en la web y en la app", () => {
++    const web = read("src/app/components/dashboard/WorkoutTracker.tsx");
++    expect(web).toContain("<SwipeToRemove key={si}");
++    expect(web).toContain("enabled={sets.length > 1} onRemove={() => removeSet(ex.name, si)}");
++    expect(web).toContain("if (sets.length <= 1) return logs;");
++    const app = read("native/Autopilot/Features/Train/WorkoutView.swift");
++    expect(app).toContain('.swipeToRemove("Quitar serie", enabled: (workout.draft.logs[exercise.name]?.count ?? 0) > 1)');
++    expect(read("native/Autopilot/Features/Train/ActiveWorkout.swift")).toContain("sets.count > 1 else { return }");
++    // Mismo gesto: descubre el botón a 88 y quita la fila al pasar de 180.
++    const webSwipe = read("src/app/components/workout-parts/SwipeToRemove.tsx");
++    const appSwipe = read("native/Autopilot/Design/Components.swift");
++    expect(webSwipe).toContain("const REVEAL = 88;");
++    expect(webSwipe).toContain("const FULL_SWIPE = 180;");
++    expect(appSwipe).toContain("private let reveal: CGFloat = 88");
++    expect(appSwipe).toContain("private let fullSwipe: CGFloat = 180");
++  });
++
++  it("Las hojas que se cierran deslizando enseñan la barrita, en la web y en la app", () => {
++    expect(read("src/shared/components/ui/drawer.tsx")).toContain("rounded-full bg-muted-foreground/40");
++    for (const file of [
++      "native/Autopilot/Features/Home/HomeView.swift",
++      "native/Autopilot/Features/Account/AccountView.swift",
++      "native/Autopilot/Features/Auth/WhoIsTrainingView.swift",
++      "native/Autopilot/Features/Auth/LoginView.swift",
++    ]) expect(read(file), file).toContain(".presentationDragIndicator(.visible)");
++    expect(read("native/Autopilot/Features/Train/WorkoutView.swift").split(".presentationDragIndicator(.visible)").length - 1).toBeGreaterThanOrEqual(4);
++  });
+ });
+-- 
+2.43.0
+

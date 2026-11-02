@@ -8,6 +8,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import Screen from "@/shared/components/native/Screen";
 import { hapticSelection } from "@/shared/lib/native";
 import { cn } from "@/shared/lib/utils";
+import { EMAIL_ERROR } from "@/shared/lib/palette";
 
 type Msg = { customHtml: string; subject: string; templateData?: Record<string, unknown> };
 
@@ -39,7 +40,7 @@ export default function EmailPreview() {
       setSubject((msg?.subject?.trim()) || (data.subject ?? ""));
     } catch (e: unknown) {
       if (id === inflight.current) {
-        setRenderedHtml(`<pre style="padding:24px;color:#b00020;font-family:monospace">Error: ${errorMessage(e) || "No se pudo cargar la vista previa"}</pre>`);
+        setRenderedHtml(`<pre style="padding:24px;color:${EMAIL_ERROR};font-family:monospace">Error: ${errorMessage(e) || "No se pudo cargar la vista previa"}</pre>`);
       }
     } finally {
       if (id === inflight.current) setLoading(false);

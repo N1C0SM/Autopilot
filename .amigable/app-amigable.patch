@@ -1,0 +1,1268 @@
+From 7d41636c79ef31f762acad520b887996140b5e39 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Fri, 30 Oct 2026 18:32:56 +0000
+Subject: [PATCH 1/2] =?UTF-8?q?Primer=20uso=20m=C3=A1s=20amigable:=20invit?=
+ =?UTF-8?q?aci=C3=B3n=20con=20bot=C3=B3n=20sin=20rutina,=20sin=20=C2=ABtu?=
+ =?UTF-8?q?=20entrenador=C2=BB=20y=20una=20sola=20entrada=20en=20la=20web?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- iPhone/Mac: Inicio y Entrenar sin rutina muestran «Prepara tu rutina inicial gratis» con
+  botón que llama a generate-plan (sin force), como la web; ya no dicen «Hoy toca descansar».
+- Entrenar carga con «Cargando tu semana…» en vez de «Comprobando tu sesión…».
+- Web: fuera «entrenador» del estado sin rutina y del aviso de Nutrición.
+- Web: «Crear mi rutina» de la cabecera va directo al cuestionario; el escáner queda a un toque.
+- Test de paridad ampliado.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01BLvZLZEJn22kXoKHSBPeUf
+---
+ native/Autopilot/Core/Training.swift          | 11 +++++
+ native/Autopilot/Design/Components.swift      | 42 +++++++++++++++++++
+ native/Autopilot/Features/Home/HomeView.swift |  9 +++-
+ .../Autopilot/Features/Train/TrainView.swift  | 12 +++---
+ src/app/pages/Configurator.tsx                |  2 +
+ src/app/pages/Dashboard.tsx                   |  4 +-
+ src/shared/test/platformParity.test.ts        | 24 +++++++++++
+ src/web/components/PublicLayout.tsx           |  5 ++-
+ 8 files changed, 98 insertions(+), 11 deletions(-)
+
+diff --git a/native/Autopilot/Core/Training.swift b/native/Autopilot/Core/Training.swift
+index e6c280e..6974e03 100644
+--- a/native/Autopilot/Core/Training.swift
++++ b/native/Autopilot/Core/Training.swift
+@@ -320,6 +320,17 @@ enum TrainingRepo {
+ 
+     private static func planKey(_ userId: UUID) -> String { "plan|\(userId.uuidString.lowercased())" }
+ 
++    /// «Preparar mi rutina gratis» (web `Dashboard.tsx`): generate-plan sin `force`, así que una
++    /// rutina manual nunca se sustituye. Al terminar, la rutina nueva queda en caché y en disco.
++    static func generateStarterPlan(userId: UUID) async -> Bool {
++        struct Result: Decodable { let success: Bool?; let protected: Bool? }
++        guard let r: Result = try? await Backend.client.functions.invoke(
++            "generate-plan", options: FunctionInvokeOptions(body: ["user_id": userId.uuidString.lowercased()])),
++              r.success == true || r.protected == true else { return false }
++        _ = try? await plan(userId: userId, force: true)
++        return true
++    }
++
+     /// Rellena la foto de los ejercicios que no la traen en el plan (p. ej. rutinas creadas a
+     /// mano o generadas antes de tener imagen) con la de la biblioteca, buscando por nombre.
+     static func withImages(_ days: [DayPlan]) async -> [DayPlan] {
+diff --git a/native/Autopilot/Design/Components.swift b/native/Autopilot/Design/Components.swift
+index 8cfaaf3..9821264 100644
+--- a/native/Autopilot/Design/Components.swift
++++ b/native/Autopilot/Design/Components.swift
+@@ -45,6 +45,48 @@ struct RestCard<Action: View>: View {
+     }
+ }
+ 
++/// Sin rutina todavía (web `Dashboard.tsx`, `!hasPlan`): la misma invitación y el mismo botón,
++/// que la prepara con generate-plan. Nunca una pantalla vacía sin salida.
++struct StarterRoutineCard: View {
++    @EnvironmentObject private var session: SessionModel
++    var onReady: () async -> Void
++    @State private var preparing = false
++    @State private var failed = false
++
++    var body: some View {
++        VStack(spacing: 16) {
++            EmptyStateView(symbol: "dumbbell", title: "Prepara tu rutina inicial gratis",
++                           message: "Te la preparamos en unos segundos.")
++            Button { Task { await prepare() } } label: {
++                if preparing { BrandLoader().tint(.black).accessibilityHidden(true) } else { Text("Preparar mi rutina gratis") }
++            }
++            .buttonStyle(.pill)
++            .disabled(preparing)
++            .accessibilityLabel(preparing ? "Preparando…" : "Preparar mi rutina gratis")
++            if failed {
++                Text("No se ha podido preparar la rutina. Vuelve a intentarlo.")
++                    .font(.apFootnote).foregroundStyle(Palette.destructive).multilineTextAlignment(.center)
++            }
++        }
++    }
++
++    private func prepare() async {
++        guard !preparing, let userId = session.userId else { return }
++        Haptics.tap()
++        preparing = true
++        failed = false
++        defer { preparing = false }
++        if await TrainingRepo.generateStarterPlan(userId: userId) {
++            Haptics.success()
++            await onReady()
++        } else {
++            failed = true
++            Haptics.error()
++            A11y.announce("No se ha podido preparar la rutina. Vuelve a intentarlo.")
++        }
++    }
++}
++
+ /// Cabecera de la web (MobileHeader): campana y avatar en círculos de 30 pt dentro de 44 pt.
+ struct HeaderButtons: View {
+     let initial: String
+diff --git a/native/Autopilot/Features/Home/HomeView.swift b/native/Autopilot/Features/Home/HomeView.swift
+index 1f6a29a..ec7e1ab 100644
+--- a/native/Autopilot/Features/Home/HomeView.swift
++++ b/native/Autopilot/Features/Home/HomeView.swift
+@@ -128,6 +128,7 @@ struct HomeView: View {
+     private var stateLine: String {
+         guard let s = snapshot else { return "Preparando tu día." }
+         if s.completedToday { return "Buen trabajo." }
++        if s.noPlan == true { return "Empecemos." }
+         if s.plan?.isGym == true { return "A entrenar." }
+         if let p = s.plan, p.type == "actividad" { return "A \(p.sport ?? "moverte")." }
+         return "Hoy, a recuperar."
+@@ -268,6 +269,9 @@ struct HomeView: View {
+             // Siempre lo que toca HOY (como la web): hecho, descanso o la sesión de hoy.
+             if s.completedToday {
+                 doneCard(s.plan)
++            } else if s.noPlan == true {
++                // Sin rutina todavía (web `!hasPlan`): invitación con botón, nunca «descansa».
++                StarterRoutineCard { await load() }
+             } else if s.plan == nil {
+                 RestCard(title: "Hoy toca descansar", message: nextSession(s.scheduled) ?? "Tu plan aún no tiene sesiones.") {
+                     Button("Entrenar igualmente") { Haptics.tap(); onNavigate(.train) }
+@@ -622,7 +626,8 @@ struct HomeView: View {
+                              completedToday: completed,
+                              resumable: plan != nil && draftDay == plan?.day,
+                              firstName: firstName,
+-                             calories: calories)
++                             calories: calories,
++                             noPlan: model.error == nil && model.days.isEmpty)
+     }
+ 
+     /// Clave de la copia en disco: por usuario y día (lo de hoy caduca al cambiar el día).
+@@ -685,6 +690,8 @@ private struct TodaySnapshot: Codable {
+     var resumable = false
+     var firstName = ""
+     var calories: Int?
++    /// Aún no hay rutina (ni sesiones ni descansos): Inicio invita a prepararla.
++    var noPlan: Bool?
+     /// Gramos de proteína, carbos y grasas del plan (widget de Nutrición).
+     var macros: MacroSum?
+     /// Última mejor marca (widget de Récord).
+diff --git a/native/Autopilot/Features/Train/TrainView.swift b/native/Autopilot/Features/Train/TrainView.swift
+index e4868d2..d3bc9e3 100644
+--- a/native/Autopilot/Features/Train/TrainView.swift
++++ b/native/Autopilot/Features/Train/TrainView.swift
+@@ -39,15 +39,15 @@ struct TrainView: View {
+                 if model.loading && model.days.isEmpty {
+                     VStack(spacing: 12) {
+                         BrandLoader()
+-                        Text("Comprobando tu sesión…").font(.apSubhead).foregroundStyle(Palette.muted)
++                        Text("Cargando tu semana…").font(.apSubhead).foregroundStyle(Palette.muted)
+                     }
+                     .frame(maxWidth: .infinity, minHeight: 300)
++                } else if let error = model.error, model.days.isEmpty {
++                    EmptyStateView(symbol: "dumbbell", title: error,
++                                   message: "Desliza hacia abajo para volver a intentarlo.")
+                 } else if model.days.isEmpty {
+-                    routineBar
+-                    EmptyStateView(symbol: "dumbbell",
+-                                   title: model.error ?? "Aún no hay rutina",
+-                                   message: model.error == nil ? "En cuanto tengamos tu plan, verás aquí tu semana."
+-                                                               : "Desliza hacia abajo para volver a intentarlo.")
++                    // Sin rutina: la misma invitación que Inicio y la web, con su botón.
++                    StarterRoutineCard { await load() }
+                 } else {
+                     routineBar
+                     WeeklyRoutineView(days: model.days,
+diff --git a/src/app/pages/Configurator.tsx b/src/app/pages/Configurator.tsx
+index 30ff289..16044ba 100644
+--- a/src/app/pages/Configurator.tsx
++++ b/src/app/pages/Configurator.tsx
+@@ -356,6 +356,8 @@ const Configurator = () => {
+             )}
+             <Choices header="Objetivo" options={GOALS} value={c.goal} onChange={(v) => set("goal", String(v))} />
+             <PhotoChoices header={t("¿Dónde entrenas?", "¿Dónde entrenáis?")} options={FOCUS} value={c.focus} onChange={(v) => set("focus", v)} />
++            {/* La cabecera de la web ya no pasa por «¿Cómo creamos tu plan?»: el escáner sigue a un toque. */}
++            {!user && <p className="px-4 type-footnote text-muted-foreground">¿Prefieres empezar con fotos? <Link to="/scan" className="text-primary">Analiza tu físico con IA</Link></p>}
+           </>
+         )}
+ 
+diff --git a/src/app/pages/Dashboard.tsx b/src/app/pages/Dashboard.tsx
+index 3349ac8..7d27e93 100644
+--- a/src/app/pages/Dashboard.tsx
++++ b/src/app/pages/Dashboard.tsx
+@@ -583,7 +583,7 @@ const Dashboard = () => {
+   const sectionHelp = hasPlan && section === "nutrition" && nutrition
+     ? macros
+       ? "Estos son tus objetivos diarios. No hace falta clavarlos al gramo: acércate y sé constante."
+-      : "Las comidas son orientativas hasta que tu entrenador calcule objetivos con tu peso actual."
++      : "Las comidas son orientativas hasta que añadas tu peso actual para calcular tus objetivos."
+     : hasPlan && section === "progress" && user
+       ? "Sube una foto cada 2 semanas, misma luz y misma hora. Es la forma más fiable de ver el cambio."
+       : null;
+@@ -596,7 +596,7 @@ const Dashboard = () => {
+             className="flex-1"
+             icon={Dumbbell}
+             title="Prepara tu rutina inicial gratis"
+-            description="No necesitas contratar un entrenador para empezar."
++            description="Te la preparamos en unos segundos."
+           />
+           <Button size="lg" className="w-full md:w-auto md:self-center" disabled={preparingRoutine} onClick={async () => {
+             void hapticTap();
+diff --git a/src/shared/test/platformParity.test.ts b/src/shared/test/platformParity.test.ts
+index 5fedd4a..c0c5cdf 100644
+--- a/src/shared/test/platformParity.test.ts
++++ b/src/shared/test/platformParity.test.ts
+@@ -161,6 +161,30 @@ describe("paridad web ↔ apps nativas", () => {
+     expect(app).toMatch(/PlatformImage\.downscaled\(from: data, maxSide: 1600\)/);
+   });
+ 
++  it("Sin rutina: la misma invitación con botón en la web y en la app (Inicio y Entrenar), nunca «descansa»", () => {
++    const web = read("src/app/pages/Dashboard.tsx");
++    const card = read("native/Autopilot/Design/Components.swift");
++    for (const text of [
++      "Prepara tu rutina inicial gratis", "Te la preparamos en unos segundos.", "Preparar mi rutina gratis",
++      "Preparando…", "No se ha podido preparar la rutina. Vuelve a intentarlo.",
++    ]) {
++      expect(web, text).toContain(text);
++      expect(card, text).toContain(text);
++    }
++    // Las dos llaman a generate-plan sin `force`: una rutina manual nunca se sustituye.
++    expect(web).toMatch(/generatePlanGuarded\(supabase, \{ user_id: user\?\.id \}/);
++    expect(read("native/Autopilot/Core/Training.swift")).toMatch(/"generate-plan", options: FunctionInvokeOptions\(body: \["user_id": /);
++    expect(read("native/Autopilot/Features/Home/HomeView.swift")).toMatch(/s\.noPlan == true \{[\s\S]*?StarterRoutineCard/);
++    expect(read("native/Autopilot/Features/Train/TrainView.swift")).toMatch(/model\.days\.isEmpty \{[\s\S]*?StarterRoutineCard/);
++  });
++
++  it("Gratis y Plus no leen «tu entrenador» en el primer uso ni en Nutrición", () => {
++    const web = read("src/app/pages/Dashboard.tsx");
++    expect(web).not.toContain("No necesitas contratar un entrenador para empezar.");
++    expect(web).not.toContain("hasta que tu entrenador calcule");
++    expect(read("native/Autopilot/Features/Train/TrainView.swift")).not.toContain("En cuanto tengamos tu plan");
++  });
++
+   it("Scan: la misma ruedecita de espera en la web y en la app (anillo con %, mensajes y ritmo)", () => {
+     const shared = read("src/shared/lib/scanLoading.ts");
+     const view = read("src/app/components/scan/ScanAnalyzing.tsx");
+diff --git a/src/web/components/PublicLayout.tsx b/src/web/components/PublicLayout.tsx
+index b404c10..ddda173 100644
+--- a/src/web/components/PublicLayout.tsx
++++ b/src/web/components/PublicLayout.tsx
+@@ -6,6 +6,7 @@ import { Button } from "@/shared/components/ui/button";
+ import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from "@/shared/components/ui/sheet";
+ import { ListGroup, ListRow } from "@/shared/components/ui/list";
+ import { hapticTap } from "@/shared/lib/native";
++import { track } from "@/shared/lib/analytics";
+ import { supabase } from "@/shared/integrations/supabase/client";
+ import { socialLinkList } from "@/shared/lib/socialLinks";
+ import AppStoreBadges from "@/web/components/AppStoreBadges";
+@@ -76,10 +77,10 @@ export default function PublicLayout({ title, description, children }: { title:
+           {navigation.map(([to, label]) => <NavLink key={to} to={to} className={({ isActive }) => `inline-flex min-h-11 items-center px-3 type-subhead transition-colors active:opacity-60 ${isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}>{label}</NavLink>)}
+           {showApp && <NavLink to="/app" className="inline-flex min-h-11 items-center px-3 type-subhead text-muted-foreground transition-colors hover:text-foreground active:opacity-60">App móvil</NavLink>}
+           <Button variant="plain" asChild><Link to="/login">Iniciar sesión</Link></Button>
+-          <Button variant="tinted" asChild><Link to="/onboarding-choice">Crear mi rutina</Link></Button>
++          <Button variant="tinted" asChild><Link to="/onboarding" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source: "header" }); }}>Crear mi rutina</Link></Button>
+         </nav>
+         <div className="flex items-center lg:hidden">
+-          <Button variant="plain" asChild><Link to="/onboarding-choice" onClick={() => void hapticTap()}>Crear mi rutina</Link></Button>
++          <Button variant="plain" asChild><Link to="/onboarding" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source: "header" }); }}>Crear mi rutina</Link></Button>
+           <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+             <SheetTrigger asChild><Button variant="ghost" size="icon" aria-label="Abrir menú" onClick={() => void hapticTap()}><Menu className="h-6 w-6" strokeWidth={2} /></Button></SheetTrigger>
+             <SheetContent className="w-[min(90vw,360px)] overflow-y-auto px-4" onOpenAutoFocus={(e) => e.preventDefault()}>
+-- 
+2.43.0
+
+
+From 8acd66528b66da238cfedd39f16a72d50e2688e9 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Fri, 30 Oct 2026 18:42:24 +0000
+Subject: [PATCH 2/2] =?UTF-8?q?Probar=20sin=20cuenta=20en=20iPhone=20y=20M?=
+ =?UTF-8?q?ac:=20bienvenida,=20cuestionario=20de=203=20pasos=20y=20cuenta?=
+ =?UTF-8?q?=20con=20c=C3=B3digo=20al=20final?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- Sin sesión, la app abre una bienvenida (como Welcome.tsx) en vez de «Inicia sesión»;
+  con cuentas guardadas sigue abriendo el acceso.
+- El cuestionario calca /onboarding de la web (objetivo, semana, plan de arranque con
+  vista previa) y guarda lo mismo en onboarding; después prepara la rutina.
+- La cuenta se crea y se verifica con el código dentro de la app (sin Safari).
+- Acceso: «¿Olvidaste la contraseña?» con enlace por correo y «Crear una cuenta gratis»
+  lleva al cuestionario, igual que la web (que ya no pide la cuenta primero).
+- Test de paridad ampliado.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01BLvZLZEJn22kXoKHSBPeUf
+---
+ native/Autopilot.xcodeproj/project.pbxproj    |   4 +
+ native/Autopilot/Core/Session.swift           |   2 +
+ native/Autopilot/Design/Components.swift      |  12 +-
+ .../Autopilot/Features/Auth/LoginView.swift   |  78 ++-
+ .../Features/Auth/OnboardingView.swift        | 614 ++++++++++++++++++
+ .../Autopilot/Features/Shell/RootView.swift   |   5 +-
+ src/app/pages/Configurator.tsx                |   2 -
+ src/app/pages/Login.tsx                       |   2 +-
+ src/app/pages/Welcome.tsx                     |   7 +-
+ src/shared/test/platformParity.test.ts        |  67 ++
+ 10 files changed, 778 insertions(+), 15 deletions(-)
+ create mode 100644 native/Autopilot/Features/Auth/OnboardingView.swift
+
+diff --git a/native/Autopilot.xcodeproj/project.pbxproj b/native/Autopilot.xcodeproj/project.pbxproj
+index 6e360f3..0739e4d 100644
+--- a/native/Autopilot.xcodeproj/project.pbxproj
++++ b/native/Autopilot.xcodeproj/project.pbxproj
+@@ -19,6 +19,7 @@
+ 		39012991BB9D556B10C68E0C /* AdminViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 215885F8A59B676130290EEB /* AdminViews.swift */; };
+ 		3CD2ECE76B612C811CF540BA /* Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9E053FD3BBE7DBA136AACF9 /* Session.swift */; };
+ 		42B37E40810ED706D583D9A5 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2087F6E61B3A0D2AD7B75E7A /* LoginView.swift */; };
++		09C413657ED11B2C2B527169 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A36A965926418E1A9020D17F /* OnboardingView.swift */; };
+ 		45C59E19DE5DBDD2398090D4 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 922D1242F803ABF9EC7B42D3 /* Theme.swift */; };
+ 		4A4158E5A447BF480BE6C342 /* OtherViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A8C9FF8A9F9707540345088 /* OtherViews.swift */; };
+ 		4B50EE3EBA1FA6A1C98BA0D4 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 7D2A2A74EF26831307F6611A /* Supabase */; };
+@@ -64,6 +65,7 @@
+ 		1BF4A6FB7014FD1B1927D2F6 /* AdminAcquisition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminAcquisition.swift; sourceTree = "<group>"; };
+ 		1E2CBD0297E5F8BCF017644D /* Autopilot.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Autopilot.app; sourceTree = BUILT_PRODUCTS_DIR; };
+ 		2087F6E61B3A0D2AD7B75E7A /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
++		A36A965926418E1A9020D17F /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+ 		215885F8A59B676130290EEB /* AdminViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminViews.swift; sourceTree = "<group>"; };
+ 		2ABEA2EE0F4882F9B05D3C21 /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
+ 		2F83F6BD939EF251A757930A /* AdminExercises.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminExercises.swift; sourceTree = "<group>"; };
+@@ -229,6 +231,7 @@
+ 			isa = PBXGroup;
+ 			children = (
+ 				2087F6E61B3A0D2AD7B75E7A /* LoginView.swift */,
++				A36A965926418E1A9020D17F /* OnboardingView.swift */,
+ 				D2B6432A97E06E936915D024 /* WhoIsTrainingView.swift */,
+ 			);
+ 			path = Auth;
+@@ -411,6 +414,7 @@
+ 				1D236648E7FF2EC8FE627E00 /* HomeView.swift in Sources */,
+ 				5FDD42D966E843635893C724 /* InterFont.swift in Sources */,
+ 				42B37E40810ED706D583D9A5 /* LoginView.swift in Sources */,
++				09C413657ED11B2C2B527169 /* OnboardingView.swift in Sources */,
+ 				38108789AEF99008A7016FDA /* NutritionSetupView.swift in Sources */,
+ 				4A4158E5A447BF480BE6C342 /* OtherViews.swift in Sources */,
+ 				30C1A16D10C334C0D2EFB9D1 /* PlanEditorView.swift in Sources */,
+diff --git a/native/Autopilot/Core/Session.swift b/native/Autopilot/Core/Session.swift
+index 401bca2..288e53f 100644
+--- a/native/Autopilot/Core/Session.swift
++++ b/native/Autopilot/Core/Session.swift
+@@ -12,6 +12,8 @@ final class SessionModel: ObservableObject {
+     @Published private(set) var ready = false
+     /// Mostrar «¿Quién entrena?» al abrir (varias cuentas o cuenta protegida).
+     @Published var showPicker = false
++    /// Cuenta recién verificada guardando el cuestionario: se sigue en el alta hasta terminar.
++    @Published var finishingSignup = false
+ 
+     private let accounts = AccountStore.shared
+ 
+diff --git a/native/Autopilot/Design/Components.swift b/native/Autopilot/Design/Components.swift
+index 9821264..29b86b5 100644
+--- a/native/Autopilot/Design/Components.swift
++++ b/native/Autopilot/Design/Components.swift
+@@ -523,9 +523,15 @@ enum MacroEstimate {
+     static func load(userId: UUID) async -> (kcal: Double, p: Double, c: Double, f: Double)? {
+         struct O: Decodable { let weight: Double?; let sex: String?; let goal: String? }
+         guard let o: O = try? await Backend.client.from("onboarding").select("weight, sex, goal").eq("user_id", value: userId).single().execute().value,
+-              let w = o.weight, w > 30, w <= 300 else { return nil }
+-        let base = o.sex == "female" ? w * 28 : w * 32
+-        let kcal = max(1200, (o.goal == "lose_weight" ? base - 350 : o.goal == "gain_muscle" ? base + 300 : base).rounded())
++              let w = o.weight else { return nil }
++        return estimate(weight: w, sex: o.sex, goal: o.goal)
++    }
++
++    /// Como `resolveNutritionPreview` de la web: nil si el peso no es válido.
++    static func estimate(weight w: Double, sex: String?, goal: String?) -> (kcal: Double, p: Double, c: Double, f: Double)? {
++        guard w > 30, w <= 300 else { return nil }
++        let base = sex == "female" ? w * 28 : w * 32
++        let kcal = max(1200, (goal == "lose_weight" ? base - 350 : goal == "gain_muscle" ? base + 300 : base).rounded())
+         let p = (w * 2).rounded(), f = (kcal * 0.25 / 9).rounded()
+         return (kcal, p, max(0, ((kcal - p * 4 - f * 9) / 4).rounded()), f)
+     }
+diff --git a/native/Autopilot/Features/Auth/LoginView.swift b/native/Autopilot/Features/Auth/LoginView.swift
+index 422b35b..4b95a82 100644
+--- a/native/Autopilot/Features/Auth/LoginView.swift
++++ b/native/Autopilot/Features/Auth/LoginView.swift
+@@ -1,7 +1,10 @@
+ import SwiftUI
++import Supabase
+ 
+ /// Acceso con correo o usuario. Al añadir otra cuenta ofrece protegerla con contraseña.
+ struct LoginView: View {
++    /// Alta dentro de la app (cuestionario y cuenta al final); nil al añadir otra cuenta.
++    var onCreateAccount: (() -> Void)?
+     @EnvironmentObject private var session: SessionModel
+     @EnvironmentObject private var accounts: AccountStore
+     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+@@ -10,6 +13,7 @@ struct LoginView: View {
+     @State private var lockAccount = false
+     @State private var loading = false
+     @State private var error: String?
++    @State private var forgot = false
+     @FocusState private var focus: Field?
+     enum Field { case identifier, password }
+ 
+@@ -41,6 +45,9 @@ struct LoginView: View {
+                             .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 8)
+                             .accessibilityAddTraits(.updatesFrequently)
+                     }
++                    Button("¿Olvidaste la contraseña?") { Haptics.tap(); forgot = true }
++                        .font(.apSubhead).foregroundStyle(Palette.gold).frame(minHeight: 44)
++                        .frame(maxWidth: .infinity, alignment: .trailing).padding(.horizontal, 8)
+                     if offerLock {
+                         Toggle(isOn: $lockAccount) {
+                             Text("Pedir contraseña al elegir esta cuenta").font(.apSubhead).foregroundStyle(Palette.muted)
+@@ -76,9 +83,11 @@ struct LoginView: View {
+                             .font(.apSubhead).foregroundStyle(Palette.gold).frame(minHeight: 44)
+                             .accessibilityHint("Elige entre las cuentas guardadas en este dispositivo")
+                     }
+-                    Link("Crear una cuenta", destination: URL(string: "https://autopilotplan.app/signup")!)
+-                        .font(.apSubhead).foregroundStyle(Palette.muted).frame(minHeight: 44)
+-                        .accessibilityHint("Abre la web de registro")
++                    if let onCreateAccount {
++                        Button("Crear una cuenta gratis") { Haptics.tap(); onCreateAccount() }
++                            .font(.apSubhead).foregroundStyle(Palette.muted).frame(minHeight: 44)
++                            .accessibilityHint("Prepara tu rutina y crea la cuenta al final")
++                    }
+                 }
+             }
+             .frame(maxWidth: 420)
+@@ -88,6 +97,7 @@ struct LoginView: View {
+         // Con el teclado abierto (y texto grande) el botón no queda tapado: se puede arrastrar.
+         .scrollDismissesKeyboard(.interactively)
+         .screenBackground()
++        .sheet(isPresented: $forgot) { ForgotPasswordSheet(email: identifier.contains("@") ? identifier : "") }
+         // No se roba el foco del teclado a VoiceOver: quien usa lector de pantalla navega a su
+         // ritmo y un foco automático le haría perder el hilo del formulario.
+         .onAppear { if !A11y.voiceOver { focus = identifier.isEmpty ? .identifier : .password } }
+@@ -144,3 +154,65 @@ struct RoundCheckStyle: ToggleStyle {
+         .accessibilityHint(configuration.isOn ? "Desactiva pedir contraseña al elegir esta cuenta" : "Pide contraseña al elegir esta cuenta")
+     }
+ }
++
++/// «Recuperar contraseña» de la web (`ForgotPassword.tsx`): el enlace abre el cambio de
++/// contraseña en la web y después se entra aquí con la nueva.
++struct ForgotPasswordSheet: View {
++    @Environment(\.dismiss) private var dismiss
++    @State var email: String
++    @State private var sent = false
++    @State private var loading = false
++    @State private var error: String?
++
++    var body: some View {
++        VStack(spacing: 24) {
++            VStack(spacing: 12) {
++                Image(systemName: sent ? "envelope.badge" : "key.fill").font(.system(size: 36, weight: .semibold))
++                    .foregroundStyle(Palette.gold).accessibilityHidden(true)
++                Text(sent ? "Revisa tu correo" : "Recuperar contraseña").font(.apTitle1).accessibilityAddTraits(.isHeader)
++                Text(sent ? "Te hemos enviado un enlace a \(email) para restablecer tu contraseña." : "Te enviaremos un enlace a tu correo.")
++                    .font(.apSubhead).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
++            }
++            if !sent {
++                PillField(label: "Correo electrónico", text: $email, contentType: .email)
++                if let error {
++                    Text(error).font(.apFootnote).foregroundStyle(Palette.destructive)
++                        .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 8)
++                }
++            }
++            Button { if sent { dismiss() } else { Task { await send() } } } label: {
++                if loading { BrandLoader().tint(.black).accessibilityHidden(true) }
++                else { Text(sent ? "Volver al inicio de sesión" : "Enviar enlace") }
++            }
++            .buttonStyle(.pill)
++            .disabled(loading || (!sent && !email.contains("@")))
++            .accessibilityLabel(loading ? "Enviando…" : sent ? "Volver al inicio de sesión" : "Enviar enlace")
++            Spacer(minLength: 0)
++        }
++        .padding(24).padding(.top, 16)
++        .frame(maxWidth: 420)
++        .frame(maxWidth: .infinity)
++        .screenBackground()
++        .presentationDetents([.medium, .large])
++        .onChange(of: error) { _, text in
++            if let text { A11y.announce("Error: \(text)") }
++        }
++    }
++
++    private func send() async {
++        loading = true
++        error = nil
++        defer { loading = false }
++        do {
++            try await Backend.client.auth.resetPasswordForEmail(email.trimmingCharacters(in: .whitespacesAndNewlines),
++                                                                redirectTo: URL(string: "https://autopilotplan.com/reset-password"))
++            Haptics.success()
++            sent = true
++        } catch {
++            Haptics.error()
++            self.error = AccountStore.isNetworkError(error)
++                ? "Sin conexión. Inténtalo de nuevo cuando vuelvas a tener internet."
++                : "No hemos podido enviar el enlace. Revisa el correo e inténtalo de nuevo."
++        }
++    }
++}
+diff --git a/native/Autopilot/Features/Auth/OnboardingView.swift b/native/Autopilot/Features/Auth/OnboardingView.swift
+new file mode 100644
+index 0000000..02166ea
+--- /dev/null
++++ b/native/Autopilot/Features/Auth/OnboardingView.swift
+@@ -0,0 +1,614 @@
++import SwiftUI
++import Supabase
++
++/// Sin sesión: bienvenida (primer uso), acceso y el cuestionario que prepara la rutina antes de
++/// pedir la cuenta, como `/onboarding` en la web. Con cuentas guardadas se abre el acceso.
++struct SignedOutView: View {
++    @EnvironmentObject private var session: SessionModel
++    @EnvironmentObject private var accounts: AccountStore
++    @State private var screen: Screen? = OnboardingDraft.pendingEmail == nil ? nil : .quiz
++    enum Screen { case welcome, login, quiz }
++
++    private var current: Screen {
++        if session.addingAccount { return .login }
++        return screen ?? (accounts.accounts.isEmpty ? .welcome : .login)
++    }
++
++    var body: some View {
++        Group {
++            switch current {
++            case .welcome: WelcomeView(onStart: { go(.quiz) }, onLogin: { go(.login) })
++            case .login: LoginView(onCreateAccount: session.addingAccount ? nil : { go(.quiz) })
++            case .quiz: OnboardingQuizView(onExit: { go(accounts.accounts.isEmpty ? .welcome : .login) })
++            }
++        }
++        .transition(.opacity)
++    }
++
++    private func go(_ s: Screen) {
++        withAnimation(A11y.reduceMotion ? nil : .easeOut(duration: 0.2)) { screen = s }
++    }
++}
++
++/// Bienvenida de la app (web `Welcome.tsx`): icono, tres razones y una sola acción principal.
++struct WelcomeView: View {
++    var onStart: () -> Void
++    var onLogin: () -> Void
++
++    var body: some View {
++        VStack(spacing: 0) {
++            ScrollView {
++                VStack(spacing: 0) {
++                    Image("Logo").resizable().scaledToFit().frame(width: 80, height: 80)
++                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous)).accessibilityHidden(true)
++                    (Text("Te damos la bienvenida a\n") + Text("Autopilot").foregroundColor(Palette.gold))
++                        .font(.apLargeTitle).tracking(-0.7).multilineTextAlignment(.center)
++                        .padding(.top, 28).accessibilityAddTraits(.isHeader)
++                    VStack(alignment: .leading, spacing: 24) {
++                        feature("dumbbell.fill", "Entrenamiento", "Tu rutina se adapta cada semana a lo que haces y a cómo progresas.")
++                        feature("fork.knife", "Nutrición", "Calorías, macros y comidas que encajan con tu objetivo y tu día.")
++                        feature("sparkles", "En automático", "Tu plan se mantiene al día solo. Tú apareces, él se encarga del resto.")
++                    }
++                    .padding(.top, 40)
++                }
++                .frame(maxWidth: 420).padding(.horizontal, 24).padding(.top, 56)
++                .frame(maxWidth: .infinity)
++            }
++            VStack(spacing: 12) {
++                Button("Crear mi rutina gratis") { Haptics.tap(); onStart() }.buttonStyle(.pill)
++                Button("Ya tengo cuenta") { Haptics.tap(); onLogin() }
++                    .font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.gold).frame(minHeight: 44)
++                Text("Al continuar aceptas los [términos](https://autopilotplan.com/legal/terminos) y la [política de privacidad](https://autopilotplan.com/legal/privacidad).")
++                    .font(.apCaption).foregroundStyle(Palette.muted).multilineTextAlignment(.center).tint(Palette.muted)
++            }
++            .frame(maxWidth: 420).padding(.horizontal, 24).padding(.bottom, 16)
++        }
++        .screenBackground()
++    }
++
++    private func feature(_ symbol: String, _ title: String, _ text: String) -> some View {
++        HStack(alignment: .top, spacing: 16) {
++            Image(systemName: symbol).font(.system(size: 26, weight: .semibold)).foregroundStyle(Palette.gold)
++                .frame(width: 40).accessibilityHidden(true)
++            VStack(alignment: .leading, spacing: 4) {
++                Text(title).font(.apHeadline)
++                Text(text).font(.apSubhead).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
++            }
++        }
++        .accessibilityElement(children: .combine)
++    }
++}
++
++// MARK: - Respuestas del cuestionario
++
++/// Lo mismo que guarda el configurador de la web (`Configurator.tsx`). Se conserva en el
++/// dispositivo hasta que la cuenta está verificada, así no se pierde si se cierra la app.
++struct OnboardingDraft: Codable, Equatable {
++    var mode = "individual"
++    var partnerEmail = ""
++    var goal = ""
++    var focus = ""
++    var days: [Int] = []
++    var minutes = 55
++    var structure = "coach"
++    var weight = ""
++
++    private static let key = "onboarding-draft"
++    private static let emailKey = "onboarding-pending-email"
++
++    static func load() -> OnboardingDraft? {
++        UserDefaults.standard.data(forKey: key).flatMap { try? JSONDecoder().decode(OnboardingDraft.self, from: $0) }
++    }
++    func save() { UserDefaults.standard.set(try? JSONEncoder().encode(self), forKey: Self.key) }
++    static func clear() {
++        UserDefaults.standard.removeObject(forKey: key)
++        UserDefaults.standard.removeObject(forKey: emailKey)
++    }
++    /// Correo con la cuenta creada y el código aún sin introducir.
++    static var pendingEmail: String? {
++        get { UserDefaults.standard.string(forKey: emailKey) }
++        set { UserDefaults.standard.set(newValue, forKey: emailKey) }
++    }
++
++    var duo: Bool { mode == "pareja" }
++    var weightValue: Double? { Double(weight.replacingOccurrences(of: ",", with: ".")).flatMap { $0 > 30 ? $0 : nil } }
++    var validStep0: Bool { !goal.isEmpty && !focus.isEmpty && (!duo || partnerEmail.contains("@") && partnerEmail.contains(".")) }
++
++    /// Guarda las respuestas como la web, registra los consentimientos y prepara la rutina.
++    func persist(userId: UUID) async throws {
++        struct Availability: Encodable {
++            let days: String; let hours: String; let training_days: [Int]; let session_minutes: Int; let structure: String
++            let checkin_dow = 0; let checkin_time = "19:30"; let coach_style = "flexible"
++            let training_mode: String; let partner_email: String?
++        }
++        struct Row: Encodable {
++            let user_id: UUID; let goal: String; let primary_focus: String; let equipment_type: String
++            let intensity_level = 7; let weight: Double?; let availability: Availability
++        }
++        struct Consent: Encodable {
++            let user_id: UUID; let consent_type: String; let granted = true; let document_version = "1.0"
++            let user_agent = "Autopilot nativa"; let metadata = ["source": "configurator"]
++        }
++        let row = Row(user_id: userId, goal: goal, primary_focus: focus,
++                      equipment_type: focus == "gimnasio" ? "Gimnasio" : focus == "calistenia" ? "Calistenia" : "Mixto",
++                      weight: weightValue,
++                      availability: Availability(days: String(days.count), hours: String(format: "%g", (Double(minutes) / 60 * 100).rounded() / 100),
++                                                 training_days: days, session_minutes: minutes, structure: structure,
++                                                 training_mode: mode, partner_email: duo ? partnerEmail : nil))
++        try await Backend.client.from("onboarding").upsert(row, onConflict: "user_id").execute()
++        try? await Backend.client.from("user_consents")
++            .insert(["terms", "privacy", "health_data"].map { Consent(user_id: userId, consent_type: $0) }).execute()
++        try? await Backend.client.from("profiles").update(["plan_status": "plan_pending"]).eq("user_id", value: userId).execute()
++        _ = await TrainingRepo.generateStarterPlan(userId: userId)
++    }
++}
++
++// MARK: - Cuestionario (3 pasos) y cuenta al final
++
++/// Opciones del configurador de la web, con los mismos valores que se guardan.
++private enum Quiz {
++    struct Option: Identifiable { let v: String; let l: String; var d: String? = nil; var id: String { v } }
++    struct Day: Identifiable { let v: Int; let s: String; let l: String; var id: Int { v } }
++
++    static let goals = [Option(v: "lose_weight", l: "Perder grasa"), Option(v: "gain_muscle", l: "Ganar músculo"),
++                        Option(v: "recomp", l: "Recomposición"), Option(v: "general_health", l: "Fuerza y salud")]
++    static let focuses = [Option(v: "gimnasio", l: "Gimnasio"), Option(v: "calistenia", l: "Calistenia"), Option(v: "mixto", l: "Mixto")]
++    static let modes = [Option(v: "individual", l: "Individual", d: "Un plan solo para ti"),
++                        Option(v: "pareja", l: "En pareja", d: "Entrenáis juntos con un plan para los dos")]
++    static let durations = [Option(v: "40", l: "30–45 min"), Option(v: "55", l: "45–60 min"), Option(v: "75", l: "60–90 min")]
++    static let structures = [Option(v: "full_body", l: "Full Body"), Option(v: "torso_pierna", l: "Torso / Pierna"),
++                             Option(v: "ppl", l: "Empuje / Tirón / Pierna"), Option(v: "coach", l: "No lo sé, que Autopilot elija")]
++    static let week = [Day(v: 1, s: "L", l: "Lunes"), Day(v: 2, s: "M", l: "Martes"), Day(v: 3, s: "X", l: "Miércoles"),
++                       Day(v: 4, s: "J", l: "Jueves"), Day(v: 5, s: "V", l: "Viernes"), Day(v: 6, s: "S", l: "Sábado"),
++                       Day(v: 0, s: "D", l: "Domingo")]
++    /// Las mismas fotos de marca que la web (`brandPhotos.ts`).
++    static func photo(_ focus: String) -> URL? {
++        let file = ["gimnasio": "a31c7206-d2a4-4b31-856a-f5dec09b890e-1791475829849.png",
++                    "calistenia": "7ab0b27f-f296-4fa6-bf07-8f8b026b0832-1791475152675.png",
++                    "mixto": "d5e30e05-0791-4886-84a0-7b2695728225-1791475865184.png"][focus] ?? ""
++        return URL(string: "https://enebrcdrdnfkyduzyrzm.supabase.co/storage/v1/object/public/site-assets/exercise-images/" + file)
++    }
++    static func label(_ options: [Option], _ v: String) -> String { options.first { $0.v == v }?.l ?? "—" }
++}
++
++/// `Configurator.tsx` de la web: objetivo, semana y el plan de arranque; la cuenta, al final.
++struct OnboardingQuizView: View {
++    var onExit: () -> Void
++    @State private var c = OnboardingDraft.load() ?? OnboardingDraft()
++    @State private var step = OnboardingDraft.load().map { d in !d.validStep0 ? 0 : d.days.count < 2 ? 1 : 2 } ?? 0
++    @State private var accept = OnboardingDraft.pendingEmail != nil
++    @State private var creatingAccount = OnboardingDraft.pendingEmail != nil
++
++    private func t(_ solo: String, _ pair: String) -> String { c.duo ? pair : solo }
++    private var titles: [String] { [t("¿Qué quieres conseguir?", "¿Qué queréis conseguir?"), t("Tu semana", "Vuestra semana juntos"), t("Tu plan Autopilot", "Vuestro plan conjunto")] }
++    private var leads: [String] {
++        [t("Cuéntanos tu objetivo y dónde entrenas.", "Un mismo calendario, con cargas adaptadas a cada uno."),
++         t("Elige al menos dos días. Ajustamos el plan a tu semana.", "Elegid al menos dos días que os vengan bien a los dos."),
++         t("Así queda con tus respuestas. Crea tu cuenta para guardar tu plan completo.", "Así queda vuestro plan. Crea tu cuenta para guardarlo.")]
++    }
++    private var valid: [Bool] { [c.validStep0, c.days.count >= 2, accept] }
++
++    var body: some View {
++        if creatingAccount {
++            CreateAccountView(draft: c) { withAnimation { creatingAccount = false } }
++        } else {
++            quiz
++        }
++    }
++
++    private var quiz: some View {
++        VStack(spacing: 0) {
++            HStack {
++                Button { Haptics.tap(); if step == 0 { onExit() } else { step -= 1 } } label: {
++                    Image(systemName: "chevron.left").font(.system(size: 20, weight: .semibold)).frame(width: 44, height: 44)
++                }
++                .foregroundStyle(Palette.gold).accessibilityLabel("Atrás")
++                Spacer()
++                Text("\(step + 1) de \(titles.count)").font(.apHeadline)
++                Spacer()
++                Color.clear.frame(width: 44, height: 44)
++            }
++            .padding(.horizontal, 8)
++            ScrollView {
++                VStack(alignment: .leading, spacing: 0) {
++                    ProgressView(value: Double(step + 1), total: Double(titles.count)).tint(Palette.gold)
++                        .accessibilityLabel("Paso \(step + 1) de \(titles.count)")
++                    Text(titles[step]).font(.apTitle1).padding(.top, 24).accessibilityAddTraits(.isHeader)
++                    Text(leads[step]).font(.apSubhead).foregroundStyle(Palette.muted).padding(.top, 8)
++                    VStack(alignment: .leading, spacing: 32) { content }.padding(.top, 32).padding(.bottom, 16)
++                }
++                .frame(maxWidth: 560).padding(.horizontal, 16).frame(maxWidth: .infinity)
++            }
++            .scrollDismissesKeyboard(.interactively)
++            Group {
++                if step < titles.count - 1 {
++                    Button("Continuar") { Haptics.tap(); c.save(); step += 1 }.buttonStyle(.pill).disabled(!valid[step])
++                } else {
++                    Button("Guardar mi plan gratis") { Haptics.signature(); c.save(); withAnimation { creatingAccount = true } }
++                        .buttonStyle(.pill).disabled(!accept)
++                }
++            }
++            .frame(maxWidth: 560).padding(.horizontal, 16).padding(.vertical, 12)
++        }
++        .screenBackground()
++        .animation(A11y.reduceMotion ? nil : .easeInOut(duration: 0.25), value: step)
++    }
++
++    @ViewBuilder private var content: some View {
++        switch step {
++        case 0:
++            choices(nil, Quiz.modes, c.mode) { c.mode = $0 }
++            if c.duo {
++                group("Tu pareja de entreno") { PillField(label: "Email de tu pareja de entreno", text: $c.partnerEmail, contentType: .email) }
++            }
++            choices("Objetivo", Quiz.goals, c.goal) { c.goal = $0 }
++            group(t("¿Dónde entrenas?", "¿Dónde entrenáis?")) {
++                HStack(spacing: 10) { ForEach(Quiz.focuses) { photoChoice($0) } }
++            }
++        case 1:
++            group(t("¿Qué días vas a entrenar?", "¿Qué días entrenáis juntos?")) {
++                HStack(spacing: 4) {
++                    ForEach(Quiz.week) { d in
++                        let on = c.days.contains(d.v)
++                        Button { Haptics.selection(); if on { c.days.removeAll { $0 == d.v } } else { c.days.append(d.v) } } label: {
++                            Text(d.s).font(.apHeadline).foregroundStyle(on ? Palette.gold : Palette.foreground)
++                                .frame(width: 44, height: 44)
++                                .background(on ? Palette.gold.opacity(0.15) : Palette.card, in: Circle())
++                        }
++                        .buttonStyle(.plain).frame(maxWidth: .infinity)
++                        .accessibilityLabel(d.l).accessibilityAddTraits(on ? .isSelected : [])
++                    }
++                }
++            }
++            choices("Tiempo por sesión", Quiz.durations, String(c.minutes)) { c.minutes = Int($0) ?? 55 }
++            choices("Estructura", Quiz.structures, c.structure) { c.structure = $0 }
++            group("Tu peso en kg (opcional)") { PillField(label: "Tu peso en kg", text: $c.weight).decimalKeyboard() }
++        default:
++            summary
++            PlanPreviewView(focus: c.focus, goal: c.goal, weight: c.weightValue, days: c.days.count)
++            HStack(alignment: .top, spacing: 12) {
++                Button { Haptics.selection(); accept.toggle() } label: {
++                    Image(systemName: accept ? "checkmark.circle.fill" : "circle").font(.inter(size: 22))
++                        .foregroundStyle(accept ? Palette.gold : Palette.muted)
++                }
++                .buttonStyle(.plain).frame(minWidth: 44, minHeight: 44, alignment: .top)
++                .accessibilityLabel("Acepto los términos, la privacidad y el tratamiento de mis datos de salud")
++                .accessibilityValue(accept ? "Activado" : "Desactivado")
++                Text("Acepto los [términos](https://autopilotplan.com/legal/terminos), la [privacidad](https://autopilotplan.com/legal/privacidad) y el tratamiento de mis datos de salud para preparar mi plan.")
++                    .font(.apFootnote).foregroundStyle(Palette.muted).tint(Palette.gold).padding(.top, 2)
++            }
++            .padding(.horizontal, 4)
++        }
++    }
++
++    private var summary: some View {
++        VStack(alignment: .leading, spacing: 0) {
++            Text(t("TU OBJETIVO", "VUESTRO OBJETIVO")).font(.apFootnote).tracking(0.6).foregroundStyle(Palette.gold)
++            Text("\(Quiz.label(Quiz.goals, c.goal)) · \(Quiz.label(Quiz.focuses, c.focus))").font(.apTitle2).padding(.top, 4)
++            HStack(spacing: 6) {
++                ForEach(Quiz.week) { d in
++                    let on = c.days.contains(d.v)
++                    Text(d.s).font(.apHeadline).foregroundStyle(on ? Color.black : Palette.muted)
++                        .frame(width: 36, height: 36)
++                        .background(on ? Palette.gold : Palette.secondary, in: Circle()).frame(maxWidth: .infinity)
++                }
++            }
++            .padding(.top, 20)
++            .accessibilityElement(children: .ignore)
++            .accessibilityLabel("Días de entreno: \(Quiz.week.filter { c.days.contains($0.v) }.map(\.l).joined(separator: ", "))")
++            HStack(spacing: 8) {
++                stat("Días", String(c.days.count))
++                stat("Sesión", Quiz.label(Quiz.durations, String(c.minutes)))
++                stat("Peso", c.weight.isEmpty ? "—" : "\(c.weight) kg")
++            }
++            .padding(.top, 20)
++            Text((c.structure == "coach" ? "Distribución: Autopilot elige la mejor para \(c.days.count) días." : "Distribución: \(Quiz.label(Quiz.structures, c.structure)).")
++                 + (c.duo ? " Mismo calendario, cargas adaptadas a cada uno." : ""))
++                .font(.apSubhead).foregroundStyle(Palette.muted).padding(.top, 16)
++        }
++        .padding(20)
++        .frame(maxWidth: .infinity, alignment: .leading)
++        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
++    }
++
++    private func stat(_ k: String, _ v: String) -> some View {
++        VStack(spacing: 2) {
++            Text(v).font(.apHeadline).lineLimit(1).minimumScaleFactor(0.7)
++            Text(k).font(.apFootnote).foregroundStyle(Palette.muted)
++        }
++        .frame(maxWidth: .infinity).padding(.vertical, 12)
++        .background(Palette.secondary, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
++        .accessibilityElement(children: .combine)
++    }
++
++    private func group<Content: View>(_ header: String, @ViewBuilder _ content: () -> Content) -> some View {
++        VStack(alignment: .leading, spacing: 8) {
++            Text(header).font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.muted).padding(.horizontal, 16)
++                .accessibilityAddTraits(.isHeader)
++            content()
++        }
++    }
++
++    private func choices(_ header: String?, _ options: [Quiz.Option], _ value: String, _ set: @escaping (String) -> Void) -> some View {
++        let list = VStack(spacing: 0) {
++            ForEach(Array(options.enumerated()), id: \.element.id) { i, o in
++                Button { Haptics.selection(); set(o.v) } label: {
++                    HStack(spacing: 12) {
++                        VStack(alignment: .leading, spacing: 2) {
++                            Text(o.l).font(.apHeadline)
++                            if let d = o.d { Text(d).font(.apSubhead).foregroundStyle(Palette.muted) }
++                        }
++                        Spacer(minLength: 0)
++                        Image(systemName: "checkmark").font(.system(size: 17, weight: .bold)).foregroundStyle(Palette.gold)
++                            .opacity(o.v == value ? 1 : 0)
++                    }
++                    .padding(.horizontal, 16).frame(minHeight: 56).contentShape(Rectangle())
++                    .overlay(alignment: .bottom) { if i < options.count - 1 { Palette.separator.frame(height: 0.5).padding(.leading, 16) } }
++                }
++                .buttonStyle(.plain)
++                .accessibilityAddTraits(o.v == value ? .isSelected : [])
++            }
++        }
++        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
++        return Group { if let header { group(header) { list } } else { list } }
++    }
++
++    private func photoChoice(_ o: Quiz.Option) -> some View {
++        let on = c.focus == o.v
++        return Button { Haptics.selection(); c.focus = o.v } label: {
++            ZStack(alignment: .bottomLeading) {
++                CachedAsyncImage(url: Quiz.photo(o.v)) { $0.resizable().scaledToFill() } placeholder: { Palette.card }
++                    .frame(maxWidth: .infinity).aspectRatio(4 / 5, contentMode: .fit).clipped()
++                    .overlay { LinearGradient(colors: [.clear, .black.opacity(0.9)], startPoint: .center, endPoint: .bottom) }
++                Text(o.l).font(.apHeadline).foregroundStyle(.white).padding(12)
++            }
++            .overlay(alignment: .topTrailing) {
++                Image(systemName: "checkmark.circle.fill").font(.system(size: 24)).foregroundStyle(Color.black, Palette.gold)
++                    .padding(8).opacity(on ? 1 : 0)
++            }
++            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
++            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(on ? Palette.gold : .clear, lineWidth: 2))
++        }
++        .buttonStyle(.pressableCard)
++        .accessibilityLabel(o.l).accessibilityAddTraits(on ? .isSelected : [])
++    }
++}
++
++/// `PlanPreview.tsx` de la web: un día de ejemplo y la nutrición estimada con el peso.
++struct PlanPreviewView: View {
++    let focus: String
++    let goal: String
++    let weight: Double?
++    let days: Int
++
++    private var sample: (title: String, muscle: String, exercises: [(String, String)]) {
++        switch focus {
++        case "calistenia":
++            return ("Día 1 · Empuje (Calistenia)", "Pecho · Hombro · Tríceps",
++                    [("Flexiones lastradas", "4 × 8"), ("Fondos en paralelas", "4 × 6"), ("Pike push-ups", "3 × 10"), ("Plancha lastrada", "3 × 45s")])
++        case "mixto":
++            return ("Día 1 · Full body híbrido", "Cuerpo completo",
++                    [("Sentadilla con barra", "4 × 6"), ("Dominadas lastradas", "4 × 6"), ("Press militar", "3 × 8"), ("L-sit / Core", "3 × 30s")])
++        default:
++            return ("Día 1 · Empuje (Gimnasio)", "Pecho · Hombro · Tríceps",
++                    [("Press banca", "4 × 6-8"), ("Press militar", "4 × 8"), ("Aperturas con mancuerna", "3 × 10"), ("Extensiones de tríceps", "3 × 12")])
++        }
++    }
++
++    var body: some View {
++        let s = sample
++        let n = weight.flatMap { MacroEstimate.estimate(weight: $0, sex: nil, goal: goal) }
++        VStack(alignment: .leading, spacing: 32) {
++            VStack(alignment: .leading, spacing: 8) {
++                Text(s.title).font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.muted).padding(.horizontal, 16)
++                VStack(spacing: 0) {
++                    ForEach(Array(s.exercises.enumerated()), id: \.offset) { i, ex in
++                        HStack(spacing: 12) {
++                            Image(systemName: "dumbbell.fill").foregroundStyle(Palette.muted).accessibilityHidden(true)
++                            Text(ex.0).font(.apBody)
++                            Spacer(minLength: 8)
++                            Text(ex.1).font(.apBody).monospacedDigit().foregroundStyle(Palette.muted)
++                        }
++                        .padding(.horizontal, 16).frame(minHeight: 50)
++                        .overlay(alignment: .bottom) { if i < s.exercises.count - 1 { Palette.separator.frame(height: 0.5).padding(.leading, 16) } }
++                        .accessibilityElement(children: .combine)
++                    }
++                }
++                .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
++                Text("\(s.muscle) · +\(max(days - 1, 2)) sesiones que se completarán al crear el plan")
++                    .font(.apFootnote).foregroundStyle(Palette.muted).padding(.horizontal, 16)
++            }
++            HStack(alignment: .top, spacing: 16) {
++                Image(systemName: "fork.knife").font(.system(size: 24, weight: .semibold)).foregroundStyle(Palette.gold)
++                    .frame(width: 28).accessibilityHidden(true)
++                VStack(alignment: .leading, spacing: 0) {
++                    Text("Tu nutrición diaria").font(.apHeadline)
++                    if let n {
++                        HStack(spacing: 32) {
++                            figure(NumberText.integer(Int(n.kcal)), "kcal al día")
++                            figure("\(Int(n.p)) g", "proteína")
++                        }
++                        .padding(.top, 8)
++                        Text("Menús y cantidades al generar el plan.").font(.apSubhead).foregroundStyle(Palette.muted).padding(.top, 12)
++                    } else {
++                        Text("Añade tu peso para ver kcal y proteína personalizadas. Menús y cantidades al generar el plan.")
++                            .font(.apSubhead).foregroundStyle(Palette.muted).padding(.top, 4)
++                    }
++                }
++            }
++            .padding(.horizontal, 16)
++        }
++    }
++
++    private func figure(_ value: String, _ caption: String) -> some View {
++        VStack(alignment: .leading, spacing: 4) {
++            Text(value).font(.figure(size: 28))
++            Text(caption).font(.apSubhead).foregroundStyle(Palette.muted)
++        }
++        .accessibilityElement(children: .combine)
++    }
++}
++
++/// La cuenta, después de ver el plan (web `Signup.tsx` + `VerifyEmail.tsx`), sin salir de la app.
++struct CreateAccountView: View {
++    let draft: OnboardingDraft
++    var onBack: () -> Void
++    @EnvironmentObject private var session: SessionModel
++    @State private var name = ""
++    @State private var email = OnboardingDraft.pendingEmail ?? ""
++    @State private var password = ""
++    @State private var code = ""
++    @State private var codeSent = OnboardingDraft.pendingEmail != nil
++    @State private var loading = false
++    @State private var error: String?
++    @State private var notice: String?
++
++    var body: some View {
++        VStack(spacing: 0) {
++            HStack {
++                Button { Haptics.tap(); if codeSent { codeSent = false; OnboardingDraft.pendingEmail = nil } else { onBack() } } label: {
++                    Image(systemName: "chevron.left").font(.system(size: 20, weight: .semibold)).frame(width: 44, height: 44)
++                }
++                .foregroundStyle(Palette.gold).accessibilityLabel("Atrás")
++                Spacer()
++            }
++            .padding(.horizontal, 8)
++            ScrollView {
++                VStack(spacing: 28) {
++                    VStack(spacing: 12) {
++                        Image(systemName: codeSent ? "envelope.badge" : "sparkles").font(.system(size: 36, weight: .semibold))
++                            .foregroundStyle(Palette.gold).accessibilityHidden(true)
++                        Text(codeSent ? "Introduce el código" : "Crea tu cuenta").font(.apLargeTitle).accessibilityAddTraits(.isHeader)
++                        Text(codeSent ? "Te hemos enviado un código de 8 dígitos a \(email). Escríbelo aquí para activar tu cuenta."
++                                      : "Último paso para desbloquear tu plan.")
++                            .font(.apSubhead).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
++                    }
++                    VStack(spacing: 12) {
++                        if codeSent {
++                            PillField(label: "Código de verificación", text: $code).oneTimeCode()
++                                .onChange(of: code) { _, v in
++                                    let digits = String(v.filter(\.isNumber).prefix(8))
++                                    if digits != v { code = digits }
++                                }
++                        } else {
++                            PillField(label: "Nombre", text: $name)
++                            PillField(label: "Correo electrónico", text: $email, contentType: .email)
++                            PillField(label: "Contraseña, mínimo 6 caracteres", text: $password, secure: true, contentType: .password)
++                        }
++                        if let error {
++                            Text(error).font(.apFootnote).foregroundStyle(Palette.destructive)
++                                .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 8)
++                        } else if let notice {
++                            Text(notice).font(.apFootnote).foregroundStyle(Palette.muted)
++                                .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 8)
++                        }
++                    }
++                    VStack(spacing: 12) {
++                        Button { Task { if codeSent { await verify() } else { await create() } } } label: {
++                            if loading { BrandLoader().tint(.black).accessibilityHidden(true) }
++                            else { Text(codeSent ? "Verificar cuenta" : "Crear cuenta gratis") }
++                        }
++                        .buttonStyle(.pill)
++                        .disabled(loading || (codeSent ? ![6, 8].contains(code.count) : (email.isEmpty || password.count < 6)))
++                        .accessibilityLabel(loading ? (codeSent ? "Verificando" : "Creando cuenta…") : (codeSent ? "Verificar cuenta" : "Crear cuenta gratis"))
++                        if codeSent {
++                            Button("Reenviar código") { Task { await resend() } }
++                                .font(.apSubhead).foregroundStyle(Palette.gold).frame(minHeight: 44).disabled(loading)
++                        }
++                    }
++                }
++                .frame(maxWidth: 420).padding(.horizontal, 24).padding(.top, 16).frame(maxWidth: .infinity)
++            }
++            .scrollDismissesKeyboard(.interactively)
++        }
++        .screenBackground()
++        .onChange(of: error) { _, text in
++            if let text { A11y.announce("Error: \(text)") }
++        }
++    }
++
++    private func create() async {
++        guard !loading else { return }
++        error = nil
++        let mail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
++        guard !name.trimmingCharacters(in: .whitespaces).isEmpty else { return fail("El nombre es obligatorio.") }
++        loading = true
++        defer { loading = false }
++        struct Availability: Decodable { let emailTaken: Bool? }
++        if let a: Availability = try? await Backend.client.functions.invoke("check-availability", options: FunctionInvokeOptions(body: ["email": mail])),
++           a.emailTaken == true {
++            return fail("Este correo ya está registrado.")
++        }
++        do {
++            _ = try await Backend.client.auth.signUp(email: mail, password: password,
++                                                     data: ["display_name": .string(name.trimmingCharacters(in: .whitespaces)),
++                                                            "is_free": "true", "selected_plan": ""])
++            email = mail
++            OnboardingDraft.pendingEmail = mail
++            codeSent = true
++            Haptics.success()
++        } catch {
++            fail(AccountStore.isNetworkError(error)
++                 ? "No hemos podido crear tu cuenta. Comprueba tu conexión y vuelve a intentarlo."
++                 : String(describing: error).contains("weak_password") ? "La contraseña debe tener al menos 6 caracteres."
++                 : "No hemos podido crear tu cuenta. Revisa el correo y la contraseña.")
++        }
++    }
++
++    private func verify() async {
++        guard !loading else { return }
++        error = nil
++        loading = true
++        // Mientras se guardan las respuestas, la app no salta al panel con la rutina vacía.
++        session.finishingSignup = true
++        defer { loading = false; session.finishingSignup = false }
++        do {
++            let response = try await Backend.client.auth.verifyOTP(email: email, token: code, type: .signup)
++            // Si algo falla al guardar, Inicio ofrece «Preparar mi rutina gratis»: nunca queda vacío.
++            try? await draft.persist(userId: response.user.id)
++            OnboardingDraft.clear()
++            Haptics.success()
++        } catch {
++            let text = String(describing: error).lowercased()
++            fail(text.contains("too many") || text.contains("rate") || text.contains("429")
++                 ? "Demasiados intentos. Espera un minuto y vuelve a intentarlo."
++                 : AccountStore.isNetworkError(error) ? "No hemos podido verificar el código. Comprueba la conexión e inténtalo de nuevo."
++                 : "El código no es válido o ha caducado. Pide uno nuevo.")
++        }
++    }
++
++    private func resend() async {
++        error = nil
++        do {
++            try await Backend.client.auth.resend(email: email, type: .signup)
++            notice = "Código reenviado. Revisa tu correo."
++        } catch {
++            fail("No hemos podido reenviar el código. Espera un momento y vuelve a intentarlo.")
++        }
++    }
++
++    private func fail(_ message: String) {
++        error = message
++        Haptics.error()
++    }
++}
++
++extension View {
++    /// Teclado numérico con coma (solo iPhone/iPad).
++    @ViewBuilder func decimalKeyboard() -> some View {
++        #if os(iOS)
++        self.keyboardType(.decimalPad)
++        #else
++        self
++        #endif
++    }
++
++    /// Campo de código: el iPhone ofrece el que llega por correo encima del teclado.
++    @ViewBuilder func oneTimeCode() -> some View {
++        #if os(iOS)
++        self.textContentType(.oneTimeCode).keyboardType(.numberPad)
++        #else
++        self
++        #endif
++    }
++}
+diff --git a/native/Autopilot/Features/Shell/RootView.swift b/native/Autopilot/Features/Shell/RootView.swift
+index 1997a0e..1899c9f 100644
+--- a/native/Autopilot/Features/Shell/RootView.swift
++++ b/native/Autopilot/Features/Shell/RootView.swift
+@@ -112,8 +112,9 @@ struct RootView: View {
+                     .accessibilityLabel("Autopilot")
+             } else if session.showPicker {
+                 WhoIsTrainingView()
+-            } else if session.session == nil || session.addingAccount {
+-                LoginView()
++            } else if session.session == nil || session.addingAccount || session.finishingSignup {
++                // Primer uso sin cuenta: bienvenida y cuestionario; con cuentas guardadas, el acceso.
++                SignedOutView()
+             } else {
+                 MainShell()
+             }
+diff --git a/src/app/pages/Configurator.tsx b/src/app/pages/Configurator.tsx
+index 16044ba..30ff289 100644
+--- a/src/app/pages/Configurator.tsx
++++ b/src/app/pages/Configurator.tsx
+@@ -356,8 +356,6 @@ const Configurator = () => {
+             )}
+             <Choices header="Objetivo" options={GOALS} value={c.goal} onChange={(v) => set("goal", String(v))} />
+             <PhotoChoices header={t("¿Dónde entrenas?", "¿Dónde entrenáis?")} options={FOCUS} value={c.focus} onChange={(v) => set("focus", v)} />
+-            {/* La cabecera de la web ya no pasa por «¿Cómo creamos tu plan?»: el escáner sigue a un toque. */}
+-            {!user && <p className="px-4 type-footnote text-muted-foreground">¿Prefieres empezar con fotos? <Link to="/scan" className="text-primary">Analiza tu físico con IA</Link></p>}
+           </>
+         )}
+ 
+diff --git a/src/app/pages/Login.tsx b/src/app/pages/Login.tsx
+index 3098e87..b6a97dc 100644
+--- a/src/app/pages/Login.tsx
++++ b/src/app/pages/Login.tsx
+@@ -147,7 +147,7 @@ const Login = () => {
+       {appleSignInEnabled() && <AppleSignInButton label="sign-in" onClick={handleApple} />}
+       <div className={hideWithKeyboardClass}>
+         <Button asChild variant="plain" size="sm" className={authSecondaryActionClass}>
+-          <Link to="/signup" onClick={() => void hapticTap()}>Crear una cuenta</Link>
++          <Link to="/onboarding" onClick={() => void hapticTap()}>Crear una cuenta gratis</Link>
+         </Button>
+         <p className="flex justify-center type-footnote text-muted-foreground">
+           <Link to="/legal/terminos" className="inline-flex h-11 items-center px-2 transition-opacity active:opacity-60">Términos</Link>
+diff --git a/src/app/pages/Welcome.tsx b/src/app/pages/Welcome.tsx
+index 05180cd..9f59dd0 100644
+--- a/src/app/pages/Welcome.tsx
++++ b/src/app/pages/Welcome.tsx
+@@ -1,5 +1,5 @@
+ import { useNavigate, Navigate, Link } from "react-router-dom";
+-import { ArrowRight, Loader2, Dumbbell, Apple, Sparkles } from "lucide-react";
++import { Loader2, Dumbbell, Apple, Sparkles } from "lucide-react";
+ import { useAuth } from "@/shared/contexts/AuthContext";
+ import { Helmet } from "react-helmet-async";
+ import { hapticTap } from "@/shared/lib/native";
+@@ -107,11 +107,10 @@ const Welcome = () => {
+       <footer className="pb-6 pt-4 space-y-3 max-w-sm mx-auto w-full">
+         <button
+           type="button"
+-          onClick={() => { void hapticTap(); navigate("/signup?free=true"); }}
++          onClick={() => { void hapticTap(); navigate("/onboarding"); }}
+           className="w-full h-[52px] rounded-2xl bg-primary text-primary-foreground type-body font-semibold tracking-[-0.015em] flex items-center justify-center gap-1.5 transition-transform duration-150 ease-out active:scale-[0.98]"
+         >
+-          Continuar
+-          <ArrowRight className="w-4 h-4" />
++          Crear mi rutina gratis
+         </button>
+         <button
+           type="button"
+diff --git a/src/shared/test/platformParity.test.ts b/src/shared/test/platformParity.test.ts
+index c0c5cdf..b49cee8 100644
+--- a/src/shared/test/platformParity.test.ts
++++ b/src/shared/test/platformParity.test.ts
+@@ -178,6 +178,73 @@ describe("paridad web ↔ apps nativas", () => {
+     expect(read("native/Autopilot/Features/Train/TrainView.swift")).toMatch(/model\.days\.isEmpty \{[\s\S]*?StarterRoutineCard/);
+   });
+ 
++  it("Primer uso sin cuenta: misma bienvenida y mismo cuestionario de 3 pasos, con la cuenta al final", () => {
++    const welcome = read("src/app/pages/Welcome.tsx");
++    const quiz = read("src/app/pages/Configurator.tsx");
++    const preview = read("src/app/components/PlanPreview.tsx");
++    const app = read("native/Autopilot/Features/Auth/OnboardingView.swift");
++    for (const text of [
++      "Te damos la bienvenida a", "Crear mi rutina gratis", "Ya tengo cuenta",
++      "Tu rutina se adapta cada semana a lo que haces y a cómo progresas.",
++      "Calorías, macros y comidas que encajan con tu objetivo y tu día.",
++      "Tu plan se mantiene al día solo. Tú apareces, él se encarga del resto.",
++    ]) {
++      expect(welcome, text).toContain(text);
++      expect(app, text).toContain(text);
++    }
++    // La bienvenida lleva al cuestionario, no a registrarse primero.
++    expect(welcome).toMatch(/navigate\("\/onboarding"\)/);
++    expect(app).toMatch(/WelcomeView\(onStart: \{ go\(\.quiz\) \}/);
++    for (const text of [
++      "¿Qué quieres conseguir?", "Tu semana", "Tu plan Autopilot", "Cuéntanos tu objetivo y dónde entrenas.",
++      "Elige al menos dos días. Ajustamos el plan a tu semana.",
++      "Así queda con tus respuestas. Crea tu cuenta para guardar tu plan completo.",
++      "Perder grasa", "Ganar músculo", "Recomposición", "Fuerza y salud", "Gimnasio", "Calistenia", "Mixto",
++      "Un plan solo para ti", "Entrenáis juntos con un plan para los dos", "30–45 min", "45–60 min", "60–90 min",
++      "Empuje / Tirón / Pierna", "No lo sé, que Autopilot elija", "Tiempo por sesión", "Tu peso en kg (opcional)",
++      "Mismo calendario, cargas adaptadas a cada uno.", "Guardar mi plan gratis",
++      "y el tratamiento de mis datos de salud para preparar mi plan.",
++    ]) {
++      expect(quiz, text).toContain(text);
++      expect(app, text).toContain(text);
++    }
++    for (const text of ["Día 1 · Empuje (Gimnasio)", "Día 1 · Full body híbrido", "Pike push-ups", "Tu nutrición diaria",
++      "sesiones que se completarán al crear el plan", "Menús y cantidades al generar el plan."]) {
++      expect(preview, text).toContain(text);
++      expect(app, text).toContain(text);
++    }
++    // Mismos datos guardados: tabla, conflicto y disponibilidad.
++    expect(quiz).toMatch(/from\("onboarding"\)\.upsert\(/);
++    expect(app).toMatch(/from\("onboarding"\)\.upsert\(row, onConflict: "user_id"\)/);
++    for (const key of ["training_days", "session_minutes", "checkin_dow", "coach_style", "training_mode", "partner_email"]) {
++      expect(quiz, key).toContain(key);
++      expect(app, key).toContain(key);
++    }
++    // La cuenta se crea y se verifica con el código dentro de la app, como en la web.
++    for (const text of ["Crea tu cuenta", "Introduce el código", "Reenviar código", "Este correo ya está registrado.",
++      "El código no es válido o ha caducado. Pide uno nuevo."]) {
++      expect(read("src/app/pages/Signup.tsx") + read("src/app/pages/VerifyEmail.tsx"), text).toContain(text);
++      expect(app, text).toContain(text);
++    }
++    expect(app).toMatch(/verifyOTP\(email: email, token: code, type: \.signup\)/);
++    expect(read("native/Autopilot/Features/Shell/RootView.swift")).toMatch(/SignedOutView\(\)/);
++  });
++
++  it("Acceso: «¿Olvidaste la contraseña?» y «Crear una cuenta gratis» llevan a lo mismo en la web y en la app", () => {
++    const web = read("src/app/pages/Login.tsx");
++    const app = read("native/Autopilot/Features/Auth/LoginView.swift");
++    expect(web).toContain("¿Olvidaste la contraseña?");
++    expect(app).toContain("¿Olvidaste la contraseña?");
++    expect(web).toContain(`<Link to="/onboarding" onClick={() => void hapticTap()}>Crear una cuenta gratis</Link>`);
++    expect(app).toContain("Crear una cuenta gratis");
++    for (const text of ["Recuperar contraseña", "Te enviaremos un enlace a tu correo.", "Enviar enlace", "Revisa tu correo", "Volver al inicio de sesión"]) {
++      expect(read("src/app/pages/ForgotPassword.tsx"), text).toContain(text);
++      expect(app, text).toContain(text);
++    }
++    // Nada apunta al dominio antiguo desde el acceso.
++    expect(app).not.toContain("autopilotplan.app");
++  });
++
+   it("Gratis y Plus no leen «tu entrenador» en el primer uso ni en Nutrición", () => {
+     const web = read("src/app/pages/Dashboard.tsx");
+     expect(web).not.toContain("No necesitas contratar un entrenador para empezar.");
+-- 
+2.43.0
+

@@ -2,9 +2,10 @@ import { Home, Dumbbell, Apple, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import { PhoneAppBar, PhoneFrame, PhoneHome, PhoneShot, PhoneTabBar } from "@/web/components/PublicPhone";
 import { usePlanAvailability } from "@/shared/lib/planCatalog";
+import { MASK_OPAQUE } from "@/shared/lib/palette";
 import { supabase } from "@/shared/integrations/supabase/client";
 
-const FADE = "linear-gradient(to bottom, #000 55%, transparent 100%)";
+const FADE = `linear-gradient(to bottom, ${MASK_OPAQUE} 55%, transparent 100%)`;
 
 /** Founder photo, or their initial when it is missing or fails to load. */
 function OwnerAvatar({ photo, initial }: { photo: string | null; initial: string }) {
