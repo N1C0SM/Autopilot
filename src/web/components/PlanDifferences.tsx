@@ -34,7 +34,7 @@ const PlanDifferences = () => {
     ? <span className={`type-subhead font-semibold ${v === "Básico" ? "text-foreground" : "text-primary"}`}>{v}</span>
     : v
       ? <><Check className={`${compact ? "h-4 w-4" : "h-5 w-5"} shrink-0 text-primary`} aria-hidden="true" /><span className={compact ? "sr-only" : "type-subhead font-medium"}>Sí</span></>
-      : <><X className={`${compact ? "h-4 w-4" : "h-5 w-5"} shrink-0 text-muted-foreground/50`} aria-hidden="true" /><span className={compact ? "sr-only" : "type-subhead text-muted-foreground/60"}>No</span></>;
+      : <><X className={`${compact ? "h-4 w-4" : "h-5 w-5"} shrink-0 text-muted-foreground/50`} aria-hidden="true" /><span className={compact ? "sr-only" : "type-subhead text-muted-foreground"}>No</span></>;
 
   return (
     <section className="py-12 sm:py-16 bg-card">

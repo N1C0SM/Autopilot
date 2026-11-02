@@ -274,7 +274,7 @@ function ProductPreviewContent({ onPlans, onFree }: { onPlans: () => void; onFre
               {shownViews.map((v) => (
                 <button key={v.key} type="button" role="tab" aria-selected={view === v.key} onClick={() => changeView(v.key as View)}
                   className={cn(
-                    "h-9 rounded-full type-footnote font-semibold transition-colors",
+                    "flex h-11 items-center justify-center rounded-full px-1 type-footnote font-semibold transition-colors",
                     view === v.key ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground",
                   )}>
                   {v.label}

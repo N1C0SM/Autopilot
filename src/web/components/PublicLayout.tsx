@@ -101,8 +101,8 @@ export default function PublicLayout({ title, description, children }: { title: 
           ))}
           {showApp && <NavLink to="/app" className="inline-flex min-h-11 items-center px-3 text-[14px] font-medium text-muted-foreground transition-colors hover:text-foreground active:opacity-60">App móvil</NavLink>}
           <span aria-hidden="true" className="mx-2 h-4 w-px bg-border" />
-          <Button variant="plain" size="sm" asChild><Link to="/login">Iniciar sesión</Link></Button>
-          <Button variant="tinted" size="sm" asChild className="ml-1 px-4"><Link to="/onboarding" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source: "header" }); }}>Crear mi rutina</Link></Button>
+          <Button variant="plain" size="sm" asChild className="h-11"><Link to="/login">Iniciar sesión</Link></Button>
+          <Button variant="tinted" size="sm" asChild className="ml-1 h-11 px-4"><Link to="/onboarding" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source: "header" }); }}>Crear mi rutina</Link></Button>
         </nav>
         <div className="flex items-center gap-1 lg:hidden">
           <Button variant="tinted" size="sm" asChild className="h-11 px-4"><Link to="/onboarding" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source: "header" }); }}>Crear mi rutina</Link></Button>
@@ -157,7 +157,7 @@ export default function PublicLayout({ title, description, children }: { title: 
           {/* Dos columnas en móvil: los cinco enlaces legales quedaban en 3 + 2 con
               huecos de 44 px y una línea huérfana. */}
           <nav aria-label="Información legal" className="grid grid-cols-2 gap-x-5 sm:flex sm:flex-wrap sm:gap-x-5">
-            {[["aviso-legal", "Aviso legal"], ["terminos", "Términos"], ["privacidad", "Privacidad"], ["cookies", "Cookies"], ["disclaimer-medico", "Información de salud"]].map(([slug, label]) => <Link key={slug} className="inline-flex min-h-9 items-center transition-colors hover:text-foreground active:opacity-60 sm:min-h-11" to={`/legal/${slug}`}>{label}</Link>)}
+            {[["aviso-legal", "Aviso legal"], ["terminos", "Términos"], ["privacidad", "Privacidad"], ["cookies", "Cookies"], ["disclaimer-medico", "Información de salud"]].map(([slug, label]) => <Link key={slug} className="inline-flex min-h-11 items-center transition-colors hover:text-foreground active:opacity-60" to={`/legal/${slug}`}>{label}</Link>)}
           </nav>
         </div>
       </div>

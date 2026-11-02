@@ -395,7 +395,9 @@ body.keyboard-open main {
      still wins on every breakpoint. La etiqueta crece con Dynamic Type; la altura
      se mantiene en los 44 pt táctiles de la HIG. */
   .btn-md   { height: 44px; padding-inline: 18px; border-radius: 9999px; font-size: calc(17px * var(--type-scale)); line-height: calc(22px * var(--type-scale)); }
-  .btn-sm   { height: 34px; padding-inline: 14px; border-radius: 9999px; font-size: calc(15px * var(--type-scale)); line-height: calc(20px * var(--type-scale)); }
+  .btn-sm   { position: relative; height: 34px; padding-inline: 14px; border-radius: 9999px; font-size: calc(15px * var(--type-scale)); line-height: calc(20px * var(--type-scale)); }
+  /* El botón pequeño se ve compacto pero su zona táctil mide 44 pt. */
+  .btn-sm::before { content: ""; position: absolute; inset: -6px 0; }
   .btn-lg   { height: 50px; padding-inline: 24px; border-radius: 9999px; font-size: calc(17px * var(--type-scale)); line-height: calc(22px * var(--type-scale)); }
   .btn-icon { height: 44px; width: 44px; border-radius: 9999px; }
   
@@ -420,7 +422,7 @@ body.keyboard-open main {
     .btn-icon { height: 44px; width: 44px; }
     .field    { height: 44px; font-size: 16px; line-height: 22px; }
     .label-text { font-size: 15px; }
-    .menu-item  { min-height: 40px; padding-inline: 14px; font-size: 16px; line-height: 22px; }
+    .menu-item  { min-height: 44px; padding-inline: 14px; font-size: 16px; line-height: 22px; }
   }
 
   /* Menu / popover material (context menus, pickers). */

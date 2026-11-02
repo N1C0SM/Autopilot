@@ -70,8 +70,9 @@ const InsetRow = ({ children }: { children: ReactNode }) => (
   </div>
 );
 
-// Un campo dentro de una ListRow ocupa 36 px; el margen negativo mantiene la fila en 44 px.
-const rowField = "-my-[7px] h-9";
+// El campo dentro de una ListRow mide los mismos 44 pt que su zona táctil: 36 + márgenes
+// negativos dejaba un objetivo de 36 px, por debajo del mínimo del sistema.
+const rowField = "h-11";
 
 const MySchedule = () => {
   const { user } = useAuth();

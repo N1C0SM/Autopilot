@@ -76,7 +76,7 @@ const BlogPost = () => {
       <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4">
         <Helmet><title>Artículo no encontrado — Autopilot</title><meta name="robots" content="noindex" /></Helmet>
         <p className="text-muted-foreground mb-4">Este artículo no existe.</p>
-        <button onClick={() => navigate("/blog")} className="text-primary hover:underline type-subhead">← Volver a la Academia</button>
+        <button onClick={() => navigate("/blog")} className="inline-flex min-h-11 items-center text-primary hover:underline type-subhead">← Volver a la Academia</button>
       </div>
     );
   }

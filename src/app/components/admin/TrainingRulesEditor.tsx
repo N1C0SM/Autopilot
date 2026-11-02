@@ -249,7 +249,7 @@ function CountInput({ id, label, value, onChange, max, className }: {
         value={value}
         onChange={e => onChange(parseInt(e.target.value) || 0)}
         onFocus={e => e.currentTarget.select()}
-        className={cn("h-9 w-16 text-right", className)}
+        className={cn("w-16 px-2 text-right", className)}
       />
     </HitArea>
   );
@@ -299,7 +299,7 @@ function TextRow({ id, label, ariaLabel, value, onChange }: {
             autoCorrect="off"
             spellCheck={false}
             enterKeyHint="done"
-            className="h-9 w-24 px-2 text-right"
+            className="w-24 px-2 text-right"
           />
         </HitArea>
       }

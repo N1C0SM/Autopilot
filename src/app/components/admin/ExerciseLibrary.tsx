@@ -154,7 +154,8 @@ type MediaTone = "ok" | "missing" | "stale" | "error";
 
 const MEDIA_TONE_CLASS: Record<MediaTone, string> = {
   ok: "text-muted-foreground",
-  missing: "text-muted-foreground/60",
+  // «Sin imagen/vídeo» es un estado neutro, no un aviso: mismo gris legible que el resto.
+  missing: "text-muted-foreground",
   stale: "text-primary",
   error: "text-destructive",
 };

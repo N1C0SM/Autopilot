@@ -798,10 +798,12 @@ const SiteContentEditor = () => {
             </span>
           </label>
           {hero.hero_video_url && (
+            /* Sobre `bg-card` el rojo del sistema conserva 5.3:1; sobre gris medio se queda en 4.3. */
             <button
               type="button"
               onClick={() => { void hapticTap(); void removeHeroVideo(); }}
-              className={`${UPLOAD_CHIP} bg-secondary text-destructive active:bg-accent`}
+              className={`${UPLOAD_CHIP} bg-card text-destructive active:bg-accent`}
+              aria-label="Quitar vídeo"
             >
               Quitar vídeo
             </button>

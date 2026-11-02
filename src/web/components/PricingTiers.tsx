@@ -75,7 +75,7 @@ const PricingTiersContent = ({ onSelect, recommended = "training", hideFree }: P
                   </li>
                 ))}
                 {t.notIncluded.map((f) => (
-                  <li key={f} className="flex items-start gap-3 type-subhead text-muted-foreground/60">
+                  <li key={f} className="flex items-start gap-3 type-subhead text-muted-foreground">
                     <X className="h-5 w-5 shrink-0" aria-hidden="true" />
                     <span className="line-through">{f}</span>
                   </li>

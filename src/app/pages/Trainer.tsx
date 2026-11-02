@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/shared/contexts/AuthContext";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { MessageCircle, LogOut, Search, Users as UsersIcon, UserRound } from "lucide-react";
+import { ArrowLeftRight, MessageCircle, LogOut, Search, Users as UsersIcon, UserRound } from "lucide-react";
 import { Input } from "@/shared/components/ui/input";
 import { toast } from "sonner";
 import Chat from "@/app/components/Chat";
@@ -22,6 +22,7 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
+  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -29,6 +30,9 @@ import {
   SidebarProvider,
   useSidebar,
 } from "@/shared/components/ui/sidebar";
+import { hapticTap } from "@/shared/lib/native";
+import { openAccountPicker } from "@/shared/lib/accounts";
+import { supportsMultipleAccounts } from "@/shared/lib/platform";
 
 type TrainerSection = "users" | "chat" | "profile";
 
@@ -60,20 +64,25 @@ const TrainerSidebar = ({
     { title: SECTION_TITLES.chat, section: "chat", icon: MessageCircle },
     { title: SECTION_TITLES.profile, section: "profile", icon: UserRound },
   ];
+  const go = (target: TrainerSection) => {
+    void hapticTap();
+    onNavigate(target);
+    if (isMobile) setOpenMobile(false);
+  };
   return (
     <Sidebar collapsible="icon">
+      <SidebarHeader className="px-4 pb-1 pt-4 group-data-[collapsible=icon]:px-2">
+        {collapsed ? (
+          <span className="type-headline text-center text-primary">A</span>
+        ) : (
+          <div className="flex items-baseline gap-2">
+            <span className="type-title3 text-primary">Autopilot</span>
+            <span className="type-subhead text-muted-foreground">Entrenador</span>
+          </div>
+        )}
+      </SidebarHeader>
       <SidebarContent>
-        <div className="px-4 py-5">
-          {!collapsed ? (
-            <>
-              <span className="type-title3 text-primary">Autopilot</span>
-              <span className="ml-2 type-footnote text-muted-foreground">Entrenador</span>
-            </>
-          ) : (
-            <span className="type-title3 text-primary">A</span>
-          )}
-        </div>
-        <SidebarGroup>
+        <SidebarGroup className="py-1">
           <SidebarGroupLabel>Menú</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -82,14 +91,16 @@ const TrainerSidebar = ({
                 return (
                   <SidebarMenuItem key={item.section}>
                     <SidebarMenuButton
-                      onClick={() => { onNavigate(item.section); if (isMobile) setOpenMobile(false); }}
+                      isActive={isActive}
+                      tooltip={item.title}
+                      onClick={() => go(item.section)}
                       aria-current={isActive ? "page" : undefined}
-                      className={`transition-colors active:bg-sidebar-accent ${isActive ? "bg-sidebar-accent text-sidebar-primary font-medium" : ""}`}
+                      className="data-[active=true]:bg-primary/15 data-[active=true]:hover:bg-primary/20"
                     >
-                      <item.icon className="mr-2 h-4 w-4" />
+                      <item.icon aria-hidden="true" />
                       {!collapsed && (
-                        <span className="flex flex-1 items-center justify-between">
-                          {item.title}
+                        <span className="flex flex-1 items-center justify-between gap-2">
+                          <span className="truncate">{item.title}</span>
                           {item.section === "users" && (
                             <span className="type-footnote tabular-nums text-muted-foreground">{userCount}</span>
                           )}
@@ -105,9 +116,21 @@ const TrainerSidebar = ({
       </SidebarContent>
       <SidebarFooter>
         <SidebarMenu>
+          {supportsMultipleAccounts() && (
+            <SidebarMenuItem>
+              <SidebarMenuButton tooltip="Cambiar de cuenta" onClick={() => { void hapticTap(); openAccountPicker(); }}>
+                <ArrowLeftRight aria-hidden="true" />
+                {!collapsed && <span>Cambiar de cuenta</span>}
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          )}
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={onSignOut} className="text-muted-foreground active:text-destructive hover:text-destructive">
-              <LogOut className="mr-2 h-4 w-4" />
+            <SidebarMenuButton
+              tooltip="Cerrar sesión"
+              onClick={() => { void hapticTap(); onSignOut(); }}
+              className="text-destructive hover:text-destructive active:text-destructive"
+            >
+              <LogOut aria-hidden="true" />
               {!collapsed && <span>Cerrar sesión</span>}
             </SidebarMenuButton>
           </SidebarMenuItem>

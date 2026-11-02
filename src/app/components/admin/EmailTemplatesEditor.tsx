@@ -218,7 +218,7 @@ export default function EmailTemplatesEditor() {
         "editor.foreground": "#FFFFFF",
         "editor.lineHighlightBackground": "#2C2C2E",
         "editor.lineHighlightBorder": "#2C2C2E",
-        "editorLineNumber.foreground": "#636366",
+        "editorLineNumber.foreground": "#8E8E93",
         "editorLineNumber.activeForeground": "#EBEBF5",
         "editorCursor.foreground": "#D7B45B",
         "editor.selectionBackground": "#D7B45B44",

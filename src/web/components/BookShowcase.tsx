@@ -31,7 +31,8 @@ export default function BookShowcase() {
   const still = p < 0;
   // Abanico solo en escritorio con movimiento: en móvil, fila deslizable.
   const fan = wide && !still && !!books && books.length > 1;
-  const SCREENS = 3;
+  // Dos pantallas bastan para la coreografía: pila → abanico → fila.
+  const SCREENS = 2;
   const t = fan ? pin : 1;
 
   const isPack = (b: ShowBook) => Boolean(b.is_pack || /pack/i.test(b.title));
@@ -75,12 +76,12 @@ export default function BookShowcase() {
     const rest = books.filter((bk) => bk !== pack);
     const ordered = pack ? [...rest.slice(0, Math.floor(rest.length / 2)), pack, ...rest.slice(Math.floor(rest.length / 2))] : books;
     const n = ordered.length;
-    // 0→0.5: de pila a abanico · 0.5→0.85: de abanico a fila · >0.85: aparecen títulos y precios.
-    const a = Math.min(1, t / 0.4), b = Math.min(1, Math.max(0, (t - 0.4) / 0.32));
-    const infoO = Math.min(1, Math.max(0, (t - 0.75) / 0.12));
+    // 0→0.45: de pila a abanico · 0.45→0.8: de abanico a fila · >0.8: aparecen títulos y precios.
+    const a = Math.min(1, t / 0.45), b = Math.min(1, Math.max(0, (t - 0.45) / 0.28));
+    const infoO = Math.min(1, Math.max(0, (t - 0.78) / 0.1));
     const W = 190, GAP = 28;
     return <section ref={ref} aria-labelledby="guias-titulo" data-pinned className="relative" style={{ height: `${SCREENS * 100}vh` }}>
-      <div className="sticky top-0 flex h-screen flex-col justify-center overflow-hidden">
+      <div className="sticky top-0 flex h-[100svh] flex-col justify-center overflow-hidden">
         {header}
         <div className="relative mx-auto mt-10 h-[380px] w-full" style={{ perspective: "1600px" }}>
           {ordered.map((bk, i) => {
@@ -101,7 +102,7 @@ export default function BookShowcase() {
     </section>;
   }
 
-  return <section ref={ref} id="guias" aria-labelledby="guias-titulo" className="overflow-hidden py-16 sm:py-24">
+  return <section ref={ref} id="guias" aria-labelledby="guias-titulo" className="overflow-hidden py-14 sm:py-20">
     {header}
     <div className="mt-14 flex snap-x snap-mandatory gap-5 overflow-x-auto px-5 pb-6 [scrollbar-width:none] sm:justify-center sm:px-8 [&::-webkit-scrollbar]:hidden">
       {(books ?? Array.from({ length: 4 }, () => null)).map((b, i) => b

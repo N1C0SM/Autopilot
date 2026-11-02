@@ -1,6 +1,8 @@
 import {
   Sidebar,
   SidebarContent,
+  SidebarGroup,
+  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -10,8 +12,8 @@ import {
 import { Home, Dumbbell, Apple, MessageCircle, Settings, LogOut, Sparkles, Lock, ArrowLeftRight } from "lucide-react";
 import { openAccountPicker } from "@/shared/lib/accounts";
 import { supportsMultipleAccounts } from "@/shared/lib/platform";
-import autopilotLogo from "@/shared/assets/autopilot-logo.png";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/tooltip";
+import { hapticTap } from "@/shared/lib/native";
 import { cn } from "@/shared/lib/utils";
 
 const TOOLTIPS: Partial<Record<UserSection, string>> = {
@@ -45,6 +47,10 @@ const NAV_ITEMS: { title: string; section: UserSection; icon: typeof Home }[] = 
   { title: "Ajustes",       section: "settings",   icon: Settings },
 ];
 
+/**
+ * Barra lateral del usuario: la misma que Admin y Entrenador (logo, filas de 44 pt,
+ * «actual» en dorado al 15 %), para que el producto se sienta uno solo.
+ */
 const UserSidebar = ({
   section,
   onNavigate,
@@ -59,91 +65,51 @@ const UserSidebar = ({
 
   return (
     <Sidebar collapsible="icon">
+      <SidebarHeader className="px-4 pb-1 pt-4 group-data-[collapsible=icon]:px-2">
+        {collapsed ? (
+          <span className="type-headline text-center text-primary">A</span>
+        ) : (
+          <div className="flex items-baseline gap-2">
+            <span className="type-title3 text-primary">Autopilot</span>
+            <span className="type-subhead text-muted-foreground">App</span>
+          </div>
+        )}
+      </SidebarHeader>
+
       <SidebarContent>
+        <SidebarGroup className="py-1">
+          <SidebarMenu className="gap-1">
+            {NAV_ITEMS.filter((item) => !hiddenSections.includes(item.section)).map((item) => {
+              const isActive = section === item.section;
+              const isLocked = lockedSections.includes(item.section);
+              const hint = isLocked ? `${item.title} — no incluido en tu plan` : TOOLTIPS[item.section];
 
-        {/* ── Logo ── */}
-        <div className={cn(
-          "flex items-center min-w-0",
-          collapsed ? "justify-center px-0 py-6" : "px-6 py-6",
-        )}>
-          <img src={autopilotLogo} alt="Autopilot" className="h-8 w-8 shrink-0 rounded-full object-cover" />
-          {!collapsed && (
-            <span className="ml-3 font-display text-[15px] font-semibold uppercase tracking-[0.3em] text-foreground whitespace-nowrap select-none">
-              Autopilot
-            </span>
-          )}
-        </div>
-
-        {/* ── Separador sutil ── */}
-        <div className="mx-4 mb-3 h-px bg-sidebar-border/50" />
-
-        {/* ── Navegación principal ── */}
-        <SidebarMenu className="px-3 gap-1">
-          {NAV_ITEMS.filter((item) => !hiddenSections.includes(item.section)).map((item) => {
-            const isActive = section === item.section;
-            const isLocked = lockedSections.includes(item.section);
-
-            return (
-              <SidebarMenuItem key={item.section}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <SidebarMenuButton
-                      onClick={() => onNavigate(item.section)}
-                      className={cn(
-                        // web: más alto y con más padding
-                        "h-11 rounded-media px-3.5 gap-3.5 transition-all duration-150",
-                        "hover:bg-sidebar-accent/60",
-                        "active:scale-[0.97] active:opacity-75",
-                        isActive
-                          ? "bg-sidebar-accent text-sidebar-primary font-semibold"
-                          : "text-sidebar-foreground/60 font-normal",
-                      )}
-                    >
-                      {/* Indicador dorado lateral */}
-                      {isActive && (
-                        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-6 rounded-r-full bg-primary" />
-                      )}
-                      <item.icon
-                        className={cn(
-                          "shrink-0 transition-colors",
-                          collapsed ? "h-5 w-5" : "h-[18px] w-[18px]",
-                          isActive ? "text-primary" : "text-sidebar-foreground/40",
-                        )}
-                      />
-                      {!collapsed && (
-                        <span className="flex flex-1 items-center justify-between min-w-0">
-                          <span className={cn(
-                            "truncate text-[15px] leading-[22px]",
-                            isLocked && "text-sidebar-foreground/35",
-                          )}>
-                            {item.title}
-                          </span>
-                          {isLocked && <Lock className="h-3 w-3 shrink-0 text-sidebar-foreground/25" />}
-                        </span>
-                      )}
-                    </SidebarMenuButton>
-                  </TooltipTrigger>
-                  <TooltipContent
-                    side="right"
-                    className="type-footnote max-w-[220px] bg-card border-border text-foreground"
+              return (
+                <SidebarMenuItem key={item.section}>
+                  <SidebarMenuButton
+                    isActive={isActive}
+                    tooltip={hint}
+                    onClick={() => { void hapticTap(); onNavigate(item.section); }}
+                    aria-current={isActive ? "page" : undefined}
+                    className="data-[active=true]:bg-primary/15 data-[active=true]:hover:bg-primary/20"
                   >
-                    {isLocked
-                      ? `${item.title} — no incluido en tu plan`
-                      : (TOOLTIPS[item.section] || item.title)}
-                  </TooltipContent>
-                </Tooltip>
-              </SidebarMenuItem>
-            );
-          })}
-        </SidebarMenu>
-
+                    <item.icon aria-hidden="true" />
+                    {!collapsed && (
+                      <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
+                        <span className="truncate">{item.title}</span>
+                        {isLocked && <Lock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />}
+                      </span>
+                    )}
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              );
+            })}
+          </SidebarMenu>
+        </SidebarGroup>
       </SidebarContent>
 
-      {/* ── Footer: avatar + cerrar sesión ── */}
+      {/* ── Footer: cuenta + cerrar sesión ── */}
       <SidebarFooter className="pb-4">
-        <div className="mx-4 mb-3 h-px bg-sidebar-border/50" />
-
-        {/* Perfil */}
         {profileName && (() => {
           // En las apps nativas el perfil es el selector de cuentas, como el menú de usuarios del Mac.
           const canSwitch = supportsMultipleAccounts();
@@ -151,46 +117,38 @@ const UserSidebar = ({
           return <Row
             {...(canSwitch ? { type: "button" as const, onClick: () => openAccountPicker(), "aria-label": `${profileName}. Cambiar de cuenta` } : {})}
             className={cn(
-              "flex w-[calc(100%-1rem)] items-center gap-3 px-4 py-2.5 rounded-media mx-2 text-left",
-              "hover:bg-sidebar-accent/40 transition-colors",
-              canSwitch ? "cursor-pointer active:opacity-70" : "cursor-default",
-              collapsed && "justify-center px-0 mx-0",
+              "mx-2 flex w-[calc(100%-1rem)] items-center gap-3 rounded-media px-3 py-2.5 text-left",
+              "transition-colors hover:bg-accent active:opacity-70",
+              collapsed && "mx-0 justify-center px-0",
             )}>
-            <div className={cn(
-              "rounded-full bg-primary/15 flex items-center justify-center overflow-hidden shrink-0 ring-1 ring-primary/25",
-              collapsed ? "h-8 w-8" : "h-8 w-8",
-            )}>
+            <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full bg-primary/15 ring-1 ring-primary/25">
               {profileAvatar ? (
-                <img loading="lazy" decoding="async" src={profileAvatar} alt="" className="w-full h-full object-cover" />
+                <img loading="lazy" decoding="async" src={profileAvatar} alt="" className="h-full w-full object-cover" />
               ) : (
-                <span className="type-footnote font-bold text-primary">
+                <span className="flex h-full w-full items-center justify-center type-subhead font-bold text-primary">
                   {profileName.charAt(0).toUpperCase()}
                 </span>
               )}
             </div>
             {!collapsed && (
               <span className="min-w-0 flex-1">
-                <span className="block type-footnote text-sidebar-foreground/60 truncate leading-tight">{profileName}</span>
-                {canSwitch && <span className="block type-footnote text-primary leading-tight mt-0.5">Cambiar de cuenta</span>}
+                <span className="block truncate type-footnote text-muted-foreground">{profileName}</span>
+                {canSwitch && <span className="mt-0.5 block type-caption2 text-primary">Cambiar de cuenta</span>}
               </span>
             )}
-            {!collapsed && canSwitch && <ArrowLeftRight className="h-4 w-4 shrink-0 text-sidebar-foreground/40" aria-hidden="true" />}
+            {!collapsed && canSwitch && <ArrowLeftRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />}
           </Row>;
         })()}
 
-        {/* Cerrar sesión */}
-        <SidebarMenu className="px-3 mt-1">
+        <SidebarMenu className="mt-1 px-2">
           <SidebarMenuItem>
             <SidebarMenuButton
-              onClick={onSignOut}
-              className={cn(
-                "h-10 rounded-media px-3.5 gap-3.5 transition-all duration-150",
-                "text-sidebar-foreground/35 hover:text-destructive hover:bg-destructive/10",
-                "active:opacity-70",
-              )}
+              tooltip="Cerrar sesión"
+              onClick={() => { void hapticTap(); onSignOut(); }}
+              className="text-destructive hover:text-destructive active:text-destructive"
             >
-              <LogOut className="h-[18px] w-[18px] shrink-0" />
-              {!collapsed && <span className="text-[15px]">Cerrar sesión</span>}
+              <LogOut aria-hidden="true" />
+              {!collapsed && <span className="truncate">Cerrar sesión</span>}
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

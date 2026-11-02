@@ -53,7 +53,9 @@ function Row({ b, i }: { b: Benefit; i: number }) {
 }
 
 export default function Benefits() {
-  return <section aria-label="Ventajas de Autopilot" className="px-5 py-12 sm:px-8">
+  // El ritmo vertical lo marcan las filas (`py-16`): sumar otro relleno al contenedor
+  // duplicaba el aire entre secciones.
+  return <section aria-label="Ventajas de Autopilot" className="px-5 sm:px-8">
     {BENEFITS.map((b, i) => <Row key={b.title} b={b} i={i} />)}
   </section>;
 }
