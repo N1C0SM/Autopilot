@@ -133,7 +133,7 @@ describe("dashboard home overview", () => {
     expect(nutritionCard).toBeVisible();
     expect(progressCard).toBeVisible();
     // Los widgets van juntos en su rejilla, después de la acción principal.
-    expect(nutritionCard.closest(".grid")).toBe(progressCard.closest(".grid"));
+    expect(nutritionCard.closest("[data-home-rows]")).toBe(progressCard.closest("[data-home-rows]"));
     const startButton = screen.getByRole("button", { name: /Empezar Entrenamiento de fuerza/ });
     expect(startButton).toBeVisible();
     const allButtons = screen.getAllByRole("button");
