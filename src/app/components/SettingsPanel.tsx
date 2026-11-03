@@ -70,7 +70,7 @@ const blockTextarea = "rounded-none bg-transparent px-4";
 const FieldRow = ({ label, htmlFor, children }: { label: string; htmlFor: string; children: ReactNode }) => (
   <div className="group/row flex min-h-[44px] items-center px-4">
     <div className="flex min-h-[44px] min-w-0 flex-1 items-center gap-3 group-[:not(:last-child)]/row:sep-b">
-      <label htmlFor={htmlFor} className="shrink-0 type-body md:text-sm">{label}</label>
+      <label htmlFor={htmlFor} className="shrink-0 type-body">{label}</label>
       {children}
     </div>
   </div>
@@ -962,7 +962,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
             aria-label="Descanso personalizado en segundos"
             className={rowInput}
           />
-          <span className="shrink-0 type-body text-muted-foreground md:text-sm">segundos</span>
+          <span className="shrink-0 type-body text-muted-foreground">segundos</span>
         </FieldRow>
       </ListGroup>
 

@@ -141,7 +141,6 @@ struct FloatingTabBar: View {
                     .background {
                         if active {
                             Capsule().fill(Palette.gold.opacity(0.9))
-                                .shadow(color: Palette.gold.opacity(0.35), radius: 6, y: 6)
                                 .matchedGeometryEffect(id: "pill", in: pill)
                         }
                     }

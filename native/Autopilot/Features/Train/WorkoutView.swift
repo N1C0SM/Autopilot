@@ -316,7 +316,7 @@ struct SessionExerciseCard: View {
                     }
                     Spacer(minLength: 0)
                     if allDone {
-                        Image(systemName: "checkmark").font(.inter(size: 18, weight: .bold)).foregroundStyle(Palette.success)
+                        Image(systemName: "checkmark").font(.inter(size: 18, weight: .bold)).foregroundStyle(Palette.gold)
                             .frame(width: 36, height: 44)
                             .scaleEffect(justCompleted && !reduceMotion ? 1.25 : 1)
                             .animation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.45), value: justCompleted)
@@ -972,7 +972,7 @@ private struct WorkoutThumb: View {
             }
             if completed {
                 Color.black.opacity(0.5)
-                Image(systemName: "checkmark").font(.inter(.headline).weight(.bold)).foregroundStyle(Palette.success)
+                Image(systemName: "checkmark").font(.inter(.headline).weight(.bold)).foregroundStyle(Palette.gold)
             }
         }
         .frame(width: size, height: size)
@@ -1333,7 +1333,7 @@ struct WorkoutSummaryView: View {
                     let diff = workout.volumeKg - previousVolume
                     Text("\(diff >= 0 ? "+" : "−")\(NumberText.integer(Int(abs(diff)))) kg respecto a la última vez")
                         .font(.apFootnote)
-                        .foregroundStyle(diff >= 0 ? Palette.success : Palette.muted)
+                        .foregroundStyle(diff >= 0 ? Palette.gold : Palette.muted)
                         .padding(.bottom, 10)
                 }
                 brandFooter
@@ -1456,7 +1456,7 @@ struct WorkoutSummaryView: View {
                         ForEach(Array(items.enumerated()), id: \.offset) { i, it in
                             HStack(spacing: 10) {
                                 Text(it.name).font(.apSubhead).lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
-                                let color: Color = it.trend == 1 ? Palette.success : it.trend == -1 ? Palette.destructive : Palette.muted
+                                let color: Color = it.trend == 1 ? Palette.gold : Palette.muted
                                 Text(it.change)
                                     .font(.apFootnote.weight(.semibold).monospacedDigit())
                                     .foregroundStyle(color)
@@ -1551,8 +1551,8 @@ struct CelebrationConfetti: View {
 
     /// Reparto determinista (sin `random` en cada dibujado): mismo confeti en cada apertura.
     private let pieces: [Piece] = (0..<26).map { i in
-        let palette: [Color] = [Palette.gold, Palette.gold.opacity(0.65), Palette.success,
-                                Palette.foreground.opacity(0.9), Palette.gold.opacity(0.45)]
+        let palette: [Color] = [Palette.gold, Palette.gold.opacity(0.65), Palette.foreground,
+                                Palette.muted, Palette.gold.opacity(0.4)]
         return Piece(id: i,
                      x: (CGFloat(i) * 0.618).truncatingRemainder(dividingBy: 1),
                      delay: Double(i % 7) * 0.09,

@@ -1619,7 +1619,7 @@ struct ExerciseProgressSection: View {
                         .animation(reduceMotion ? nil : .snappy, value: metric)
                     HStack(spacing: 0) {
                         if hasLine, let change {
-                            Text("\(change > 0 ? "+" : "")\(r(change))%").fontWeight(.medium).foregroundStyle(change >= 0 ? Palette.success : Palette.foreground)
+                            Text("\(change > 0 ? "+" : "")\(r(change))%").fontWeight(.medium).foregroundStyle(change >= 0 ? Palette.gold : Palette.muted)
                             Text(" · ")
                         }
                         if hasLine, let best { Text("\(r(best)) \(unit) · ") }
@@ -1791,4 +1791,3 @@ private struct ProgressRecordThumb: View {
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
-

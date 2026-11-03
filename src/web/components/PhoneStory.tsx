@@ -1,6 +1,6 @@
 import { Home, Dumbbell, Apple, Sparkles } from "lucide-react";
 import { PublicTrainingScreen, PublicProgressScreen } from "@/web/components/PublicAppScreen";
-import { PhoneAppBar, PhoneFrame, PhoneHome, PhoneShot, PhoneTabBar } from "@/web/components/PublicPhone";
+import { PhoneAppBar, PhoneFrame, PhoneHome, PhoneTabBar } from "@/web/components/PublicPhone";
 import { useScrollProgress } from "@/shared/hooks/useScrollProgress";
 import { usePlanAvailability } from "@/shared/lib/planCatalog";
 
@@ -13,9 +13,9 @@ export default function PhoneStory() {
   // La recomendación de carga solo se anuncia donde el producto la calcula (Plus o campaña abierta).
   const suggest = plans.campaign || plans.plus;
   const scenes = [
-    { eyebrow: "Tu día está preparado", title: "Abres la app. Sabes qué toca.", text: "La rutina del día ya está organizada: no tienes que decidir qué ejercicio hacer.", shot: "/app-shots/hoy.jpg", fallback: <div className="px-4 pt-3"><PhoneHome plans={plans} /></div> },
-    { eyebrow: "Cada serie cuenta", title: "Entrena. Registra. Sigue.", text: "Apunta peso y repeticiones de cada serie; el historial de tus sesiones queda guardado.", shot: "/app-shots/registro.jpg", fallback: <PublicTrainingScreen active /> },
-    { eyebrow: "Visualiza tu progreso", title: "Mira cómo progresas.", text: suggest ? "Consulta tus registros y tu evolución. La siguiente carga se calcula con ellos." : "Consulta tus registros y entiende tu evolución.", shot: "/app-shots/progreso.jpg", fallback: <PublicProgressScreen /> },
+    { eyebrow: "Tu día está preparado", title: "Abres la app. Sabes qué toca.", text: "La rutina del día ya está organizada: no tienes que decidir qué ejercicio hacer.", screen: <div className="px-4 pt-3"><PhoneHome plans={plans} /></div> },
+    { eyebrow: "Cada serie cuenta", title: "Entrena. Registra. Sigue.", text: "Apunta peso y repeticiones de cada serie; el historial de tus sesiones queda guardado.", screen: <PublicTrainingScreen active /> },
+    { eyebrow: "Visualiza tu progreso", title: "Mira cómo progresas.", text: suggest ? "Consulta tus registros y tu evolución. La siguiente carga se calcula con ellos." : "Consulta tus registros y entiende tu evolución.", screen: <PublicProgressScreen /> },
   ];
   // Una pantalla y media por escena en escritorio: tiempo para leer y mirar; en móvil, una.
   const SCREENS = typeof window !== "undefined" && window.innerWidth >= 768 ? 3 : 2.5;
@@ -25,13 +25,7 @@ export default function PhoneStory() {
   const current = Math.min(scenes.length - 1, Math.floor(t));
 
   const phone = (i: number, style?: React.CSSProperties) => <div key={i} className="absolute inset-0" style={style} aria-hidden={i !== current}>
-    <PhoneShot
-      src={scenes[i].shot}
-      alt={scenes[i].title}
-      fallback={
-        <PhoneFrame screenClassName="h-[44rem]"><PhoneAppBar avatar="N" /><div className={`flex-1 overflow-hidden ${i === 1 ? "" : "pb-24"}`}>{scenes[i].fallback}</div>{i !== 1 && <PhoneTabBar tabs={[{ key: "home", label: "Hoy", icon: Home }, { key: "training", label: "Entrenar", icon: Dumbbell }, { key: "nutrition", label: "Nutrición", icon: Apple }, { key: "progress", label: "Progreso", icon: Sparkles }]} active={i === 0 ? "home" : "progress"} onSelect={() => undefined} />}</PhoneFrame>
-      }
-    />
+    <PhoneFrame screenClassName="h-[44rem]"><PhoneAppBar avatar="N" /><div className={`flex-1 overflow-hidden ${i === 1 ? "" : "pb-24"}`}>{scenes[i].screen}</div>{i !== 1 && <PhoneTabBar tabs={[{ key: "home", label: "Hoy", icon: Home }, { key: "training", label: "Entrenar", icon: Dumbbell }, { key: "nutrition", label: "Nutrición", icon: Apple }, { key: "progress", label: "Progreso", icon: Sparkles }]} active={i === 0 ? "home" : "progress"} onSelect={() => undefined} />}</PhoneFrame>
   </div>;
 
   if (still) return <section ref={ref} aria-label="Así funciona la app" className="space-y-16 px-5 py-20 sm:px-8">

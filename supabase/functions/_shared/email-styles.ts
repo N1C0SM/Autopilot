@@ -4,11 +4,11 @@
  *
  * Paleta:
  *   --background: #000000  (systemBackground dark)
- *   --card:       #111216  (secondarySystemGroupedBackground)
- *   --primary:    #D6B45B  (dorado de la app, hsl(43 61% 60%))
+ *   --card:       #141416  (bg-card)
+ *   --primary:    #D8B25E  (dorado de la app, hsl(41 61% 61%))
  *   --foreground: #FFFFFF
- *   --muted-fg:   #98989E  (secondaryLabel iOS)
- *   --border:     #1f2024  (opaque separator)
+ *   --muted-fg:   #A8A8AE  (muted-foreground)
+ *   --border:     #262629  (separador)
  */
 
 export const email = {
@@ -23,18 +23,15 @@ export const email = {
     maxWidth: '560px',
     margin: '0 auto',
     padding: '0',
-    backgroundColor: '#08090b',
+    backgroundColor: '#000000',
     borderRadius: '28px',
-    border: '1px solid #1f2024',
     overflow: 'hidden' as const,
   },
 
-  /** Cabecera con logotipo y línea dorada */
+  /** Cabecera sobria con la firma de marca. */
   header: {
-    backgroundColor: '#08090b',
+    backgroundColor: '#000000',
     padding: '36px 32px 0',
-    borderTop: '2px solid #D6B45B',
-    borderBottom: '1px solid #1f2024',
   },
 
   logoImg: {
@@ -45,18 +42,17 @@ export const email = {
 
   logo: {
     fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", Arial, sans-serif',
-    fontSize: '13px',
+    fontSize: '20px',
     fontWeight: 700 as const,
-    color: '#FFFFFF',
-    letterSpacing: '0.42em',
-    textTransform: 'uppercase' as const,
+    color: '#D8B25E',
+    letterSpacing: '-0.02em',
     margin: '0 0 24px',
     display: 'block' as const,
   },
 
   /** Cuerpo principal */
   body: {
-    backgroundColor: '#08090b',
+    backgroundColor: '#000000',
     padding: '32px 32px 0',
   },
 
@@ -82,28 +78,28 @@ export const email = {
 
   text: {
     fontSize: '15px',
-    color: '#EBEBF5CC', // ~85% white, equivale a label iOS dark
+    color: '#E4E4E7',
     lineHeight: '1.6',
     margin: '0 0 20px',
   },
 
   textMuted: {
     fontSize: '15px',
-    color: '#98989E', // secondaryLabel iOS dark
+    color: '#A8A8AE',
     lineHeight: '1.6',
     margin: '0 0 20px',
   },
 
   small: {
     fontSize: '13px',
-    color: '#98989E',
+    color: '#A8A8AE',
     lineHeight: '1.6',
     margin: '0 0 16px',
   },
 
   /** Botón CTA principal — amarillo de marca */
   button: {
-    backgroundColor: '#D6B45B',
+    backgroundColor: '#D8B25E',
     color: '#000000',
     fontSize: '15px',
     fontWeight: 700 as const,
@@ -121,16 +117,15 @@ export const email = {
 
   /** Card oscura para destacar info (código OTP, stats, etc.) */
   card: {
-    backgroundColor: '#111216',
+    backgroundColor: '#141416',
     borderRadius: '22px',
     padding: '20px 24px',
     margin: '0 0 24px',
-    border: '1px solid #1f2024',
   },
 
   /** Separador sutil */
   hr: {
-    borderColor: '#1f2024',
+    borderColor: '#262629',
     borderTopWidth: '1px',
     borderStyle: 'solid' as const,
     borderBottomWidth: 0,
@@ -144,37 +139,36 @@ export const email = {
     fontFamily: '"SF Mono", "Fira Code", "Courier New", Courier, monospace',
     fontSize: '32px',
     fontWeight: 700 as const,
-    color: '#D6B45B',
+    color: '#D8B25E',
     letterSpacing: '0',
-    backgroundColor: '#111216',
+    backgroundColor: '#141416',
     padding: '16px 12px',
-    borderRadius: '12px',
+    borderRadius: '999px',
     display: 'inline-block' as const,
-    border: '1px solid #1f2024',
+    border: 'none',
     margin: '0 0 24px',
   },
 
   link: {
-    color: '#D6B45B',
+    color: '#D8B25E',
     textDecoration: 'underline' as const,
     wordBreak: 'break-all' as const,
   },
 
   linkMuted: {
-    color: '#98989E',
+    color: '#A8A8AE',
     textDecoration: 'underline' as const,
   },
 
   /** Footer de cierre */
   footer: {
-    backgroundColor: '#08090b',
+    backgroundColor: '#000000',
     padding: '24px 32px 40px',
-    borderTop: '1px solid #1f2024',
   },
 
   footerText: {
     fontSize: '13px',
-    color: '#636366', // tertiaryLabel iOS dark
+    color: '#A8A8AE',
     lineHeight: '1.6',
     margin: '0',
   },

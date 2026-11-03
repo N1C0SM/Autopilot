@@ -35,14 +35,22 @@ vi.mock("@/shared/lib/planCatalog", async () => {
 afterEach(cleanup);
 
 describe("public product preview", () => {
-  it("shows real app screenshots and switches them from the visible tabs", () => {
+  it("renders read-only screens from sample data and switches them from the visible tabs", () => {
     render(<ProductPreview onPlans={() => {}} />);
-    expect(screen.getByRole("img", { name: /Pantalla Hoy/ })).toHaveAttribute("src", "/app-shots/hoy.jpg");
+    expect(screen.getByRole("heading", { name: /Hola, Nicolás/ })).toBeVisible();
+    expect(screen.getByText("Muestra interactiva · datos de ejemplo")).toBeVisible();
+
     fireEvent.click(screen.getByRole("tab", { name: "Nutrición" }));
-    expect(screen.getByRole("img", { name: /Pantalla Nutrición/ })).toHaveAttribute("src", "/app-shots/nutricion.jpg");
+    expect(screen.getByRole("heading", { name: "Tus objetivos diarios" })).toBeVisible();
     expect(screen.getByRole("tab", { name: "Nutrición" })).toHaveAttribute("aria-selected", "true");
+
     fireEvent.click(screen.getByRole("tab", { name: "Entrenar" }));
-    expect(screen.getByRole("img", { name: /Pantalla Entrenar/ })).toHaveAttribute("src", "/app-shots/registro.jpg");
+    expect(screen.getByRole("heading", { name: "Entrenar" })).toBeVisible();
+    expect(screen.queryByRole("group", { name: "Secciones de la demo" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Progreso" }));
+    expect(screen.getByRole("heading", { name: "Progreso" })).toBeVisible();
+    expect(screen.getByText("Datos de ejemplo")).toBeVisible();
   });
 
   it("presents macros as free and has no chat tab", () => {

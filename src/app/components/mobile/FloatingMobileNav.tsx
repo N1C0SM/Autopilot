@@ -69,7 +69,7 @@ const FloatingMobileNav = ({ active, items, label, layoutId, onChange, className
               {isActive && (
                 <motion.span
                   layoutId={`${layoutId}-active`}
-                  className="absolute inset-0 rounded-full bg-primary/90 shadow-[0_6px_18px_-8px_hsl(var(--primary)/0.6)]"
+                  className="absolute inset-0 rounded-full bg-primary/90"
                   transition={{ type: "spring", stiffness: 380, damping: 36 }}
                 />
               )}

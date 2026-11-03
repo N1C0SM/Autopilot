@@ -159,9 +159,7 @@ struct NutritionView: View {
         VStack(alignment: .leading, spacing: 8) {
             // Alineado con el borde de la tarjeta (sin sangría): todas las secciones de la
             // pantalla comparten el mismo eje vertical.
-            Text("COMIDAS DE HOY")
-                .font(.apFootnote.weight(.semibold)).tracking(0.6)
-                .foregroundStyle(Palette.muted)
+            SectionTitle(title: "Comidas de hoy")
             VStack(spacing: 0) {
                 let split = perMeal
                 ForEach(Array(meals.enumerated()), id: \.offset) { i, meal in

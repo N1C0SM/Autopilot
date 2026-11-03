@@ -1,9 +1,8 @@
 import SwiftUI
 import Supabase
 
-/// Inicio, solo con lo de hoy: el saludo, la sesión de hoy (o el descanso que toque) y, si el
-/// entreno ya está completado, sus resultados. La tarjeta es el resumen y, al tocarla, abre el
-/// detalle en una hoja (ejercicios con foto y acción). La semana vive en Entrenar.
+/// Inicio reúne el saludo, la sesión de hoy, el plan semanal y los resúmenes de nutrición y récords.
+/// La tarjeta de hoy abre el detalle en una hoja con los ejercicios y sus acciones.
 struct HomeView: View {
     @EnvironmentObject private var session: SessionModel
     #if !os(macOS)
@@ -23,7 +22,7 @@ struct HomeView: View {
 
     /// Altura reservada de la tarjeta de hoy: el esqueleto de carga y la tarjeta de empezar miden
     /// exactamente lo mismo (los bloques del esqueleto son el fantasma de los de la tarjeta).
-    private static let cardMinHeight: CGFloat = 240
+    private static let cardMinHeight: CGFloat = 400
 
     /// Paridad con la web de escritorio: en iPhone (y ventanas estrechas) la columna del móvil; en
     /// iPad horizontal y Mac, la misma columna del móvil pero a todo el ancho, con la foto héroe
@@ -57,6 +56,48 @@ struct HomeView: View {
         return TodayCache.shared.snapshot(userId: id)
     }
 
+    private var weekPlan: some View {
+        let scheduled = Set(snapshot?.scheduled.map(\.day) ?? [])
+        let labels = ["L", "M", "X", "J", "V", "S", "D"]
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Plan semanal").font(.apTitle3.weight(.semibold))
+                Spacer()
+                Text("\(scheduled.count) sesiones")
+                    .font(.apSubhead.monospacedDigit())
+                    .foregroundStyle(Palette.muted)
+            }
+            HStack(spacing: 4) {
+                ForEach(DayNames.all.indices, id: \.self) { index in
+                    let day = DayNames.all[index]
+                    let isToday = index == todayIndex
+                    let isScheduled = scheduled.contains(day)
+                    VStack(spacing: 8) {
+                        Text(labels[index])
+                            .font(.apSubhead.weight(.medium))
+                            .foregroundStyle(isToday ? Palette.gold : Color.white)
+                        Circle()
+                            .fill(isScheduled ? Palette.gold : Palette.secondary)
+                            .frame(width: 8, height: 8)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 48)
+                    .background(
+                        isToday ? Palette.gold.opacity(0.12) : .clear,
+                        in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+                    )
+                    .overlay {
+                        RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+                            .stroke(isToday ? Palette.gold : .clear, lineWidth: 1.5)
+                    }
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("\(day), \(isScheduled ? "entrenamiento programado" : "sin entrenamiento programado")\(isToday ? ", hoy" : "")")
+                }
+            }
+        }
+        .padding(16)
+        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
@@ -65,11 +106,13 @@ struct HomeView: View {
                 if wideLayout {
                     // Escritorio como `HomeOverview.tsx`: una sola columna ancha.
                     wideToday
+                    weekPlan.padding(.top, 24)
                     widgets.padding(.top, 32)
                 } else {
-                    // iPhone: la acción de hoy y, debajo, los widgets (como `HomeOverview.tsx`).
+                    // iPhone: hoy, semana y resúmenes, en el mismo orden que la web.
                     VStack(alignment: .leading, spacing: 28) {
                         mainAction
+                        weekPlan
                         widgets
                     }
                     .padding(.top, 24)
@@ -304,7 +347,7 @@ struct HomeView: View {
                         Image("lu-check").renderingMode(.template).resizable().frame(width: 12, height: 12)
                         Text("HECHO HOY").font(.apCaption.weight(.bold)).tracking(0.8)
                     }
-                    .foregroundStyle(Palette.success)
+                    .foregroundStyle(Palette.gold)
                     .shadow(color: .black.opacity(0.55), radius: 6)
                     .padding(18)
                 }
@@ -332,6 +375,8 @@ struct HomeView: View {
     /// resumen y acción), así el salto es cero y la pantalla no «baila».
     private var todaySkeleton: some View {
         VStack(alignment: .leading, spacing: 0) {
+            RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Palette.secondary)
+                .frame(height: 190)
             RoundedRectangle(cornerRadius: 4, style: .continuous).fill(Palette.secondary).frame(width: 92, height: 13)
             RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Palette.secondary).frame(width: 196, height: 34).padding(.top, 6)
             RoundedRectangle(cornerRadius: 4, style: .continuous).fill(Palette.secondary).frame(width: 132, height: 18).padding(.top, 2)
@@ -350,35 +395,44 @@ struct HomeView: View {
     private func startCard(_ plan: DayPlan) -> some View {
         let parts = plan.title.components(separatedBy: " · ")
         let summary = detail(plan)
+        let cover = plan.isGym ? todayCover : nil
         return Button { openSheet() } label: {
             VStack(alignment: .leading, spacing: 0) {
-                HStack {
-                    Text(plan.isGym ? "Hoy · entreno" : "Hoy · actividad")
-                        .font(.apCaption.weight(.semibold)).textCase(.uppercase).tracking(0.6)
-                        .foregroundStyle(Palette.gold)
-                    Spacer(minLength: 8)
-                    Image(systemName: "chevron.up").font(.inter(size: 12, weight: .semibold))
-                        .foregroundStyle(Palette.muted.opacity(0.7))
+                if let cover {
+                    CachedAsyncImage(url: cover) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 190)
+                        .clipped()
+                        .accessibilityHidden(true)
                 }
-                Text(parts[0]).font(.apTitle1).lineLimit(2).fixedSize(horizontal: false, vertical: true).padding(.top, 6)
-                if parts.count > 1 {
-                    Text(parts.dropFirst().joined(separator: " · ")).font(.apSubhead).foregroundStyle(Palette.muted)
-                        .lineLimit(2).padding(.top, 2)
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack {
+                        Text(plan.isGym ? "Hoy · entreno" : "Hoy · actividad")
+                            .font(.apCaption.weight(.semibold)).textCase(.uppercase).tracking(0.6)
+                            .foregroundStyle(Palette.gold)
+                        Spacer(minLength: 8)
+                        Image(systemName: "chevron.up").font(.inter(size: 12, weight: .semibold))
+                            .foregroundStyle(Palette.muted.opacity(0.7))
+                    }
+                    Text(parts[0]).font(.apTitle1).lineLimit(2).fixedSize(horizontal: false, vertical: true).padding(.top, 6)
+                    if parts.count > 1 {
+                        Text(parts.dropFirst().joined(separator: " · ")).font(.apSubhead).foregroundStyle(Palette.muted)
+                            .lineLimit(2).padding(.top, 2)
+                    }
+                    if !summary.isEmpty {
+                        Text(summary).font(.apSubhead.monospacedDigit()).foregroundStyle(Palette.muted).padding(.top, 4)
+                    }
+                    Text("Ver la sesión")
+                        .font(.apHeadline).foregroundStyle(.black)
+                        .frame(maxWidth: .infinity, minHeight: 50)
+                        .background(Palette.gold, in: Capsule())
+                        .padding(.top, 24)
                 }
-                if !summary.isEmpty {
-                    Text(summary).font(.apSubhead.monospacedDigit()).foregroundStyle(Palette.muted).padding(.top, 4)
-                }
-                // Píldora dorada, igual que la acción principal de la hoja y el resto de la app
-                // (`PillButtonStyle`): una sola forma de «botón» en toda la app.
-                Text("Ver la sesión")
-                    .font(.apHeadline).foregroundStyle(.black)
-                    .frame(maxWidth: .infinity, minHeight: 50)
-                    .background(Palette.gold, in: Capsule())
-                    .padding(.top, 24)
+                .padding(18)
             }
-            .padding(18)
-            .frame(maxWidth: .infinity, minHeight: Self.cardMinHeight, alignment: .topLeading)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
             .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
         }
         .buttonStyle(.pressableCard)
         .accessibilityLabel([plan.title, summary, "Abrir el detalle de la sesión"].filter { !$0.isEmpty }.joined(separator: ". "))
@@ -867,7 +921,7 @@ private struct TodaySessionSheet: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(completed ? "Completado hoy" : plan?.isGym == true ? "Hoy · entreno" : "Hoy · actividad")
                     .font(.apCaption.weight(.semibold)).textCase(.uppercase).tracking(0.6)
-                    .foregroundStyle(completed ? Palette.success : Palette.gold)
+                    .foregroundStyle(Palette.gold)
                 Text(parts[0]).font(.apTitle1).lineLimit(3).fixedSize(horizontal: false, vertical: true)
                     .accessibilityAddTraits(.isHeader)
                 if parts.count > 1 {
@@ -1050,7 +1104,7 @@ private struct ConfettiView: View {
     /// Caída máxima de una partícula.
     private static let lifetime: Double = 2.2
     private static let pieceCount = 44
-    private static let colors: [Color] = [Palette.gold, .white, Palette.success, Palette.gold.opacity(0.65)]
+    private static let colors: [Color] = [Palette.gold, .white, Palette.gold.opacity(0.65), Palette.gold.opacity(0.4)]
     /// Lo fija quien lo lanza: así los redibujados de la pantalla no reinician la caída.
     let start: Date
 
