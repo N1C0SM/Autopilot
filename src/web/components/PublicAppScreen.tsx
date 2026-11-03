@@ -22,7 +22,7 @@ export function PublicProgressScreen() {
 
 export function PublicTrainingScreen({ active = false }: { active?: boolean }) {
   const exercise = previewExercises[0];
-  const { primary, synergists } = musclesForExercise(exercise.name, exercise.muscleGroup ?? null);
+  const { primary, synergists } = musclesForExercise(exercise.name, null);
   return <div className="flex h-full min-h-0 flex-col px-4 pt-2">
     <h2 className="type-large-title">Entrenar</h2>
     <p className="mt-5 type-title1">Fuerza cuerpo completo</p>

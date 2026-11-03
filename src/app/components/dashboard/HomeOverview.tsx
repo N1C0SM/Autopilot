@@ -1,9 +1,8 @@
 import { readMealsDone as readMealsDoneFor } from "@/shared/lib/mealsDone";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { Apple, Check, ChevronRight, Clock, LockKeyhole, Moon, Sparkles, Trophy } from "lucide-react";
+import { Apple, Check, ChevronRight, Clock, LockKeyhole, Trophy } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { EmptyState } from "@/shared/components/ui/empty-state";
-import { ProgressRing } from "@/shared/components/ui/progress-ring";
 import { supabase } from "@/shared/integrations/supabase/client";
 import type { DayPlan } from "@/shared/types/training";
 import type { UserSection } from "@/app/components/UserSidebar";
@@ -280,16 +279,23 @@ const HomeOverview = ({
     );
   }
 
+  const weekMarks = DAYS_ORDER.map((day, index) => ({
+    letter: ["L", "M", "X", "J", "V", "S", "D"][index],
+    scheduled: scheduledDays.some((plan) => plan.day === day),
+    isToday: index === todayIndex,
+  }));
+
+  const sessionName = String(sessionTitle).split(" · ")[0];
+  const sessionFocus = String(sessionTitle).includes(" · ") ? String(sessionTitle).split(" · ").slice(1).join(" · ") : "";
+
   return (
-    // Con la sesión hecha no hay acción que centrar: el contenido se apila sin huecos.
-    <div className={cn("flex w-full flex-col", !(completedToday && !activeWorkout) && "flex-1")}>
-      {/* Saludo arriba a todo el ancho y la sesión de hoy debajo, en una sola columna */}
-      <div className="flex flex-1 flex-col">
-        <div>
-        <p className="type-subhead font-semibold text-muted-foreground">{greetingDate}</p>
-        <h2 data-nav-title className="mt-0.5 type-large-title lg:text-[44px] lg:leading-[52px]">
-          {firstName ? `Hola, ${firstName}.` : "Hola."}
-          <span className="block text-muted-foreground">
+    <div className="flex w-full flex-col pb-4">
+      {/* Cabecera compacta: fecha y saludo discreto, sin titular de marketing */}
+      <header>
+        <p className="text-[13px] font-medium text-muted-foreground">{greetingDate}</p>
+        <h2 data-nav-title className="mt-0.5 text-[22px] font-semibold leading-7 text-foreground">
+          {firstName ? `Hola, ${firstName}.` : "Hola."}{" "}
+          <span className="font-normal text-muted-foreground">
             {completedToday
               ? "Buen trabajo."
               : todayPlan?.type === "gimnasio"
@@ -299,159 +305,163 @@ const HomeOverview = ({
                   : "Hoy, a recuperar."}
           </span>
         </h2>
-        </div>
+      </header>
 
-        {/* Acción principal: debajo del saludo. En móvil sigue centrada en el hueco que queda. */}
-        <div className={cn("flex flex-col", completedToday && !activeWorkout ? "mt-6" : "flex-1 justify-center py-8 md:py-10 lg:mt-10 lg:flex-none lg:justify-start lg:py-0")}>
-          {/* Foto del día: la sesión de hoy, siempre con una foto real */}
-          {dayPhoto && !activeWorkout && (
-            <div aria-hidden="true" className="relative mb-4 h-48 overflow-hidden rounded-[28px] bg-card lg:mb-6 lg:h-[340px]">
-              <img
-                key={dayPhoto}
-                src={dayPhoto}
-                alt=""
-                decoding="async"
-                className="absolute inset-0 h-full w-full object-cover object-[50%_30%] lg:object-[50%_0%] animate-in fade-in duration-500 motion-reduce:animate-none"
-              />
-              <span className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-            </div>
-          )}
-          {activeWorkout && activeWorkoutIsToday ? (
-            <div className="w-full lg:max-w-md">
-              <p className="type-caption1 font-semibold text-primary">EN CURSO · HOY</p>
-              <h3 className="mt-1 type-title1">{planTitle(activeWorkout.plan)}</h3>
-              <p className="mt-2 type-subhead tabular-nums text-muted-foreground">
-                {Object.values(activeWorkout.logs).flat().filter((set) => set.done && !set.isWarmup).length} de {Object.values(activeWorkout.logs).flat().filter((set) => !set.isWarmup).length} series
-              </p>
-              <Button size="lg" className="mt-5 w-full" onClick={() => {
-                void hapticTap();
-                if (onResumeWorkout) onResumeWorkout();
-                else onNavigate("training");
-              }}>Continuar entreno</Button>
-              <Button type="button" variant="plain" size="sm" className="mt-1 w-full" onClick={() => { void hapticTap(); void discardActiveWorkout(); }}>
-                Descartar sesión
-              </Button>
-            </div>
-          ) : canStart ? (
-            <button
-              type="button"
-              onClick={() => {
-                void hapticTap();
-                if (onStartWorkout) onStartWorkout();
-                else onNavigate("training");
-              }}
-              className="group block w-full rounded-media text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background"
-              aria-label={`Empezar ${sessionTitle}`}
-            >
-              <span className="mt-6 flex flex-col gap-5 md:flex-row md:items-end md:justify-between md:gap-8">
-                <span className="block min-w-0">
-                  <span className="block truncate type-title1">{String(sessionTitle).split(" · ")[0]}</span>
-                  {String(sessionTitle).includes(" · ") && (
-                    <span className="mt-0.5 block truncate type-subhead text-muted-foreground">{String(sessionTitle).split(" · ").slice(1).join(" · ")}</span>
-                  )}
-                  {sessionDetail.length > 0 && (
-                    <span className="mt-1 block type-subhead tabular-nums text-muted-foreground">
-                      {sessionDetail.map((part, index) => (
-                        <span key={`${index}-${part}`}>{index > 0 && " · "}{part}</span>
-                      ))}
-                    </span>
-                  )}
+      {/* Entrenamiento de hoy */}
+      <section className="mt-6" aria-label="Entrenamiento de hoy">
+        <p className="mb-2 text-[13px] font-medium text-muted-foreground">Entrenamiento de hoy</p>
+        {activeWorkout && activeWorkoutIsToday ? (
+          <div className="rounded-2xl bg-card p-4 lg:max-w-xl">
+            <p className="text-[13px] font-medium text-primary">En curso</p>
+            <h3 className="mt-0.5 text-[17px] font-semibold leading-6">{planTitle(activeWorkout.plan)}</h3>
+            <p className="mt-0.5 text-[15px] tabular-nums text-muted-foreground">
+              {Object.values(activeWorkout.logs).flat().filter((set) => set.done && !set.isWarmup).length} de {Object.values(activeWorkout.logs).flat().filter((set) => !set.isWarmup).length} series
+            </p>
+            <Button size="lg" className="mt-4 w-full" onClick={() => {
+              void hapticTap();
+              if (onResumeWorkout) onResumeWorkout();
+              else onNavigate("training");
+            }}>Continuar entreno</Button>
+            <Button type="button" variant="plain" size="sm" className="mt-1 w-full" onClick={() => { void hapticTap(); void discardActiveWorkout(); }}>
+              Descartar sesión
+            </Button>
+          </div>
+        ) : canStart ? (
+          <button
+            type="button"
+            onClick={() => {
+              void hapticTap();
+              if (onStartWorkout) onStartWorkout();
+              else onNavigate("training");
+            }}
+            className="group block w-full rounded-2xl bg-card p-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:max-w-xl"
+            aria-label={`Empezar ${sessionTitle}`}
+          >
+            <span className="flex items-center gap-3.5">
+              {dayPhoto && (
+                <span aria-hidden="true" className="relative h-[72px] w-[72px] shrink-0 overflow-hidden rounded-xl bg-secondary">
+                  <img key={dayPhoto} src={dayPhoto} alt="" decoding="async" className="absolute inset-0 h-full w-full object-cover object-[50%_30%]" />
                 </span>
-                <span className="flex h-[50px] w-full shrink-0 items-center justify-center rounded-[14px] bg-primary px-5 type-headline text-primary-foreground transition-[opacity,transform] duration-150 ease-out group-active:scale-[0.98] group-active:opacity-80 md:w-auto md:min-w-[14rem]">
-                  Empezar entreno
-                </span>
+              )}
+              <span className="block min-w-0 flex-1">
+                <span className="block truncate text-[17px] font-semibold leading-6">{sessionName}</span>
+                {sessionFocus && <span className="block truncate text-[15px] text-muted-foreground">{sessionFocus}</span>}
+                {sessionDetail.length > 0 && (
+                  <span className="mt-0.5 block text-[13px] tabular-nums text-muted-foreground">
+                    {sessionDetail.map((part, index) => (
+                      <span key={`${index}-${part}`}>{index > 0 && " · "}{part}</span>
+                    ))}
+                  </span>
+                )}
               </span>
-            </button>
-          ) : completedToday ? (
-            // Hecho: la misma portada grande con foto, marcada como hecha, y la siguiente sesión debajo.
-            <button
-              type="button"
-              onClick={() => { void hapticTap(); onNavigate("training"); }}
-              className="block w-full overflow-hidden rounded-[28px] bg-card text-left transition-transform duration-150 active:scale-[0.98] lg:max-w-2xl"
-              aria-label="Ver el resumen de la sesión de hoy"
-            >
-              <span className="relative block h-[210px] bg-secondary">
-                {(sessionCover || BRAND_PHOTOS.gym) && <img src={sessionCover || BRAND_PHOTOS.gym} alt="" className="h-full w-full object-cover" />}
-                <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/80" />
-                <span className="absolute bottom-4 left-[18px] flex items-center gap-1.5 type-caption1 font-bold uppercase tracking-[0.08em] text-success">
-                  <Check className="h-3 w-3" strokeWidth={3} aria-hidden="true" />Hecho hoy
-                </span>
-              </span>
-              <span className="flex items-center gap-3 p-[18px]">
-                <span className="min-w-0 flex-1">
-                  <span className="block type-title2">{todayPlan ? String(planTitle(todayPlan)).split(" · ")[0] : "Sesión completada"}</span>
-                  <span className="mt-0.5 block type-footnote text-muted-foreground">{nextSession ?? "Buen trabajo. Hoy toca recuperar."}</span>
-                </span>
-                <span className="shrink-0 type-subhead font-semibold text-primary">Resumen</span>
-              </span>
-            </button>
-          ) : (
-            <EmptyState
-              rest
-              icon={Moon}
-              title="Hoy toca descansar"
-              description={nextSession ?? "Tu plan aún no tiene sesiones."}
-              action={<Button type="button" variant="secondary" size="lg" className="w-full" onClick={() => { void hapticTap(); onNavigate("training"); }}>Entrenar igualmente</Button>}
-            />
-          )}
-          {activeWorkout && !activeWorkoutIsToday && (
-            <div className="mt-4 rounded-media bg-card px-4 py-3 text-left">
-              <p className="type-footnote text-muted-foreground">
-                Tienes una sesión sin terminar del {activeWorkoutDate}.
-              </p>
-              <div className="mt-2 flex gap-2">
-                <Button size="sm" onClick={() => {
-                  void hapticTap();
-                  if (onResumeWorkout) onResumeWorkout();
-                  else onNavigate("training");
-                }}>Reanudar</Button>
-                <Button type="button" variant="plain" size="sm" onClick={() => { void hapticTap(); void discardActiveWorkout(); }}>
-                  Descartar
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
-
-      {/* Widgets de Inicio: dos cuadrados lado a lado, Nutrición y Último récord. */}
-      <section className="mt-8 lg:mt-12">
-      <div className="grid grid-cols-2 gap-3 lg:gap-4 [&>*]:aspect-square">
-        <OverviewRow
-          title="Nutrición"
-          value={nutrition && calorieTarget ? <>{calorieTarget.toLocaleString("es-ES")}<span className="ml-1 font-sans type-subhead font-semibold text-muted-foreground">kcal</span></> : undefined}
-          onClick={() => onNavigate("nutrition")}
-          icon={
-            nutrition ? (
-              <ProgressRing value={meals.length ? (doneMealCount / meals.length) * 100 : calorieTarget ? 100 : 0} size={32} stroke={3.5}>
-                <Apple className="h-[14px] w-[14px]" strokeWidth={2.25} />
-              </ProgressRing>
-            ) : (
-              <ProgressRing value={0} size={32} stroke={3.5} className="text-muted-foreground">
-                <LockKeyhole className="h-[14px] w-[14px]" strokeWidth={2.25} />
-              </ProgressRing>
-            )
-          }
-          description={<><span>{nutritionMain}</span>{nutritionExtra && <span>{` · ${nutritionExtra}`}</span>}</>}
-        />
-        <OverviewRow
-          title={lastPr ? lastPr.exercise_name : "Récords"}
-          value={lastPr ? <>{lastPr.weight.toLocaleString("es-ES")}<span className="ml-1 font-sans type-subhead font-semibold text-muted-foreground">kg</span></> : undefined}
-          onClick={() => onNavigate("progress")}
-          icon={(
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/15 text-primary">
-              <Trophy className="h-[14px] w-[14px]" strokeWidth={2.25} />
             </span>
-          )}
-          description={lastPr
-            ? `${lastPr.reps} reps · ${new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "short" }).format(new Date(lastPr.achieved_at))}`
-            : "Tu primer récord llegará entrenando"}
-        />
-      </div>
+            <span className="mt-4 flex h-12 w-full items-center justify-center rounded-full bg-primary text-[17px] font-semibold text-primary-foreground transition-opacity duration-150 group-active:opacity-80">
+              Empezar entreno
+            </span>
+          </button>
+        ) : completedToday ? (
+          <button
+            type="button"
+            onClick={() => { void hapticTap(); onNavigate("training"); }}
+            className="flex w-full items-center gap-3.5 rounded-2xl bg-card p-4 text-left transition-opacity active:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:max-w-xl"
+            aria-label="Ver el resumen de la sesión de hoy"
+          >
+            <span aria-hidden="true" className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-secondary">
+              <img src={sessionCover || BRAND_PHOTOS.gym} alt="" className="h-full w-full object-cover" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="flex items-center gap-1 text-[13px] font-medium text-success">
+                <Check className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden="true" />Hecho hoy
+              </span>
+              <span className="block truncate text-[17px] font-semibold leading-6">{todayPlan ? sessionName : "Sesión completada"}</span>
+              <span className="block text-[13px] text-muted-foreground">{nextSession ?? "Hoy toca recuperar."}</span>
+            </span>
+            <span className="shrink-0 text-[15px] font-medium text-primary">Resumen</span>
+          </button>
+        ) : (
+          <div className="rounded-2xl bg-card p-4 lg:max-w-xl">
+            <h3 className="text-[17px] font-semibold leading-6">Hoy toca descansar</h3>
+            <p className="mt-0.5 text-[15px] text-muted-foreground">{nextSession ?? "Tu plan aún no tiene sesiones."}</p>
+            <Button type="button" variant="secondary" size="lg" className="mt-4 w-full" onClick={() => { void hapticTap(); onNavigate("training"); }}>Entrenar igualmente</Button>
+          </div>
+        )}
+        {activeWorkout && !activeWorkoutIsToday && (
+          <div className="mt-3 flex items-center gap-3 border-t border-border/60 pt-3 lg:max-w-xl">
+            <p className="min-w-0 flex-1 text-[13px] text-muted-foreground">Tienes una sesión sin terminar del {activeWorkoutDate}.</p>
+            <Button size="sm" onClick={() => {
+              void hapticTap();
+              if (onResumeWorkout) onResumeWorkout();
+              else onNavigate("training");
+            }}>Reanudar</Button>
+            <Button type="button" variant="plain" size="sm" onClick={() => { void hapticTap(); void discardActiveWorkout(); }}>
+              Descartar
+            </Button>
+          </div>
+        )}
       </section>
-      </div>
+
+      {/* Semana compacta: sesiones hechas y días con sesión, sin navegación por días */}
+      <section className="mt-7 lg:max-w-xl" aria-label={`Esta semana: ${sessionCount} de ${scheduledDays.length} sesiones`}>
+        <div className="flex items-baseline justify-between">
+          <p className="text-[13px] font-medium text-muted-foreground">Esta semana</p>
+          <p className="text-[13px] tabular-nums text-muted-foreground"><span className="font-semibold text-foreground">{sessionCount}</span> de {scheduledDays.length} sesiones</p>
+        </div>
+        <div aria-hidden="true" className="mt-2.5 grid grid-cols-7 gap-1">
+          {weekMarks.map((mark) => (
+            <span key={mark.letter} className="flex flex-col items-center gap-1.5">
+              <span className={cn("text-[12px]", mark.isToday ? "font-semibold text-foreground" : "text-muted-foreground")}>{mark.letter}</span>
+              <span className={cn("h-1 w-full rounded-full", mark.scheduled ? (mark.isToday ? "bg-primary" : "bg-foreground/35") : "bg-secondary")} />
+            </span>
+          ))}
+        </div>
+      </section>
+
+      {/* Progreso: filas con valores reales */}
+      <section className="mt-7 lg:max-w-xl">
+        <p className="mb-1 text-[13px] font-medium text-muted-foreground">Progreso</p>
+        <ul data-home-rows className="divide-y divide-border/60">
+          <li>
+            <HomeRow
+              icon={nutrition ? <Apple className="h-5 w-5" strokeWidth={1.75} /> : <LockKeyhole className="h-5 w-5" strokeWidth={1.75} />}
+              title="Nutrición"
+              detail={<><span>{nutritionMain}</span>{nutritionExtra && <span>{` · ${nutritionExtra}`}</span>}</>}
+              value={nutrition && calorieTarget ? `${calorieTarget.toLocaleString("es-ES")} kcal` : undefined}
+              onClick={() => onNavigate("nutrition")}
+            />
+          </li>
+          <li>
+            <HomeRow
+              icon={<Trophy className="h-5 w-5" strokeWidth={1.75} />}
+              title={lastPr ? lastPr.exercise_name : "Récords"}
+              detail={lastPr
+                ? `${lastPr.reps} reps · ${new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "short" }).format(new Date(lastPr.achieved_at))}`
+                : "Tu primer récord llegará entrenando"}
+              value={lastPr ? `${lastPr.weight.toLocaleString("es-ES")} kg` : undefined}
+              onClick={() => onNavigate("progress")}
+            />
+          </li>
+        </ul>
+      </section>
       {discardDialog}
     </div>
   );
 };
+
+/** Fila de Hoy: icono de línea, título, detalle y valor a la derecha. */
+const HomeRow = ({ icon, title, detail, value, onClick }: { icon: ReactNode; title: string; detail: ReactNode; value?: string; onClick: () => void }) => (
+  <button
+    type="button"
+    onClick={() => { void hapticTap(); onClick(); }}
+    className="flex min-h-[60px] w-full items-center gap-3 py-3 text-left transition-opacity active:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+  >
+    <span aria-hidden="true" className="flex h-5 w-5 shrink-0 text-muted-foreground">{icon}</span>
+    <span className="min-w-0 flex-1">
+      <span className="block truncate text-[15px] font-medium text-foreground">{title}</span>
+      <span className="block truncate text-[13px] tabular-nums text-muted-foreground">{detail}</span>
+    </span>
+    {value && <span className="shrink-0 text-[15px] font-semibold tabular-nums text-foreground">{value}</span>}
+    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/70" strokeWidth={2} aria-hidden="true" />
+  </button>
+);
 
 export default HomeOverview;
