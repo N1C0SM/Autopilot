@@ -148,7 +148,7 @@ const ExerciseMedia = ({ video, image, name, pattern, stimulus, load, className 
 
   if (spec && !(photo && image)) {
     return (
-      <div className={cn("relative aspect-video w-full overflow-hidden rounded-xl bg-background", className)}>
+      <div className={cn("relative aspect-video w-full overflow-hidden rounded-media bg-background", className)}>
         <ExerciseMotion spec={spec} className="p-3" />
         {image && (
           <div className="absolute bottom-3 left-3 flex items-center gap-0.5 rounded-full bg-secondary/90 p-0.5">

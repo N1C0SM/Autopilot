@@ -8,6 +8,7 @@ import {
   Heading,
   Hr,
   Html,
+  Img,
   Preview,
   Section,
   Text,
@@ -31,27 +32,35 @@ const RenewalNoAnswerEmail = ({
   <Html lang="es" dir="ltr">
     <Head />
     <Preview>No hemos recibido tu respuesta sobre tu plan</Preview>
-    <Body style={main}>
-      <Container style={container}>
-        <Heading style={h1}>{name ? `Hola ${name},` : 'Hola,'}</Heading>
-        <Text style={text}>
-          Si no nos dices nada antes del <strong>{cycleEndDate}</strong>, te pasamos
-          automáticamente al plan Completo (49€/mes) para que no pierdas seguimiento.
-        </Text>
-        <Text style={text}>
-          Si prefieres renovar tu Transformación de 12 semanas o pausar, elígelo en tu panel.
-        </Text>
-        <Section style={buttonContainer}>
-          <Button href={manageUrl} style={button}>
-            Elegir qué hago al terminar
-          </Button>
+    <Body style={s.main}>
+      <Container style={s.container}>
+        <Section style={s.header}>
+          <Img src="https://autopilotplan.com/pwa-192.png" width="44" height="44" alt="Autopilot" style={s.logoImg} />
+          <Text style={s.logo}>{SITE_NAME}</Text>
         </Section>
-        <Hr style={hr} />
-        <Text style={small}>
-          ¿Dudas? Responde a este correo o escríbenos por el chat de la app — te responde un
-          entrenador real.
-        </Text>
-        <Text style={footer}>— El equipo de {SITE_NAME}</Text>
+        <Section style={s.body}>
+          <Heading style={s.h1}>{name ? `Hola ${name},` : 'Hola,'}</Heading>
+          <Text style={s.text}>
+            Si no nos dices nada antes del <strong>{cycleEndDate}</strong>, te pasamos
+            automáticamente al plan Completo (49€/mes) para que no pierdas seguimiento.
+          </Text>
+          <Text style={s.text}>
+            Si prefieres renovar tu Transformación de 12 semanas o pausar, elígelo en tu panel.
+          </Text>
+          <Section style={s.buttonContainer}>
+            <Button href={manageUrl} style={s.button}>
+              Elegir qué hago al terminar
+            </Button>
+          </Section>
+          <Hr style={s.hr} />
+          <Text style={s.small}>
+            ¿Dudas? Responde a este correo o escríbenos por el chat de la app — te responde un
+            entrenador real.
+          </Text>
+        </Section>
+        <Section style={s.footer}>
+          <Text style={s.footerText}>— El equipo de {SITE_NAME}</Text>
+        </Section>
       </Container>
     </Body>
   </Html>
@@ -67,13 +76,3 @@ export const template = {
     manageUrl: 'https://autopilotplan.com/dashboard',
   },
 } satisfies TemplateEntry
-
-const main = s.main
-const container = { ...s.container, padding: '32px 24px' }
-const h1 = s.h1
-const text = s.text
-const small = s.small
-const buttonContainer = s.buttonContainer
-const button = s.button
-const hr = s.hr
-const footer = s.footerText

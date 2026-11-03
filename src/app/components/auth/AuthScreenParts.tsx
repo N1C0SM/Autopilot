@@ -11,7 +11,7 @@ import { cn } from "@/shared/lib/utils";
 export const AuthAppMark = ({ className }: { className?: string }) => (
   <div
     className={cn(
-      "mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/60 shadow-[0_12px_40px_-12px_hsl(var(--primary)/0.6)]",
+      "mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary",
       className,
     )}
   >

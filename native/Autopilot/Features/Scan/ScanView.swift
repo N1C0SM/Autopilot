@@ -656,6 +656,8 @@ struct ScanResult: Codable {
 struct ScanResultView: View {
     let result: ScanResult
     var onAgain: () -> Void
+    @State private var shareImage: Image?
+    @State private var shareCardFailed = false
 
     /// Sin dato no se inventa un «0,0»: se muestra «—» (un 0 parecería una nota real).
     private func score(_ value: Double?) -> String {
@@ -670,8 +672,52 @@ struct ScanResultView: View {
             if let list = result.improvements, !list.isEmpty { improvements(list) }
             if hasDetail { detail }
             if result.basic == true { plusCard }
+            if let shareImage {
+                ShareLink(
+                    item: shareImage,
+                    preview: SharePreview("Mi análisis corporal", image: shareImage)
+                ) {
+                    Label("Compartir resumen", systemImage: "square.and.arrow.up")
+                }
+                .buttonStyle(.pill)
+            } else if shareCardFailed {
+                Text("No se pudo preparar la tarjeta. Inténtalo de nuevo.")
+                    .font(.apFootnote)
+                    .foregroundStyle(Palette.destructive)
+                Button("Reintentar tarjeta") { Task { await prepareShareCard() } }
+                    .buttonStyle(.pillSecondary)
+            } else {
+                Button("Preparando tarjeta…", action: {})
+                    .buttonStyle(.pillSecondary)
+                    .disabled(true)
+            }
             Button("Hacer otro scan", action: onAgain).buttonStyle(.pillSecondary)
         }
+        .task { await prepareShareCard() }
+    }
+
+    @MainActor
+    private func prepareShareCard() async {
+        guard let image = renderShareImage() else {
+            shareCardFailed = true
+            return
+        }
+        shareCardFailed = false
+        shareImage = image
+    }
+
+    @MainActor
+    private func renderShareImage() -> Image? {
+        let card = ScanShareCardView(result: result).environment(\.colorScheme, .dark)
+        let renderer = ImageRenderer(content: card)
+        renderer.scale = 3
+        #if os(iOS)
+        guard let image = renderer.uiImage else { return nil }
+        return Image(uiImage: image)
+        #else
+        guard let image = renderer.nsImage else { return nil }
+        return Image(nsImage: image)
+        #endif
     }
 
     // MARK: - Puntuación

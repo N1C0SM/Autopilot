@@ -140,7 +140,7 @@ export default function Index() {
       <div aria-hidden="true" className="pointer-events-none absolute left-1/2 top-[38%] h-[44rem] w-[44rem] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,hsl(var(--primary)/0.16),transparent)] lg:left-[72%]" />
       <div className="relative mx-auto grid w-full max-w-6xl items-center gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:gap-8">
         <div className="text-center animate-in fade-in duration-700 motion-reduce:animate-none lg:text-left">
-          <h1 className="font-rounded text-[40px] font-bold leading-[1.02] tracking-[-0.04em] sm:text-[60px] lg:text-[64px] xl:text-[76px]"><span className="block">Entrena con plan.</span> <span className="block">Registra cada serie.</span> <span className="block text-primary">Mira cómo progresas.</span></h1>
+          <h1 className="font-rounded text-[40px] font-bold leading-[1.02] tracking-[-0.04em] sm:text-[60px] lg:text-[64px] xl:text-[64px] 2xl:text-[72px]"><span className="block">Entrena con plan.</span> <span className="block">Registra cada serie.</span> <span className="block text-primary">Mira cómo progresas.</span></h1>
           <p className="mx-auto mt-6 max-w-md type-body text-muted-foreground md:text-[21px] md:leading-[29px] lg:mx-0">Tu rutina según tu objetivo, tus días y tu material. En el gimnasio o en casa.</p>
           <div ref={heroCtaRef} className="mt-9 flex flex-col items-center gap-3 sm:flex-row sm:justify-center lg:justify-start">
             <Button variant="hero" size="lg" asChild className="w-full sm:w-auto sm:px-9"><Link to="/onboarding" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source: "hero" }); }}>Crear mi rutina gratis</Link></Button>

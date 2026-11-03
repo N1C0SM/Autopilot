@@ -89,14 +89,14 @@ export const OverviewRow = ({
   value?: ReactNode;
   onClick?: () => void;
 }) => {
-  const className = "flex min-h-[7.5rem] min-w-0 flex-col rounded-media bg-card p-4 text-left transition-transform duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  const className = "flex min-h-[7.5rem] min-w-0 flex-col rounded-card bg-card p-4 text-left transition-transform duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
   const inner = (
     <>
       <span className="flex items-start justify-between">
         <span aria-hidden="true">{icon}</span>
         <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/60" strokeWidth={2.5} aria-hidden="true" />
       </span>
-      {value != null && <span className="mt-auto block pt-4 type-figure text-[40px] font-bold leading-none tracking-tight tabular-nums">{value}</span>}
+      {value != null && <span className="mt-auto block pt-4 type-figure font-figure font-bold leading-none tracking-tight tabular-nums">{value}</span>}
       <span className={`${value != null ? "mt-2" : "mt-auto pt-4"} block type-headline`}>{title}</span>
       <span className="mt-0.5 block type-footnote tabular-nums text-muted-foreground">{description}</span>
     </>
@@ -293,8 +293,9 @@ const HomeOverview = ({
       {/* Cabecera compacta: fecha y saludo discreto, sin titular de marketing */}
       <header>
         <p className="text-[13px] font-medium text-muted-foreground">{greetingDate}</p>
-        <h2 data-nav-title className="mt-0.5 text-[22px] font-semibold leading-7 text-foreground">
-          {firstName ? `Hola, ${firstName}.` : "Hola."}{" "}
+        <h2 data-nav-title className="mt-0.5 type-large-title leading-tight text-foreground sm:text-[44px] sm:leading-[48px]">
+          {firstName ? `Hola, ${firstName}.` : "Hola."}
+          <br />
           <span className="font-normal text-muted-foreground">
             {completedToday
               ? "Buen trabajo."
@@ -309,7 +310,7 @@ const HomeOverview = ({
 
       {/* Entrenamiento de hoy */}
       <section className="mt-6" aria-label="Entrenamiento de hoy">
-        <p className="mb-2 text-[13px] font-medium text-muted-foreground">Entrenamiento de hoy</p>
+        <p className="mb-2 type-footnote font-medium text-muted-foreground">Entrenamiento de hoy</p>
         {activeWorkout && activeWorkoutIsToday ? (
           <div className="rounded-2xl bg-card p-4 lg:max-w-xl">
             <p className="text-[13px] font-medium text-primary">En curso</p>
@@ -334,29 +335,34 @@ const HomeOverview = ({
               if (onStartWorkout) onStartWorkout();
               else onNavigate("training");
             }}
-            className="group block w-full rounded-2xl bg-card p-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:max-w-xl"
+            className="group block w-full overflow-hidden rounded-[28px] bg-card text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:max-w-xl"
             aria-label={`Empezar ${sessionTitle}`}
           >
-            <span className="flex items-center gap-3.5">
-              {dayPhoto && (
-                <span aria-hidden="true" className="relative h-[72px] w-[72px] shrink-0 overflow-hidden rounded-xl bg-secondary">
-                  <img key={dayPhoto} src={dayPhoto} alt="" decoding="async" className="absolute inset-0 h-full w-full object-cover object-[50%_30%]" />
-                </span>
-              )}
-              <span className="block min-w-0 flex-1">
-                <span className="block truncate text-[17px] font-semibold leading-6">{sessionName}</span>
-                {sessionFocus && <span className="block truncate text-[15px] text-muted-foreground">{sessionFocus}</span>}
+            {dayPhoto && (
+              <span aria-hidden="true" className="relative block aspect-[1.8] w-full overflow-hidden bg-secondary">
+                <img key={dayPhoto} src={dayPhoto} alt="" decoding="async" className="absolute inset-0 h-full w-full object-cover object-[50%_30%]" />
+              </span>
+            )}
+            <span className="block p-4">
+              <span className="flex items-center gap-3.5">
+                <span className="block min-w-0 flex-1">
+                  <span className="mb-1 block type-footnote font-semibold uppercase tracking-wide text-primary">
+                    Hoy · {todayPlan?.type === "actividad" ? "actividad" : "entreno"}
+                  </span>
+                <span className="block truncate type-headline font-semibold leading-6">{sessionName}</span>
+                {sessionFocus && <span className="block truncate type-subhead text-muted-foreground">{sessionFocus}</span>}
                 {sessionDetail.length > 0 && (
-                  <span className="mt-0.5 block text-[13px] tabular-nums text-muted-foreground">
+                  <span className="mt-0.5 block type-footnote tabular-nums text-muted-foreground">
                     {sessionDetail.map((part, index) => (
                       <span key={`${index}-${part}`}>{index > 0 && " · "}{part}</span>
                     ))}
                   </span>
                 )}
+                </span>
               </span>
-            </span>
-            <span className="mt-4 flex h-12 w-full items-center justify-center rounded-full bg-primary text-[17px] font-semibold text-primary-foreground transition-opacity duration-150 group-active:opacity-80">
-              Empezar entreno
+              <span className="mt-4 flex h-12 w-full items-center justify-center rounded-full bg-primary text-[17px] font-semibold text-primary-foreground transition-opacity duration-150 group-active:opacity-80">
+                Empezar entreno
+              </span>
             </span>
           </button>
         ) : completedToday ? (
@@ -366,7 +372,7 @@ const HomeOverview = ({
             className="flex w-full items-center gap-3.5 rounded-2xl bg-card p-4 text-left transition-opacity active:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:max-w-xl"
             aria-label="Ver el resumen de la sesión de hoy"
           >
-            <span aria-hidden="true" className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-secondary">
+            <span aria-hidden="true" className="h-14 w-14 shrink-0 overflow-hidden rounded-media bg-secondary">
               <img src={sessionCover || BRAND_PHOTOS.gym} alt="" className="h-full w-full object-cover" />
             </span>
             <span className="min-w-0 flex-1">
@@ -418,7 +424,7 @@ const HomeOverview = ({
 
       {/* Progreso: filas con valores reales */}
       <section className="mt-7 lg:max-w-xl">
-        <p className="mb-1 text-[13px] font-medium text-muted-foreground">Progreso</p>
+        <p className="mb-1 type-title3 text-foreground">Progreso</p>
         <ul data-home-rows className="divide-y divide-border/60">
           <li>
             <HomeRow
@@ -456,10 +462,10 @@ const HomeRow = ({ icon, title, detail, value, onClick }: { icon: ReactNode; tit
   >
     <span aria-hidden="true" className="flex h-5 w-5 shrink-0 text-muted-foreground">{icon}</span>
     <span className="min-w-0 flex-1">
-      <span className="block truncate text-[15px] font-medium text-foreground">{title}</span>
-      <span className="block truncate text-[13px] tabular-nums text-muted-foreground">{detail}</span>
+      <span className="block truncate type-subhead font-medium text-foreground">{title}</span>
+      <span className="block truncate type-footnote tabular-nums text-muted-foreground">{detail}</span>
     </span>
-    {value && <span className="shrink-0 text-[15px] font-semibold tabular-nums text-foreground">{value}</span>}
+    {value && <span className="shrink-0 type-subhead font-semibold tabular-nums text-foreground">{value}</span>}
     <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/70" strokeWidth={2} aria-hidden="true" />
   </button>
 );

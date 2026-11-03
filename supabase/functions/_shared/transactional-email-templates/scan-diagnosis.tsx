@@ -34,7 +34,7 @@ interface ScanDiagnosisProps {
   style?: number
 }
 
-const GOLD = '#D6B45B'
+const GOLD = '#D8B25E'
 const LOGO = 'https://autopilotplan.com/pwa-192.png'
 
 const figure = (n?: number) =>
@@ -182,7 +182,7 @@ const ScanDiagnosisEmail = ({
                   {withoutPlan && (
                     <Column style={halfColumn}>
                       <Text style={label}>Por tu cuenta</Text>
-                      <Text style={{ ...monthsFigure, color: '#98989E' }}>{withoutPlan}</Text>
+                      <Text style={{ ...monthsFigure, color: '#A8A8AE' }}>{withoutPlan}</Text>
                     </Column>
                   )}
                 </Row>
@@ -244,14 +244,14 @@ const pad: React.CSSProperties = { padding: '0 28px 12px' }
 // Halo dorado muy tenue detrás del titular (≈14 %), nunca brillos.
 const hero: React.CSSProperties = {
   padding: '36px 28px 28px',
-  backgroundImage: 'radial-gradient(closest-side, rgba(214,180,91,0.14), rgba(214,180,91,0))',
+  backgroundImage: 'radial-gradient(closest-side, rgba(216,178,94,0.14), rgba(216,178,94,0))',
   backgroundRepeat: 'no-repeat',
   backgroundPosition: 'right -120px top -140px',
   backgroundSize: '420px 420px',
 }
 
 const eyebrow: React.CSSProperties = {
-  fontSize: '11px',
+  fontSize: '13px',
   fontWeight: 700,
   color: GOLD,
   letterSpacing: '0.15em',
@@ -270,13 +270,13 @@ const heroTitle: React.CSSProperties = {
 
 const heroLead: React.CSSProperties = {
   fontSize: '16px',
-  color: '#98989E',
+  color: '#A8A8AE',
   lineHeight: '1.5',
   margin: '0',
 }
 
 const card: React.CSSProperties = {
-  backgroundColor: '#111216',
+  backgroundColor: '#141416',
   borderRadius: '22px',
   padding: '20px 22px',
 }
@@ -285,7 +285,7 @@ const scoreCard: React.CSSProperties = {
   ...card,
   borderRadius: '28px',
   padding: '24px 24px 22px',
-  backgroundImage: 'radial-gradient(closest-side, rgba(214,180,91,0.14), rgba(214,180,91,0))',
+  backgroundImage: 'radial-gradient(closest-side, rgba(216,178,94,0.14), rgba(216,178,94,0))',
   backgroundRepeat: 'no-repeat',
   backgroundPosition: 'right -80px center',
   backgroundSize: '320px 320px',
@@ -294,7 +294,7 @@ const scoreCard: React.CSSProperties = {
 const label: React.CSSProperties = {
   fontSize: '13px',
   fontWeight: 600,
-  color: '#98989E',
+  color: '#A8A8AE',
   margin: '0 0 4px',
 }
 
@@ -312,21 +312,21 @@ const scoreFigure: React.CSSProperties = {
 const scoreOutOf: React.CSSProperties = {
   fontSize: '24px',
   fontWeight: 600,
-  color: '#98989E',
+  color: '#A8A8AE',
   letterSpacing: '0',
   marginLeft: '4px',
 }
 
 const muted: React.CSSProperties = {
   fontSize: '15px',
-  color: '#98989E',
+  color: '#A8A8AE',
   lineHeight: '1.55',
   margin: '0',
 }
 
 const small: React.CSSProperties = {
   fontSize: '13px',
-  color: '#636366',
+  color: '#A8A8AE',
   lineHeight: '1.5',
 }
 
@@ -406,8 +406,8 @@ const pill = (priority: string): React.CSSProperties => ({
   padding: '4px 10px',
   fontSize: '12px',
   fontWeight: 700,
-  backgroundColor: /alta/i.test(priority) ? 'rgba(214,180,91,0.15)' : 'rgba(255,255,255,0.08)',
-  color: /alta/i.test(priority) ? GOLD : '#98989E',
+  backgroundColor: /alta/i.test(priority) ? 'rgba(216,178,94,0.15)' : 'rgba(255,255,255,0.08)',
+  color: /alta/i.test(priority) ? GOLD : '#A8A8AE',
 })
 
 const ctaSection: React.CSSProperties = { padding: '16px 28px 36px' }
@@ -423,6 +423,6 @@ const ctaButton: React.CSSProperties = {
 const footerBrand: React.CSSProperties = {
   fontSize: '13px',
   fontWeight: 600,
-  color: '#98989E',
+  color: '#A8A8AE',
   margin: '0 0 6px',
 }

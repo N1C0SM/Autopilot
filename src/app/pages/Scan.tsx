@@ -490,8 +490,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
     if (!shareRef.current) return null;
     // Extra tick para que fuentes/layout se asienten
     await new Promise<void>((r) => setTimeout(r, 150));
-    // Asegurar que TODAS las <img loading="eager" decoding="sync"> internas (foto del usuario, etc.) están decodificadas
-    // antes de capturar — si no, html-to-image las pinta vacías.
+    // Asegurar que el logotipo de la tarjeta se haya decodificado antes de capturarla.
     try {
       const imgs = Array.from(shareRef.current.querySelectorAll("img"));
       // En iOS las imágenes "lazy" fuera de pantalla nunca se cargan: forzamos carga inmediata.
@@ -2362,7 +2361,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                 }}
                 aria-hidden
               >
-                <ScanShareCard ref={shareRef} result={result} photos={[currentImg, backImg].filter(Boolean) as string[]} />
+                <ScanShareCard ref={shareRef} result={result} />
               </div>
             </motion.div>
           )}

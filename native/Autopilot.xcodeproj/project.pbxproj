@@ -19,6 +19,7 @@
 		39012991BB9D556B10C68E0C /* AdminViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 215885F8A59B676130290EEB /* AdminViews.swift */; };
 		3CD2ECE76B612C811CF540BA /* Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9E053FD3BBE7DBA136AACF9 /* Session.swift */; };
 		42B37E40810ED706D583D9A5 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2087F6E61B3A0D2AD7B75E7A /* LoginView.swift */; };
+		445258069304B4AF9A7AB111 /* ScanShareCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A89DEAE73DCF19644F3BDEC6 /* ScanShareCardView.swift */; };
 		45C59E19DE5DBDD2398090D4 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 922D1242F803ABF9EC7B42D3 /* Theme.swift */; };
 		4A4158E5A447BF480BE6C342 /* OtherViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A8C9FF8A9F9707540345088 /* OtherViews.swift */; };
 		4B50EE3EBA1FA6A1C98BA0D4 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 7D2A2A74EF26831307F6611A /* Supabase */; };
@@ -49,6 +50,7 @@
 		C33EEF6918E30230C1551E46 /* AdminTrainers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AB2F8559DD0B658B4DA48C0 /* AdminTrainers.swift */; };
 		C38BFD538EEEA7E82ADCB392 /* Training.swift in Sources */ = {isa = PBXBuildFile; fileRef = C60F84451BD2C06501A2E80E /* Training.swift */; };
 		D6DA59DC5917CE17B6D42958 /* InterVariable.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 523B49FFF874D33F1F331FA9 /* InterVariable.ttf */; };
+		DDEB07BF5162DA692EE1F4F6 /* MuscleMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 736261749DDF4F29B5E99A13 /* MuscleMapView.swift */; };
 		DE5E50505FB213A9666E7902 /* AdminAcquisition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BF4A6FB7014FD1B1927D2F6 /* AdminAcquisition.swift */; };
 		E3C379D882AD856AB8A82CA5 /* Backend.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D06C6CE81D75452F06C8802 /* Backend.swift */; };
 		E7B7C480EF9B7EDCA868C500 /* ExerciseMotion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18372D90ACEF551F883409B3 /* ExerciseMotion.swift */; };
@@ -85,6 +87,7 @@
 		668CF450ED8BDDB4165C8A45 /* ExerciseLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseLibraryView.swift; sourceTree = "<group>"; };
 		66ACDDCD9DCD34A77D715501 /* AdminDashboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminDashboard.swift; sourceTree = "<group>"; };
 		6AB2F8559DD0B658B4DA48C0 /* AdminTrainers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminTrainers.swift; sourceTree = "<group>"; };
+		736261749DDF4F29B5E99A13 /* MuscleMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MuscleMapView.swift; sourceTree = "<group>"; };
 		74B2604636425A7A76330A3C /* AutopilotApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutopilotApp.swift; sourceTree = "<group>"; };
 		80424D4030A49FC7F8638EEF /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		833844952D3321A1BE6A4ADD /* BigShoulders-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "BigShoulders-Bold.ttf"; sourceTree = "<group>"; };
@@ -97,6 +100,7 @@
 		94FDE3BFE671B103E0039E96 /* NutritionSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NutritionSetupView.swift; sourceTree = "<group>"; };
 		9FD92FC3A4FA899A9AF2A41F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A57E68C8EAB6DFD893FAFDF5 /* HealthKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitManager.swift; sourceTree = "<group>"; };
+		A89DEAE73DCF19644F3BDEC6 /* ScanShareCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanShareCardView.swift; sourceTree = "<group>"; };
 		ABDC5FBCB982DC18600B15B1 /* AdminLanding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminLanding.swift; sourceTree = "<group>"; };
 		AEFB057618D570CFBDF91E63 /* AdminUserDetail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminUserDetail.swift; sourceTree = "<group>"; };
 		B1837043D6026822C99B027E /* Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components.swift; sourceTree = "<group>"; };
@@ -279,6 +283,7 @@
 		910F3B4B3F7F732A9C4003B0 /* Scan */ = {
 			isa = PBXGroup;
 			children = (
+				A89DEAE73DCF19644F3BDEC6 /* ScanShareCardView.swift */,
 				F4E7B8525054278D389D0B59 /* ScanView.swift */,
 			);
 			path = Scan;
@@ -316,6 +321,7 @@
 				B1837043D6026822C99B027E /* Components.swift */,
 				18372D90ACEF551F883409B3 /* ExerciseMotion.swift */,
 				F14D950EBE35D6E5D364A520 /* LoopingVideo.swift */,
+				736261749DDF4F29B5E99A13 /* MuscleMapView.swift */,
 				922D1242F803ABF9EC7B42D3 /* Theme.swift */,
 			);
 			path = Design;
@@ -430,6 +436,7 @@
 				5FDD42D966E843635893C724 /* InterFont.swift in Sources */,
 				42B37E40810ED706D583D9A5 /* LoginView.swift in Sources */,
 				A4849FF32FD6BD44ADE10328 /* LoopingVideo.swift in Sources */,
+				DDEB07BF5162DA692EE1F4F6 /* MuscleMapView.swift in Sources */,
 				38108789AEF99008A7016FDA /* NutritionSetupView.swift in Sources */,
 				6AF473D054AE230F2A3D39E0 /* OnboardingView.swift in Sources */,
 				4A4158E5A447BF480BE6C342 /* OtherViews.swift in Sources */,
@@ -438,6 +445,7 @@
 				9A0975F2340BFE3928FD9F8A /* Progression.swift in Sources */,
 				B303B7824C6D835D37EB539F /* RoadmapView.swift in Sources */,
 				EB35510AE5F8A100568AEED6 /* RootView.swift in Sources */,
+				445258069304B4AF9A7AB111 /* ScanShareCardView.swift in Sources */,
 				87E60DB75F6066D44856E541 /* ScanView.swift in Sources */,
 				3CD2ECE76B612C811CF540BA /* Session.swift in Sources */,
 				3538D36D10996732BE4FF0C5 /* Snapshots.swift in Sources */,

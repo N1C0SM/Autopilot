@@ -1,4 +1,4 @@
-import { PublicBasicNutrition } from "@/web/components/PublicAppScreen";
+import { PublicBasicNutrition, PublicProgressScreen, PublicTrainingScreen } from "@/web/components/PublicAppScreen";
 import { Tabs, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import ScrollWords from "@/web/components/ScrollWords";
 import { lazy, Suspense, useEffect, useState } from "react";
@@ -45,14 +45,6 @@ const exercises = [
   { name: "Remo con mancuerna", sets: 3, reps: 11, load: "16 kg", last: "Última vez: 14 kg × 12", image: fastImage("https://enebrcdrdnfkyduzyrzm.supabase.co/storage/v1/object/public/site-assets/exercise-images/d5e30e05-0791-4886-84a0-7b2695728225-1791475865184.png", 800) },
   { name: "Press con mancuernas", sets: 3, reps: 9, load: "14 kg", last: "Última vez: 14 kg × 8", image: fastImage("https://enebrcdrdnfkyduzyrzm.supabase.co/storage/v1/object/public/site-assets/exercise-images/a31c7206-d2a4-4b31-856a-f5dec09b890e-1791475829849.png", 800) },
 ];
-
-const DEMO_SHOTS: Record<View, string> = {
-  home: "/app-shots/hoy.jpg",
-  training: "/app-shots/registro.jpg",
-  nutrition: "/app-shots/nutricion.jpg",
-  chat: "/app-shots/hoy.jpg",
-  progress: "/app-shots/progreso.jpg",
-};
 
 const baseSide: Record<View, { title: string; points: string[] }> = {
   home: {
@@ -226,7 +218,7 @@ function ProductPreviewContent({ onPlans, onFree }: { onPlans: () => void; onFre
             <h2 id="preview-heading" className="mt-1 type-title1 sm:text-[40px] sm:leading-[44px]"><ScrollWords text="Prueba cómo sería tu día." /></h2>
             <p className="mt-3 type-body text-muted-foreground">Así se ve la app por dentro: tu día, cada serie y tu progreso. Cambia de pantalla con las pestañas de la demo.</p>
           </div>
-          <span className="hidden type-footnote text-muted-foreground sm:inline">Capturas reales de la app</span>
+          <span className="hidden type-footnote text-muted-foreground sm:inline">Muestra interactiva · datos de ejemplo</span>
         </div>
 
         {/* Alineado arriba, no centrado: el texto arranca a la altura del teléfono en vez
@@ -239,7 +231,7 @@ function ProductPreviewContent({ onPlans, onFree }: { onPlans: () => void; onFre
                 <li key={p} className="flex items-start gap-3 type-body text-muted-foreground"><Check className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />{p}</li>
               ))}
             </ul>
-            <p className="mt-6 max-w-md type-footnote text-muted-foreground">{`Capturas reales de la app. Gratis incluye rutina, registro, progreso, macros y scan básico${plans.plus ? `; ${plans.plusName} añade tus comidas y el scan completo por ${euro(plans.plusPrice)}/mes tras la prueba` : ""}.`}</p>
+            <p className="mt-6 max-w-md type-footnote text-muted-foreground">{`Muestra interactiva con datos de ejemplo. Gratis incluye rutina, registro, progreso, macros y scan básico${plans.plus ? `; ${plans.plusName} añade tus comidas y el scan completo por ${euro(plans.plusPrice)}/mes tras la prueba` : ""}.`}</p>
             {/* Las acciones viven con el texto, no en una fila suelta al pie de la sección. */}
             <div className="mt-8 flex max-w-md flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:gap-3">
               {onFree && <Button type="button" variant="tinted" size="lg" onClick={() => { void hapticTap(); onFree(); }}>Crear mi propia rutina gratis</Button>}
@@ -248,24 +240,15 @@ function ProductPreviewContent({ onPlans, onFree }: { onPlans: () => void; onFre
           </div>
 
           <div className="order-1 mx-auto flex w-full max-w-[22rem] flex-col md:order-2">
-            {/* Capturas REALES de la app (public/app-shots); las pestañas de abajo cambian de pantalla. */}
-            {/* La proporción del marco es la de las capturas (738×1645): no se corta la
-                barra de la app. */}
-            <PhoneFrame screenClassName="aspect-[738/1645]" chrome={false}>
-              <img
-                key={view}
-                src={DEMO_SHOTS[view]}
-                alt={`Pantalla ${view === "home" ? "Hoy" : titles[view as Exclude<View, "home">]} de la app Autopilot`}
-                className="h-full w-full object-cover object-top motion-safe:animate-fade-in"
-                decoding="async"
-              />
-              {/* Zonas táctiles sobre la barra dibujada en la captura: solo puntero, el control
-                  accesible es el visible de abajo. */}
-              <nav aria-hidden="true" className="absolute inset-x-3 bottom-4 z-10 hidden h-16 grid-cols-4 md:grid">
-                {shownViews.map((v) => (
-                  <button key={v.key} type="button" tabIndex={-1} onClick={() => changeView(v.key as View)} className="rounded-full" />
-                ))}
-              </nav>
+            <PhoneFrame screenClassName="aspect-[738/1645]">
+              <PhoneAppBar avatar={<OwnerAvatar photo={owner.photo} initial={ownerInitial} />} />
+              <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-24 pt-2">
+                {view === "home" && <PhoneHome plans={plans} heading name={ownerFirst} onSession={() => changeView("training")} onNutrition={() => changeView("nutrition")} onProgress={() => changeView("progress")} />}
+                {view === "training" && <PublicTrainingScreen active />}
+                {view === "nutrition" && <PublicBasicNutrition />}
+                {view === "progress" && <PublicProgressScreen />}
+              </div>
+              {view !== "training" && <PhoneTabBar tabs={shownViews} active={view} onSelect={(key) => changeView(key as View)} />}
             </PhoneFrame>
 
             {/* Control visible: las zonas táctiles sobre la barra del teléfono existían pero

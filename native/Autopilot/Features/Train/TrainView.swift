@@ -116,12 +116,12 @@ struct TrainView: View {
             Button { Haptics.tap(); library = true } label: {
                 Label("Ejercicios", image: "lu-book-open")
                     #if os(iOS)
-                    .labelStyle(.iconOnly).frame(width: 36)
+                    .labelStyle(.iconOnly).frame(width: 44)
                     #else
                     .labelStyle(.titleOnly).padding(.horizontal, 14)
                     #endif
                     .font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.gold)
-                    .frame(height: 36)
+                    .frame(minHeight: 44)
                     .background(Palette.secondary, in: Capsule())
             }
             .buttonStyle(.plain)
@@ -129,7 +129,7 @@ struct TrainView: View {
             Button { Haptics.tap(); editing = true } label: {
                 Label("Editar", image: "lu-settings").labelStyle(.titleOnly)
                     .font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.gold)
-                    .padding(.horizontal, 14).frame(height: 36)
+                    .padding(.horizontal, 14).frame(minHeight: 44)
                     .background(Palette.secondary, in: Capsule())
             }
             .buttonStyle(.plain)
@@ -535,12 +535,12 @@ struct WeeklyRoutineView: View {
         }
     }
 
-    /// Estado «hecho» del día: misma forma y alto que la píldora de acción, en verde y sin acción.
+    /// Estado «hecho» del día: misma forma y alto que la píldora de acción, en dorado y sin acción.
     private func completedLabel(_ title: String) -> some View {
         Label(title, systemImage: "checkmark.circle.fill")
-            .font(.apHeadline).foregroundStyle(Palette.success)
+            .font(.apHeadline).foregroundStyle(Palette.gold)
             .frame(maxWidth: .infinity, minHeight: 50)
-            .background(Palette.success.opacity(0.14), in: Capsule())
+            .background(Palette.gold.opacity(0.14), in: Capsule())
             .accessibilityElement(children: .combine)
     }
 

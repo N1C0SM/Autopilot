@@ -69,36 +69,21 @@ export function drawBrandA(ctx: CanvasRenderingContext2D, x: number, y: number, 
 
 // Firma común a todo lo que sale de Autopilot (stories, scan, emails): la «A» y la web, abajo.
 function drawSignature(ctx: CanvasRenderingContext2D, W: number, H: number) {
-  drawBrandA(ctx, W / 2 - 28, H - 190, 56);
+  drawBrandA(ctx, W / 2 - 36, H - 224, 72);
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.fillStyle = INK_TEXT.tertiary; ctx.font = `500 26px ${F}`;
-  ctx.fillText("autopilotplan.com", W / 2, H - 90);
+  ctx.fillStyle = INK_TEXT.tertiary; ctx.font = `500 39px ${F}`;
+  ctx.fillText("autopilotplan.com", W / 2, H - 120);
 }
 
 function drawBackdrop(ctx: CanvasRenderingContext2D, W: number, H: number) {
-  // Deep obsidian athletic background
-  const bg = ctx.createLinearGradient(0, 0, 0, H);
-  bg.addColorStop(0, INK.base);
-  bg.addColorStop(0.35, INK.mid);
-  bg.addColorStop(1, INK.deep);
-  ctx.fillStyle = bg;
+  ctx.fillStyle = INK.base;
   ctx.fillRect(0, 0, W, H);
 
-  // Ambient top gold glow
-  const glow = ctx.createRadialGradient(W / 2, 100, 10, W / 2, 100, 650);
-  glow.addColorStop(0, "rgba(255, 170, 60, 0.085)");
-  glow.addColorStop(0.5, "rgba(255, 170, 60, 0.025)");
-  glow.addColorStop(1, "rgba(0, 0, 0, 0)");
+  const glow = ctx.createRadialGradient(W / 2, 100, 0, W / 2, 100, 650);
+  glow.addColorStop(0, "rgba(216, 178, 94, 0.14)");
+  glow.addColorStop(1, "rgba(216, 178, 94, 0)");
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, W, H);
-
-  // Subtle top hairline accent
-  const line = ctx.createLinearGradient(0, 0, W, 0);
-  line.addColorStop(0, "rgba(255, 170, 60, 0)");
-  line.addColorStop(0.5, "rgba(255, 170, 60, 0.35)");
-  line.addColorStop(1, "rgba(255, 170, 60, 0)");
-  ctx.fillStyle = line;
-  ctx.fillRect(0, 0, W, 2);
 }
 
 // The most share-worthy fact of this session: PR > progress vs last time > nothing.
@@ -119,24 +104,23 @@ function highlight(p: Props): { type: "pr" | "progress"; label: string } | null 
 function drawHeader(ctx: CanvasRenderingContext2D, W: number, p: Props, logo?: HTMLImageElement | null) {
   ctx.textBaseline = "middle"; ctx.textAlign = "left";
   let x = 76;
-  if (logo) { ctx.drawImage(logo, x, 82, 48, 48); x += 64; }
-  ctx.fillStyle = INK_TEXT.primary; ctx.font = `700 30px ${F}`;
-  ctx.fillText("Autopilot", x, 106);
-  ctx.textAlign = "right"; ctx.fillStyle = INK_TEXT.secondary; ctx.font = `500 28px ${F}`;
-  ctx.fillText(p.date, W - 76, 106);
+  if (logo) { ctx.drawImage(logo, x, 82, 66, 66); x += 82; }
+  ctx.fillStyle = INK_TEXT.primary; ctx.font = `700 50px ${F}`;
+  ctx.fillText("Autopilot", x, 115);
+  ctx.textAlign = "right"; ctx.fillStyle = INK_TEXT.secondary; ctx.font = `500 39px ${F}`;
+  ctx.fillText(p.date, W - 76, 115);
 }
 
-// Logro de la sesión como cápsula centrada (récord en dorado, progreso en verde).
+// Logro de la sesión como cápsula centrada, en el único acento de marca.
 function drawHighlight(ctx: CanvasRenderingContext2D, p: Props, W: number, y: number) {
   const hi = highlight(p);
   if (!hi) return;
-  const isPr = hi.type === "pr";
-  const color = isPr ? BRAND_GOLD : INK_TEXT.success;
-  let fs = 30;
+  const color = BRAND_GOLD;
+  let fs = 34;
   ctx.font = `600 ${fs}px ${F}`;
   while (ctx.measureText(hi.label).width + 72 > W - 152 && fs > 20) { fs -= 1; ctx.font = `600 ${fs}px ${F}`; }
   const bw = ctx.measureText(hi.label).width + 72, bh = 68, bx = (W - bw) / 2;
-  ctx.fillStyle = isPr ? "rgba(214,180,91,0.14)" : "rgba(52,211,153,0.14)";
+  ctx.fillStyle = "rgba(216,178,94,0.14)";
   ctx.beginPath(); ctx.roundRect(bx, y, bw, bh, bh / 2); ctx.fill();
   ctx.fillStyle = color; ctx.textAlign = "center"; ctx.textBaseline = "middle";
   ctx.fillText(hi.label, W / 2, y + bh / 2 + 1);
@@ -167,11 +151,11 @@ function muscleSubtitle(p: Props) {
 
 function drawTitle(ctx: CanvasRenderingContext2D, p: Props, y: number, W: number) {
   ctx.textAlign = "center"; ctx.textBaseline = "alphabetic"; ctx.fillStyle = INK_TEXT.primary;
-  let s = 76; const t = p.title || "Sesión de hoy";
+  let s = 84; const t = p.title || "Sesión de hoy";
   ctx.font = `800 ${s}px ${F}`;
   while (ctx.measureText(t).width > W - 152 && s > 44) { s -= 2; ctx.font = `800 ${s}px ${F}`; }
   ctx.fillText(t, W / 2, y);
-  ctx.fillStyle = INK_TEXT.secondary; ctx.font = `500 34px ${F}`;
+  ctx.fillStyle = INK_TEXT.secondary; ctx.font = `500 45px ${F}`;
   ctx.fillText(muscleSubtitle(p), W / 2, y + 58);
 }
 
@@ -183,7 +167,7 @@ function drawStats(ctx: CanvasRenderingContext2D, stats: [string, string][], W: 
     if (i) { ctx.fillStyle = "rgba(255,255,255,0.12)"; ctx.fillRect(76 + cw * i, y - 70, 2, 130); }
     ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
     ctx.fillStyle = INK_TEXT.primary; ctx.font = `800 96px ${FIG}`; ctx.fillText(value, cx, y);
-    ctx.fillStyle = INK_TEXT.secondary; ctx.font = `500 28px ${F}`; ctx.fillText(label, cx, y + 50);
+    ctx.fillStyle = INK_TEXT.secondary; ctx.font = `500 39px ${F}`; ctx.fillText(label, cx, y + 50);
   });
 }
 
@@ -259,8 +243,8 @@ export function WorkoutStoryShare(props: Props) {
   // Texto enriquecido para compartir por WhatsApp / mensajes
   const shareText = () => {
     const lines: string[] = [];
-    if (props.records.length) lines.push(`🏆 ${props.records[0]}`);
-    if (props.volumeKg > 0) lines.push(`💪 ${Math.round(props.volumeKg).toLocaleString("es-ES")} kg de carga total`);
+    if (props.records.length) lines.push(`Nuevo récord: ${props.records[0]}`);
+    if (props.volumeKg > 0) lines.push(`Carga total: ${Math.round(props.volumeKg).toLocaleString("es-ES")} kg`);
     lines.push(`${props.sets} series · ${props.exercises} ejercicios`);
     if (props.muscles.length) lines.push(props.muscles.slice(0, 3).join(", "));
     lines.push("Autopilot — autopilotplan.com");
@@ -268,32 +252,21 @@ export function WorkoutStoryShare(props: Props) {
   };
 
   const run = async (mode: "share" | "download") => {
-    console.log("[WORKOUT-SHARE] Starting run, mode:", mode, "busy:", busy);
-    if (busy) {
-      console.log("[WORKOUT-SHARE] Already busy, ignoring");
-      return;
-    }
+    if (busy) return;
     
     setBusy(true);
-    console.log("[WORKOUT-SHARE] Set busy to true");
     
     try {
       const filename = `autopilot-entreno-${activeVariant}-${Date.now()}.png`;
-      console.log("[WORKOUT-SHARE] Rendering story, variant:", activeVariant);
-      
       const blob = await renderStory(props, activeVariant);
-      console.log("[WORKOUT-SHARE] Story rendered, blob size:", blob.size);
 
       if (mode === "download") {
-        console.log("[WORKOUT-SHARE] Download mode");
         download(blob, filename);
         toast.success("Imagen descargada");
         setBusy(false);
         return;
       }
 
-      console.log("[WORKOUT-SHARE] Calling shareFileOrImage");
-      
       // Desbloquear el botón ANTES de abrir el menú nativo
       // El menú nativo de iOS/Android puede tardar en resolverse o no resolverse nunca
       setBusy(false);
@@ -305,7 +278,6 @@ export function WorkoutStoryShare(props: Props) {
         title: props.title || "Mi entrenamiento en Autopilot",
         text: shareText(),
       }).then(res => {
-        console.log("[WORKOUT-SHARE] Share completed:", res);
         if (res.shared) {
           toast.success("Compartido");
         } else if (res.downloaded) {
@@ -314,7 +286,6 @@ export function WorkoutStoryShare(props: Props) {
       }).catch((e: unknown) => {
         const name = (e as Error)?.name || "";
         const msg = (e as Error)?.message || "";
-        console.error("[WORKOUT-SHARE] Share error:", { name, msg, error: e });
         
         if (name !== "AbortError" && !msg.toLowerCase().includes("cancel")) {
           toast.error("No se pudo compartir");
@@ -324,7 +295,6 @@ export function WorkoutStoryShare(props: Props) {
     } catch (e: unknown) {
       const name = (e as Error)?.name || "";
       const msg = (e as Error)?.message || "";
-      console.error("[WORKOUT-SHARE] Render error:", { name, msg, error: e });
       
       toast.error("No se pudo crear la imagen");
       setBusy(false);
