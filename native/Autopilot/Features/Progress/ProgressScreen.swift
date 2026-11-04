@@ -169,29 +169,50 @@ struct ProgressScreen: View {
 
     private var strengthCard: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Últimas 4 semanas").font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.gold)
+            // Eyebrow dorado
+            Text("ÚLTIMAS 4 SEMANAS")
+                .font(.inter(size: 11, weight: .bold))
+                .tracking(0.1)
+                .foregroundStyle(Palette.gold)
+
+            // Cifra protagonista
             HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(NumberText.integer(model.kg4w)).font(.figure(size: 56))
-                    // Cifra grande: que no se corte con Dynamic Type o números largos.
-                    .lineLimit(1).minimumScaleFactor(0.6)
+                Text(NumberText.integer(model.kg4w))
+                    .font(.figure(size: 52))
+                    .lineLimit(1).minimumScaleFactor(0.55)
                     .contentTransition(.numericText())
                     .animation(reduceMotion ? nil : .snappy, value: model.kg4w)
-                Text("kg levantados").font(.apTitle3).foregroundStyle(Palette.muted)
+                Text("kg levantados")
+                    .font(.apTitle3)
+                    .foregroundStyle(Palette.muted)
             }
-            // Tres columnas iguales: las cifras nunca empujan el texto fuera del margen.
+            .padding(.top, 6)
+
+            // 3 KPIs en fila
             HStack(alignment: .top, spacing: 12) {
                 stat("\(model.workouts4w)", model.workouts4w == 1 ? "entreno" : "entrenos")
                 stat("\(model.streakWeeks)", model.streakWeeks == 1 ? "semana de racha" : "semanas de racha")
                 stat(NumberText.integer(model.kgThisWeek), "kg esta semana")
             }
-            .padding(.top, 12)
+            .padding(.top, 14)
+
+            // Gráfica de barras
             Chart(model.weekly, id: \.label) { w in
-                BarMark(x: .value("Semana", w.label), y: .value("kg", max(w.kg, model.maxWeekly * 0.02)))
-                    .foregroundStyle(w.kg > 0 ? Palette.gold : Palette.gold.opacity(0.25))
-                    .cornerRadius(8)
+                BarMark(
+                    x: .value("Semana", w.label),
+                    y: .value("kg", max(w.kg, model.maxWeekly * 0.02))
+                )
+                .foregroundStyle(w.kg > 0 ? Palette.gold : Palette.gold.opacity(0.2))
+                .cornerRadius(8)
             }
             .chartYAxis(.hidden)
-            .chartXAxis { AxisMarks { _ in AxisValueLabel().font(.inter(.caption2)).foregroundStyle(Palette.muted) } }
+            .chartXAxis {
+                AxisMarks { _ in
+                    AxisValueLabel()
+                        .font(.inter(.caption2))
+                        .foregroundStyle(Palette.muted)
+                }
+            }
             .frame(height: 160)
             .padding(.top, 20)
             .accessibilityLabel("Kilos levantados por semana")
@@ -199,10 +220,19 @@ struct ProgressScreen: View {
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(alignment: .topTrailing) {
-            RadialGradient(colors: [Palette.gold.opacity(0.18), .clear], center: .topTrailing, startRadius: 0, endRadius: 260)
+            // Halo dorado en esquina
+            RadialGradient(
+                colors: [Palette.gold.opacity(0.16), .clear],
+                center: .topTrailing,
+                startRadius: 0, endRadius: 240
+            )
         }
         .background(Palette.card)
         .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
+                .strokeBorder(Palette.gold.opacity(0.08), lineWidth: 1)
+        )
     }
 
     private func stat(_ value: String, _ label: String) -> some View {
@@ -372,26 +402,64 @@ struct ProgressScreen: View {
         }
     }
 
-    /// Tarjeta grande «Tu mejor marca».
+    /// Tarjeta grande «Tu mejor marca» — foto a sangre, cifra 64pt, borde dorado.
     private func recordsHero(_ best: ProgressModel.Record) -> some View {
         ZStack(alignment: .bottomLeading) {
-            Color.clear.frame(maxWidth: .infinity).frame(height: 256)
-                .overlay { CachedAsyncImage(url: best.image.flatMap(URL.init(string:))) { $0.resizable().scaledToFill() } placeholder: { Palette.card } }
-                .clipped()
-            LinearGradient(colors: [.black.opacity(0.9), .black.opacity(0.45), .black.opacity(0.1)], startPoint: .bottom, endPoint: .top)
-            VStack(alignment: .leading, spacing: 4) {
-                Label("Tu mejor marca", systemImage: "trophy").font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.gold)
-                HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    Text(best.e1rmText).font(.figure(size: 64))
-                        .lineLimit(1).minimumScaleFactor(0.5).allowsTightening(true)
-                        .contentTransition(.numericText())
-                    Text("kg").font(.apTitle3).foregroundStyle(.white.opacity(0.7))
+            // Foto a sangre
+            Color.clear.frame(maxWidth: .infinity).frame(height: 260)
+                .overlay {
+                    CachedAsyncImage(url: best.image.flatMap(URL.init(string:))) {
+                        $0.resizable().scaledToFill()
+                    } placeholder: { Palette.card }
                 }
-                Text("1RM estimado en \(best.name)").font(.apSubhead).foregroundStyle(.white.opacity(0.75))
+                .clipped()
+
+            // Degradados doble
+            LinearGradient(
+                colors: [.black.opacity(0.1), .clear],
+                startPoint: .top, endPoint: .init(x: 0.5, y: 0.4)
+            )
+            LinearGradient(
+                colors: [.clear, .black.opacity(0.92)],
+                startPoint: .init(x: 0.5, y: 0.35), endPoint: .bottom
+            )
+
+            // Halo dorado
+            RadialGradient(
+                colors: [Palette.gold.opacity(0.1), .clear],
+                center: .bottomLeading, startRadius: 0, endRadius: 200
+            )
+            .accessibilityHidden(true)
+
+            // Contenido
+            VStack(alignment: .leading, spacing: 5) {
+                Label("Tu mejor marca", systemImage: "trophy")
+                    .font(.apSubhead.weight(.semibold))
+                    .foregroundStyle(Palette.gold)
+
+                HStack(alignment: .firstTextBaseline, spacing: 5) {
+                    Text(best.e1rmText)
+                        .font(.figure(size: 64))
+                        .lineLimit(1).minimumScaleFactor(0.5)
+                        .allowsTightening(true)
+                        .contentTransition(.numericText())
+                    Text("kg")
+                        .font(.apTitle3)
+                        .foregroundStyle(.white.opacity(0.65))
+                }
+
+                Text("1RM estimado en \(best.name)")
+                    .font(.apSubhead)
+                    .foregroundStyle(.white.opacity(0.7))
+                    .lineLimit(2)
             }
             .padding(20)
         }
         .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
+                .strokeBorder(Palette.gold.opacity(0.18), lineWidth: 1.5)
+        )
         .accessibilityElement(children: .combine)
     }
 

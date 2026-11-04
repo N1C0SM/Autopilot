@@ -104,7 +104,7 @@ const MUSCLE_INTENSITY = {
 
 // Misma rejilla para la cabecera, las series y sus bajadas: n.º, previa, carga, valor, check.
 const SET_GRID = "grid grid-cols-[24px_52px_minmax(0,1fr)_minmax(0,1fr)_44px] items-center gap-2";
-const NUMBER_FIELD = "scroll-mb-40 h-11 w-full min-w-0 rounded-[10px] border-0 bg-secondary px-1 text-center font-rounded type-headline tabular-nums outline-none transition-colors duration-150 placeholder:font-normal placeholder:text-muted-foreground/60 focus:bg-accent aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-inset aria-[invalid=true]:ring-destructive";
+const NUMBER_FIELD = "scroll-mb-40 h-11 w-full min-w-0 rounded-[10px] border-0 bg-secondary px-1 text-center font-rounded type-headline tabular-nums outline-none transition-colors duration-150 placeholder:font-normal placeholder:text-muted-foreground/60 focus:bg-accent focus:ring-1 focus:ring-inset focus:ring-primary/40 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-inset aria-[invalid=true]:ring-destructive";
 // La serie en curso: cifras más grandes que el resto.
 const CURRENT_FIGURE = "!text-[22px] !font-bold !leading-7";
 // iOS solo arranca un vídeo en silencio si `muted` está puesto antes de `play()`.
@@ -1257,7 +1257,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
             value={progressPercent}
             aria-valuenow={Math.round(progressPercent)}
             aria-label="Progreso de la sesión"
-            className="absolute inset-x-0 bottom-0 h-0.5 rounded-none bg-transparent"
+            className="absolute inset-x-0 bottom-0 h-[2px] rounded-none bg-transparent [&>div]:bg-primary [&>div]:transition-[width] [&>div]:duration-500"
           />
         </div>
       )}
@@ -2030,10 +2030,29 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                   className="overflow-hidden"
                 >
                   <div role="timer" aria-label="Descanso entre series" className="pb-3">
-                    <div className="flex items-center">
+                    <div className="flex items-center gap-3">
+                      {/* Anillo circular animado — radio 22, circunferencia ≈ 138 */}
+                      <div aria-hidden="true" className="relative h-14 w-14 shrink-0">
+                        <svg width="56" height="56" viewBox="0 0 56 56" style={{ transform: "rotate(-90deg)" }}>
+                          <circle cx="28" cy="28" r="22" fill="none" stroke="hsl(var(--secondary))" strokeWidth="4" />
+                          <circle
+                            cx="28" cy="28" r="22" fill="none"
+                            stroke="hsl(var(--primary))" strokeWidth="4"
+                            strokeLinecap="round"
+                            strokeDasharray="138.23"
+                            strokeDashoffset={138.23 * (1 - Math.min(1, restTimer / Math.max(restTarget, 1)))}
+                            style={{ transition: "stroke-dashoffset 1s linear" }}
+                          />
+                        </svg>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <p className="font-rounded text-[15px] font-bold tabular-nums text-primary">
+                            {restTimer}
+                          </p>
+                        </div>
+                      </div>
                       <div className="min-w-0 flex-1">
-                        <p className="sr-only">Descanso</p>
-                        <p className="font-rounded text-[34px] font-bold leading-[44px] tabular-nums">
+                        <p className="type-caption1 font-semibold uppercase tracking-wider text-muted-foreground">Descanso</p>
+                        <p className="font-rounded text-[28px] font-bold leading-tight tabular-nums">
                           {Math.floor(restTimer / 60)}:{(restTimer % 60).toString().padStart(2, "0")}
                         </p>
                       </div>
@@ -2042,12 +2061,6 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                       <button type="button" aria-label="Omitir descanso" onClick={() => { void hapticTap(); setRestTimer(null); }} className="-mr-2 h-11 rounded-chip bg-primary/10 px-3 type-body font-semibold text-primary transition-opacity active:opacity-60 [touch-action:manipulation]">
                         Omitir
                       </button>
-                    </div>
-                    <div aria-hidden="true" className="mt-2 h-[3px] overflow-hidden rounded-full bg-secondary">
-                      <div
-                        className="h-full rounded-full bg-primary"
-                        style={{ width: `${Math.min(100, (restTimer / Math.max(restTarget, 1)) * 100)}%`, transition: "width 1s linear" }}
-                      />
                     </div>
                   </div>
                 </motion.div>
@@ -2071,7 +2084,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
               onClick={() => { void hapticTap(); void finishWorkout(); }}
               disabled={saving || completedSets === 0}
               variant={allSetsDone ? "default" : "secondary"}
-              className="w-full [.keyboard-open_&]:hidden"
+              className="w-full rounded-full h-14 text-[17px] font-semibold [.keyboard-open_&]:hidden"
               size="lg"
             >
               {saving ? <><Spinner size="sm" className={`${allSetsDone ? "text-primary-foreground" : "text-foreground"} [&>svg]:!size-full`} label="Guardando" /> Guardando…</> : "Terminar entrenamiento"}

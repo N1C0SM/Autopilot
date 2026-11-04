@@ -126,7 +126,7 @@ const PRsList = ({ userId }: Props) => {
 
   return (
     <div className="space-y-8 lg:grid lg:grid-cols-[280px_1fr] lg:gap-12 lg:space-y-0 lg:items-start">
-      <section aria-label="Tu mejor marca" className="relative overflow-hidden rounded-[28px] bg-card lg:sticky lg:top-4">
+      <section aria-label="Tu mejor marca" className="relative overflow-hidden rounded-[28px] bg-card ring-1 ring-primary/20 lg:sticky lg:top-4">
         {/* Portada del récord con la foto real del ejercicio, como las sesiones y la landing. */}
         {images[top.exercise_name] && <>
           <img src={images[top.exercise_name]} alt="" decoding="async" className="absolute inset-0 h-full w-full object-cover object-[50%_30%] animate-in fade-in duration-500" />

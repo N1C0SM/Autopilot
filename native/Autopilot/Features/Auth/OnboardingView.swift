@@ -30,52 +30,128 @@ struct SignedOutView: View {
     }
 }
 
-/// Bienvenida de la app (web `Welcome.tsx`): icono, tres razones y una sola acción principal.
+/// Bienvenida de la app — hero foto a sangre, logo + título encima, botones abajo.
 struct WelcomeView: View {
     var onStart: () -> Void
     var onLogin: () -> Void
 
     var body: some View {
-        VStack(spacing: 0) {
-            ScrollView {
-                VStack(spacing: 0) {
-                    Image("Logo").resizable().scaledToFit().frame(width: 80, height: 80)
-                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous)).accessibilityHidden(true)
-                    (Text("Te damos la bienvenida a\n") + Text("Autopilot").foregroundColor(Palette.gold))
-                        .font(.apLargeTitle).tracking(-0.7).multilineTextAlignment(.center)
-                        .padding(.top, 28).accessibilityAddTraits(.isHeader)
-                    VStack(alignment: .leading, spacing: 24) {
-                        feature("dumbbell.fill", "Entrenamiento", "Tu rutina se adapta cada semana a lo que haces y a cómo progresas.")
-                        feature("fork.knife", "Nutrición", "Calorías, macros y comidas que encajan con tu objetivo y tu día.")
-                        feature("sparkles", "En automático", "Tu plan se mantiene al día solo. Tú apareces, él se encarga del resto.")
+        ZStack(alignment: .bottom) {
+            // Foto hero a sangre
+            AsyncImage(url: URL(string: "https://enebrcdrdnfkyduzyrzm.supabase.co/storage/v1/object/public/site-assets/exercise-images/a31c7206-d2a4-4b31-856a-f5dec09b890e-1791475829849.png")) { img in
+                img.resizable().scaledToFill()
+            } placeholder: {
+                Color(red: 0.08, green: 0.08, blue: 0.08)
+            }
+            .ignoresSafeArea()
+            .accessibilityHidden(true)
+
+            // Gradientes
+            LinearGradient(
+                colors: [.black.opacity(0.45), .clear],
+                startPoint: .top, endPoint: .init(x: 0.5, y: 0.35)
+            )
+            .ignoresSafeArea()
+            .accessibilityHidden(true)
+
+            LinearGradient(
+                colors: [.clear, .black.opacity(0.88), .black],
+                startPoint: .init(x: 0.5, y: 0.4), endPoint: .bottom
+            )
+            .ignoresSafeArea()
+            .accessibilityHidden(true)
+
+            // Halo dorado
+            RadialGradient(
+                colors: [Palette.gold.opacity(0.08), .clear],
+                center: .bottom, startRadius: 0, endRadius: 400
+            )
+            .ignoresSafeArea()
+            .accessibilityHidden(true)
+
+            // Contenido
+            VStack(alignment: .leading, spacing: 0) {
+                Spacer()
+
+                // Logo + nombre
+                HStack(spacing: 14) {
+                    Image("Logo")
+                        .resizable().scaledToFit()
+                        .frame(width: 52, height: 52)
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("AUTOPILOT")
+                            .font(.inter(size: 13, weight: .black))
+                            .tracking(0.18)
+                            .foregroundStyle(.white)
+                        Text("Entrenamiento adaptativo")
+                            .font(.inter(size: 13, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.5))
                     }
-                    .padding(.top, 40)
                 }
-                .frame(maxWidth: 420).padding(.horizontal, 24).padding(.top, 56)
-                .frame(maxWidth: .infinity)
-            }
-            VStack(spacing: 12) {
-                Button("Crear mi rutina gratis") { Haptics.tap(); onStart() }.buttonStyle(.pill)
-                Button("Ya tengo cuenta") { Haptics.tap(); onLogin() }
-                    .font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.gold).frame(minHeight: 44)
+                .padding(.bottom, 20)
+
+                // Titular
+                Text("Tu entrenamiento,\nen piloto automático.")
+                    .font(.inter(size: 36, weight: .bold))
+                    .tracking(-0.8)
+                    .foregroundStyle(.white)
+                    .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityAddTraits(.isHeader)
+
+                // Features compactas
+                VStack(alignment: .leading, spacing: 10) {
+                    featureRow("dumbbell.fill", "Rutina adaptativa que sube las cargas cada semana")
+                    featureRow("fork.knife", "Nutrición: macros y comidas del día")
+                    featureRow("sparkles", "Todo en automático, tú solo apareces")
+                }
+                .padding(.top, 18)
+                .padding(.bottom, 32)
+
+                // CTAs
+                VStack(spacing: 10) {
+                    Button("Crear mi rutina gratis") { Haptics.tap(); onStart() }
+                        .buttonStyle(.pill)
+                    Button("Ya tengo cuenta") { Haptics.tap(); onLogin() }
+                        .font(.apSubhead.weight(.semibold))
+                        .foregroundStyle(Palette.gold)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .background(.black.opacity(0.0))
+                }
+
                 Text("Al continuar aceptas los [términos](https://autopilotplan.com/legal/terminos) y la [política de privacidad](https://autopilotplan.com/legal/privacidad).")
-                    .font(.apCaption).foregroundStyle(Palette.muted).multilineTextAlignment(.center).tint(Palette.muted)
+                    .font(.apCaption)
+                    .foregroundStyle(.white.opacity(0.3))
+                    .multilineTextAlignment(.center)
+                    .tint(.white.opacity(0.5))
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 8)
+                    .padding(.bottom, 16)
             }
-            .frame(maxWidth: 420).padding(.horizontal, 24).padding(.bottom, 16)
+            .frame(maxWidth: 420)
+            .padding(.horizontal, 24)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .ignoresSafeArea(edges: .top)
         .screenBackground()
-        // Las fotos del cuestionario ya están en caché cuando se pulsa «Crear mi rutina gratis».
         .task { ImageCache.shared.prefetch(Quiz.focuses.compactMap { Quiz.photo($0.v) }, maxSide: Quiz.photoSide) }
     }
 
-    private func feature(_ symbol: String, _ title: String, _ text: String) -> some View {
-        HStack(alignment: .top, spacing: 16) {
-            Image(systemName: symbol).font(.system(size: 26, weight: .semibold)).foregroundStyle(Palette.gold)
-                .frame(width: 40).accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title).font(.apHeadline)
-                Text(text).font(.apSubhead).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
-            }
+    private func featureRow(_ symbol: String, _ text: String) -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            Image(systemName: symbol)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Palette.gold)
+                .frame(width: 28, height: 28)
+                .background(Palette.gold.opacity(0.12), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .accessibilityHidden(true)
+            Text(text)
+                .font(.apSubhead)
+                .foregroundStyle(.white.opacity(0.7))
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .accessibilityElement(children: .combine)
     }

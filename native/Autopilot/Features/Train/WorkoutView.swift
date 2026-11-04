@@ -167,52 +167,62 @@ struct WorkoutView: View {
 
     // MARK: Pie fijo: descanso + «Terminar entrenamiento»
 
-    /// Cifras de la sesión en vivo, como el tracker de Hevy: duración, volumen y series.
+    /// Stats en vivo de la sesión — tres columnas compactas bajo el título.
     private var sessionStats: some View {
         TimelineView(.periodic(from: .now, by: 1)) { ctx in
             HStack(spacing: 0) {
                 sessionStat("Duración", elapsed(ctx.date))
+                // Separador visual
+                Rectangle().fill(Palette.separator).frame(width: 0.5, height: 28)
                 sessionStat("Volumen", "\(NumberText.integer(Int(workout.volumeKg))) kg")
+                Rectangle().fill(Palette.separator).frame(width: 0.5, height: 28)
                 sessionStat("Series", "\(workout.doneSets)/\(workout.totalSets)")
             }
             .padding(.horizontal, 4)
-            .padding(.bottom, 4)
+            .padding(.vertical, 6)
+            .background(Palette.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
         .accessibilityElement(children: .combine)
     }
 
     private func sessionStat(_ label: String, _ value: String) -> some View {
-        VStack(alignment: .leading, spacing: 1) {
-            Text(label).font(.apCaption).foregroundStyle(Palette.muted)
-            Text(value).font(.inter(size: 18, weight: .bold).monospacedDigit())
+        VStack(alignment: .center, spacing: 1) {
+            Text(label)
+                .font(.inter(size: 11, weight: .semibold))
+                .tracking(0.05)
+                .foregroundStyle(Palette.muted)
+            Text(value)
+                .font(.inter(size: 17, weight: .bold).monospacedDigit())
                 .lineLimit(1).minimumScaleFactor(0.7)
                 .contentTransition(.numericText())
                 .animation(reduceMotion ? nil : .snappy, value: value)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity)
         .accessibilityLabel("\(label): \(value)")
     }
 
     private var footer: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: 10) {
             if let end = workout.draft.restEndsAt {
                 RestTimerRow(end: end, workout: workout)
-                    .padding(.bottom, 12)
                     .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
             }
-            Button {
-                finish()
-            } label: {
-                if workout.saving { HStack { BrandLoader().tint(allSetsDone ? .black : Palette.foreground); Text("Guardando…") } } else { Text("Terminar entrenamiento") }
+            Button { finish() } label: {
+                if workout.saving {
+                    HStack {
+                        BrandLoader().tint(allSetsDone ? .black : Palette.foreground)
+                        Text("Guardando…")
+                    }
+                } else {
+                    Text("Terminar entrenamiento")
+                }
             }
-            // Psicología del color: mientras quedan series, la acción dorada es marcar la serie;
-            // «Terminar» se vuelve dorado solo cuando la sesión está completa (la recompensa).
-            .buttonStyle(PillButtonStyle(kind: allSetsDone ? .primary : .secondary))
+            .buttonStyle(PillButtonStyle(kind: allSetsDone ? .primary : .secondary, height: 52))
             .disabled(workout.saving || workout.doneSets == 0)
             .keyboardShortcut(.return, modifiers: .command)
         }
         .padding(.horizontal, 16).padding(.top, 12).padding(.bottom, 12)
-        .background(.bar)
+        .background(.ultraThinMaterial)
         .overlay(alignment: .top) { Rectangle().fill(Palette.separator).frame(height: 0.5) }
         .animation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.9), value: workout.draft.restEndsAt)
     }
@@ -989,35 +999,69 @@ struct RestTimerRow: View {
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { ctx in
             let left = max(0, Int(end.timeIntervalSince(ctx.date).rounded(.up)))
-            VStack(spacing: 8) {
-                HStack(spacing: 0) {
+            let target = max(workout.restTarget, 1)
+            let progress = min(1.0, Double(left) / Double(target))
+
+            HStack(spacing: 14) {
+                // Anillo circular animado
+                ZStack {
+                    Circle()
+                        .stroke(Palette.secondary, lineWidth: 4)
+                    Circle()
+                        .trim(from: 0, to: progress)
+                        .stroke(
+                            Palette.gold,
+                            style: StrokeStyle(lineWidth: 4, lineCap: .round)
+                        )
+                        .rotationEffect(.degrees(-90))
+                        .animation(.linear(duration: 1), value: progress)
+                    Text("\(left)")
+                        .font(.inter(size: 13, weight: .bold).monospacedDigit())
+                        .foregroundStyle(Palette.gold)
+                }
+                .frame(width: 52, height: 52)
+                .accessibilityHidden(true)
+
+                // Texto
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("DESCANSO")
+                        .font(.inter(size: 10, weight: .bold))
+                        .tracking(0.08)
+                        .foregroundStyle(Palette.muted)
                     Text(String(format: "%d:%02d", left / 60, left % 60))
-                        .font(.inter(size: 34, weight: .bold).monospacedDigit())
+                        .font(.inter(size: 24, weight: .bold).monospacedDigit())
                         .contentTransition(.numericText(countsDown: true))
                         .transaction { $0.animation = nil }
-                        .frame(maxWidth: .infinity, alignment: .leading)
                         .accessibilityLabel("Descanso, quedan \(left) segundos")
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                // Controles
+                HStack(spacing: 4) {
                     Button("−30") { Haptics.selection(); workout.adjustRest(by: -30) }
-                        .frame(minWidth: 44, minHeight: 44).accessibilityLabel("Restar 30 segundos")
+                        .frame(minWidth: 44, minHeight: 44)
+                        .accessibilityLabel("Restar 30 segundos")
                     Button("+30") { Haptics.selection(); workout.adjustRest(by: 30) }
-                        .frame(minWidth: 44, minHeight: 44).accessibilityLabel("Sumar 30 segundos")
+                        .frame(minWidth: 44, minHeight: 44)
+                        .accessibilityLabel("Sumar 30 segundos")
                     Button("Saltar") { Haptics.tap(); workout.skipRest() }
-                        .frame(minWidth: 52, minHeight: 44).accessibilityLabel("Saltar descanso")
                         .foregroundStyle(Palette.gold)
+                        .padding(.horizontal, 12).padding(.vertical, 8)
+                        .background(Palette.gold.opacity(0.1), in: Capsule())
+                        .frame(minHeight: 44)
+                        .accessibilityLabel("Saltar descanso")
                 }
                 .font(.apBody.monospacedDigit())
                 .buttonStyle(.plain)
                 .foregroundStyle(Palette.foreground)
-                GeometryReader { geo in
-                    Capsule().fill(Palette.secondary)
-                        .overlay(alignment: .leading) {
-                            Capsule().fill(Palette.gold)
-                                .frame(width: geo.size.width * min(1, Double(left) / Double(max(workout.restTarget, 1))))
-                        }
-                }
-                .frame(height: 3)
-                .accessibilityHidden(true)
             }
+            .padding(.horizontal, 16).padding(.vertical, 12)
+            .background(Palette.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .strokeBorder(Palette.gold.opacity(0.1), lineWidth: 1)
+            )
+            .padding(.horizontal, 16)
             .onChange(of: left == 0) { _, done in if done { Haptics.warning(); workout.skipRest() } }
         }
     }

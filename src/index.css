@@ -219,14 +219,14 @@ body.keyboard-open main {
     --background: 0 0% 0%;
     --foreground: 0 0% 100%;
 
-    --card: 240 5% 8%;
+    --card: 240 5% 6.7%;
     --card-foreground: 0 0% 100%;
 
-    --popover: 240 5% 8%;
+    --popover: 240 5% 6.7%;
     --popover-foreground: 0 0% 100%;
 
-    /* Dorado de marca #D8B25E. Un pelo más cálido que el anterior (43 61% 60 %). */
-    --primary: 41 61% 61%;
+    /* Dorado de marca #C8A535 — más profundo y premium sobre negro puro. */
+    --primary: 46 58% 50%;
     --primary-foreground: 0 0% 0%;
 
     --secondary: 240 5% 16%;

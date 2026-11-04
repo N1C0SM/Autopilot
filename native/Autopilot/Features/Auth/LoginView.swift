@@ -23,11 +23,28 @@ struct LoginView: View {
         ScrollView {
             VStack(spacing: 28) {
                 VStack(spacing: 14) {
-                    Image("Logo").resizable().scaledToFit().frame(width: 76, height: 76)
-                        .clipShape(Circle()).accessibilityHidden(true)
-                    Text(session.addingAccount ? "Añadir cuenta" : "Hola de nuevo").font(.apLargeTitle)
+                    // Icono con halo dorado
+                    ZStack {
+                        Circle()
+                            .fill(Palette.gold.opacity(0.08))
+                            .frame(width: 96, height: 96)
+                        Circle()
+                            .strokeBorder(Palette.gold.opacity(0.18), lineWidth: 1.5)
+                            .frame(width: 96, height: 96)
+                        Image("Logo").resizable().scaledToFit()
+                            .frame(width: 62, height: 62)
+                            .clipShape(Circle())
+                    }
+                    .accessibilityHidden(true)
+
+                    Text(session.addingAccount ? "Añadir cuenta" : "Hola de nuevo")
+                        .font(.inter(size: 28, weight: .bold))
+                        .tracking(-0.6)
                         .accessibilityAddTraits(.isHeader)
-                    Text("Inicia sesión para acceder a tu plan.").font(.apSubhead).foregroundStyle(Palette.muted)
+                    Text("Inicia sesión para acceder a tu plan.")
+                        .font(.apSubhead)
+                        .foregroundStyle(Palette.muted)
+                        .multilineTextAlignment(.center)
                 }
                 .padding(.top, 40)
 
