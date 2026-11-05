@@ -16,6 +16,7 @@ import MobileAppShell from "@/app/components/mobile/MobileAppShell";
 import { useIsMobile } from "@/shared/hooks/use-mobile";
 import { SidebarProvider, SidebarTrigger } from "@/shared/components/ui/sidebar";
 import { recordAcquisitionEvent } from "@/shared/lib/acquisition";
+import { GoogleSignInButton } from "@/app/components/auth/GoogleSignInButton";
 import {
   Upload,
   Sparkles,
@@ -1597,19 +1598,41 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
               transition={{ duration: 0.2 }}
               className="mx-auto w-full max-w-md"
             >
-              <div className="text-center mb-8">
-                <div className="mx-auto w-[72px] h-[72px] rounded-[22%] bg-card flex items-center justify-center mb-5">
-                  <CheckCircle2 className="w-8 h-8 text-success" strokeWidth={1.75} />
-                </div>
-                <p className="type-subhead text-muted-foreground mb-1">Diagnóstico listo</p>
-                <h1 className="type-title1 mb-3">
-                  Hemos detectado tus <span className="text-primary">principales prioridades físicas</span>.
-                </h1>
-                <p className="type-subhead text-muted-foreground">
-                  Dinos tu nombre y tu email y te lo mostramos ahora mismo. También te lo
-                  enviamos por correo para que lo tengas guardado.
-                </p>
+              <div className="text-center mb-6">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary mb-2">Diagnóstico listo</p>
+                <h1 className="type-title1">Este es tu adelanto.</h1>
               </div>
+
+              {pendingResult && (
+                <div className="mb-6 rounded-[22px] border border-foreground/[0.08] bg-card p-5">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Potencial</p>
+                      <p className="mt-1 text-[40px] font-semibold leading-none tabular-nums">
+                        {formatDecimal(pendingResult.potential, 1)}<span className="text-base text-muted-foreground">/10</span>
+                      </p>
+                    </div>
+                    {(pendingResult.months_with_plan ?? pendingResult.estimated_months) !== undefined && (
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Meses estimados</p>
+                        <p className="mt-1 text-[40px] font-semibold leading-none tabular-nums">
+                          {pendingResult.months_with_plan ?? pendingResult.estimated_months}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  {pendingResult.bottleneck && (
+                    <div className="mt-5 border-t border-foreground/[0.08] pt-4">
+                      <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Prioridad detectada</p>
+                      <p className="mt-1 text-[15px] text-foreground">{pendingResult.bottleneck}</p>
+                    </div>
+                  )}
+                  <p className="mt-4 text-xs text-muted-foreground">Estimación orientativa a partir de tus fotos.</p>
+                </div>
+              )}
+
+              <GoogleSignInButton label="Ver diagnóstico completo con Google" next="/signup?from=scan" />
+              <p className="my-5 text-center type-footnote text-muted-foreground">o recíbelo con tu email</p>
 
               <div className="space-y-5">
                 <div>
