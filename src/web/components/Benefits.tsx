@@ -30,7 +30,7 @@ const BENEFITS: Benefit[] = [
     eyebrow: "Memoria de cada sesión",
     title: "Lo que hiciste la última vez, delante.",
     text: "Antes de cada serie ves tu peso y tus repeticiones anteriores. Sin libretas.",
-    visual: <div className="rounded-[28px] bg-card p-7">
+    visual: <div className="rounded-[22px] bg-card p-7">
       <p className="type-subhead text-muted-foreground">Remo con mancuerna</p>
       <p className="mt-2 type-figure text-[56px] font-bold leading-none tracking-tight tabular-nums">22 kg <span className="text-muted-foreground">× 10</span></p>
       <p className="mt-3 type-subhead text-primary">Última vez · hace 4 días</p>
@@ -45,7 +45,7 @@ function Row({ b, i }: { b: Benefit; i: number }) {
   return <div ref={ref} className="mx-auto grid min-h-[80vh] max-w-6xl items-center gap-10 py-16 md:grid-cols-2 md:gap-20">
     <ScrollReveal className={i % 2 ? "md:order-2" : ""}>
       <p className="type-subhead font-semibold text-primary">{b.eyebrow}</p>
-      <h3 className="mt-3 font-rounded text-[36px] font-bold leading-[1.05] tracking-tight sm:text-[52px]">{b.title}</h3>
+      <h3 className="mt-3 text-[36px] font-bold leading-[1.05] tracking-tight sm:text-[52px]">{b.title}</h3>
       <p className="mt-4 max-w-md type-body text-muted-foreground md:text-[21px] md:leading-[29px]">{b.text}</p>
     </ScrollReveal>
     <div aria-hidden="true" className="will-change-transform" style={{ transform: `scale(${s})`, opacity: 0.4 + (s - 0.92) / 0.08 * 0.6 }}>{b.visual}</div>

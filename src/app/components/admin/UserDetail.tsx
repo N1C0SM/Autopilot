@@ -900,7 +900,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                     step="any"
                     value={macros[m.key]}
                     onChange={(e) => setMacros((prev) => ({ ...prev, [m.key]: e.target.value }))}
-                    className="h-14 rounded-media text-center font-rounded text-[22px] font-bold tabular-nums md:h-11 md:rounded-media md:text-lg"
+                    className="h-14 rounded-media text-center text-[22px] font-bold tabular-nums md:h-11 md:rounded-media md:text-lg"
                   />
                   <Label htmlFor={`client-${profile.user_id}-${m.key}`} className="mt-1.5 block text-center type-footnote font-normal text-muted-foreground">{m.label}</Label>
                 </div>

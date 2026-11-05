@@ -224,7 +224,7 @@ const AdminMetrics = ({ users, onRefresh }: { users: Profile[]; onRefresh: () =>
             {activity.map((a) => (
               <div key={a.label} className="min-w-0">
                 <dt className="truncate type-footnote text-muted-foreground">{a.label}</dt>
-                <dd className="mt-0.5 font-rounded text-[28px] font-bold leading-[34px] tabular-nums">{a.value}</dd>
+                <dd className="mt-0.5 text-[28px] font-bold leading-[34px] tabular-nums">{a.value}</dd>
               </div>
             ))}
           </dl>
@@ -298,7 +298,7 @@ function Kpi({ label, value, hint, accent }: { label: string; value: ReactNode; 
   return (
     <div className="flex min-w-0 flex-col rounded-media bg-card p-4 lg:p-5">
       <p className="truncate type-footnote text-muted-foreground">{label}</p>
-      <p className={cn("mt-1 truncate font-rounded text-[28px] font-bold leading-[34px] tabular-nums lg:text-[34px] lg:leading-[41px]", accent && "text-primary")}>{value}</p>
+      <p className={cn("mt-1 truncate text-[28px] font-bold leading-[34px] tabular-nums lg:text-[34px] lg:leading-[41px]", accent && "text-primary")}>{value}</p>
       {hint ? <p className="mt-0.5 truncate type-footnote text-muted-foreground">{hint}</p> : null}
     </div>
   );

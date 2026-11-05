@@ -87,11 +87,11 @@ const PlanPreview = ({ focus, goal, weight, sex, days = 4, registered = false, h
             <>
               <div className="mt-2 flex gap-8">
                 <div>
-                  <p className="type-title1 font-rounded leading-none tabular-nums">{nutritionPreview.calories}</p>
+                  <p className="type-title1 leading-none tabular-nums">{nutritionPreview.calories}</p>
                   <p className="mt-1 type-subhead text-muted-foreground">kcal al día</p>
                 </div>
                 <div>
-                  <p className="type-title1 font-rounded leading-none tabular-nums">{nutritionPreview.protein} g</p>
+                  <p className="type-title1 leading-none tabular-nums">{nutritionPreview.protein} g</p>
                   <p className="mt-1 type-subhead text-muted-foreground">proteína</p>
                 </div>
               </div>

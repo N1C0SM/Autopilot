@@ -46,7 +46,7 @@ export function PublicTrainingScreen({ active = false }: { active?: boolean }) {
         <span className="rounded-full bg-secondary py-3 text-center type-body tabular-nums">20</span><span className="rounded-full bg-secondary py-3 text-center type-body tabular-nums">9</span>
         <span className={`mx-auto flex h-8 w-8 items-center justify-center rounded-full ${i < 2 ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}><Check className="h-[18px] w-[18px]" strokeWidth={3} /></span>
       </div>)}
-      <div className="mt-auto pb-6 pt-5"><div className="flex items-center justify-between"><span className="font-rounded type-title1 tabular-nums">1:24</span><span className="type-body text-primary">−30</span><span className="type-body text-primary">+30</span><span className="type-body text-primary">Omitir</span></div><Button className="mt-4 w-full" variant="secondary" tabIndex={-1}>Terminar entreno</Button></div>
+      <div className="mt-auto pb-6 pt-5"><div className="flex items-center justify-between"><span className=" type-title1 tabular-nums">1:24</span><span className="type-body text-primary">−30</span><span className="type-body text-primary">+30</span><span className="type-body text-primary">Omitir</span></div><Button className="mt-4 w-full" variant="secondary" tabIndex={-1}>Terminar entreno</Button></div>
     </> : <>
       <div className="mt-6 overflow-hidden rounded-media bg-card">{previewExercises.map(ex => <div key={ex.name} className="flex items-center gap-3 p-4"><img src={ex.image} alt="" className="h-12 w-12 shrink-0 rounded-media bg-secondary object-contain" loading="lazy" decoding="async" /><div className="min-w-0 flex-1"><p className="type-headline">{ex.name}</p><p className="type-footnote text-muted-foreground">{ex.sets} × {ex.reps} · {ex.load}</p></div><ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" /></div>)}</div>
       <Button className="mt-5 w-full" size="lg" tabIndex={-1}><Dumbbell className="mr-2 h-5 w-5" />Empezar entreno</Button>
@@ -58,7 +58,7 @@ export function PublicBasicNutrition() {
   return <section className="space-y-8 py-4">
     <h2 className="type-title1">Tus objetivos diarios</h2>
     <div className="flex flex-wrap items-center gap-6">
-      <ProgressRing value={100} size={144} stroke={14} label="Objetivo: 2.300 kcal al día"><span className="flex flex-col items-center"><span className="font-rounded type-title1 tabular-nums">2.300</span><span className="mt-1 type-footnote text-muted-foreground">kcal / día</span></span></ProgressRing>
+      <ProgressRing value={100} size={144} stroke={14} label="Objetivo: 2.300 kcal al día"><span className="flex flex-col items-center"><span className=" type-title1 tabular-nums">2.300</span><span className="mt-1 type-footnote text-muted-foreground">kcal / día</span></span></ProgressRing>
       <div className="flex items-center gap-3"><ProgressRing value={100} size={64} stroke={7} label="Proteína: 150 g al día"><span className="type-headline tabular-nums">150</span></ProgressRing><div><p className="type-headline">150 g</p><p className="type-subhead text-muted-foreground">proteína / día</p></div></div>
     </div>
     <p className="type-footnote text-muted-foreground">Estimación inicial según tus datos y objetivo. No sustituye una valoración nutricional individual.</p>

@@ -49,7 +49,7 @@ export default function DeviceShowcase() {
     <div role="img" aria-label="Autopilot en un portátil y en un móvil" className="relative mx-auto mt-16 max-w-5xl" style={{ perspective: "2000px" }}>
       {/* Portátil: pantalla con bisel y base. */}
       <div className="mx-auto w-[92%] origin-bottom will-change-transform" style={{ transform: `rotateX(${lid}deg)` }}>
-        <div className="rounded-t-[18px] border border-border/60 bg-secondary p-2 shadow-[0_40px_120px_-40px_rgba(0,0,0,0.9)] sm:p-3">
+        <div className="rounded-t-[18px] border border-border/60 bg-secondary p-2 sm:p-3">
           <div className="aspect-[16/10] overflow-hidden rounded-[8px]"><LaptopScreen /></div>
         </div>
       </div>

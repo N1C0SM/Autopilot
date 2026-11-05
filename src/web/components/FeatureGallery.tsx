@@ -64,7 +64,7 @@ export default function FeatureGallery() {
       <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
       <div className="relative">
         {tag && <p className="type-footnote font-semibold text-white/70">{tag}</p>}
-        <h3 className="mt-1 font-rounded text-[32px] font-bold leading-[1.05] tracking-tight text-white md:text-[44px]">{title}</h3>
+        <h3 className="mt-1 text-[32px] font-bold leading-[1.05] tracking-tight text-white md:text-[44px]">{title}</h3>
         <p className="mt-3 type-body text-white/75">{text}</p>
       </div>
     </article> : <article key={title} className={`relative flex h-[min(20rem,48vh)] w-[min(80vw,26rem)] shrink-0 flex-col overflow-hidden rounded-[32px] p-7 md:p-10 ${i % 2 ? "bg-primary text-primary-foreground" : "bg-card"}`}>
@@ -76,7 +76,7 @@ export default function FeatureGallery() {
       </div>
       <div>
         {tag && <p className={`type-footnote font-semibold ${i % 2 ? "opacity-70" : "text-muted-foreground"}`}>{tag}</p>}
-        <h3 className="mt-1 font-rounded text-[32px] font-bold leading-[1.05] tracking-tight md:text-[44px]">{title}</h3>
+        <h3 className="mt-1 text-[32px] font-bold leading-[1.05] tracking-tight md:text-[44px]">{title}</h3>
         <p className={`mt-3 type-body ${i % 2 ? "opacity-80" : "text-muted-foreground"}`}>{text}</p>
       </div>
     </article>)}

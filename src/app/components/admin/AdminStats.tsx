@@ -8,7 +8,7 @@ export function HeroFigure({ label, value, hint }: { label: string; value: React
   return (
     <div>
       <p className="type-subhead text-muted-foreground">{label}</p>
-      <p className="mt-1 font-rounded text-[48px] font-bold leading-[52px] tabular-nums">{value}</p>
+      <p className="mt-1 text-[48px] font-bold leading-[52px] tabular-nums">{value}</p>
       {hint ? <p className="mt-1 type-footnote text-muted-foreground">{hint}</p> : null}
     </div>
   );
@@ -56,7 +56,7 @@ export function StatRow({
           )}
         >
           <dt className="type-footnote text-muted-foreground">{item.label}</dt>
-          <dd className="whitespace-nowrap font-rounded text-[28px] font-bold leading-[34px] tabular-nums">{item.value}</dd>
+          <dd className="whitespace-nowrap text-[28px] font-bold leading-[34px] tabular-nums">{item.value}</dd>
           {item.hint ? <dd className="type-footnote text-muted-foreground">{item.hint}</dd> : null}
         </div>
       ))}
