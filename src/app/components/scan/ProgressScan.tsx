@@ -92,8 +92,7 @@ export default function ProgressScan({ onScanned }: { onScanned?: () => void }) 
   }, []);
   const pickObjective = async (file: File) => {
     try {
-      const friendly = await toBrowserFriendlyImage(file);
-      setObjective(await compressImage(friendly));
+      setObjective(await toDataUrl(file));
       setPresetId(null);
     } catch { setError("No se pudo leer la foto del objetivo."); }
   };
@@ -247,6 +246,35 @@ export default function ProgressScan({ onScanned }: { onScanned?: () => void }) 
               <p className="type-headline">Tu objetivo</p>
               <p className="type-subhead text-muted-foreground">{goal || "Sin definir"}</p>
               <p className="type-footnote text-muted-foreground">Se usa para personalizar el análisis.</p>
+            </div>
+          </div>
+
+          <div className="rounded-[22px] border border-foreground/[0.08] bg-card p-[18px]">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="type-headline">Tu físico objetivo</p>
+                <p className="type-footnote text-muted-foreground">Elige una referencia o sube tu foto. Solo con objetivo calculamos la similitud y los meses que te faltan.</p>
+              </div>
+              {objective && (
+                <Button variant="outline" size="sm" onClick={() => { void hapticTap(); setObjective(null); setPresetId(null); }}>Quitar</Button>
+              )}
+            </div>
+            <div className="mt-4 flex gap-3 overflow-x-auto pb-1">
+              <label className={cn("flex h-28 w-20 shrink-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-[14px] border text-center text-[11px] text-muted-foreground",
+                objective && !presetId ? "border-primary" : "border-dashed border-foreground/20")}>
+                {objective && !presetId
+                  ? <img src={objective} alt="Tu objetivo" className="h-full w-full rounded-[13px] object-cover" />
+                  : <><Plus className="h-5 w-5" aria-hidden="true" />Subir foto</>}
+                <input type="file" accept="image/*" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; if (f) void pickObjective(f); e.target.value = ""; }} />
+              </label>
+              {presets.map((p) => (
+                <button key={p.id} type="button" aria-pressed={presetId === p.id}
+                  onClick={() => { void hapticTap(); setPresetId(p.id); setObjective(p.image_url); }}
+                  className={cn("relative h-28 w-20 shrink-0 overflow-hidden rounded-[14px] border", presetId === p.id ? "border-primary" : "border-transparent")}>
+                  <img src={p.image_url} alt={p.name} className="h-full w-full object-cover" loading="lazy" />
+                  <span className="absolute inset-x-0 bottom-0 bg-background/70 px-1 py-0.5 text-[10px] text-foreground truncate">{p.name}</span>
+                </button>
+              ))}
             </div>
           </div>
 
