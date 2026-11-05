@@ -6,7 +6,7 @@ import Supabase
 struct TrainView: View {
     @EnvironmentObject private var session: SessionModel
     @Environment(\.horizontalSizeClass) private var sizeClass
-    @StateObject private var model = PlanModel()
+    @StateObject private var model: PlanModel
     @State private var active: ActiveWorkout?
     @State private var starting = false
     /// Sesión con un entreno a medias guardado (su acción pasa a ser «Continuar entreno»).
@@ -34,10 +34,19 @@ struct TrainView: View {
         #endif
     }
 
+    /// La rutina, lo hecho y el entreno a medias salen de la caché ya en el init: el primer
+    /// fotograma es la pantalla final. Antes, hasta que arrancaba la carga, asomaba un instante
+    /// la tarjeta de «sin rutina» al entrar en Entrenar.
+    init(userId: UUID? = nil) {
+        _model = StateObject(wrappedValue: PlanModel(userId: userId))
+        _resumableDay = State(initialValue: userId.flatMap { ActiveWorkout.restore(userId: $0.uuidString.lowercased())?.day.day })
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                if model.loading && model.days.isEmpty {
+                // Sin respuesta todavía (ni caché): cargando, nunca «sin rutina».
+                if model.days.isEmpty && model.error == nil && (model.loading || !model.loaded) {
                     VStack(spacing: 12) {
                         BrandLoader()
                         Text("Cargando tu rutina…").font(.apSubhead).foregroundStyle(Palette.muted)
@@ -290,14 +299,28 @@ final class PlanModel: ObservableObject {
     @Published var completions: [(day: String, date: String)] = []
     @Published var loading = false
     @Published var error: String?
+    /// Ya hay una respuesta (red, memoria o disco). Hasta entonces nunca se pinta «sin rutina».
+    @Published var loaded = false
+
+    /// Siembra el plan y lo hecho desde la caché (memoria o disco) sin esperar a la red.
+    init(userId: UUID? = nil) {
+        guard let userId, let cached = TrainingRepo.instantPlan(userId: userId) else { return }
+        days = cached
+        completions = TrainingRepo.instantCompletions(userId: userId, since: LocalDate.daysAgo(6)) ?? []
+        loaded = true
+    }
 
     func load(userId: UUID?) async {
         guard let userId else { return }
         loading = true
-        defer { loading = false }
+        defer { loading = false; loaded = true }
         do {
-            days = try await TrainingRepo.plan(userId: userId)
-            completions = await TrainingRepo.completions(userId: userId, since: LocalDate.daysAgo(6))
+            let fresh = try await TrainingRepo.plan(userId: userId)
+            let rows = await TrainingRepo.completions(userId: userId, since: LocalDate.daysAgo(6))
+            // Un único cambio, y solo si algo cambió: sin redibujos de más al refrescar.
+            if fresh != days { days = fresh }
+            if !rows.elementsEqual(completions, by: { $0.day == $1.day && $0.date == $1.date }) { completions = rows }
+            TrainingRepo.saveCompletionsSnapshot(userId: userId, rows)
             error = nil
         } catch {
             self.error = "No se pudo cargar el plan."

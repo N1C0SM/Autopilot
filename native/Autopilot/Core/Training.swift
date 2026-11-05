@@ -384,6 +384,30 @@ enum TrainingRepo {
         TrainingCache.shared.plan(userId: userId, maxAge: .infinity)
     }
 
+    /// Plan para el primer fotograma, sin red: el de memoria o, si no, la copia en disco.
+    static func instantPlan(userId: UUID) -> [DayPlan]? {
+        if let cached = TrainingCache.shared.plan(userId: userId, maxAge: .infinity) { return cached }
+        guard let disk = Snapshots.load([DayPlan].self, planKey(userId)) else { return nil }
+        TrainingCache.shared.storePlan(disk, userId: userId)
+        return disk
+    }
+
+    /// Completions para el primer fotograma, sin red: las de memoria o la copia en disco de Entrenar.
+    static func instantCompletions(userId: UUID, since: String) -> [(day: String, date: String)]? {
+        if let hit = cachedCompletions(userId: userId, since: since) { return hit }
+        guard let rows = Snapshots.load([[String]].self, completionsKey(userId)) else { return nil }
+        return rows.compactMap { row -> (day: String, date: String)? in
+            row.count == 2 ? (day: row[0], date: row[1]) : nil
+        }.filter { $0.date >= since }
+    }
+
+    /// Guarda en disco las completions recientes (Entrenar las pinta al instante la próxima vez).
+    static func saveCompletionsSnapshot(userId: UUID, _ rows: [(day: String, date: String)]) {
+        Snapshots.save(rows.map { [$0.day, $0.date] }, completionsKey(userId))
+    }
+
+    private static func completionsKey(_ userId: UUID) -> String { "completions|\(userId.uuidString.lowercased())" }
+
     private static func fetchPlan(userId: UUID) async throws -> [DayPlan] {
         struct Row: Decodable { let workouts_json: AnyJSON }
         let rows: [Row] = try await Backend.client.from("training_plan").select("workouts_json")

@@ -438,7 +438,8 @@ struct SectionView: View {
         Group {
             switch section {
             case .home: HomeView(onNavigate: onNavigate)
-            case .train: TrainView()
+            // Con el usuario ya en el init: Entrenar pinta su rutina en caché en el primer fotograma.
+            case .train: TrainView(userId: session.userId)
             case .progress: ProgressScreen(onNavigate: onNavigate)
             case .nutrition: NutritionView()
             case .scan: ScanView()
