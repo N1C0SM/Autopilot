@@ -289,7 +289,7 @@ const HomeOverview = ({
   const sessionFocus = String(sessionTitle).includes(" · ") ? String(sessionTitle).split(" · ").slice(1).join(" · ") : "";
 
   return (
-    <div className="flex w-full flex-col pb-4 lg:grid lg:grid-cols-[minmax(0,1.55fr)_minmax(300px,1fr)] lg:items-start lg:gap-x-10 xl:gap-x-14">
+    <div className="flex w-full flex-col pb-4 lg:grid lg:grid-cols-[minmax(0,1.55fr)_minmax(300px,1fr)] lg:grid-rows-[auto_auto_1fr] lg:items-start lg:gap-x-10 xl:gap-x-14">
       {/* Cabecera compacta: fecha y saludo discreto, sin titular de marketing */}
       <header className="lg:col-span-2">
         <p className="text-[13px] font-medium text-muted-foreground">{greetingDate}</p>
