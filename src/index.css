@@ -409,8 +409,8 @@ body.keyboard-open main {
     height: 44px;
     padding-inline: 18px;
     border-radius: 9999px;
-    border-width: 0;
-    background-color: hsl(var(--secondary));
+    border: 1px solid hsl(var(--border));
+    background-color: transparent;
     font-size: 17px;
     line-height: 22px;
   }
