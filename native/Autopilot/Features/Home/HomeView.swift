@@ -56,93 +56,190 @@ struct HomeView: View {
         return TodayCache.shared.snapshot(userId: id)
     }
 
-    private var weekPlan: some View {
-        let scheduled = Set(snapshot?.scheduled.map(\.day) ?? [])
-        let labels = ["L", "M", "X", "J", "V", "S", "D"]
-        return VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Plan semanal").font(.apTitle3.weight(.semibold))
-                Spacer()
-                Text("\(scheduled.count) sesiones")
-                    .font(.apSubhead.monospacedDigit())
-                    .foregroundStyle(Palette.muted)
+    // MARK: iPhone Hero — foto a sangre con saludo encima
+
+    @ViewBuilder private var iPhoneHero: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .bottom) {
+                // HERO siempre usa la foto de marca del gym — NO la foto del ejercicio
+                // La foto del ejercicio va en la card de hoy, no en el hero (igual que la web)
+                let gymURL = URL(string: "https://enebrcdrdnfkyduzyrzm.supabase.co/storage/v1/object/public/site-assets/exercise-images/a31c7206-d2a4-4b31-856a-f5dec09b890e-1791475829849.png")
+                CachedAsyncImage(url: gymURL) { $0.resizable().scaledToFill() } placeholder: { Rectangle().fill(Color(red: 0.1, green: 0.1, blue: 0.1)) }
+                    .frame(width: geo.size.width, height: 400).clipped().accessibilityHidden(true)
+
+                LinearGradient(colors: [.black.opacity(0.5), .clear], startPoint: .top, endPoint: .init(x: 0.5, y: 0.45)).frame(height: 400)
+                LinearGradient(colors: [.clear, .black.opacity(0.72), .black], startPoint: .init(x: 0.5, y: 0.45), endPoint: .bottom).frame(height: 400)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(Date().formatted(.dateTime.weekday(.wide).day().month(.wide).locale(Locale(identifier: "es_ES"))).capitalizedFirst)
+                        .font(.inter(size: 13, weight: .medium)).foregroundStyle(.white.opacity(0.55))
+                    Text(greeting).font(.inter(size: 34, weight: .bold)).tracking(-0.8).foregroundStyle(.white).accessibilityAddTraits(.isHeader)
+                    if !stateLine.isEmpty {
+                        Text(stateLine).font(.inter(size: 34, weight: .bold)).tracking(-0.8).foregroundStyle(.white.opacity(0.42))
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 22).padding(.bottom, 36)
             }
+        }
+        .frame(height: 400)
+    }
+
+    /// Semana compacta — idéntica a la web: letra + barra fina, sin círculos grandes.
+    private var weekPlan: some View {
+        let labels = ["L", "M", "X", "J", "V", "S", "D"]
+        let scheduled = Set(snapshot?.scheduled.map(\.day) ?? [])
+        let sessionCount = min(snapshot?.scheduled.count ?? 0, scheduled.count)
+        return VStack(alignment: .leading, spacing: 10) {
+            // Header
+            HStack(alignment: .firstTextBaseline) {
+                Text("Esta semana")
+                    .font(.inter(size: 13, weight: .medium))
+                    .foregroundStyle(Palette.muted)
+                Spacer()
+                HStack(spacing: 2) {
+                    Text("\(sessionCount)").font(.inter(size: 13, weight: .semibold))
+                    Text("de \(scheduled.count) sesiones")
+                        .font(.inter(size: 13)).foregroundStyle(Palette.muted)
+                }
+                .monospacedDigit()
+            }
+            // 7 barras — h-1 exacto de la web
             HStack(spacing: 4) {
-                ForEach(DayNames.all.indices, id: \.self) { index in
-                    let day = DayNames.all[index]
-                    let isToday = index == todayIndex
+                ForEach(DayNames.all.indices, id: \.self) { i in
+                    let day = DayNames.all[i]
+                    let isToday = i == todayIndex
                     let isScheduled = scheduled.contains(day)
-                    VStack(spacing: 8) {
-                        Text(labels[index])
-                            .font(.apSubhead.weight(.medium))
-                            .foregroundStyle(isToday ? Palette.gold : Color.white)
-                        Circle()
-                            .fill(isScheduled ? Palette.gold : Palette.secondary)
-                            .frame(width: 8, height: 8)
+                    VStack(spacing: 6) {
+                        Text(labels[i])
+                            .font(.inter(size: 12, weight: isToday ? .semibold : .regular))
+                            .foregroundStyle(isToday ? Palette.foreground : Palette.muted)
+                        // Barra fina — igual que la web (h-1 = 4pt)
+                        RoundedRectangle(cornerRadius: 2, style: .continuous)
+                            .fill(isScheduled
+                                  ? (isToday ? Palette.gold : Palette.foreground.opacity(0.35))
+                                  : Palette.secondary)
+                            .frame(height: 4)
                     }
-                    .frame(maxWidth: .infinity, minHeight: 48)
-                    .background(
-                        isToday ? Palette.gold.opacity(0.12) : .clear,
-                        in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
-                    )
-                    .overlay {
-                        RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
-                            .stroke(isToday ? Palette.gold : .clear, lineWidth: 1.5)
-                    }
+                    .frame(maxWidth: .infinity)
                     .accessibilityElement(children: .ignore)
-                    .accessibilityLabel("\(day), \(isScheduled ? "entrenamiento programado" : "sin entrenamiento programado")\(isToday ? ", hoy" : "")")
+                    .accessibilityLabel("\(day)\(isToday ? ", hoy" : "")\(isScheduled ? ", sesión programada" : "")")
                 }
             }
         }
-        .padding(16)
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+    }
+
+    /// Sección Progreso — idéntica a la web: HomeRow con icono de línea, título, detalle, valor.
+    private var progressSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Progreso")
+                .font(.apTitle3)
+                .padding(.bottom, 4)
+
+            let kcal = snapshot?.calories
+            let pr = snapshot?.lastPr
+
+            VStack(spacing: 0) {
+                homeRow(
+                    symbol: kcal == nil ? "lock" : "fork.knife",
+                    title: "Nutrición",
+                    detail: kcal == nil ? (isNativeIOS ? "" : "Incluido en Plus")
+                           : (snapshot?.mealCount ?? 0) > 0 ? "Objetivo diario"
+                           : kcal.map { "\($0.formatted()) kcal" } ?? "Objetivo diario",
+                    value: kcal.map { "\(NumberText.integer($0)) kcal" }
+                ) { onNavigate(.nutrition) }
+
+                Rectangle().fill(Palette.border).frame(height: 0.5).padding(.leading, 32)
+
+                homeRow(
+                    symbol: "trophy",
+                    title: pr?.exercise ?? "Récords",
+                    detail: pr.map { "\($0.reps) reps · \($0.dateLabel)" } ?? "Tu primer récord llegará entrenando",
+                    value: pr.map { "\($0.weight.formatted(.number.precision(.fractionLength(1)).locale(Locale(identifier: "es_ES")))) kg" }
+                ) { onNavigate(.progress) }
+            }
+        }
+    }
+
+    private var isNativeIOS: Bool {
+        #if os(iOS)
+        return true
+        #else
+        return false
+        #endif
+    }
+
+    private func homeRow(symbol: String, title: String, detail: String, value: String?, action: @escaping () -> Void) -> some View {
+        Button { Haptics.tap(); action() } label: {
+            HStack(spacing: 12) {
+                Image(systemName: symbol)
+                    .font(.system(size: 17, weight: .regular))
+                    .foregroundStyle(Palette.muted)
+                    .frame(width: 20, alignment: .center)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title).font(.apSubhead.weight(.medium)).lineLimit(1)
+                    if !detail.isEmpty {
+                        Text(detail).font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(1)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                if let value {
+                    Text(value)
+                        .font(.apSubhead.weight(.semibold))
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Palette.muted.opacity(0.7))
+                    .accessibilityHidden(true)
+            }
+            .frame(minHeight: 60)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
     }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                // Saludo siempre a todo el ancho (en la web el titular tampoco se parte en columnas).
-                heading(wide: wideLayout)
                 if wideLayout {
-                    // Escritorio como `HomeOverview.tsx`: una sola columna ancha.
+                    heading(wide: true).padding(.horizontal, horizontalPadding).padding(.top, 24)
                     wideToday
-                    weekPlan.padding(.top, 24)
-                    widgets.padding(.top, 32)
+                    weekPlan.padding(.horizontal, horizontalPadding).padding(.top, 24)
+                    progressSection
+                        .padding(.horizontal, horizontalPadding)
+                        .padding(.top, 16)
                 } else {
-                    // iPhone: hoy, semana y resúmenes, en el mismo orden que la web.
-                    VStack(alignment: .leading, spacing: 28) {
+                    // iPhone: hero foto gym (no ejercicio), card hoy, semana, progreso
+                    iPhoneHero
+                    VStack(alignment: .leading, spacing: 20) {
                         mainAction
                         weekPlan
-                        widgets
+                        progressSection
                     }
-                    .padding(.top, 24)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
                 }
             }
-            .padding(.horizontal, horizontalPadding)
-            .padding(.top, wideLayout ? 24 : 8)
             .padding(.bottom, 96)
         }
+        .ignoresSafeArea(edges: wideLayout ? [] : .top)
         .screenBackground()
         .refreshable { await load() }
         .task {
             await load()
-            // Si se entra con el día ya completado (o se completó en otra pestaña), se celebra igual.
             if snapshot?.completedToday == true { celebrateIfNeeded() }
         }
         .onReceive(NotificationCenter.default.publisher(for: .refreshSection)) { _ in Task { await load() } }
-        .onChange(of: snapshot?.completedToday ?? false) { _, done in
-            if done { celebrateIfNeeded() }
-        }
+        .onChange(of: snapshot?.completedToday ?? false) { _, done in if done { celebrateIfNeeded() } }
         .sheet(isPresented: $sheetOpen) { sheetView }
-        // Celebración ligera: confeti SwiftUI puro, una vez al día y nunca con «Reducir
-        // movimiento» (ahí el premio es el propio cambio de estado, sin animación).
         .overlay(alignment: .top) {
             if celebrating {
                 ConfettiView(start: confettiStart)
-                    .frame(height: 560)
-                    .transition(.opacity)
-                    .allowsHitTesting(false)
-                    .accessibilityHidden(true)
+                    .frame(height: 560).transition(.opacity)
+                    .allowsHitTesting(false).accessibilityHidden(true)
             }
         }
     }
@@ -408,27 +505,25 @@ struct HomeView: View {
                 VStack(alignment: .leading, spacing: 0) {
                     HStack {
                         Text(plan.isGym ? "Hoy · entreno" : "Hoy · actividad")
-                            .font(.apCaption.weight(.semibold)).textCase(.uppercase).tracking(0.6)
+                            .font(.inter(size: 12, weight: .semibold)).textCase(.uppercase).tracking(0.05)
                             .foregroundStyle(Palette.gold)
                         Spacer(minLength: 8)
-                        Image(systemName: "chevron.up").font(.inter(size: 12, weight: .semibold))
-                            .foregroundStyle(Palette.muted.opacity(0.7))
                     }
-                    Text(parts[0]).font(.apTitle1).lineLimit(2).fixedSize(horizontal: false, vertical: true).padding(.top, 6)
+                    Text(parts[0]).font(.apHeadline.weight(.semibold)).lineLimit(2).fixedSize(horizontal: false, vertical: true).padding(.top, 4)
                     if parts.count > 1 {
                         Text(parts.dropFirst().joined(separator: " · ")).font(.apSubhead).foregroundStyle(Palette.muted)
-                            .lineLimit(2).padding(.top, 2)
+                            .lineLimit(1).padding(.top, 2)
                     }
                     if !summary.isEmpty {
-                        Text(summary).font(.apSubhead.monospacedDigit()).foregroundStyle(Palette.muted).padding(.top, 4)
+                        Text(summary).font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted).padding(.top, 2)
                     }
-                    Text("Ver la sesión")
-                        .font(.apHeadline).foregroundStyle(.black)
-                        .frame(maxWidth: .infinity, minHeight: 50)
+                    Text("Empezar entreno")
+                        .font(.inter(size: 17, weight: .semibold)).foregroundStyle(.black)
+                        .frame(maxWidth: .infinity, minHeight: 48)
                         .background(Palette.gold, in: Capsule())
-                        .padding(.top, 24)
+                        .padding(.top, 16)
                 }
-                .padding(18)
+                .padding(16)
             }
             .frame(maxWidth: .infinity, alignment: .topLeading)
             .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
