@@ -10,19 +10,19 @@
  * fuera del CSS: si mañana cambia el dorado, se cambia en un sitio.
  */
 
-/** Dorado de marca (token `--primary`). */
-export const BRAND_GOLD = "#E8BB73";
+/** Dorado de marca (token `--primary` = hsl(41 61% 61%) = #D8B25E). Mismo en web, app y canvas. */
+export const BRAND_GOLD = "#D8B25E";
 
 /** Lienzo de las imágenes exportadas (historia de entrenamiento, scan). */
 export const INK = {
-  base: "#0B0A0A",
-  mid: "#0B0A0A",
-  deep: "#0B0A0A",
-  card: "#151414",
-  line: "#282625",
+  base: "#000000",
+  mid: "#000000",
+  deep: "#000000",
+  card: "#111113",
+  line: "#1C1C1E",
   silhouette: "#3d3d40",
   /** Fondo del lienzo que captura html2canvas en el scan. */
-  scanCanvas: "#0B0A0A",
+  scanCanvas: "#000000",
 } as const;
 
 /** Sombreado del mapa muscular: luces y sombras sobre la silueta (no son color de marca). */
@@ -36,11 +36,11 @@ export const MASK_OPAQUE = "#000";
 
 /** Texto sobre esas imágenes: mismos pasos que `foreground` y `muted-foreground`. */
 export const INK_TEXT = {
-  primary: "#F7F5F3",
-  body: "#E3E1DD",
-  secondary: "#B1AEA9",
-  tertiary: "#B1AEA9",
-  faint: "#B1AEA9",
+  primary: "#FFFFFF",
+  body: "#F5F5F7",
+  secondary: "#A8A8AE",
+  tertiary: "#A8A8AE",
+  faint: "#A8A8AE",
 } as const;
 
 /** Mapa muscular: de «poco trabajado» a «mucho» en la sesión. */

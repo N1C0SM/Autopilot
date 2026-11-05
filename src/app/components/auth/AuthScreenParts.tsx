@@ -61,12 +61,13 @@ export const AuthHero = ({
   children?: ReactNode;
 }) => (
   <div className="relative text-center">
-    {/* Misma marca que el menú de la landing: palabra en dorado, sin halos. */}
-    <p className="mb-6 text-[13px] font-semibold tracking-[0.18em] text-primary">AUTOPILOT</p>
+    {/* Kicker — idéntico a la landing */}
+    <p className="kicker mb-6">AUTOPILOT</p>
     {mark}
-    <h1 className="mt-6 text-[30px] font-semibold leading-tight tracking-tight">{title}</h1>
+    {/* Titular — mismo tracking que la landing */}
+    <h1 className="mt-6 text-[28px] font-bold leading-tight tracking-[-0.02em]">{title}</h1>
     {description ? (
-      <p className="mx-auto mt-2 max-w-[34ch] type-subhead text-muted-foreground">{description}</p>
+      <p className="mx-auto mt-2 max-w-[34ch] text-[15px] text-foreground/75">{description}</p>
     ) : null}
     {children}
   </div>

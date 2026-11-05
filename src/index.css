@@ -217,38 +217,37 @@ body.keyboard-open main {
          border      = #262629   (15 %) separador, nunca borde de tarjeta
          muted-fg    = #A8A8AE   67 %, AA sobre las tres superficies */
     --background: 30 6% 4%;
-    --foreground: 40 20% 96%;
+    --foreground: 0 0% 100%;
 
-    --card: 240 5% 6.7%;
+    /* Sistema de superficies — negro puro + 4 pasos grises fríos, igual que la landing */
+    --card: 240 5% 7%;
     --card-foreground: 0 0% 100%;
 
-    --popover: 240 5% 6.7%;
+    --popover: 240 5% 7%;
     --popover-foreground: 0 0% 100%;
 
-    /* Dorado de marca #C8A535 — más profundo y premium sobre negro puro. */
-    --primary: 46 58% 50%;
+    /* Dorado de marca — igual que pillGold de la landing (#D8B25E / hsl(41 61% 61%)) */
+    --primary: 41 61% 61%;
     --primary-foreground: 0 0% 0%;
 
-    --secondary: 30 4% 14%;
+    --secondary: 240 5% 16%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 30 4% 14%;
-    --muted-foreground: 35 5% 68%;
+    --muted: 240 5% 16%;
+    --muted-foreground: 240 4% 67%;
 
-    --accent: 30 4% 19%;
+    --accent: 240 5% 21%;
     --accent-foreground: 0 0% 100%;
 
-    /* systemRed / systemGreen, dark appearance. El verde solo confirma (pago,
-       guardado); en el entrenamiento no marca estado: eso es trabajo del dorado. */
     --destructive: 3 100% 61%;
     --destructive-foreground: 0 0% 100%;
 
     --success: 135 64% 50%;
     --success-foreground: 0 0% 100%;
 
-    --border: 30 4% 15%;
-    --input: 30 4% 15%;
-    --ring: 37 72% 68%;
+    --border: 240 4% 15%;
+    --input: 240 4% 15%;
+    --ring: 41 61% 61%;
 
     /* Radios semánticos: úsalos en pantallas nuevas en vez de md/lg/xl/3xl. */
     --radius: 0.75rem;
@@ -262,14 +261,14 @@ body.keyboard-open main {
        Solo se escala la tipografía, no la rejilla: las tarjetas no se deforman. */
     --type-scale: 1;
 
-    --sidebar-background: 30 4% 7%;
+    --sidebar-background: 240 5% 7%;
     --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 37 72% 68%;
+    --sidebar-primary: 41 61% 61%;
     --sidebar-primary-foreground: 0 0% 0%;
-    --sidebar-accent: 30 4% 14%;
+    --sidebar-accent: 240 5% 16%;
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 30 4% 15%;
-    --sidebar-ring: 37 72% 68%;
+    --sidebar-border: 240 4% 15%;
+    --sidebar-ring: 41 61% 61%;
 
     /* Inter (self-hosted, variable) on every platform: one typeface, typography-led design. */
     --font-display: "Inter Variable", "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
@@ -398,7 +397,9 @@ body.keyboard-open main {
   .btn-sm   { position: relative; height: 34px; padding-inline: 14px; border-radius: 9999px; font-size: calc(15px * var(--type-scale)); line-height: calc(20px * var(--type-scale)); }
   /* El botón pequeño se ve compacto pero su zona táctil mide 44 pt. */
   .btn-sm::before { content: ""; position: absolute; inset: -6px 0; }
-  .btn-lg   { height: 50px; padding-inline: 24px; border-radius: 9999px; font-size: calc(17px * var(--type-scale)); line-height: calc(22px * var(--type-scale)); }
+  .btn-lg   { height: 48px; padding-inline: 28px; border-radius: 9999px; font-size: calc(16px * var(--type-scale)); line-height: calc(22px * var(--type-scale)); font-weight: 600; letter-spacing: -0.01em; }
+  /* Kicker — etiqueta de sección igual que la landing: 11px bold uppercase tracking-[0.2em] dorado */
+  .kicker { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.2em; color: hsl(var(--primary)); }
   .btn-icon { height: 44px; width: 44px; border-radius: 9999px; }
   
   /* iOS transition timing: 150ms ease for consistent feel */

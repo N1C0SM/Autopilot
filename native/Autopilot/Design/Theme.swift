@@ -16,7 +16,8 @@ enum Palette {
     /// 6,0:1 sobre `secondary`, así que ya cumple AA/AAA para texto normal; no hace falta
     /// subir la luminosidad. Los grises con opacidad solo se usan en adornos (chevrones, iconos).
     static let muted = Color(red: 0.696, green: 0.683, blue: 0.664)
-    static let gold = Color(red: 0.910, green: 0.734, blue: 0.450)
+    /// Dorado de marca #D8B25E — idéntico a hsl(41 61% 61%) del token --primary de la web y la landing.
+    static let gold = Color(red: 0.847, green: 0.698, blue: 0.369)
     static let destructive = Color(red: 1.0, green: 0.271, blue: 0.227)
     /// --success 135 64% 50%
     static let success = Color(red: 0.18, green: 0.82, blue: 0.34)

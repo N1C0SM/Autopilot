@@ -15,7 +15,7 @@ Escala de superficies: cuatro pasos sobre negro, ni uno más. Una tarjeta no lle
 | `border` / `bg-border` | `240 4% 15%` (`#262629`) | Separadores (`sep-b`, `sep-t`). **Nunca borde de tarjeta.** |
 | `text-foreground` | blanco | Texto principal. |
 | `text-muted-foreground` | `240 4% 67%` (`#A8A8AE`) | Texto secundario (AA sobre las tres superficies). Nunca más pequeño que `type-footnote`. |
-| `text-primary` / `bg-primary` | dorado `41 61% 61%` (`#D8B25E`) | Acción principal, cifra protagonista, palabra destacada, estado activo. |
+| `bg-primary` / `text-primary` | dorado `41 61% 61%` (`#D8B25E`) | Idéntico al `pillGold` de la landing. Acción principal, cifra protagonista, palabra destacada, estado activo. |
 | `bg-primary/15` | dorado al 15 % | Etiquetas, fichas activas, fila «hecha». |
 | `border-primary/30` | dorado al 30 % | Borde de la fila o campo activo. |
 | `text-destructive` | `#FF453A` | Solo borrar, cerrar sesión o error. **Nunca el número de serie ni el fondo de una fila.** |
@@ -78,6 +78,60 @@ Avatares e icono de la app: círculo.
 - Márgenes laterales: 16–20 px en móvil (`px-4`/`px-5`), 32 px en tablet (`sm:px-8`).
 - Entre bloques de la app: 32 px (`mt-8`); entre secciones de la landing: una pantalla o más, según la narrativa.
 - Ancho de lectura: párrafos ≤ 60 caracteres (`max-w-md`/`max-w-xl`).
+
+## Patrones de la landing (referencia de identidad)
+
+La landing es **la referencia de diseño**. Toda pantalla de la app debe seguir estos patrones:
+
+### Kicker (etiqueta de sección)
+```tsx
+import { Kicker } from "@/shared/components/ui/kicker";
+<Kicker>La experiencia</Kicker>  // → 11px bold uppercase tracking-[0.2em] text-primary
+```
+
+### Titular de bloque
+```tsx
+<h2 className="mt-3 text-[30px] font-bold leading-[1.15] tracking-[-0.015em] sm:text-[34px]">
+  Empieza gratis<br />y decide después.
+</h2>
+```
+
+### Cards con borde fino (como la landing)
+```tsx
+// Landing: rounded-[14px] border border-border bg-card
+// App: rounded-card border border-border bg-card  (rounded-card = 22px)
+<div className="rounded-card border border-border bg-card p-5">...</div>
+```
+
+### Botón primario — pill dorado h-12
+```tsx
+<Button variant="hero" size="lg">Empezar gratis <ArrowRight /></Button>
+// → rounded-full h-12 bg-primary text-primary-foreground
+```
+
+### Botón secundario — pill outline
+```tsx
+<Button variant="outline" size="lg">Ver demo</Button>
+// → rounded-full h-12 border border-foreground/35
+```
+
+### Foto a sangre con gradiente
+```tsx
+// Siempre: foto real a todo el ancho, gradiente encima, texto libre
+<div className="relative overflow-hidden">
+  <img className="absolute inset-0 h-full w-full object-cover" />
+  <div className="absolute inset-0 bg-gradient-to-r from-background via-background/85 to-transparent" />
+  <div className="relative ...">// texto encima</div>
+</div>
+```
+
+### Colores secundarios de texto
+```tsx
+// Landing usa foreground/80 y foreground/85, no solo muted-foreground
+<p className="text-foreground/80">Texto secundario prominente</p>
+<p className="text-foreground/85">Texto secundario muy legible</p>
+<p className="text-muted-foreground">Texto secundario estándar</p>
+```
 
 ## Movimiento
 
