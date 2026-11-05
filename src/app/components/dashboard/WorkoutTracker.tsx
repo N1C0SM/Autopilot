@@ -1511,7 +1511,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                   }}
                   style={{ touchAction: "pan-y" }}
                   aria-label="Desliza para cambiar de ejercicio"
-                  className={`relative flex w-full items-center justify-center overflow-hidden rounded-2xl bg-card md:cursor-grab md:active:cursor-grabbing ${img || loop ? "aspect-[4/3] max-h-[26dvh] [@media(max-height:700px)]:max-h-[22dvh] md:max-h-[40dvh]" : "h-12"}`}>
+                  className={`relative flex w-full items-center justify-center overflow-hidden rounded-media bg-card md:cursor-grab md:active:cursor-grabbing ${img || loop ? "aspect-[4/3] max-h-[26dvh] [@media(max-height:700px)]:max-h-[22dvh] md:max-h-[40dvh]" : "h-12"}`}>
                   {loop ? (
                     <video key={loop} ref={startLoop} src={loop} poster={img || undefined} autoPlay muted loop playsInline preload="auto" disablePictureInPicture aria-label={active.name} draggable={false} className="pointer-events-none h-full w-full object-cover" />
                   ) : img ? (
