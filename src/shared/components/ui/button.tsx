@@ -20,7 +20,7 @@ const buttonVariants = cva(
         hero: filled,
         destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90 active:opacity-80",
         tinted,
-        outline: tinted,
+        outline: "border border-foreground/30 bg-transparent text-foreground hover:bg-foreground/5 active:bg-foreground/10",
         secondary: "bg-secondary text-secondary-foreground hover:bg-accent active:bg-accent",
         plain,
         link: `${plain} underline-offset-4 hover:underline`,
