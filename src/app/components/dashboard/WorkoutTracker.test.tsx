@@ -79,6 +79,14 @@ describe("routine week navigation and saved session dates", () => {
     act(() => { setWorkoutView("user", "list"); });
     expect(readActiveWorkout("user")?.logs.Remo).toHaveLength(2);
   });
+  it("shows exactly one exercise viewer in focus mode", async () => {
+    render(<WorkoutTracker userId="user" dayPlans={[{ ...plan("Lunes", "Remo"), exercises: [...(plan("Lunes", "Remo").exercises || []), ...(plan("Lunes", "Press").exercises || [])] }]} initialDay="Lunes" />);
+    fireEvent.click(await screen.findByRole("button", { name: "Empezar entrenamiento" }));
+    act(() => { setWorkoutView("user", "focus"); });
+    // El visor del ejercicio activo no puede duplicarse: dos paneles apilados empujan
+    // las filas de series fuera de la pantalla.
+    expect(screen.getAllByLabelText("Desliza para cambiar de ejercicio")).toHaveLength(1);
+  });
   it("opens the next routine when today has no session, without a rest screen", async () => {
     render(<WorkoutTracker userId="user" dayPlans={[plan("Lunes", "Sentadilla")]} />);
     // El domingo no entrena: se abre el lunes, la siguiente sesión, y ningún día sin sesión
