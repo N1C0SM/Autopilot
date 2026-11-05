@@ -155,7 +155,7 @@ export default function Index() {
     <section aria-labelledby="fundador-titulo" className="px-5 py-14 sm:px-8 sm:py-20">
       <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">
         <div>
-          <h2 id="fundador-titulo" className="type-display-sm"><ScrollWords text="Quién está detrás" /></h2>
+          <h2 id="fundador-titulo" className="type-display-sm">Quién está detrás</h2>
           <p className="mt-4 type-body text-muted-foreground">Soy Nicolás San Marcos, fundador y desarrollador de Autopilot. Lo construyo yo{plans.coach ? <>, y en el plan {plans.coachName} también soy yo quien revisa tu plan y te responde {COACH_CONTACT_CHANNEL}</> : null}. Quería una app que te diga qué hacer hoy sin complicarte.</p>
           <p className="mt-3 type-footnote text-muted-foreground">Es un proyecto de una persona{plans.coach ? ". Por eso las respuestas no son inmediatas ni 24/7." : ": cada mejora sale de lo que me cuentan quienes entrenan con Autopilot."}</p>
         </div>
