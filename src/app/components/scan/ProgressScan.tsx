@@ -82,6 +82,21 @@ export default function ProgressScan({ onScanned }: { onScanned?: () => void }) 
   const [front, setFront] = useState<string | null>(null);
   const [back, setBack] = useState<string | null>(null);
   const [goal, setGoal] = useState("");
+  // Físico objetivo, igual que el Scan público: referencias del admin o foto propia.
+  const [presets, setPresets] = useState<{ id: string; name: string; image_url: string }[]>([]);
+  const [objective, setObjective] = useState<string | null>(null);
+  const [presetId, setPresetId] = useState<string | null>(null);
+  useEffect(() => {
+    void supabase.from("goal_physiques").select("id, name, image_url").order("sort_order", { ascending: true })
+      .then(({ data }) => setPresets(((data ?? []) as { id: string; name: string; image_url: string }[]).filter((p) => /^https?:/i.test(p.image_url ?? ""))));
+  }, []);
+  const pickObjective = async (file: File) => {
+    try {
+      const friendly = await toBrowserFriendlyImage(file);
+      setObjective(await compressImage(friendly));
+      setPresetId(null);
+    } catch { setError("No se pudo leer la foto del objetivo."); }
+  };
   const [bio, setBio] = useState<{ height?: number; weight?: number; age?: number; gender?: string }>({});
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<ScanResult | null>(null);
@@ -137,7 +152,7 @@ export default function ProgressScan({ onScanned }: { onScanned?: () => void }) 
     try {
       const { data, error: fnErr } = await supabase.functions.invoke("analyze-physique", {
         body: {
-          currentImage: front, backImage: back, objectiveImage: null,
+          currentImage: front, backImage: back, objectiveImage: objective,
           height_cm: bio.height, weight_kg: bio.weight, age: bio.age, gender: bio.gender,
         },
       });
