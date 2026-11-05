@@ -44,7 +44,7 @@ export default function PhoneStory() {
             const o = i === current ? Math.min(1, local * 5 + (i === 0 ? 1 : 0), (1 - local) * 5 + (i === scenes.length - 1 ? 1 : 0)) : 0;
             return <div key={s.title} className="absolute inset-0" style={{ opacity: o, transform: `translateY(${(1 - o) * 16}px)` }} aria-hidden={i !== current}>
               <p className="type-subhead text-primary">{s.eyebrow}</p>
-              <h3 className="mt-2 font-rounded text-[28px] font-bold leading-[1.1] tracking-tight md:text-[48px]">{s.title}</h3>
+              <h3 className="mt-2 text-[28px] font-bold leading-[1.1] tracking-tight md:text-[48px]">{s.title}</h3>
               <p className="mx-auto mt-3 hidden max-w-sm type-body text-muted-foreground md:mx-0 md:block md:text-[19px] md:leading-[26px]">{s.text}</p>
             </div>;
           })}

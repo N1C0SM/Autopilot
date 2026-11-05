@@ -275,7 +275,7 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
               <div className="flex items-end justify-between gap-3">
                 <SectionHeader title="Evolución del RPE" hint={`${rpeData.length} ${rpeData.length === 1 ? "sesión" : "sesiones"}`} className="min-w-0" />
                 <div className="shrink-0 text-right">
-                  <div className="font-rounded text-[28px] font-bold leading-[34px] tabular-nums">{avgRPE}</div>
+                  <div className=" text-[28px] font-bold leading-[34px] tabular-nums">{avgRPE}</div>
                   <div className="type-caption1 text-muted-foreground">Media</div>
                 </div>
               </div>
@@ -364,7 +364,7 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
                     }
                     trailing={
                       <span className="text-right">
-                        <span className="block font-rounded type-headline tabular-nums">
+                        <span className="block type-headline tabular-nums">
                           {pr.estimated_1rm ? `${formatDecimal(pr.estimated_1rm, 1)} kg` : "—"}
                         </span>
                         <span className="block type-caption2 text-muted-foreground">1RM est.</span>
@@ -410,7 +410,7 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
 /** Cifra al estilo de Salud: número grande redondeado y su etiqueta debajo. */
 const Stat = ({ value, unit, label, className }: { value: ReactNode; unit?: string; label: string; className?: string }) => (
   <div className={cn("min-w-0", className)}>
-    <div className="truncate font-rounded text-[28px] font-bold leading-[34px] tabular-nums">
+    <div className="truncate text-[28px] font-bold leading-[34px] tabular-nums">
       {value}
       {unit ? <span className="ml-1 type-subhead font-semibold text-muted-foreground">{unit}</span> : null}
     </div>

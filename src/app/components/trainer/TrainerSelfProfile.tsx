@@ -153,7 +153,7 @@ const TrainerSelfProfile = ({ assignedClientCount }: { assignedClientCount: numb
               <AvatarImage src={photoPreview || photoUrl || undefined} alt="" className="object-cover" />
               <AvatarFallback className="bg-secondary text-muted-foreground">
                 {displayName ? (
-                  <span aria-hidden="true" className="font-rounded type-large-title">{displayName.charAt(0).toUpperCase()}</span>
+                  <span aria-hidden="true" className=" type-large-title">{displayName.charAt(0).toUpperCase()}</span>
                 ) : (
                   <UserRound className="h-9 w-9" strokeWidth={1.75} />
                 )}

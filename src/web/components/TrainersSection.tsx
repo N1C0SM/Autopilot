@@ -43,16 +43,16 @@ function FounderCard() {
     return () => { alive = false; };
   }, []);
   return <article className="grid items-center gap-8 sm:grid-cols-[minmax(0,280px)_1fr] sm:gap-12">
-    <div className="relative aspect-[4/5] w-full max-w-[280px] overflow-hidden rounded-[28px] bg-card">
+    <div className="relative aspect-[4/5] w-full max-w-[280px] overflow-hidden rounded-[22px] bg-card">
       {founder.photo && !failed
         ? <img src={founder.photo} alt={founder.name} loading="lazy" onError={() => setFailed(true)} className="h-full w-full object-cover" />
         : <div className="flex h-full w-full items-center justify-center"><User className="h-16 w-16 text-muted-foreground" strokeWidth={1.5} aria-hidden="true" /></div>}
       <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-      <p className="absolute inset-x-0 bottom-0 p-5 font-rounded text-[24px] font-bold leading-tight text-white">{founder.name}</p>
+      <p className="absolute inset-x-0 bottom-0 p-5 text-[24px] font-bold leading-tight text-white">{founder.name}</p>
     </div>
     <div>
       <p className="type-subhead font-semibold text-primary">Fundador y desarrollador</p>
-      <p className="mt-3 max-w-xl font-rounded text-[28px] font-bold leading-tight tracking-tight sm:text-[36px]">Una app que te dice qué hacer hoy, sin complicarte.</p>
+      <p className="mt-3 max-w-xl text-[28px] font-bold leading-tight tracking-tight sm:text-[36px]">Una app que te dice qué hacer hoy, sin complicarte.</p>
       <p className="mt-4 max-w-xl type-body text-muted-foreground md:text-[19px] md:leading-[27px]">Autopilot es un proyecto independiente: la rutina, el registro y la progresión los diseña y mantiene su fundador. Cada mejora sale de lo que cuentan quienes entrenan con la app.</p>
     </div>
   </article>;

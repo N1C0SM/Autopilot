@@ -18,7 +18,7 @@ const Steps = ({ items }: { items: ReactNode[] }) => (
   <ol className="space-y-5">
     {items.map((step, i) => (
       <li key={i} className="flex items-start gap-4">
-        <span aria-hidden="true" className="w-7 shrink-0 text-center font-rounded type-title3 tabular-nums text-primary">
+        <span aria-hidden="true" className="w-7 shrink-0 text-center type-title3 tabular-nums text-primary">
           {i + 1}
         </span>
         <span className="min-w-0 flex-1 pt-px type-body">{step}</span>
