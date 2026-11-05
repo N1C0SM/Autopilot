@@ -289,9 +289,9 @@ const HomeOverview = ({
   const sessionFocus = String(sessionTitle).includes(" · ") ? String(sessionTitle).split(" · ").slice(1).join(" · ") : "";
 
   return (
-    <div className="flex w-full flex-col pb-4">
+    <div className="flex w-full flex-col pb-4 lg:grid lg:grid-cols-[minmax(0,1.55fr)_minmax(300px,1fr)] lg:grid-rows-[auto_auto_1fr] lg:items-start lg:gap-x-10 xl:gap-x-14">
       {/* Cabecera compacta: fecha y saludo discreto, sin titular de marketing */}
-      <header>
+      <header className="lg:col-span-2">
         <p className="text-[13px] font-medium text-muted-foreground">{greetingDate}</p>
         <h2 data-nav-title className="mt-0.5 type-large-title leading-tight text-foreground sm:text-[44px] sm:leading-[48px]">
           {firstName ? `Hola, ${firstName}.` : "Hola."}
@@ -309,10 +309,10 @@ const HomeOverview = ({
       </header>
 
       {/* Entrenamiento de hoy */}
-      <section className="mt-6" aria-label="Entrenamiento de hoy">
+      <section className="mt-6 lg:row-span-2 lg:mt-8" aria-label="Entrenamiento de hoy">
         <p className="mb-2 type-footnote font-medium text-muted-foreground">Entrenamiento de hoy</p>
         {activeWorkout && activeWorkoutIsToday ? (
-          <div className="rounded-2xl bg-card p-4 lg:max-w-xl">
+          <div className="rounded-2xl bg-card p-4">
             <p className="text-[13px] font-medium text-primary">En curso</p>
             <h3 className="mt-0.5 text-[17px] font-semibold leading-6">{planTitle(activeWorkout.plan)}</h3>
             <p className="mt-0.5 text-[15px] tabular-nums text-muted-foreground">
@@ -335,11 +335,11 @@ const HomeOverview = ({
               if (onStartWorkout) onStartWorkout();
               else onNavigate("training");
             }}
-            className="group block w-full overflow-hidden rounded-[22px] border border-border bg-card text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:max-w-xl"
+            className="group block w-full overflow-hidden rounded-[22px] border border-border bg-card text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             aria-label={`Empezar ${sessionTitle}`}
           >
             {dayPhoto && (
-              <span aria-hidden="true" className="relative block aspect-[1.8] w-full overflow-hidden bg-secondary">
+              <span aria-hidden="true" className="relative block aspect-[1.8] w-full lg:aspect-[2.1] overflow-hidden bg-secondary">
                 <img key={dayPhoto} src={dayPhoto} alt="" decoding="async" className="absolute inset-0 h-full w-full object-cover object-[50%_30%]" />
               </span>
             )}
@@ -369,7 +369,7 @@ const HomeOverview = ({
           <button
             type="button"
             onClick={() => { void hapticTap(); onNavigate("training"); }}
-            className="flex w-full items-center gap-3.5 rounded-2xl bg-card p-4 text-left transition-opacity active:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:max-w-xl"
+            className="flex w-full items-center gap-3.5 rounded-2xl bg-card p-4 text-left transition-opacity active:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             aria-label="Ver el resumen de la sesión de hoy"
           >
             <span aria-hidden="true" className="h-14 w-14 shrink-0 overflow-hidden rounded-media bg-secondary">
@@ -385,14 +385,14 @@ const HomeOverview = ({
             <span className="shrink-0 text-[15px] font-medium text-primary">Resumen</span>
           </button>
         ) : (
-          <div className="rounded-2xl bg-card p-4 lg:max-w-xl">
+          <div className="rounded-2xl bg-card p-4">
             <h3 className="text-[17px] font-semibold leading-6">Hoy toca descansar</h3>
             <p className="mt-0.5 text-[15px] text-muted-foreground">{nextSession ?? "Tu plan aún no tiene sesiones."}</p>
             <Button type="button" variant="secondary" size="lg" className="mt-4 w-full" onClick={() => { void hapticTap(); onNavigate("training"); }}>Entrenar igualmente</Button>
           </div>
         )}
         {activeWorkout && !activeWorkoutIsToday && (
-          <div className="mt-3 flex items-center gap-3 border-t border-border/60 pt-3 lg:max-w-xl">
+          <div className="mt-3 flex items-center gap-3 border-t border-border/60 pt-3">
             <p className="min-w-0 flex-1 text-[13px] text-muted-foreground">Tienes una sesión sin terminar del {activeWorkoutDate}.</p>
             <Button size="sm" onClick={() => {
               void hapticTap();
@@ -407,7 +407,7 @@ const HomeOverview = ({
       </section>
 
       {/* Semana compacta: sesiones hechas y días con sesión, sin navegación por días */}
-      <section className="mt-7 lg:max-w-xl" aria-label={`Esta semana: ${sessionCount} de ${scheduledDays.length} sesiones`}>
+      <section className="mt-7 lg:mt-8 lg:rounded-[22px] lg:border lg:border-border lg:bg-card lg:p-5" aria-label={`Esta semana: ${sessionCount} de ${scheduledDays.length} sesiones`}>
         <div className="flex items-baseline justify-between">
           <p className="text-[13px] font-medium text-muted-foreground">Esta semana</p>
           <p className="text-[13px] tabular-nums text-muted-foreground"><span className="font-semibold text-foreground">{sessionCount}</span> de {scheduledDays.length} sesiones</p>
@@ -423,7 +423,7 @@ const HomeOverview = ({
       </section>
 
       {/* Progreso: filas con valores reales */}
-      <section className="mt-7 lg:max-w-xl">
+      <section className="mt-7 lg:mt-4 lg:rounded-[22px] lg:border lg:border-border lg:bg-card lg:px-5 lg:pb-2 lg:pt-5">
         <p className="mb-1 type-title3 text-foreground">Progreso</p>
         <ul data-home-rows className="divide-y divide-border/60">
           <li>
