@@ -108,7 +108,7 @@ const WorkoutProgress = ({ userId, compact = false }: Props) => {
 
       {exercises.length > 0 && (
         // Ejercicio elegido como portada: su foto real y el nombre en grande, tocable para cambiar.
-        <div className="relative shrink-0 overflow-hidden rounded-[28px] bg-card transition-opacity duration-150 active:opacity-80 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring">
+        <div className="relative shrink-0 overflow-hidden rounded-[22px] border border-border bg-card transition-opacity duration-150 active:opacity-80 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring">
           {exerciseImages[selectedExercise] && <>
             <img key={exerciseImages[selectedExercise]} src={exerciseImages[selectedExercise]} alt="" decoding="async" className="absolute inset-0 h-full w-full object-cover object-[50%_30%] animate-in fade-in duration-500" />
             <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
@@ -116,7 +116,7 @@ const WorkoutProgress = ({ userId, compact = false }: Props) => {
           <div className={`relative flex items-end gap-2 p-5 ${exerciseImages[selectedExercise] ? "min-h-[11rem]" : ""}`}>
             <span className="min-w-0 flex-1">
               <span className="block type-footnote font-semibold text-primary">{historyByExercise[selectedExercise]?.length ?? 0} {(historyByExercise[selectedExercise]?.length ?? 0) === 1 ? "sesión" : "sesiones"}</span>
-              <span className="mt-0.5 block font-rounded text-[26px] font-bold leading-tight tracking-tight text-white">{selectedExercise}</span>
+              <span className="mt-0.5 block text-[26px] font-bold leading-tight tracking-tight text-white">{selectedExercise}</span>
             </span>
             <ChevronsUpDown className="mb-1 h-5 w-5 shrink-0 text-white/70" strokeWidth={2} aria-hidden="true" />
           </div>

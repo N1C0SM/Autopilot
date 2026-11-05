@@ -18,7 +18,6 @@ export default function ScanAnalyzing({ progress, navTitle }: { progress: number
   return (
     <div className="mx-auto flex max-w-md flex-col items-center py-12 text-center">
       <div className="relative mb-8">
-        <span aria-hidden className="pointer-events-none absolute -inset-16 rounded-full bg-[radial-gradient(closest-side,hsl(var(--primary)/0.14),transparent)]" />
         <ProgressRing value={progress} size={160} stroke={12} label="Progreso del análisis">
           <span className="type-figure text-[34px] font-bold leading-none tabular-nums">
             {Math.round(progress)}

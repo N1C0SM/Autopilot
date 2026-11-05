@@ -104,7 +104,7 @@ const MUSCLE_INTENSITY = {
 
 // Misma rejilla para la cabecera, las series y sus bajadas: n.º, previa, carga, valor, check.
 const SET_GRID = "grid grid-cols-[24px_52px_minmax(0,1fr)_minmax(0,1fr)_44px] items-center gap-2";
-const NUMBER_FIELD = "scroll-mb-40 h-11 w-full min-w-0 rounded-[10px] border-0 bg-secondary px-1 text-center font-rounded type-headline tabular-nums outline-none transition-colors duration-150 placeholder:font-normal placeholder:text-muted-foreground/60 focus:bg-accent aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-inset aria-[invalid=true]:ring-destructive";
+const NUMBER_FIELD = "scroll-mb-40 h-11 w-full min-w-0 rounded-[10px] border-0 bg-secondary px-1 text-center type-headline tabular-nums outline-none transition-colors duration-150 placeholder:font-normal placeholder:text-muted-foreground/60 focus:bg-accent aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-inset aria-[invalid=true]:ring-destructive";
 // La serie en curso: cifras más grandes que el resto.
 const CURRENT_FIGURE = "!text-[22px] !font-bold !leading-7";
 // iOS solo arranca un vídeo en silencio si `muted` está puesto antes de `play()`.
@@ -1367,11 +1367,11 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
               const [name, ...rest] = String(trainingTitle || selectedDay).split(" · ");
               return (
                 <>
-                  {sessionCover && <div aria-hidden="true" className="relative mb-4 h-48 overflow-hidden rounded-[28px] bg-card">
+                  {sessionCover && <div aria-hidden="true" className="relative mb-4 h-48 overflow-hidden rounded-[22px] border border-border bg-card">
                     <img key={sessionCover} src={sessionCover} alt="" decoding="async" className="absolute inset-0 h-full w-full object-cover object-[50%_30%] animate-in fade-in duration-500" />
                     <span className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
                   </div>}
-                  <h2 className="truncate font-rounded text-[32px] font-bold leading-tight tracking-tight">{name}</h2>
+                  <h2 className="truncate text-[32px] font-bold leading-tight tracking-tight">{name}</h2>
                   {rest.length > 0 && <p className="mt-0.5 truncate type-subhead text-muted-foreground">{rest.join(" · ")}</p>}
                 </>
               );
@@ -1770,7 +1770,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                             {/* Segmento principal de la serie */}
                             <div className={SET_GRID}>
                               {/* Set number */}
-                              <span className={`text-center font-rounded type-headline tabular-nums ${si === firstPendingIndex ? "text-primary" : "text-muted-foreground"} ${dim}`}>
+                              <span className={`text-center type-headline tabular-nums ${si === firstPendingIndex ? "text-primary" : "text-muted-foreground"} ${dim}`}>
                                 {isWarmup ? <Flame className="mx-auto h-4 w-4" aria-hidden="true" /> : si + 1}
                               </span>
                               <span className={`truncate text-center type-caption1 tabular-nums text-muted-foreground ${dim}`}>
@@ -1854,8 +1854,8 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                                 initial={prefersReducedMotion ? { opacity: 0 } : { scale: 0.7, opacity: 0 }}
                                 animate={prefersReducedMotion ? { opacity: 1 } : { scale: 1, opacity: 1 }}
                                 transition={prefersReducedMotion ? { duration: 0.2 } : { type: "spring", stiffness: 420, damping: 14 }}
-                                className="mt-2 flex w-fit origin-left items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-0.5 type-footnote font-semibold text-amber-400 ring-1 ring-inset ring-amber-500/30 shadow-[0_0_10px_rgba(234,179,8,0.15)]">
-                                <Trophy className="h-3.5 w-3.5 shrink-0 text-amber-400" aria-hidden="true" />
+                                className="mt-2 flex w-fit origin-left items-center gap-1.5 rounded-full border border-primary/40 bg-transparent px-2.5 py-0.5 type-footnote font-semibold text-primary">
+                                <Trophy className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
                                 <span>Récord personal · {livePR}</span>
                               </motion.div>
                             )}
@@ -2000,7 +2000,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                     <div className="flex items-center">
                       <div className="min-w-0 flex-1">
                         <p className="sr-only">Descanso</p>
-                        <p className="font-rounded text-[34px] font-bold leading-[44px] tabular-nums">
+                        <p className=" text-[34px] font-bold leading-[44px] tabular-nums">
                           {Math.floor(restTimer / 60)}:{(restTimer % 60).toString().padStart(2, "0")}
                         </p>
                       </div>

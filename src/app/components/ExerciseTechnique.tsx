@@ -22,7 +22,7 @@ const ExerciseTechnique = ({
       <ol className="mt-3 space-y-3 rounded-media bg-secondary p-4">
         {guide.steps.map((step, i) => (
           <li key={step} className="flex items-start gap-3">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/20 font-rounded type-subhead font-semibold tabular-nums text-primary">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/20 type-subhead font-semibold tabular-nums text-primary">
               {i + 1}
             </span>
             <p className="min-w-0 pt-0.5 type-body">{step}</p>

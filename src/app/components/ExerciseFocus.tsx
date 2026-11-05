@@ -179,7 +179,7 @@ export const ExerciseFocus = ({
             {stats.map((item) => (
               <div key={item.label} className="min-w-0 rounded-media bg-secondary p-3">
                 <dt className="type-footnote text-muted-foreground">{item.label}</dt>
-                <dd className="mt-0.5 font-rounded type-title2 tabular-nums">{item.value ?? "—"}</dd>
+                <dd className="mt-0.5 type-title2 tabular-nums">{item.value ?? "—"}</dd>
               </div>
             ))}
           </dl>

@@ -263,7 +263,7 @@ function PhotoTile({ title, hint, badge, image, onFile }: {
   title: string; hint: string; badge: string; image: string | null; onFile: (f: File) => void;
 }) {
   return (
-    <label className="relative block h-[240px] cursor-pointer overflow-hidden rounded-[28px] bg-card transition-transform duration-150 active:scale-[0.98]">
+    <label className="relative block h-[240px] cursor-pointer overflow-hidden rounded-[22px] border border-border bg-card transition-transform duration-150 active:scale-[0.98]">
       <input
         type="file"
         accept="image/*"
@@ -279,7 +279,7 @@ function PhotoTile({ title, hint, badge, image, onFile }: {
         <img src={image} alt="" className="absolute inset-0 h-full w-full object-cover" />
       ) : (
         <>
-          <span aria-hidden="true" className="absolute inset-0 rounded-[28px] border-[1.5px] border-dashed border-primary/35" />
+          <span aria-hidden="true" className="absolute inset-0 rounded-[22px] border-[1.5px] border-dashed border-primary/35" />
           <PersonStanding aria-hidden="true" strokeWidth={0.75}
             className="absolute left-1/2 top-1/2 h-[150px] w-[150px] -translate-x-1/2 -translate-y-1/2 text-foreground/[0.06]" />
           {/* Todo centrado: cruz, título y pista. */}
@@ -325,7 +325,7 @@ function FigureTile({ label, value, hint, accent }: { label: string; value: stri
   return (
     <div className="flex min-w-0 flex-col gap-0.5 rounded-media bg-card p-4">
       <p className="truncate type-footnote text-muted-foreground">{label}</p>
-      <p className={cn("truncate font-rounded text-[28px] font-bold leading-tight tabular-nums", accent ? "text-primary" : "text-foreground")}>{value}</p>
+      <p className={cn("truncate text-[28px] font-bold leading-tight tabular-nums", accent ? "text-primary" : "text-foreground")}>{value}</p>
       {hint && <p className="truncate type-footnote text-muted-foreground">{hint}</p>}
     </div>
   );
@@ -379,7 +379,7 @@ export function ScanResultView({ result, onAgain }: { result: ScanResult; onAgai
   const hasDetail = !!(bc || groups.length || pr || po?.issues?.length || po?.note || result.genetic_markers?.length || pc);
   return (
     <div className="flex flex-col gap-[18px]">
-      <section className="rounded-[28px] bg-card p-5"
+      <section className="rounded-[22px] border border-border bg-card p-5"
         aria-label={`Físico: ${result.physique == null ? "sin datos" : `${formatDecimal(result.physique, 1)} sobre 10`}`}>
         <div className="flex items-start justify-between gap-3" aria-hidden="true">
           <div className="flex flex-col gap-0.5">
@@ -389,7 +389,7 @@ export function ScanResultView({ result, onAgain }: { result: ScanResult; onAgai
           <IconTile icon={Sparkles} size="md" />
         </div>
         <p className="mt-2.5 flex items-baseline gap-1" aria-hidden="true">
-          <span className="font-rounded text-[64px] font-bold leading-none tracking-tight tabular-nums">{score(result.physique)}</span>
+          <span className=" text-[64px] font-bold leading-none tracking-tight tabular-nums">{score(result.physique)}</span>
           {result.physique != null && <span className="type-title3 text-muted-foreground">/10</span>}
         </p>
         <p className="mt-1 type-footnote text-muted-foreground" aria-hidden="true">

@@ -335,7 +335,7 @@ const HomeOverview = ({
               if (onStartWorkout) onStartWorkout();
               else onNavigate("training");
             }}
-            className="group block w-full overflow-hidden rounded-[28px] bg-card text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:max-w-xl"
+            className="group block w-full overflow-hidden rounded-[22px] border border-border bg-card text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:max-w-xl"
             aria-label={`Empezar ${sessionTitle}`}
           >
             {dayPhoto && (
