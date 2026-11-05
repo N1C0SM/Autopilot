@@ -61,7 +61,7 @@ const ExerciseProgressChart = ({ exerciseName, history, metric, onMetricChange, 
       {/* Info compacta arriba */}
       <div className="flex items-baseline justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="type-figure text-[32px] font-bold leading-none tabular-nums lg:text-[40px]">
+          <p className="text-[32px] font-semibold leading-none tabular-nums lg:text-[40px]">
             {latest !== null ? round(latest) : "—"}
             <span className="ml-1 type-subhead text-muted-foreground">{unit}</span>
           </p>
@@ -125,10 +125,10 @@ const ExerciseProgressChart = ({ exerciseName, history, metric, onMetricChange, 
                 dataKey="metricValue"
                 connectNulls
                 stroke="hsl(var(--primary))"
-                strokeWidth={2.5}
+                strokeWidth={1.5}
                 fill="hsl(var(--primary))"
                 fillOpacity={0.12}
-                dot={{ r: 3, fill: "hsl(var(--primary))", stroke: "hsl(var(--background))", strokeWidth: 1.5 }}
+                dot={false}
                 activeDot={{ r: 5, fill: "hsl(var(--primary))", stroke: "hsl(var(--background))", strokeWidth: 2 }}
                 isAnimationActive={false}
               />

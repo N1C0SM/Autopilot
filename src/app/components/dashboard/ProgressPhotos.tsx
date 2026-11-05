@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { formatDecimal } from "@/shared/lib/numberFormat";
-import { IconTile } from "@/shared/components/ui/icon-tile";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { motion, AnimatePresence, useDragControls, useReducedMotion } from "framer-motion";
-import { Camera, Trash2, X, ChevronLeft, ChevronRight, Columns2, ImageOff, WifiOff, Sparkles, Info } from "lucide-react";
+import { Camera, Trash2, X, ChevronLeft, ChevronRight, ImageOff, WifiOff, Sparkles, Info } from "lucide-react";
 import BeforeAfterCompare from "@/app/components/dashboard/BeforeAfterCompare";
 import { Button } from "@/shared/components/ui/button";
 import { EmptyState } from "@/shared/components/ui/empty-state";
