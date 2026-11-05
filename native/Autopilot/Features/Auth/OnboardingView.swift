@@ -304,8 +304,10 @@ struct OnboardingQuizView: View {
                 if step < titles.count - 1 {
                     Button("Continuar") { Haptics.tap(); c.save(); step += 1 }.buttonStyle(.pill).disabled(!valid[step])
                 } else {
-                    Button("Guardar mi plan gratis") { Haptics.signature(); c.save(); withAnimation { creatingAccount = true } }
-                        .buttonStyle(.pill).disabled(!accept)
+                    Button { Haptics.signature(); c.save(); withAnimation { creatingAccount = true } } label: {
+                        HStack(spacing: 8) { Text("Guardar mi plan gratis"); Image(systemName: "arrow.right").accessibilityHidden(true) }
+                    }
+                    .buttonStyle(.pill).disabled(!accept)
                 }
             }
             .frame(maxWidth: 560).padding(.horizontal, 16).padding(.vertical, 12)
@@ -361,43 +363,49 @@ struct OnboardingQuizView: View {
         }
     }
 
+    /// Resumen en filas con icono y lo que incluye el plan (diseño ChatGPT).
     private var summary: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text(t("TU OBJETIVO", "VUESTRO OBJETIVO")).font(.apFootnote).tracking(0.6).foregroundStyle(Palette.gold)
-            Text("\(Quiz.label(Quiz.goals, c.goal)) · \(Quiz.label(Quiz.focuses, c.focus))").font(.apTitle2).padding(.top, 4)
-            HStack(spacing: 6) {
-                ForEach(Quiz.week) { d in
-                    let on = c.days.contains(d.v)
-                    Text(d.s).font(.apHeadline).foregroundStyle(on ? Color.black : Palette.muted)
-                        .frame(width: 36, height: 36)
-                        .background(on ? Palette.gold : Palette.secondary, in: Circle()).frame(maxWidth: .infinity)
-                }
+        let dayNames = Quiz.week.filter { c.days.contains($0.v) }.map(\.s).joined(separator: ", ")
+        return VStack(alignment: .leading, spacing: 16) {
+            VStack(spacing: 0) {
+                summaryRow("target", "Objetivo", Quiz.label(Quiz.goals, c.goal), first: true)
+                summaryRow("dumbbell", "Tipo de entrenamiento", Quiz.label(Quiz.focuses, c.focus))
+                summaryRow(c.duo ? "person.2" : "person", "Modalidad", Quiz.label(Quiz.modes, c.mode))
+                summaryRow("calendar", t("Tu semana", "Vuestra semana"), "\(c.days.count) días (\(dayNames)) · \(Quiz.label(Quiz.durations, String(c.minutes)))")
             }
-            .padding(.top, 20)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel("Días de entreno: \(Quiz.week.filter { c.days.contains($0.v) }.map(\.l).joined(separator: ", "))")
-            HStack(spacing: 8) {
-                stat("Días", String(c.days.count))
-                stat("Sesión", Quiz.label(Quiz.durations, String(c.minutes)))
-                stat("Peso", c.weight.isEmpty ? "—" : "\(c.weight) kg")
-            }
-            .padding(.top, 20)
+            .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
             Text((c.structure == "coach" ? "Distribución: Autopilot elige la mejor para \(c.days.count) días." : "Distribución: \(Quiz.label(Quiz.structures, c.structure)).")
                  + (c.duo ? " Mismo calendario, cargas adaptadas a cada uno." : ""))
-                .font(.apSubhead).foregroundStyle(Palette.muted).padding(.top, 16)
+                .font(.apFootnote).foregroundStyle(Palette.muted).padding(.horizontal, 4)
+            VStack(alignment: .leading, spacing: 10) {
+                Text(t("Tu plan incluirá", "Vuestro plan incluirá")).font(.apHeadline).accessibilityAddTraits(.isHeader)
+                ForEach(Self.planIncludes, id: \.self) { item in
+                    Label {
+                        Text(item).font(.apSubhead)
+                    } icon: {
+                        Image(systemName: "checkmark").font(.inter(size: 15, weight: .bold)).foregroundStyle(Palette.gold)
+                    }
+                }
+            }
+            .padding(.horizontal, 4).padding(.top, 8)
         }
-        .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
     }
 
-    private func stat(_ k: String, _ v: String) -> some View {
-        VStack(spacing: 2) {
-            Text(v).font(.apHeadline).lineLimit(1).minimumScaleFactor(0.7)
-            Text(k).font(.apFootnote).foregroundStyle(Palette.muted)
+    /// Lo que de verdad trae el plan gratuito: rutina, progresión, nutrición básica y progreso.
+    private static let planIncludes = ["Rutina de entrenamiento personalizada", "Progresión de cargas", "Recomendaciones de nutrición", "Seguimiento de tu progreso"]
+
+    private func summaryRow(_ symbol: String, _ k: String, _ v: String, first: Bool = false) -> some View {
+        HStack(spacing: 16) {
+            Image(systemName: symbol).font(.inter(size: 20)).foregroundStyle(Palette.gold).frame(width: 28).accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(k).font(.apFootnote).foregroundStyle(Palette.muted)
+                Text(v).font(.apHeadline).fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
         }
-        .frame(maxWidth: .infinity).padding(.vertical, 12)
-        .background(Palette.secondary, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .padding(.horizontal, 20).padding(.vertical, 14)
+        .overlay(alignment: .top) { if !first { Rectangle().fill(Palette.separator).frame(height: 0.5).padding(.leading, 20) } }
         .accessibilityElement(children: .combine)
     }
 

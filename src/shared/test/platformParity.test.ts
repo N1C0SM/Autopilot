@@ -207,6 +207,8 @@ describe("paridad web ↔ apps nativas", () => {
       "Individual", "En pareja", "30–45 min", "45–60 min", "60–90 min",
       "Empuje / Tirón / Pierna", "No lo sé, que Autopilot elija", "Tiempo por sesión", "Tu peso en kg (opcional)",
       "Mismo calendario, cargas adaptadas a cada uno.", "Guardar mi plan gratis",
+      "Tipo de entrenamiento", "Modalidad", "Tu plan incluirá", "Rutina de entrenamiento personalizada",
+      "Progresión de cargas", "Recomendaciones de nutrición", "Seguimiento de tu progreso",
       "y el tratamiento de mis datos de salud para preparar mi plan.",
     ]) {
       expect(quiz, text).toContain(text);

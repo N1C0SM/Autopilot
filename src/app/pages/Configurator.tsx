@@ -3,7 +3,7 @@ import { clearConfiguratorDraft, readConfiguratorDraft, saveConfiguratorDraft } 
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { toast } from "sonner";
-import { Check, Dumbbell, Flame, HeartPulse, RefreshCw, User, Users, type LucideIcon } from "lucide-react";
+import { ArrowRight, CalendarDays, Check, Dumbbell, Flame, HeartPulse, RefreshCw, Target, User, Users, type LucideIcon } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Checkbox } from "@/shared/components/ui/checkbox";
@@ -58,6 +58,8 @@ const initial: Cfg = {
 };
 
 const label = (arr: { v: string | number; l: string }[], v: string | number) => arr.find((x) => x.v === v)?.l ?? "—";
+/** Lo que de verdad trae el plan gratuito: rutina, progresión, nutrición básica y progreso. */
+const PLAN_INCLUDES = ["Rutina de entrenamiento personalizada", "Progresión de cargas", "Recomendaciones de nutrición", "Seguimiento de tu progreso"];
 
 /** Paso al que reanudar un borrador sin saltarse datos obligatorios. */
 const draftResumeStep = (cfg: Cfg): number => {
@@ -333,6 +335,7 @@ const Configurator = () => {
         <Button variant="hero" size="lg" className="w-full" onClick={() => { void hapticImpact(); void save(); }} disabled={!accept || saving}>
           {saving && <Spinner size="sm" className="mr-2 text-primary-foreground" label="Guardando" />}
           {user ? "Guardar mi plan" : "Guardar mi plan gratis"}
+          {!saving && <ArrowRight className="ml-1 h-5 w-5" aria-hidden="true" />}
         </Button>
       )}
     </div>
@@ -383,40 +386,38 @@ const Configurator = () => {
 
         {step === 2 && (
           <>
-            <section className="relative overflow-hidden rounded-card bg-card p-5 sm:p-6 animate-fade-in">
-              <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full bg-primary/15 blur-3xl" />
-              <p className="type-footnote uppercase tracking-wider text-primary">{t("Tu objetivo", "Vuestro objetivo")}</p>
-              <p className="mt-1 type-title2">{label(GOALS, c.goal)} · {label(FOCUS, c.focus)}</p>
-              <div className="mt-5 grid grid-cols-7 gap-1.5" aria-label={`Días de entreno: ${dayNames}`}>
-                {DOW.map((d) => {
-                  const on = c.days.includes(d.v);
-                  return (
-                    <div key={d.v} className="flex flex-col items-center gap-1.5">
-                      <span className={cn("flex aspect-square w-full max-w-[44px] items-center justify-center rounded-full type-headline",
-                        on ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground")}>{d.s}</span>
-                      <span className={cn("h-1 w-1 rounded-full", on ? "bg-primary" : "bg-transparent")} />
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="mt-5 grid grid-cols-3 gap-2">
-                {[
-                  { k: "Días", v: String(c.days.length) },
-                  { k: "Sesión", v: label(DURATION, c.minutes) },
-                  { k: "Peso", v: c.weight ? `${c.weight} kg` : "—" },
-                ].map((s) => (
-                  <div key={s.k} className="rounded-media bg-secondary px-3 py-3 text-center">
-                    <p className="type-headline">{s.v}</p>
-                    <p className="mt-0.5 type-caption1 text-muted-foreground">{s.k}</p>
+            {/* Resumen en filas con icono y lo que incluye el plan (diseño ChatGPT). */}
+            <section className="overflow-hidden rounded-card bg-card animate-fade-in" aria-label={`Días de entreno: ${dayNames}`}>
+              {[
+                { icon: Target, k: "Objetivo", v: label(GOALS, c.goal) },
+                { icon: Dumbbell, k: "Tipo de entrenamiento", v: label(FOCUS, c.focus) },
+                { icon: duo ? Users : User, k: "Modalidad", v: label(MODE, c.mode) },
+                { icon: CalendarDays, k: t("Tu semana", "Vuestra semana"), v: `${c.days.length} días (${dayNames}) · ${label(DURATION, c.minutes)}` },
+              ].map((row, i) => (
+                <div key={row.k} className={cn("flex items-center gap-4 px-5 py-3.5", i > 0 && "border-t border-border")}>
+                  <row.icon className="h-6 w-6 shrink-0 text-primary" strokeWidth={1.5} aria-hidden="true" />
+                  <div className="min-w-0">
+                    <p className="type-footnote text-muted-foreground">{row.k}</p>
+                    <p className="type-headline">{row.v}</p>
                   </div>
+                </div>
+              ))}
+            </section>
+            <p className="-mt-4 px-1 type-footnote text-muted-foreground">
+              {c.structure === "coach"
+                ? `Distribución: Autopilot elige la mejor para ${c.days.length} días.`
+                : `Distribución: ${label(STRUCTURE, c.structure)}.`}
+              {duo ? " Mismo calendario, cargas adaptadas a cada uno." : ""}
+            </p>
+            <section>
+              <h2 className="px-1 type-headline">{t("Tu plan incluirá", "Vuestro plan incluirá")}</h2>
+              <ul className="mt-3 space-y-2.5 px-1">
+                {PLAN_INCLUDES.map((item) => (
+                  <li key={item} className="flex items-center gap-3 type-subhead">
+                    <Check className="h-5 w-5 shrink-0 text-primary" strokeWidth={2.25} aria-hidden="true" />{item}
+                  </li>
                 ))}
-              </div>
-              <p className="mt-4 type-subhead text-muted-foreground">
-                {c.structure === "coach"
-                  ? `Distribución: Autopilot elige la mejor para ${c.days.length} días.`
-                  : `Distribución: ${label(STRUCTURE, c.structure)}.`}
-                {duo ? " Mismo calendario, cargas adaptadas a cada uno." : ""}
-              </p>
+              </ul>
             </section>
             <PlanPreview focus={c.focus} goal={c.goal} weight={Number(c.weight) || undefined} days={c.days.length} registered={Boolean(user)} hideHeader />
             <label className="flex min-h-[44px] items-start gap-3 px-4 type-footnote text-muted-foreground">
