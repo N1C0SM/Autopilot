@@ -37,11 +37,16 @@ serve(async (req) => {
       : (await stripe.customers.list({ email: user.email, limit: 100 })).data.map((c: { id: string }) => c.id);
     let chosen: { sub: Stripe.Subscription; tier: string; customerId: string } | null = null;
     for (const customerId of customers) {
-      for await (const sub of stripe.subscriptions.list({ customer: customerId, status: "all", limit: 100 })) {
-        const tier = resolvePaidTier(sub.items.data[0]?.price.id, prices, mode);
-        if (tier && subscriptionAllowsCoaching(sub.status)) {
-          if (!chosen || sub.created > chosen.sub.created) chosen = { sub, tier, customerId };
+      try {
+        for await (const sub of stripe.subscriptions.list({ customer: customerId, status: "all", limit: 100 })) {
+          const tier = resolvePaidTier(sub.items.data[0]?.price.id, prices, mode);
+          if (tier && subscriptionAllowsCoaching(sub.status)) {
+            if (!chosen || sub.created > chosen.sub.created) chosen = { sub, tier, customerId };
+          }
         }
+      } catch (err) {
+        // Cliente de otro modo de Stripe (prueba/real) o borrado: se ignora en vez de romper la app.
+        if ((err as { code?: string })?.code !== "resource_missing") throw err;
       }
     }
     if (chosen) {
