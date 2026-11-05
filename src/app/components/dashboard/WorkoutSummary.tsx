@@ -124,21 +124,21 @@ export function WorkoutSummary({
               >
                 {diff > 0 ? (
                   <>
-                    <TrendingUp className="h-5 w-5 text-success" strokeWidth={2.5} />
+                    <TrendingUp className="h-5 w-5 text-success" strokeWidth={1.75} />
                     <span className=" text-[22px] font-bold tabular-nums text-success">
                       +{fmt(diff)} kg
                     </span>
                   </>
                 ) : diff < 0 ? (
                   <>
-                    <TrendingDown className="h-5 w-5 text-warning" strokeWidth={2.5} />
+                    <TrendingDown className="h-5 w-5 text-warning" strokeWidth={1.75} />
                     <span className=" text-[22px] font-bold tabular-nums text-warning">
                       {fmt(diff)} kg
                     </span>
                   </>
                 ) : (
                   <>
-                    <Minus className="h-5 w-5 text-muted-foreground" strokeWidth={2.5} />
+                    <Minus className="h-5 w-5 text-muted-foreground" strokeWidth={1.75} />
                     <span className="type-headline text-muted-foreground">
                       Mismo volumen
                     </span>

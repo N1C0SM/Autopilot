@@ -12,7 +12,7 @@ export default function ScanPlusCard({ sections, onUpgrade }: { sections?: strin
   return (
     <section className="relative overflow-hidden rounded-[22px] border border-border bg-card p-5">
       <div className="relative">
-        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/15 text-primary">
+        <span className="flex h-10 w-10 items-center justify-center rounded-full border border-primary/30 text-primary">
           <LockKeyhole className="h-5 w-5" strokeWidth={2.25} aria-hidden="true" />
         </span>
         <p className="mt-4 text-[28px] font-bold leading-tight tracking-tight">Tu scan completo, con Plus</p>
@@ -20,7 +20,7 @@ export default function ScanPlusCard({ sections, onUpgrade }: { sections?: strin
         <ul className="mt-4 space-y-2.5">
           {items.map((item) => (
             <li key={item} className="flex items-start gap-2.5 type-subhead">
-              <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" strokeWidth={2.5} aria-hidden="true" />
+              <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" strokeWidth={1.75} aria-hidden="true" />
               {item}
             </li>
           ))}

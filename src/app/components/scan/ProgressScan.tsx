@@ -350,7 +350,7 @@ function TipRow({ icon: Icon, title, text }: { icon: typeof Ruler; title: string
   return (
     <div className="flex items-start gap-3 py-[7px]">
       <span aria-hidden="true" className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-chip bg-primary/15 text-primary">
-        <Icon className="h-3.5 w-3.5" strokeWidth={2.5} />
+        <Icon className="h-3.5 w-3.5" strokeWidth={1.75} />
       </span>
       <div className="flex flex-col gap-px">
         <p className="type-subhead font-semibold">{title}</p>

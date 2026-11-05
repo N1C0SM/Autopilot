@@ -1187,7 +1187,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
           onClick={() => { void hapticTap(); onCancel(); }}
           className="mb-2 inline-flex min-h-11 items-center gap-0.5 pl-0.5 pr-2 text-foreground transition-opacity active:opacity-60 [touch-action:manipulation]"
         >
-          <ChevronLeft className="h-[22px] w-[22px]" strokeWidth={2.5} aria-hidden="true" />
+          <ChevronLeft className="h-[22px] w-[22px]" strokeWidth={1.75} aria-hidden="true" />
           <span className="type-body">Rutina semanal</span>
         </button>
       )}
@@ -1204,7 +1204,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                 disabled={saving}
                 className="inline-flex h-11 items-center gap-0.5 pl-0.5 pr-2 text-foreground transition-opacity active:opacity-60 disabled:opacity-40 [touch-action:manipulation]"
               >
-                <ChevronLeft className="h-[22px] w-[22px]" strokeWidth={2.5} aria-hidden="true" />
+                <ChevronLeft className="h-[22px] w-[22px]" strokeWidth={1.75} aria-hidden="true" />
                 <span className="type-body">Salir</span>
               </button>
             }
@@ -1221,7 +1221,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                       className="inline-flex h-11 w-11 items-center justify-center transition-opacity active:opacity-60 disabled:opacity-40 [touch-action:manipulation]"
                     >
                       <span className="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-secondary text-foreground">
-                        <MoreHorizontal className="h-[18px] w-[18px]" strokeWidth={2.5} aria-hidden="true" />
+                        <MoreHorizontal className="h-[18px] w-[18px]" strokeWidth={1.75} aria-hidden="true" />
                       </span>
                     </button>
                   </DropdownMenuTrigger>
@@ -1633,7 +1633,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                   <div className={`${started ? "flex" : "hidden"} shrink-0 items-center ${focused ? "-mr-2.5 -mt-2" : ""}`}>
                     {allDone && !focused && (
                       <span className="flex h-11 w-9 items-center justify-center text-primary">
-                        <Check className="h-5 w-5" strokeWidth={2.5} aria-hidden="true" />
+                        <Check className="h-5 w-5" strokeWidth={1.75} aria-hidden="true" />
                       </span>
                     )}
                     {!allDone && (
@@ -1738,7 +1738,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                             {trackingConfig.valueLabel}
                           </span>
                           <span className="flex items-center justify-center">
-                            <Check className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden="true" />
+                            <Check className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden="true" />
                           </span>
                         </div>
 
@@ -1904,7 +1904,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                                     className="flex h-11 w-11 items-center justify-center justify-self-center rounded-full text-muted-foreground transition-opacity duration-150 active:opacity-60"
                                   >
                                     <span className="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-secondary">
-                                      <X className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden="true" />
+                                      <X className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden="true" />
                                     </span>
                                   </button>
                                 </div>
