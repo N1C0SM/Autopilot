@@ -9,6 +9,7 @@ import { hapticTap } from "@/shared/lib/native";
 import { track } from "@/shared/lib/analytics";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { socialLinkList } from "@/shared/lib/socialLinks";
+import { BrandMark } from "@/shared/components/ui/brand-mark";
 import AppStoreBadges from "@/web/components/AppStoreBadges";
 
 const navigation = [
@@ -84,7 +85,7 @@ export default function PublicLayout({ title, description, children }: { title: 
           de 14 px en gris y un único acento dorado (la acción), con un filete que separa
           el acceso de la navegación. Antes los siete elementos pesaban lo mismo. */}
       <div className="container mx-auto flex h-14 min-w-0 items-center justify-between gap-2 px-4 lg:h-16 lg:px-6">
-        <Link to="/" aria-label="Autopilot, inicio" className="inline-flex min-h-11 items-center gap-2 text-[20px] font-bold tracking-[0.01em] text-foreground transition-opacity active:opacity-60 lg:text-[21px]"><svg aria-hidden="true" viewBox="0 0 32 28" className="h-7 w-8 text-primary"><path d="M16 1 31 27h-6L16 11 7 27H1Z" fill="currentColor"/><path d="M17.5 12 13 20h3.5l-2 6 5.5-8.5h-3.5Z" fill="hsl(var(--background))"/></svg>AUTOPILOT</Link>
+        <Link to="/" aria-label="Autopilot, inicio" className="inline-flex min-h-11 items-center gap-2 text-[20px] font-bold tracking-[0.01em] text-foreground transition-opacity active:opacity-60 lg:text-[21px]"><BrandMark size={28} />AUTOPILOT</Link>
         <nav aria-label="Navegación principal" className="hidden flex-1 items-center lg:flex"><span className="flex-1" />
           {navigation.map(([to, label]) => (
             <NavLink key={to} to={to} className={({ isActive }) => `relative inline-flex min-h-11 items-center px-5 text-[14px] font-medium transition-colors active:opacity-60 ${isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
