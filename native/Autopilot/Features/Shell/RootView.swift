@@ -503,7 +503,7 @@ extension AppSection {
     var deskHint: String? {
         switch self {
         case .home: "Tu entreno de hoy y lo que toca comer"
-        case .train: "Tu rutina de la semana. Marca las series al terminarlas"
+        case .train: "Tus sesiones en orden, el día que te venga bien"
         case .nutrition: "Tus macros y comidas del día"
         case .progress: "Fotos, peso y evolución semanal"
         case .settings: "Perfil, suscripción y notificaciones"
@@ -514,7 +514,7 @@ extension AppSection {
     var navTitle: String {
         switch self {
         case .home: "Hoy"
-        case .train: "Plan semanal"
+        case .train: "Entrenar"
         case .progress: "Progreso"
         default: title
         }

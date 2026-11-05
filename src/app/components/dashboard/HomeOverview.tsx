@@ -17,6 +17,7 @@ import { useConfirm } from "@/app/components/admin/content/useConfirm";
 import { useSessionCover } from "@/shared/hooks/useSessionCover";
 import { useExerciseMetadata } from "@/shared/hooks/useExerciseMetadata";
 import { BRAND_PHOTOS } from "@/shared/lib/brandPhotos";
+import { nextPendingSession, routineSessions } from "@/shared/lib/routineOrder";
 
 interface Macros {
   protein: number;
@@ -34,21 +35,20 @@ interface Props {
   dayPlans: DayPlan[];
   meals?: Meal[];
   userId?: string;
-  /** Navegación del panel. «training» sin día abre la rutina de hoy. */
+  /** Navegación del panel. «training» sin día abre la siguiente sesión. */
   onNavigate: (section: UserSection, day?: string) => void;
-  onStartWorkout?: () => void;
+  /** Empieza la sesión indicada (la clave `day` de la siguiente pendiente). */
+  onStartWorkout?: (day: string) => void;
   onResumeWorkout?: () => void;
   profileName?: string;
   macros?: Macros | null;
   completedThisWeek?: number;
-  /** Días de la semana (lunes→hoy) con la sesión hecha: se marcan con un check dorado. */
+  /** Sesiones de la rutina (su clave `day`) hechas esta semana: se marcan con un check dorado. */
   completedDays?: string[];
   completedToday?: boolean;
   nutrition?: boolean;
   planStatus?: string;
 }
-
-const DAYS_ORDER = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 
 const planTitle = (plan: DayPlan) =>
   plan.type === "gimnasio"
@@ -178,10 +178,11 @@ const HomeOverview = ({
   // «Hoy» es solo el día de hoy: nada de tira semanal. Todo lo del día se calcula
   // aquí arriba, antes de las portadas y los metadatos que lo usan (nada de TDZ).
   const now = new Date();
-  const todayIndex = (now.getDay() + 6) % 7;
-  const todayName = DAYS_ORDER[todayIndex];
-  const todayPlan = dayPlans.find((plan) => plan.day === todayName);
-  const scheduledDays = dayPlans.filter((plan) => plan.type === "gimnasio" || plan.type === "actividad");
+  // Sin días de la semana: la sesión de hoy es la siguiente de la rutina que falta esta semana.
+  const sessions = routineSessions(dayPlans);
+  const todayPlan = nextPendingSession(sessions, completedDays);
+  const todayPlanNumber = todayPlan ? sessions.indexOf(todayPlan) + 1 : 0;
+  const weekComplete = sessions.length > 0 && !todayPlan;
 
   // Foto del día: portada de IA de la sesión de hoy, con la imagen del primer
   // ejercicio como respaldo y la foto de marca si aún no hay ninguna (siempre
@@ -200,7 +201,7 @@ const HomeOverview = ({
   const firstName = profileName?.trim().split(/\s+/)[0];
   const dateLabel = new Intl.DateTimeFormat("es-ES", { weekday: "long", day: "numeric", month: "long" }).format(now);
   const greetingDate = dateLabel.charAt(0).toLocaleUpperCase("es") + dateLabel.slice(1);
-  const sessionCount = Math.min(completedThisWeek, scheduledDays.length);
+  const sessionCount = Math.min(completedThisWeek, sessions.length);
   const doneMealCount = meals.filter((meal) => completedMeals.has(meal.name)).length;
   const macroError = macros ? nutritionMacroError(macros) : null;
   const calorieTarget = macros && !macroError
@@ -220,18 +221,11 @@ const HomeOverview = ({
     sessionDetail.push(...[todayPlan.intensity, todayPlan.duration].filter((value): value is string => Boolean(value)));
   }
 
-  const nextSession = (() => {
-    for (let offset = 1; offset <= 7; offset++) {
-      const day = DAYS_ORDER[(todayIndex + offset) % 7];
-      const plan = scheduledDays.find((candidate) => candidate.day === day);
-      if (plan) {
-        const dayName = day.toLocaleLowerCase("es");
-        const when = offset === 1 ? "mañana" : offset === 7 ? `el próximo ${dayName}` : `el ${dayName}`;
-        return `Tu próxima sesión es ${when}: ${planTitle(plan)}.`;
-      }
-    }
-    return null;
-  })();
+  const nextSession = todayPlan
+    ? `Siguiente: ${planTitle(todayPlan)}.`
+    : weekComplete
+      ? sessions.length === 1 ? "Has hecho tu sesión de esta semana." : `Has hecho tus ${sessions.length} sesiones de esta semana.`
+      : null;
 
   const calorieLabel = calorieTarget ? `${calorieTarget.toLocaleString("es-ES")} kcal` : null;
   const nutritionMain = !nutrition
@@ -282,11 +276,13 @@ const HomeOverview = ({
     );
   }
 
-  const weekMarks = DAYS_ORDER.map((day, index) => ({
-    letter: ["L", "M", "X", "J", "V", "S", "D"][index],
-    scheduled: scheduledDays.some((plan) => plan.day === day),
-    done: completedDays.includes(day) || (index === todayIndex && completedToday),
-    isToday: index === todayIndex,
+  // Una marca por sesión de la rutina (no por día): hecha, la siguiente o pendiente.
+  const sessionMarks = sessions.map((plan, index) => ({
+    key: plan.day,
+    number: index + 1,
+    name: planTitle(plan).split(" · ")[0],
+    done: completedDays.includes(plan.day),
+    isNext: plan === todayPlan,
   }));
 
   const sessionName = String(sessionTitle).split(" · ")[0];
@@ -305,12 +301,14 @@ const HomeOverview = ({
               ? "A entrenar."
               : todayPlan?.type === "actividad"
                 ? `A ${todayPlan.sport || "moverte"}.`
-                : "Hoy, a recuperar."}
+                : weekComplete
+                  ? "Semana completa."
+                  : ""}
         </p>
       </header>
 
-      {/* Entrenamiento de hoy */}
-      <section className="mt-6 lg:row-span-2 lg:mt-8" aria-label="Entrenamiento de hoy">
+      {/* Siguiente sesión de la rutina: la que toca hoy, sea el día que sea */}
+      <section className="mt-6 lg:row-span-2 lg:mt-8" aria-label="Tu siguiente sesión">
         {activeWorkout && activeWorkoutIsToday ? (
           <div className="rounded-2xl bg-card p-4">
             <p className="text-[13px] font-medium text-primary">En curso</p>
@@ -332,8 +330,8 @@ const HomeOverview = ({
             type="button"
             onClick={() => {
               void hapticTap();
-              if (onStartWorkout) onStartWorkout();
-              else onNavigate("training");
+              if (onStartWorkout && todayPlan) onStartWorkout(todayPlan.day);
+              else onNavigate("training", todayPlan?.day);
             }}
             className="group relative flex min-h-[156px] w-full overflow-hidden rounded-[22px] border border-border bg-card text-left transition-transform duration-150 active:scale-[0.985] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             aria-label={`Empezar ${sessionTitle}`}
@@ -347,7 +345,7 @@ const HomeOverview = ({
             )}
             <span className={cn("relative flex min-w-0 flex-1 flex-col p-[18px]", dayPhoto ? "pr-32" : "pr-16")}>
               <span className="type-footnote text-muted-foreground">
-                {todayPlan?.type === "actividad" ? "Actividad de hoy" : "Entrenamiento de hoy"}
+                {`${todayPlan?.type === "actividad" ? "Siguiente actividad" : "Siguiente sesión"} · ${todayPlanNumber} de ${sessions.length}`}
               </span>
               <span className="mt-1.5 line-clamp-2 text-[22px] font-bold leading-7 tracking-[-0.02em]">{sessionName}</span>
               {sessionFocus && <span className="mt-0.5 line-clamp-2 type-subhead text-muted-foreground">{sessionFocus}</span>}
@@ -374,27 +372,31 @@ const HomeOverview = ({
             aria-label="Ver el resumen de la sesión de hoy"
           >
             <span aria-hidden="true" className="h-14 w-14 shrink-0 overflow-hidden rounded-media bg-secondary">
-              <img src={sessionCover || BRAND_PHOTOS.gym} alt="" className="h-full w-full object-cover" />
+              <img src={BRAND_PHOTOS.gym} alt="" className="h-full w-full object-cover" />
             </span>
             <span className="min-w-0 flex-1">
               <span className="flex items-center gap-1 text-[13px] font-medium text-success">
                 <Check className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden="true" />Hecho hoy
               </span>
-              <span className="block truncate text-[17px] font-semibold leading-6">{todayPlan ? sessionName : "Sesión completada"}</span>
+              <span className="block truncate text-[17px] font-semibold leading-6">Sesión completada</span>
               <span className="block text-[13px] text-muted-foreground">{nextSession ?? "Hoy toca recuperar."}</span>
             </span>
             <span className="shrink-0 text-[15px] font-medium text-primary">Resumen</span>
           </button>
         ) : (
-          // Día de descanso: la misma tarjeta que la sesión de hoy, con foto real fundida a la derecha y sin dibujos (como `RestCard` en la app).
+          // Semana completa (o plan sin sesiones): la misma tarjeta que la sesión, con foto real fundida a la derecha y sin dibujos (como `RestCard` en la app).
           <div className="relative overflow-hidden rounded-[22px] border border-border bg-card p-[18px]">
             <img src={BRAND_PHOTOS.gym} alt="" aria-hidden="true" decoding="async" className="absolute inset-y-0 right-0 h-full w-[210px] object-cover object-[50%_35%] opacity-80" />
             <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-r from-card via-card/80 to-card/10" />
             <div className="relative">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Día de descanso</p>
-              <h3 className="mt-1.5 pr-24 text-[22px] font-bold leading-tight tracking-tight">Hoy toca descansar</h3>
-              <p className="mt-1 pr-24 type-subhead text-muted-foreground">{nextSession ?? "Tu plan aún no tiene sesiones."}</p>
-              <Button type="button" variant="secondary" size="lg" className="mt-5 w-full" onClick={() => { void hapticTap(); onNavigate("training"); }}>Entrenar igualmente</Button>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">{weekComplete ? "Semana completa" : "Tu plan"}</p>
+              <h3 className="mt-1.5 pr-24 text-[22px] font-bold leading-tight tracking-tight">{weekComplete ? "Toca recuperar" : "Aún no tiene sesiones"}</h3>
+              <p className="mt-1 pr-24 type-subhead text-muted-foreground">
+                {weekComplete ? `${nextSession} El lunes empieza otra vuelta.` : "Edita tu rutina para añadir tus sesiones."}
+              </p>
+              <Button type="button" variant="secondary" size="lg" className="mt-5 w-full" onClick={() => { void hapticTap(); onNavigate("training"); }}>
+                {weekComplete ? "Entrenar igualmente" : "Ir a Entrenar"}
+              </Button>
             </div>
           </div>
         )}
@@ -435,8 +437,8 @@ const HomeOverview = ({
         </li>
       </ul>
 
-      {/* Semana compacta: sesiones hechas y días con sesión, sin navegación por días */}
-      <section className="mt-3 rounded-[22px] border border-border bg-card p-4 lg:mt-4 lg:p-5" aria-label={`Esta semana: ${sessionCount} de ${scheduledDays.length} sesiones`}>
+      {/* Semana compacta: una marca por sesión de la rutina, sin días de la semana */}
+      <section className="mt-3 rounded-[22px] border border-border bg-card p-4 lg:mt-4 lg:p-5" aria-label={`Esta semana: ${sessionCount} de ${sessions.length} sesiones`}>
         <div className="flex items-center justify-between">
           <p className="type-headline text-foreground">Esta semana</p>
           <button
@@ -448,28 +450,28 @@ const HomeOverview = ({
             <ChevronRight className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />
           </button>
         </div>
-        {/* Un círculo por día: dorado con check si está hecho, anillo dorado hoy, anillo gris si toca sesión y relleno tenue si es descanso. */}
-        <div aria-hidden="true" className="mt-3 grid grid-cols-7 gap-1">
-          {weekMarks.map((mark) => (
-            <span key={mark.letter} className="flex flex-col items-center gap-2">
-              <span className={cn("text-[12px]", mark.isToday ? "font-semibold text-foreground" : "text-muted-foreground")}>{mark.letter}</span>
-              <span
-                className={cn(
-                  "flex h-8 w-8 items-center justify-center rounded-full",
-                  mark.done
-                    ? "bg-primary text-primary-foreground"
-                    : mark.isToday
-                      ? "border-2 border-primary"
-                      : mark.scheduled
-                        ? "border border-foreground/25"
-                        : "bg-secondary",
-                )}
-              >
-                {mark.done ? <Check className="h-4 w-4" strokeWidth={3} /> : null}
+        {/* Un círculo por sesión: dorado con check si está hecha, anillo dorado la siguiente y gris las pendientes. */}
+        {sessionMarks.length > 0 && (
+          <div aria-hidden="true" className="mt-3 grid gap-1" style={{ gridTemplateColumns: `repeat(${Math.max(sessionMarks.length, 3)}, minmax(0, 1fr))` }}>
+            {sessionMarks.map((mark) => (
+              <span key={mark.key} className="flex min-w-0 flex-col items-center gap-2">
+                <span
+                  className={cn(
+                    "flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-semibold tabular-nums",
+                    mark.done
+                      ? "bg-primary text-primary-foreground"
+                      : mark.isNext
+                        ? "border-2 border-primary text-primary"
+                        : "border border-foreground/25 text-muted-foreground",
+                  )}
+                >
+                  {mark.done ? <Check className="h-4 w-4" strokeWidth={3} /> : mark.number}
+                </span>
+                <span className={cn("max-w-full truncate text-[12px]", mark.isNext ? "font-semibold text-foreground" : "text-muted-foreground")}>{mark.name}</span>
               </span>
-            </span>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Nutrición en su tarjeta: kcal del día o, sin plan, la insignia Plus */}

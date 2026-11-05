@@ -133,6 +133,32 @@ enum DayNames {
     }
 }
 
+/// Orden de la rutina (como `routineOrder.ts` de la web). La clave `day` de cada sesión solo fija
+/// el ORDEN: cualquier sesión se hace cualquier día. `day_completions` guarda la sesión hecha
+/// (`day_label`) y el día real (`completed_at`), así que la siguiente sale de lo hecho esta semana.
+enum RoutineOrder {
+    /// Sesiones del plan (gimnasio o actividad) en el orden de la rutina, sin días vacíos.
+    static func sessions(_ days: [DayPlan]) -> [DayPlan] {
+        DayNames.all.compactMap { key in days.first { $0.day == key && ($0.type == "gimnasio" || $0.type == "actividad") } }
+    }
+
+    /// La siguiente: la primera de la rutina que aún no se ha hecho esta semana (nil si están todas).
+    static func nextPending(_ sessions: [DayPlan], done: Set<String>) -> DayPlan? {
+        sessions.first { !done.contains($0.day) }
+    }
+
+    /// Lunes de esta semana (yyyy-MM-dd): desde ahí cuenta lo hecho «esta semana».
+    static var weekStart: String {
+        LocalDate.daysAgo(DayNames.all.firstIndex(of: DayNames.today) ?? 0)
+    }
+
+    /// Sesiones hechas esta semana a partir de las filas de `day_completions`.
+    static func doneThisWeek(_ completions: [(day: String, date: String)]) -> Set<String> {
+        let start = weekStart
+        return Set(completions.filter { $0.date >= start }.map(\.day))
+    }
+}
+
 enum LocalDate {
     /// Formateador compartido: `LocalDate.string()` se llama desde cuerpos de vista (Inicio,
     /// Entrenar…) y crear un `DateFormatter` en cada llamada era una fuente de tirones.

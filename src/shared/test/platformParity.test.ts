@@ -275,16 +275,16 @@ describe("paridad web ↔ apps nativas", () => {
     // Insignia Plus con candado en las secciones bloqueadas del scan.
     expect(read("src/app/components/scan/ScanPlusCard.tsx")).toContain("<PlusBadge />");
     expect(read("native/Autopilot/Features/Scan/ScanView.swift")).toContain("PlusBadge()");
-    // Hoy: un círculo por día con check dorado si la sesión está hecha.
+    // Hoy: un círculo por sesión de la rutina (no por día) con check dorado si está hecha.
     const homeWeb = read("src/app/components/dashboard/HomeOverview.tsx");
     const homeApp = read("native/Autopilot/Features/Home/HomeView.swift");
-    expect(homeWeb).toContain('"flex h-8 w-8 items-center justify-center rounded-full"');
+    expect(homeWeb).toContain('"flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-semibold tabular-nums"');
     expect(homeApp).toContain(".frame(width: 32, height: 32)");
-    expect(homeWeb).toContain("completedDays.includes(day)");
+    expect(homeWeb).toContain("completedDays.includes(plan.day)");
     expect(homeApp).toContain("snapshot?.doneDays");
-    // Plan: el día elegido en dorado macizo y hoy con anillo dorado.
-    expect(read("src/app/components/dashboard/TrainingPlanView.tsx")).toContain('? "bg-primary text-primary-foreground"');
-    expect(read("native/Autopilot/Features/Train/TrainView.swift")).toContain("if isToday && !isExpanded { Circle().strokeBorder(Palette.gold");
+    // Entrenar: lo hecho esta semana en tramos dorados, uno por sesión.
+    expect(read("src/app/components/dashboard/TrainingPlanView.tsx")).toContain('doneThisWeek.includes(session.day) ? "bg-primary" : "bg-secondary"');
+    expect(read("native/Autopilot/Features/Train/TrainView.swift")).toContain("Capsule().fill(doneThisWeek.contains(plan.day) ? Palette.gold : Palette.secondary)");
     // Progreso: control segmentado con la sección activa en dorado.
     expect(read("src/app/pages/Dashboard.tsx")).toContain("data-[state=active]:bg-primary data-[state=active]:text-primary-foreground");
     expect(read("native/Autopilot/Features/Progress/ProgressScreen.swift")).toContain("selection: $tab, gold: true)");
@@ -295,25 +295,37 @@ describe("paridad web ↔ apps nativas", () => {
     expect(homeWeb).toContain('rounded-[22px] border border-border bg-card p-4');
     expect(homeApp).toContain("return Card(padding: 16) {");
     // Hoy de ChatGPT: «Hoy» grande, sesión con foto a la derecha, «Tu progreso», «Tu plan», «Ver detalle» y Nutrición en tarjetas.
-    for (const text of ['>Hoy<', "Entrenamiento de hoy", "Tu progreso", "Tu plan", "Revisa y ajusta tu plan de entrenamiento.", "Ver detalle"]) {
+    for (const text of ['>Hoy<', "Siguiente sesión", "Tu progreso", "Tu plan", "Revisa y ajusta tu plan de entrenamiento.", "Ver detalle"]) {
       expect(homeWeb, text).toContain(text);
     }
-    for (const text of ['Text("Hoy")', "Entrenamiento de hoy", "Tu progreso", "Tu plan", "Revisa y ajusta tu plan de entrenamiento.", "Ver detalle"]) {
+    for (const text of ['Text("Hoy")', "Siguiente sesión", "Tu progreso", "Tu plan", "Revisa y ajusta tu plan de entrenamiento.", "Ver detalle"]) {
       expect(homeApp, text).toContain(text);
     }
-    // Plan semanal de ChatGPT: título, subtítulo, iniciales en el selector y la semana en filas con foto.
+    // Entrenar sin semana: cualquier sesión se hace cualquier día. Título «Entrenar», las sesiones
+    // en orden con foto («Sesión N», la siguiente destacada) y lo hecho esta semana; sin L–D ni descansos.
     const planWeb = read("src/app/components/dashboard/TrainingPlanView.tsx");
     const planApp = read("native/Autopilot/Features/Train/TrainView.swift");
-    expect(read("src/app/pages/Dashboard.tsx")).toContain('training: "Plan semanal"');
-    expect(read("native/Autopilot/Features/Shell/RootView.swift")).toContain('case .train: "Plan semanal"');
-    for (const src of [planWeb, read("native/Autopilot/Features/Train/TrainView.swift")]) {
-      for (const text of ["Tu rutina de entrenamiento, día a día.", '"L", "M", "X", "J", "V", "S", "D"', "Recuperación", "Tu plan aún no tiene sesiones", "es día de descanso"]) {
+    expect(read("src/app/pages/Dashboard.tsx")).toContain('training: "Entrenar"');
+    expect(read("native/Autopilot/Features/Shell/RootView.swift")).toContain('case .train: "Entrenar"');
+    for (const src of [planWeb, planApp]) {
+      for (const text of ["Tus sesiones en orden. Hazlas el día que te venga bien.", "Sesión ", "Siguiente", "Hecha", "esta semana", "Tu plan aún no tiene sesiones", "Edita tu rutina para añadir tus sesiones."]) {
         expect(src, text).toContain(text);
       }
+      for (const text of ['"L", "M", "X", "J", "V", "S", "D"', "es día de descanso", "Recuperación"]) {
+        expect(src, text).not.toContain(text);
+      }
     }
-    expect(planWeb).toContain("<DayRow");
-    expect(planApp).toContain("dayRow(day)");
-    // La tarjeta de la rutina va bajo la semana en las dos.
+    expect(planWeb).toContain("<SessionRow");
+    expect(planApp).toContain("sessionRow(index + 1, plan)");
+    // La siguiente sesión sale de la misma regla en las dos: la primera de la rutina que falta esta semana.
+    expect(read("src/shared/lib/routineOrder.ts")).toContain("sessions.find((session) => !doneThisWeek.includes(session.day))");
+    expect(read("native/Autopilot/Core/Training.swift")).toContain("sessions.first { !done.contains($0.day) }");
+    for (const src of [read("src/app/components/dashboard/HomeOverview.tsx"), read("native/Autopilot/Features/Home/HomeView.swift")]) {
+      expect(src).toContain("Semana completa");
+      expect(src).toContain("El lunes empieza otra vuelta.");
+      expect(src).not.toContain("Hoy toca descansar");
+    }
+    // La tarjeta de la rutina va bajo las sesiones en las dos.
     expect(planWeb).toContain("{tools}");
     expect(planApp).toContain("if let routineBar { routineBar }");
     // Progreso de ChatGPT: «Tu fuerza» con la mejor marca (no la última: es la serie de más 1RM), la subida en kg y «Tu constancia» debajo.
@@ -634,8 +646,8 @@ describe("paridad web ↔ apps nativas", () => {
   it("Sin aire infantil: descanso con foto real, Scan sin siluetas y portadas de Progreso iguales en la web y en la app", () => {
     const restApp = read("native/Autopilot/Design/Components.swift");
     const homeWeb = read("src/app/components/dashboard/HomeOverview.tsx");
-    expect(restApp).toContain('Text("DÍA DE DESCANSO")');
-    expect(homeWeb).toContain(">Día de descanso<");
+    expect(restApp).toContain('var eyebrow = "DÍA DE DESCANSO"');
+    expect(homeWeb).toContain('{weekComplete ? "Semana completa" : "Tu plan"}');
     expect(restApp).not.toContain("Circle().frame(width: 77, height: 77)");
     const scanApp = read("native/Autopilot/Features/Scan/ScanView.swift");
     const scanWeb = read("src/app/components/scan/ProgressScan.tsx");

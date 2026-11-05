@@ -30,146 +30,65 @@ const setToday = (iso: string) => {
   vi.setSystemTime(new Date(iso));
 };
 
-describe("weekly plan access", () => {
-  it("opens an expanded day's routine directly and labels icon actions", () => {
+describe("routine in order", () => {
+  const plans = [
+    { day: "Lunes", type: "gimnasio" as const, routine_name: "Piernas", exercises: [squat, { ...squat, exercise_id: "lunge", name: "Zancada" }] },
+    { day: "Jueves", type: "gimnasio" as const, routine_name: "Empuje", exercises: [squat] },
+    { day: "Sábado", type: "actividad" as const, sport: "Running", intensity: "Media", duration: "45 min" },
+  ];
+
+  it("lists only the sessions in order, without weekdays or rest days", () => {
+    setToday("2026-10-14T12:00:00"); // miércoles: no cambia nada
+    render(<TrainingPlanView dayPlans={plans} onOpenWorkout={vi.fn()} />);
+    expect(screen.getByRole("button", { name: "Sesión 1: Piernas, siguiente" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Sesión 2: Empuje" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Sesión 3: Running" })).toBeVisible();
+    expect(screen.queryByText(/lunes|jueves|sábado|miércoles/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/descanso/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Días de la semana" })).not.toBeInTheDocument();
+    expect(screen.getByText("0 de 3 esta semana")).toBeVisible();
+  });
+
+  it("opens the next pending session and starts it whatever the day", () => {
     const onOpenWorkout = vi.fn();
-    render(<TrainingPlanView dayPlans={[{ day: "Lunes", type: "gimnasio", routine_name: "Piernas", exercises: [{ exercise_id: "squat", name: "Sentadilla", series: 3, reps: 8, weight: "", rest: "90 s" }] }]} onOpenWorkout={onOpenWorkout} />);
-    const monday = screen.getByRole("button", { name: /Lunes.*Piernas/ });
-    if (monday.getAttribute("aria-expanded") === "false") fireEvent.click(monday);
-    fireEvent.click(screen.getByRole("button", { name: "Abrir sesión del lunes" }));
-    expect(onOpenWorkout).toHaveBeenCalledWith("Lunes");
+    render(<TrainingPlanView dayPlans={plans} doneThisWeek={["Lunes"]} onOpenWorkout={onOpenWorkout} />);
+    expect(screen.getByRole("button", { name: "Sesión 1: Piernas, hecha esta semana" })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("button", { name: "Sesión 2: Empuje, siguiente" })).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("1 de 3 esta semana")).toBeVisible();
+    expect(screen.getByText("1 ejercicio · 3 series")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Empezar sesión" }));
+    expect(onOpenWorkout).toHaveBeenCalledWith("Jueves");
     expect(screen.getByRole("button", { name: "Copiar plan" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Descargar plan" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Exportar plan al calendario" })).toBeVisible();
   });
-  it("opens today's session by default", () => {
-    setToday("2026-10-12T12:00:00"); // lunes
-    render(<TrainingPlanView dayPlans={[{ day: "Lunes", type: "gimnasio", routine_name: "Piernas", exercises: [squat] }]} onOpenWorkout={vi.fn()} />);
-    expect(screen.getByRole("button", { name: "Lunes, Piernas, hoy" })).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByRole("heading", { name: "Piernas" })).toBeVisible();
-    expect(screen.getByText("Sentadilla")).toBeVisible();
-    expect(screen.getByRole("button", { name: "Abrir sesión del lunes" })).toBeVisible();
-  });
 
-  it("opens on the day asked for, not on today", () => {
-    setToday("2026-10-14T12:00:00"); // miércoles, sin sesión
-    render(
-      <TrainingPlanView
-        dayPlans={[{ day: "Jueves", type: "gimnasio", routine_name: "Empuje", exercises: [squat] }]}
-        initialDay="Jueves"
-        onOpenWorkout={vi.fn()}
-      />,
-    );
-    expect(screen.getByRole("button", { name: "Jueves, Empuje" })).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByRole("heading", { name: "Empuje" })).toBeVisible();
-    expect(screen.queryByText(/día de descanso/i)).not.toBeInTheDocument();
-  });
-
-  it("never opens a day without a session and falls back to the next one", () => {
-    setToday("2026-10-14T12:00:00"); // miércoles, sin sesión
-    render(
-      <TrainingPlanView
-        dayPlans={[{ day: "Lunes", type: "gimnasio", routine_name: "Piernas", exercises: [squat] }]}
-        initialDay="Sábado"
-        onOpenWorkout={vi.fn()}
-      />,
-    );
-    // Ni el sábado pedido ni el miércoles de hoy: se abre el lunes, la siguiente sesión.
-    expect(screen.getByRole("button", { name: "Lunes, Piernas" })).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByRole("heading", { name: "Piernas" })).toBeVisible();
-    // Los días sin sesión se pueden abrir (para ver que descansas), pero no se abren solos.
-    expect(screen.getByRole("button", { name: "Sábado, descanso" })).toBeEnabled();
-    expect(screen.queryByText(/día de descanso/i)).not.toBeInTheDocument();
-  });
-
-  it("opens a session from the selector and can open a rest day to see it is rest", () => {
-    setToday("2026-10-14T12:00:00"); // miércoles, sin sesión
+  it("opens the session asked for from Hoy and any other on tap", () => {
     const onOpenWorkout = vi.fn();
-    render(
-      <TrainingPlanView
-        dayPlans={[
-          { day: "Lunes", type: "gimnasio", routine_name: "Piernas", exercises: [squat] },
-          { day: "Jueves", type: "actividad", sport: "Running", intensity: "Media", duration: "45 min" },
-        ]}
-        onOpenWorkout={onOpenWorkout}
-      />,
-    );
-    // Hoy es miércoles y no entrena: se abre directamente el jueves, la siguiente sesión.
-    const thursday = screen.getByRole("button", { name: "Jueves, Running" });
-    expect(thursday).toHaveAttribute("aria-expanded", "true");
+    const { rerender } = render(<TrainingPlanView dayPlans={plans} initialDay="Sábado" onOpenWorkout={onOpenWorkout} />);
+    expect(screen.getByRole("button", { name: "Sesión 3: Running" })).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByText("45 min")).toBeVisible();
-    expect(screen.getByRole("button", { name: "Miércoles, descanso, hoy" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Martes, descanso" })).toBeEnabled();
-    expect(screen.queryByText(/día de descanso/i)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Empezar actividad" }));
+    expect(onOpenWorkout).toHaveBeenCalledWith("Sábado");
 
-    fireEvent.click(screen.getByRole("button", { name: "Abrir actividad del jueves" }));
-    expect(onOpenWorkout).toHaveBeenCalledWith("Jueves");
+    fireEvent.click(screen.getByRole("button", { name: "Sesión 1: Piernas, siguiente" }));
+    expect(screen.getByText("2 ejercicios · 6 series")).toBeVisible();
 
-    // Pulsar el día activo no lo deselecciona ni deja la vista vacía.
-    fireEvent.click(thursday);
-    expect(thursday).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByText("45 min")).toBeVisible();
-
-    // Abrir un día de descanso muestra que descansas y ofrece la próxima sesión.
-    fireEvent.click(screen.getByRole("button", { name: "Miércoles, descanso, hoy" }));
-    expect(screen.getByText("Hoy es día de descanso")).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: "Ver el jueves" }));
-    expect(screen.getByRole("button", { name: "Jueves, Running" })).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByText("45 min")).toBeVisible();
+    rerender(<TrainingPlanView dayPlans={plans} initialDay="Jueves" onOpenWorkout={onOpenWorkout} />);
+    expect(screen.getByRole("button", { name: "Sesión 2: Empuje" })).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("button", { name: "Sesión 1: Piernas, siguiente" })).toHaveAttribute("aria-expanded", "false");
   });
 
-  it("sums up the session that opens when today has no session", () => {
-    setToday("2026-10-14T12:00:00"); // miércoles, sin sesión
-    render(
-      <TrainingPlanView
-        dayPlans={[
-          { day: "Lunes", type: "gimnasio", routine_name: "Piernas", exercises: [squat, { ...squat, exercise_id: "lunge", name: "Zancada" }] },
-          { day: "Jueves", type: "gimnasio", routine_name: "Empuje", exercises: [squat] },
-        ]}
-        onOpenWorkout={vi.fn()}
-      />,
-    );
-    expect(screen.getByRole("button", { name: "Jueves, Empuje" })).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByRole("heading", { name: "Empuje" })).toBeVisible();
-    expect(screen.getByText("1 ejercicio · 3 series")).toBeVisible();
-
-    fireEvent.click(screen.getByRole("button", { name: "Lunes, Piernas" }));
-    expect(screen.getByText("2 ejercicios · 6 series")).toBeVisible();
+  it("opens the first session again when the whole week is done", () => {
+    render(<TrainingPlanView dayPlans={plans} doneThisWeek={["Lunes", "Jueves", "Sábado"]} onOpenWorkout={vi.fn()} />);
+    expect(screen.getByText("3 de 3 esta semana")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Sesión 1: Piernas, hecha esta semana" })).toHaveAttribute("aria-expanded", "true");
   });
 
   it("shows a neutral state when the plan has no sessions at all", () => {
-    setToday("2026-10-14T12:00:00"); // miércoles, sin sesión
     render(<TrainingPlanView dayPlans={[]} onOpenWorkout={vi.fn()} />);
     expect(screen.getByText("Tu plan aún no tiene sesiones")).toBeVisible();
-    expect(screen.getByRole("button", { name: "Miércoles, descanso, hoy" })).toBeEnabled();
-    expect(screen.queryByText(/día de descanso/i)).not.toBeInTheDocument();
-  });
-
-  it("re-syncs the expanded day when a new day is asked for", () => {
-    setToday("2026-10-14T12:00:00"); // miércoles, sin sesión
-    const { rerender } = render(
-      <TrainingPlanView
-        dayPlans={[
-          { day: "Lunes", type: "gimnasio", routine_name: "Piernas", exercises: [squat] },
-          { day: "Jueves", type: "gimnasio", routine_name: "Empuje", exercises: [squat] },
-        ]}
-        initialDay="Lunes"
-        onOpenWorkout={vi.fn()}
-      />,
-    );
-    expect(screen.getByRole("button", { name: "Lunes, Piernas" })).toHaveAttribute("aria-expanded", "true");
-    rerender(
-      <TrainingPlanView
-        dayPlans={[
-          { day: "Lunes", type: "gimnasio", routine_name: "Piernas", exercises: [squat] },
-          { day: "Jueves", type: "gimnasio", routine_name: "Empuje", exercises: [squat] },
-        ]}
-        initialDay="Jueves"
-        onOpenWorkout={vi.fn()}
-      />,
-    );
-    expect(screen.getByRole("button", { name: "Jueves, Empuje" })).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByRole("button", { name: "Lunes, Piernas" })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText(/esta semana/)).not.toBeInTheDocument();
   });
 
   it("falls back to the composed placeholder when an exercise image fails to load", () => {

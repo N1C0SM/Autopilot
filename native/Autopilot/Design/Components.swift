@@ -3,17 +3,19 @@ import ImageIO
 
 /// Tarjeta de descanso de la web (`EmptyState rest`): luna dorada con halo, estrellas, título y acción.
 struct RestCard<Action: View>: View {
+    /// Antetítulo dorado («SEMANA COMPLETA», «TU PLAN»…).
+    var eyebrow = "DÍA DE DESCANSO"
     let title: String
     let message: String
     /// Foto real de marca, fundida a la derecha como en «Entrenamiento de hoy» (`BRAND_PHOTOS.gym` de la web).
     var photo = "https://enebrcdrdnfkyduzyrzm.supabase.co/storage/v1/object/public/site-assets/exercise-images/a31c7206-d2a4-4b31-856a-f5dec09b890e-1791475829849.png"
     @ViewBuilder var action: Action
 
-    /// Día de descanso: la misma tarjeta que la sesión de hoy, con foto real y sin dibujos (la luna y las
-    /// estrellas parecían infantiles). Igual que el descanso de `HomeOverview` en la web.
+    /// Semana completa (o descanso): la misma tarjeta que la sesión, con foto real y sin dibujos (la luna y
+    /// las estrellas parecían infantiles). Igual que la tarjeta de `HomeOverview` en la web.
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("DÍA DE DESCANSO").font(.apCaption.weight(.semibold)).tracking(1.6).foregroundStyle(Palette.gold)
+            Text(eyebrow).font(.apCaption.weight(.semibold)).tracking(1.6).foregroundStyle(Palette.gold)
             Text(title).font(.inter(size: 22, weight: .bold)).tracking(-0.4)
                 .padding(.top, 6).padding(.trailing, 96)
                 .accessibilityAddTraits(.isHeader)

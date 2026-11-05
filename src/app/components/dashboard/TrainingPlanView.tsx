@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useState, type ButtonHTMLAttributes, type ReactNode, type SyntheticEvent } from "react";
-import { Calendar as CalendarIcon, CalendarDays, Check, ChevronRight, Clock, Copy, Download, Flame, Moon } from "lucide-react";
+import { Calendar as CalendarIcon, CalendarDays, Check, ChevronRight, Clock, Copy, Download, Flame } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { EmptyState } from "@/shared/components/ui/empty-state";
 import { ListGroup, ListRow } from "@/shared/components/ui/list";
@@ -15,39 +15,38 @@ import ExerciseFocus from "@/app/components/ExerciseFocus";
 import { useExerciseMetadata } from "@/shared/hooks/useExerciseMetadata";
 import { cachedSessionCover, useSessionCover } from "@/shared/hooks/useSessionCover";
 import { BRAND_PHOTOS } from "@/shared/lib/brandPhotos";
-
-const DAYS_ORDER = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
-/** Inicial de cada día en el selector (X es miércoles, como en el calendario español). */
-const DAY_INITIALS = ["L", "M", "X", "J", "V", "S", "D"];
+import { doneSessionCount, nextPendingSession, routineSessions } from "@/shared/lib/routineOrder";
 
 interface Props {
   dayPlans: DayPlan[];
-  /** Día que debe abrirse al entrar (pulsado en la tira de «Hoy»). */
+  /** Sesión que debe abrirse al entrar (la clave `day` de la sesión pulsada en «Hoy»). */
   initialDay?: string;
+  /** Claves de las sesiones hechas esta semana (`day_completions.day_label`). */
+  doneThisWeek?: string[];
   onOpenWorkout?: (day: string) => void;
-  /** Tarjeta de la rutina (modo del plan, Libre, Editar, Ejercicios): va bajo la lista de días. */
+  /** Tarjeta de la rutina (modo del plan, Libre, Editar, Ejercicios): va bajo la lista de sesiones. */
   tools?: ReactNode;
 }
 
-function planToText(dayPlans: DayPlan[]): string {
+function planToText(sessions: DayPlan[]): string {
   let text = "MI PLAN DE ENTRENAMIENTO\n";
   text += "═".repeat(40) + "\n\n";
 
-  for (const day of dayPlans) {
-    text += `📅 ${day.day.toUpperCase()}`;
-    if (day.type === "gimnasio") {
-      text += ` — ${day.routine_name || "Gimnasio"}\n`;
-      text += `   Músculos: ${day.muscle_focus || ""}\n\n`;
-      for (const ex of day.exercises || []) {
+  sessions.forEach((session, index) => {
+    text += `SESIÓN ${index + 1}`;
+    if (session.type === "gimnasio") {
+      text += ` — ${session.routine_name || "Gimnasio"}\n`;
+      text += `   Músculos: ${session.muscle_focus || ""}\n\n`;
+      for (const ex of session.exercises || []) {
         text += `   • ${ex.name}\n`;
         text += `     ${ex.series} series × ${ex.reps} reps | Descanso: ${ex.rest}\n`;
       }
     } else {
-      text += ` — ${day.sport || "Actividad"}\n`;
-      text += `   Intensidad: ${day.intensity} | Duración: ${day.duration}\n`;
+      text += ` — ${session.sport || "Actividad"}\n`;
+      text += `   Intensidad: ${session.intensity} | Duración: ${session.duration}\n`;
     }
     text += "\n" + "─".repeat(40) + "\n\n";
-  }
+  });
   return text;
 }
 
@@ -57,28 +56,6 @@ const sessionTitle = (plan: DayPlan) =>
     : plan.sport || "Actividad";
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
-
-/** Solo los días con sesión existen en la vista: un día sin plan nunca es una pantalla. */
-const hasSessionIn = (plans: DayPlan[], day?: string | null) =>
-  Boolean(day) && plans.some((p) => p.day === day && (p.type === "gimnasio" || p.type === "actividad"));
-
-/** Siguiente día con sesión después de `from`, dando la vuelta a la semana. */
-const nextSessionIn = (plans: DayPlan[], from: string): string | null => {
-  const start = DAYS_ORDER.indexOf(from);
-  if (start < 0) return null;
-  for (let i = 1; i <= DAYS_ORDER.length; i += 1) {
-    const day = DAYS_ORDER[(start + i) % DAYS_ORDER.length];
-    if (hasSessionIn(plans, day)) return day;
-  }
-  return null;
-};
-
-/** Día que se abre siempre: el pedido si tiene sesión; si no, hoy; si no, la siguiente sesión. */
-const openDayFor = (plans: DayPlan[], preferred: string | undefined, today: string): string | null => {
-  if (hasSessionIn(plans, preferred)) return preferred!;
-  if (hasSessionIn(plans, today)) return today;
-  return nextSessionIn(plans, today);
-};
 
 const sessionSummary = (plan: DayPlan) => {
   const exercises = plan.exercises ?? [];
@@ -90,34 +67,36 @@ const sessionSummary = (plan: DayPlan) => {
 };
 
 /** Detalle corto de la fila: series y ejercicios del gimnasio, intensidad y duración de la actividad. */
-const dayMeta = (plan?: DayPlan) => {
-  if (!plan) return "Recuperación";
+const sessionMeta = (plan: DayPlan) => {
   if (plan.type === "gimnasio") return sessionSummary(plan) || "Sin ejercicios todavía";
   return [plan.intensity ? `Intensidad ${plan.intensity.toLocaleLowerCase("es-ES")}` : null, plan.duration].filter(Boolean).join(" · ") || "Actividad";
 };
 
-interface DayRowProps {
-  day: string;
-  plan?: DayPlan;
-  isToday: boolean;
+interface SessionRowProps {
+  number: number;
+  plan: DayPlan;
+  isNext: boolean;
+  done: boolean;
   expanded: boolean;
   /** Foto de respaldo (caché de la portada, foto del primer ejercicio o foto de marca). */
   photo: string | null;
   onSelect: () => void;
 }
 
-// Fila del plan semanal (maqueta de ChatGPT): foto, día, sesión y detalle, con chevron.
+// Fila de la rutina: foto, «Sesión N» (con «Siguiente» u «Hecha esta semana»), nombre y detalle.
+// Sin días de la semana: cualquier sesión se hace el día que venga bien.
 // Solo la fila abierta pide la portada con IA; las demás usan la caché o su respaldo.
-const DayRow = ({ day, plan, isToday, expanded, photo, onSelect }: DayRowProps) => {
-  const gym = plan?.type === "gimnasio";
+const SessionRow = ({ number, plan, isNext, done, expanded, photo, onSelect }: SessionRowProps) => {
+  const gym = plan.type === "gimnasio";
   const ids = gym && expanded ? (plan.exercises ?? []).map((exercise) => exercise.exercise_id) : [];
   const cover = useSessionCover(ids, photo);
-  const title = plan ? sessionTitle(plan) : "Descanso";
+  const title = sessionTitle(plan);
+  const status = done ? "hecha esta semana" : isNext ? "siguiente" : null;
   return (
     <button
       type="button"
       aria-expanded={expanded}
-      aria-label={`${day.toLocaleLowerCase("es-ES")}: ${title}`}
+      aria-label={`Sesión ${number}: ${title}${status ? `, ${status}` : ""}`}
       onClick={onSelect}
       className={cn(
         "flex min-h-[88px] w-full items-center gap-3.5 rounded-[22px] border bg-card p-3 pr-4 text-left transition-transform duration-150 active:scale-[0.985] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
@@ -129,14 +108,23 @@ const DayRow = ({ day, plan, isToday, expanded, photo, onSelect }: DayRowProps) 
           {cover && <img src={cover} alt="" decoding="async" loading="lazy" className="absolute inset-0 h-full w-full object-cover object-[50%_30%]" />}
         </span>
       ) : (
-        <span aria-hidden className={cn("flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-secondary", plan ? "text-primary" : "text-muted-foreground")}>
-          {plan ? <Flame className="h-6 w-6" /> : <Moon className="h-6 w-6" />}
+        <span aria-hidden className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-secondary text-primary">
+          <Flame className="h-6 w-6" />
         </span>
       )}
       <span className="min-w-0 flex-1">
-        <span className={cn("block type-footnote font-medium", isToday ? "text-primary" : "text-muted-foreground")}>{isToday ? `${day} · Hoy` : day}</span>
+        <span className="flex items-center gap-1.5 type-footnote font-medium text-muted-foreground">
+          {`Sesión ${number}`}
+          {done ? (
+            <span className="inline-flex items-center gap-0.5 text-success">
+              · <Check className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />Hecha
+            </span>
+          ) : isNext ? (
+            <span className="text-primary">· Siguiente</span>
+          ) : null}
+        </span>
         <h3 className="mt-0.5 line-clamp-2 type-headline">{title}</h3>
-        <span className="mt-0.5 block truncate type-footnote tabular-nums text-muted-foreground">{dayMeta(plan)}</span>
+        <span className="mt-0.5 block truncate type-footnote tabular-nums text-muted-foreground">{sessionMeta(plan)}</span>
       </span>
       <ChevronRight
         aria-hidden
@@ -171,19 +159,26 @@ const ToolRow = forwardRef<HTMLButtonElement, ToolRowProps>(({ icon, label, clas
 ));
 ToolRow.displayName = "ToolRow";
 
-const TrainingPlanView = ({ dayPlans, initialDay, onOpenWorkout, tools }: Props) => {
-  const todayIndex = (new Date().getDay() + 6) % 7;
-  const todayName = DAYS_ORDER[todayIndex];
-  // Nunca se abre un día sin sesión: el pedido, si no hoy, si no el siguiente que entrene.
-  const [expandedDay, setExpandedDay] = useState<string | null>(() => openDayFor(dayPlans, initialDay, todayName));
-  // La vista no se desmonta al cambiar de pestaña: sincroniza cada día pedido desde «Hoy».
+const TrainingPlanView = ({ dayPlans, initialDay, doneThisWeek = [], onOpenWorkout, tools }: Props) => {
+  // La rutina en orden: solo sesiones, sin días de la semana ni días de descanso.
+  const sessions = routineSessions(dayPlans);
+  const next = nextPendingSession(sessions, doneThisWeek);
+  const doneCount = doneSessionCount(sessions, doneThisWeek);
+  const hasSession = (key?: string | null) => Boolean(key) && sessions.some((session) => session.day === key);
+  // Se abre la pedida desde «Hoy»; si no, la siguiente pendiente; si no, la primera.
+  const openKeyFor = (preferred?: string | null) =>
+    (hasSession(preferred) ? preferred! : next?.day ?? sessions[0]?.day) ?? null;
+  const [expandedDay, setExpandedDay] = useState<string | null>(() => openKeyFor(initialDay));
+  // La vista no se desmonta al cambiar de pestaña: sincroniza cada sesión pedida desde «Hoy».
   useEffect(() => {
-    if (hasSessionIn(dayPlans, initialDay)) setExpandedDay(initialDay!);
+    if (hasSession(initialDay)) setExpandedDay(initialDay!);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dayPlans, initialDay]);
-  // El plan puede llegar después de montar: si el día abierto no tiene sesión, se abre el que toca.
+  // El plan puede llegar después de montar: si la abierta ya no existe, se abre la que toca.
   useEffect(() => {
-    setExpandedDay((current) => (hasSessionIn(dayPlans, current) ? current : openDayFor(dayPlans, initialDay, todayName)));
-  }, [dayPlans, initialDay, todayName]);
+    setExpandedDay((current) => (hasSession(current) ? current : openKeyFor(initialDay)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dayPlans, initialDay, next?.day]);
   const [copied, setCopied] = useState(false);
   const [detail, setDetail] = useState<{
     name: string;
@@ -212,7 +207,7 @@ const TrainingPlanView = ({ dayPlans, initialDay, onOpenWorkout, tools }: Props)
 
   const handleCopy = async () => {
     void hapticTap();
-    await navigator.clipboard.writeText(planToText(dayPlans));
+    await navigator.clipboard.writeText(planToText(sessions));
     setCopied(true);
     toast.success("Plan copiado al portapapeles");
     setTimeout(() => setCopied(false), 2000);
@@ -220,7 +215,7 @@ const TrainingPlanView = ({ dayPlans, initialDay, onOpenWorkout, tools }: Props)
 
   const handleDownload = () => {
     void hapticTap();
-    const blob = new Blob([planToText(dayPlans)], { type: "text/plain;charset=utf-8" });
+    const blob = new Blob([planToText(sessions)], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -230,40 +225,27 @@ const TrainingPlanView = ({ dayPlans, initialDay, onOpenWorkout, tools }: Props)
     toast.success("Plan descargado");
   };
 
-  // Cualquier día se puede abrir: los que tienen sesión muestran su entreno y los
-  // que no, la tarjeta de descanso. La vista nunca se abre sola en un día de descanso.
-  const workPlanFor = (day: string) => {
-    const plan = dayPlans.find((p) => p.day === day);
-    return plan?.type === "gimnasio" || plan?.type === "actividad" ? plan : undefined;
-  };
-  const selectedPlan = expandedDay ? workPlanFor(expandedDay) : undefined;
-  const selectedDay = expandedDay ?? "";
-  const selectedIsToday = selectedDay === todayName;
+  const selectedPlan = sessions.find((session) => session.day === expandedDay);
   const hasExercises = Boolean(selectedPlan?.exercises && selectedPlan.exercises.length > 0);
-  // Siguiente día con sesión desde el día abierto: la tarjeta de descanso ofrece ir.
-  const nextWorkDay = expandedDay
-    ? DAYS_ORDER.map((_, i) => DAYS_ORDER[(DAYS_ORDER.indexOf(expandedDay) + 1 + i) % DAYS_ORDER.length]).find((day) => workPlanFor(day))
-    : undefined;
 
   // Respaldo de la foto de cada fila: la portada ya generada (caché), la foto del primer
   // ejercicio y, si no hay, la foto de marca. Nunca se pide una portada nueva por fila cerrada.
-  const rowPhoto = (plan?: DayPlan) => {
-    if (plan?.type !== "gimnasio") return null;
+  const rowPhoto = (plan: DayPlan) => {
+    if (plan.type !== "gimnasio") return null;
     const exercises = plan.exercises ?? [];
     const first = exercises[0];
     const image = first ? (exerciseMetadata.byId[first.exercise_id] || exerciseMetadata.byName[first.name])?.image_url || first.image_url : null;
     return cachedSessionCover(exercises.map((exercise) => exercise.exercise_id)) || usableImage(image) || BRAND_PHOTOS.gym;
   };
-  const hasAnySession = DAYS_ORDER.some((day) => workPlanFor(day));
 
   // Lo que se abre bajo la fila elegida: empezar la sesión y sus ejercicios, la actividad o el descanso.
   const renderDetail = () => {
     if (selectedPlan?.type === "gimnasio") {
       return (
-        <section aria-label={`Sesión del ${selectedDay.toLocaleLowerCase("es-ES")}`} className="space-y-3">
+        <section aria-label={`Ejercicios de ${sessionTitle(selectedPlan)}`} className="space-y-3">
           {onOpenWorkout && hasExercises && (
-            <Button type="button" variant="hero" size="lg" className="w-full" onClick={() => onOpenWorkout(selectedDay)}>
-              Abrir sesión del {selectedDay.toLocaleLowerCase("es-ES")}
+            <Button type="button" variant="hero" size="lg" className="w-full" onClick={() => onOpenWorkout(selectedPlan.day)}>
+              Empezar sesión
             </Button>
           )}
           {hasExercises && (
@@ -281,7 +263,7 @@ const TrainingPlanView = ({ dayPlans, initialDay, onOpenWorkout, tools }: Props)
 
                 return (
                   <ListRow
-                    key={`${selectedDay}-${ex.exercise_id || ex.name}-${i}`}
+                    key={`${selectedPlan.day}-${ex.exercise_id || ex.name}-${i}`}
                     // La miniatura es la portada del vídeo: al tocar la fila se abre la ficha, cuyo héroe es el vídeo.
                     leading={<ExerciseThumb image={usableImage(image)} video={video} name={ex.name} pattern={pattern} stimulus={stimulus} load={load} size="sm" />}
                     title={<span className="line-clamp-2 whitespace-normal">{ex.name}</span>}
@@ -308,16 +290,16 @@ const TrainingPlanView = ({ dayPlans, initialDay, onOpenWorkout, tools }: Props)
               })}
             </ListGroup>
           )}
-          {!hasExercises && <p className="px-1 type-subhead text-muted-foreground">Este día no tiene ejercicios asignados todavía.</p>}
+          {!hasExercises && <p className="px-1 type-subhead text-muted-foreground">Esta sesión no tiene ejercicios todavía.</p>}
         </section>
       );
     }
     if (selectedPlan?.type === "actividad") {
       return (
-        <section aria-label={`Actividad del ${selectedDay.toLocaleLowerCase("es-ES")}`} className="space-y-3">
+        <section aria-label={`Detalle de ${sessionTitle(selectedPlan)}`} className="space-y-3">
           {onOpenWorkout && (
-            <Button type="button" variant="hero" size="lg" className="w-full" onClick={() => onOpenWorkout(selectedDay)}>
-              Abrir actividad del {selectedDay.toLocaleLowerCase("es-ES")}
+            <Button type="button" variant="hero" size="lg" className="w-full" onClick={() => onOpenWorkout(selectedPlan.day)}>
+              Empezar actividad
             </Button>
           )}
           <ListGroup>
@@ -327,96 +309,57 @@ const TrainingPlanView = ({ dayPlans, initialDay, onOpenWorkout, tools }: Props)
         </section>
       );
     }
-    return (
-      <div className="flex flex-col gap-3 px-1">
-        <div>
-          <p className="type-headline">{selectedIsToday ? "Hoy es día de descanso" : `${selectedDay} es día de descanso`}</p>
-          <p className="mt-0.5 type-subhead text-muted-foreground">
-            {nextWorkDay ? `Tu próxima sesión es el ${nextWorkDay.toLocaleLowerCase("es-ES")}.` : "Recupera y vuelve con más fuerza."}
-          </p>
-        </div>
-        {nextWorkDay && (
-          <Button type="button" variant="secondary" size="lg" className="w-full" onClick={() => { void hapticSelection(); setExpandedDay(nextWorkDay); }}>
-            {`Ver el ${nextWorkDay.toLocaleLowerCase("es-ES")}`}
-          </Button>
-        )}
-      </div>
-    );
+    return null;
   };
 
   return (
     <div className="flex w-full flex-col gap-5" onErrorCapture={handleImageError}>
-      <h2 className="sr-only">Plan semanal</h2>
-      {/* En el móvil, bajo el título grande «Plan semanal»; en escritorio la barra ya lleva su pista. */}
-      <p className="-mt-1 type-subhead text-muted-foreground md:hidden">Tu rutina de entrenamiento, día a día.</p>
+      <h2 className="sr-only">Entrenar</h2>
+      {/* En el móvil, bajo el título grande «Entrenar»; en escritorio la barra ya lleva su pista. */}
+      <p className="-mt-1 type-subhead text-muted-foreground md:hidden">Tus sesiones en orden. Hazlas el día que te venga bien.</p>
 
-      <div
-        role="group"
-        aria-label="Días de la semana"
-        className="flex justify-between gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      >
-        {DAYS_ORDER.map((day, index) => {
-          const plan = workPlanFor(day);
-          const isToday = day === todayName;
-          const isExpanded = expandedDay === day;
-          const summary = plan ? sessionTitle(plan) : "descanso";
-          // El día elegido va en dorado macizo y hoy con anillo dorado (selector de días del rediseño).
-          const tone = isExpanded
-            ? "bg-primary text-primary-foreground"
-            : isToday
-            ? "border border-primary/60 text-primary"
-            : plan
-            ? "bg-secondary text-foreground"
-            : "text-muted-foreground/60";
+      {sessions.length > 0 ? (
+        <>
+          {/* Lo hecho esta semana: un tramo por sesión, dorado si ya está hecha. */}
+          <div className="flex items-center gap-3" aria-label={`Esta semana: ${doneCount} de ${sessions.length} sesiones`} role="group">
+            <div aria-hidden="true" className="flex flex-1 gap-1.5">
+              {sessions.map((session) => (
+                <span key={session.day} className={cn("h-1.5 flex-1 rounded-full", doneThisWeek.includes(session.day) ? "bg-primary" : "bg-secondary")} />
+              ))}
+            </div>
+            <span aria-hidden="true" className="shrink-0 type-footnote tabular-nums text-muted-foreground">{`${doneCount} de ${sessions.length} esta semana`}</span>
+          </div>
 
-          return (
-            <button
-              key={day}
-              type="button"
-              aria-label={`${day}, ${summary}${isToday ? ", hoy" : ""}`}
-              aria-expanded={isExpanded}
-              onClick={() => {
-                void hapticSelection();
-                setExpandedDay(day);
-              }}
-              className={`flex h-11 w-11 lg:h-12 lg:w-12 shrink-0 items-center justify-center rounded-full type-subhead lg:text-[16px] font-semibold transition-colors duration-150 ease-out active:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${tone}`}
-            >
-              {DAY_INITIALS[index]}
-            </button>
-          );
-        })}
-      </div>
-
-      {hasAnySession ? (
-        // La semana entera en filas, como la maqueta: el día elegido se abre debajo de su fila.
-        <ul data-week-list className="space-y-3">
-          {DAYS_ORDER.map((day) => {
-            const plan = workPlanFor(day);
-            const expanded = expandedDay === day;
-            return (
-              <li key={day} className="space-y-3">
-                <DayRow
-                  day={day}
-                  plan={plan}
-                  isToday={day === todayName}
-                  expanded={expanded}
-                  photo={rowPhoto(plan)}
-                  onSelect={() => {
-                    void hapticSelection();
-                    setExpandedDay(day);
-                  }}
-                />
-                {expanded && renderDetail()}
-              </li>
-            );
-          })}
-        </ul>
+          {/* La rutina en orden: la sesión elegida se abre debajo de su fila. */}
+          <ul data-session-list className="space-y-3">
+            {sessions.map((session, index) => {
+              const expanded = expandedDay === session.day;
+              return (
+                <li key={session.day} className="space-y-3">
+                  <SessionRow
+                    number={index + 1}
+                    plan={session}
+                    isNext={next?.day === session.day}
+                    done={doneThisWeek.includes(session.day)}
+                    expanded={expanded}
+                    photo={rowPhoto(session)}
+                    onSelect={() => {
+                      void hapticSelection();
+                      setExpandedDay(session.day);
+                    }}
+                  />
+                  {expanded && renderDetail()}
+                </li>
+              );
+            })}
+          </ul>
+        </>
       ) : (
         <EmptyState
           card
           icon={CalendarDays}
           title="Tu plan aún no tiene sesiones"
-          description="Edita tu rutina para añadir los días de la semana que quieras entrenar."
+          description="Edita tu rutina para añadir tus sesiones."
         />
       )}
 

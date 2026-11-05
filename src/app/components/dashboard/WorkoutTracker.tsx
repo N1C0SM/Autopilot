@@ -28,6 +28,7 @@ import { parsePositiveWeight } from "@/shared/lib/weight";
 import { WorkoutSummary } from "@/app/components/dashboard/WorkoutSummary";
 import { ExerciseSwap } from "@/app/components/dashboard/ExerciseSwap";
 import { formatTrainingTitle } from "@/shared/lib/trainingDisplay";
+import { routineSessions } from "@/shared/lib/routineOrder";
 import { hapticImpact, hapticNotify, hapticSelection, hapticSignature, hapticTap } from "@/shared/lib/native";
 import SwipeSetEntry from "@/app/components/dashboard/SwipeSetEntry";
 import LogAllSetsButton from "@/app/components/dashboard/LogAllSetsButton";
@@ -79,20 +80,8 @@ const DAYS_ORDER = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sába
 const hasSessionIn = (plans: DayPlan[], day?: string | null) =>
   Boolean(day) && plans.some((p) => p.day === day && (p.type === "gimnasio" || p.type === "actividad"));
 
-/** Siguiente día con sesión después de `from`, dando la vuelta a la semana. */
-const nextSessionIn = (plans: DayPlan[], from: string): string | null => {
-  const start = DAYS_ORDER.indexOf(from);
-  if (start < 0) return null;
-  for (let i = 1; i <= DAYS_ORDER.length; i += 1) {
-    const day = DAYS_ORDER[(start + i) % DAYS_ORDER.length];
-    if (hasSessionIn(plans, day)) return day;
-  }
-  return null;
-};
-
-/** Hoy si entrena; si no, la siguiente sesión de la semana. */
-const firstSessionIn = (plans: DayPlan[], today: string): string | null =>
-  hasSessionIn(plans, today) ? today : nextSessionIn(plans, today);
+/** Primera sesión de la rutina: sin días de la semana, el orden es el de la rutina. */
+const firstSessionIn = (plans: DayPlan[]): string | null => routineSessions(plans)[0]?.day ?? null;
 
 // `--accent` es ahora el gris de fila pulsada: el nivel alto se deriva del tinte.
 const MUSCLE_INTENSITY = {
@@ -150,11 +139,11 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
   }, []);
   const todayIndex = (new Date().getDay() + 6) % 7;
   const today = DAYS_ORDER[todayIndex];
-  // El día abierto siempre tiene sesión: el borrador activo, el día pedido si entrena,
-  // si no hoy, si no el siguiente que entrene. Nunca un día sin sesión.
+  // La sesión abierta siempre existe: el borrador activo, la pedida (la siguiente pendiente
+  // desde «Hoy») o la primera de la rutina. Nunca un día sin sesión.
   const [selectedDay, setSelectedDay] = useState<string>(() =>
     resumeDraft?.plan.day
-    ?? (hasSessionIn(dayPlans, initialDay) ? initialDay! : firstSessionIn(dayPlans, today) ?? today));
+    ?? (hasSessionIn(dayPlans, initialDay) ? initialDay! : firstSessionIn(dayPlans) ?? today));
   const [expandedExercise, setExpandedExercise] = useState<number | null>(null);
   const [exerciseLogs, setExerciseLogs] = useState<Record<string, WorkoutSetLog[]>>({});
   const [previousLogs, setPreviousLogs] = useState<Record<string, WorkoutSetLog[]>>({});
@@ -265,12 +254,12 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
   useEffect(() => {
     if (started || resumeDraft) return;
     if (hasSessionIn(dayPlans, selectedDay)) return;
-    const next = firstSessionIn(dayPlans, today) ?? today;
+    const next = (hasSessionIn(dayPlans, initialDay) ? initialDay! : firstSessionIn(dayPlans)) ?? today;
     if (next === selectedDay) return;
     setLogsReady(false);
     setCompletionReady(false);
     setSelectedDay(next);
-  }, [dayPlans, resumeDraft, selectedDay, started, today]);
+  }, [dayPlans, initialDay, resumeDraft, selectedDay, started, today]);
   const addSessionExercises = (entries: GymExerciseEntry[]) => {
     const existing = new Set((activePlan?.exercises ?? []).map((e) => e.name));
     const fresh = entries.filter((e) => !existing.has(e.name));
@@ -455,19 +444,19 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
 
   useEffect(() => {
     if (!autoStart) return;
-    // Inicio siempre abre la rutina de hoy, aunque antes se consultara otro día.
-    // Si hoy no tiene sesión no se auto-arranca otra rutina ni se abre un día de descanso.
+    // Inicio abre la sesión pedida (la siguiente pendiente), aunque antes se consultara otra.
+    // Sin sesión pedida no se auto-arranca ninguna.
     if (started) {
       onAutoStartConsumed?.();
       return;
     }
-    if (selectedDay !== today) {
-      if (!hasSessionIn(dayPlans, today)) {
-        onAutoStartConsumed?.();
-        return;
-      }
+    if (!hasSessionIn(dayPlans, initialDay)) {
+      onAutoStartConsumed?.();
+      return;
+    }
+    if (selectedDay !== initialDay) {
       setLogsReady(false);
-      setSelectedDay(today);
+      setSelectedDay(initialDay!);
       return;
     }
     if (selectedDate !== currentDate) {
@@ -486,7 +475,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
       onSessionModeChange?.(true);
     }
     onAutoStartConsumed?.();
-  }, [autoStart, currentDate, currentPlan?.type, dayPlans, loadError, logsReady, onAutoStartConsumed, onSessionModeChange, selectedDate, selectedDay, started, today, workoutCompleted]);
+  }, [autoStart, currentDate, currentPlan?.type, dayPlans, initialDay, loadError, logsReady, onAutoStartConsumed, onSessionModeChange, selectedDate, selectedDay, started, workoutCompleted]);
 
   // Absolute deadline: suspended timers cannot extend the athlete's rest.
   useEffect(() => {
@@ -1298,48 +1287,40 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
         </div>
       )}
 
-      {/* Selector de día: la semana entera siempre a un toque. Se oculta durante la
-          sesión para no cambiar de día con series a medias. */}
-      {!started && dayPlans.length > 0 && (
+      {/* Selector de sesión: la rutina en orden, sin días de la semana. Se oculta durante la
+          sesión para no cambiar de sesión con series a medias. */}
+      {!started && routineSessions(dayPlans).length > 1 && (
         <div
           role="tablist"
-          aria-label="Elige el día de la semana"
+          aria-label="Elige la sesión"
           className="no-scrollbar mb-4 flex gap-1 overflow-x-auto rounded-media bg-card p-1.5"
         >
-          {DAYS_ORDER.map((day) => {
-            const active = day === selectedDay;
-            const isToday = day === DAYS_ORDER[todayIndex];
-            const hasWork = hasSessionIn(dayPlans, day);
+          {routineSessions(dayPlans).map((session, index) => {
+            const active = session.day === selectedDay;
+            const name = (session.type === "gimnasio"
+              ? formatTrainingTitle(session.routine_name, session.muscle_focus) || "Entrenamiento"
+              : session.sport || "Actividad").split(" · ")[0];
             return (
               <button
-                key={day}
+                key={session.day}
                 type="button"
                 role="tab"
                 aria-selected={active}
-                aria-label={`${day}${hasWork ? "" : " · sin sesión"}${isToday ? " · hoy" : ""}`}
-                disabled={saving || !hasWork}
+                aria-label={`Sesión ${index + 1}: ${name}`}
+                disabled={saving}
                 onClick={() => {
-                  if (day === selectedDay) return;
+                  if (active) return;
                   void hapticSelection();
                   setLogsReady(false);
                   setCompletionReady(false);
-                  setSelectedDay(day);
+                  setSelectedDay(session.day);
                 }}
-                className={`flex h-[50px] min-w-10 flex-1 shrink-0 flex-col items-center justify-center gap-1 rounded-media type-footnote transition-colors duration-150 disabled:opacity-40 ${
-                  active
-                    ? "bg-primary font-semibold text-primary-foreground"
-                    : !hasWork
-                      ? "cursor-default text-muted-foreground/40"
-                      : isToday
-                        ? "font-semibold text-primary active:bg-accent"
-                        : "text-muted-foreground active:bg-accent"
+                className={`flex h-[50px] min-w-12 flex-1 shrink-0 flex-col items-center justify-center gap-0.5 rounded-media px-1 transition-colors duration-150 disabled:opacity-40 ${
+                  active ? "bg-primary text-primary-foreground" : "text-muted-foreground active:bg-accent"
                 }`}
               >
-                <span>{day.slice(0, 3)}</span>
-                <span
-                  aria-hidden="true"
-                  className={`h-[5px] w-[5px] rounded-full ${hasWork ? (active ? "bg-primary-foreground" : "bg-primary") : "bg-transparent"}`}
-                />
+                <span className="type-subhead font-semibold tabular-nums">{index + 1}</span>
+                <span className="max-w-full truncate text-[11px] leading-none">{name}</span>
               </button>
             );
           })}
@@ -1404,7 +1385,6 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                 {currentPlan.exercises.length} ejercicios · {totalSets} series
               </p>
             )}
-            {selectedDay !== today && <p className="mt-1 type-footnote text-muted-foreground">Se registra hoy · {completedDateLabel}</p>}
 
             {/* Antes de empezar, la única protagonista es la acción principal. */}
             <div className={completedSets > 0 ? "mt-4 flex items-center gap-3" : "sr-only"}>

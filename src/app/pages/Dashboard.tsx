@@ -575,7 +575,7 @@ const Dashboard = () => {
 
   const SECTION_HINTS: Record<MobileTab, string> = {
     home: "Tu entreno de hoy y lo que toca comer",
-    training: "Tu rutina de la semana. Marca las series al terminarlas",
+    training: "Tus sesiones en orden, el día que te venga bien",
     nutrition: "Tus macros y comidas del día",
     chat: "Habla con tu entrenador y envía fotos o vídeos",
     progress: "Fotos, peso y evolución semanal",
@@ -586,7 +586,7 @@ const Dashboard = () => {
   // Títulos de la barra en el móvil: cortos, los mismos que en la barra de pestañas.
   const MOBILE_TITLES: Record<MobileTab, string> = {
     home: "Hoy",
-    training: "Plan semanal",
+    training: "Entrenar",
     nutrition: "Nutrición",
     chat: "Chat",
     progress: "Progreso",
@@ -683,9 +683,11 @@ const Dashboard = () => {
               }
               setSection(s as MobileTab);
             }}
-            onStartWorkout={() => {
+            onStartWorkout={(day) => {
               setResumeWorkout(false);
               setFreePlans(null);
+              // La siguiente sesión pendiente, no la del día de la semana.
+              setTrainingDay(day);
               setTrainingView("tracker");
               setAutoStartWorkout(true);
               setSection("training");
@@ -729,8 +731,8 @@ const Dashboard = () => {
         <div className="w-full min-w-0">
           <Suspense fallback={<SectionFallback />}>
               {trainingView === "plan" && !workoutMode && !autoStartWorkout ? (
-                <TrainingPlanView dayPlans={dayPlans} initialDay={planFocusDay} tools={(
-                // Herramientas de la rutina bajo la semana (como «Tu plan personalizado» de la maqueta).
+                <TrainingPlanView dayPlans={dayPlans} initialDay={planFocusDay} doneThisWeek={completedDays} tools={(
+                // Herramientas de la rutina bajo las sesiones (como «Tu plan personalizado» de la maqueta).
                 <div className="flex w-full items-center gap-2 rounded-[22px] border border-foreground/[0.08] bg-card py-2 pl-5 pr-2">
                   <span className="min-w-0 flex-1 truncate type-subhead font-medium">
                     {isManualPlan(dayPlans) ? "Rutina personalizada" : "Piloto automático"}
