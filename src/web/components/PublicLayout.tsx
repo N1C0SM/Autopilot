@@ -86,9 +86,9 @@ export default function PublicLayout({ title, description, children }: { title: 
           el acceso de la navegación. Antes los siete elementos pesaban lo mismo. */}
       <div className="container mx-auto flex h-14 min-w-0 items-center justify-between gap-2 px-4 lg:h-16 lg:px-6">
         <Link to="/" aria-label="Autopilot, inicio" className="inline-flex min-h-11 items-center gap-2 text-[20px] font-bold tracking-[0.01em] text-foreground transition-opacity active:opacity-60 lg:text-[21px]"><BrandMark size={28} />AUTOPILOT</Link>
-        <nav aria-label="Navegación principal" className="hidden flex-1 items-center lg:flex"><span className="flex-1" />
+        <nav aria-label="Navegación principal" className="hidden flex-1 items-center md:flex"><span className="flex-1" />
           {navigation.map(([to, label]) => (
-            <NavLink key={to} to={to} className={({ isActive }) => `relative inline-flex min-h-11 items-center px-5 text-[14px] font-medium transition-colors active:opacity-60 ${isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+            <NavLink key={to} to={to} className={({ isActive }) => `relative inline-flex min-h-11 items-center px-3 text-[14px] lg:px-5 font-medium transition-colors active:opacity-60 ${isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
               {({ isActive }) => (
                 <>
                   {label}
@@ -101,10 +101,10 @@ export default function PublicLayout({ title, description, children }: { title: 
             </NavLink>
           ))}
           <span className="flex-1" />
-          <Link to="/login" className="ml-auto inline-flex h-10 items-center rounded-full border border-foreground/30 px-5 text-[14px] font-medium transition-colors hover:bg-foreground/5">Iniciar sesión</Link>
-          <Link to="/onboarding" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source: "header" }); }} className="ml-4 inline-flex h-10 items-center rounded-full bg-primary px-5 text-[14px] font-semibold text-primary-foreground transition-opacity hover:opacity-90">Empezar gratis</Link>
+          <Link to="/login" className="ml-auto inline-flex h-10 items-center rounded-full border border-foreground/30 px-4 lg:px-5 text-[14px] font-medium transition-colors hover:bg-foreground/5">Iniciar sesión</Link>
+          <Link to="/onboarding" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source: "header" }); }} className="ml-2 inline-flex h-10 items-center rounded-full bg-primary px-4 lg:ml-4 lg:px-5 text-[14px] font-semibold text-primary-foreground transition-opacity hover:opacity-90">Empezar gratis</Link>
         </nav>
-        <div className="flex items-center gap-1 lg:hidden">
+        <div className="flex items-center gap-1 md:hidden">
           <Link to="/onboarding" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source: "header" }); }} className="inline-flex h-10 items-center rounded-full bg-primary px-4 text-[14px] font-semibold text-primary-foreground">Empezar gratis</Link>
           <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
             <SheetTrigger asChild><Button variant="ghost" size="icon" aria-label="Abrir menú" onClick={() => void hapticTap()}><Menu className="h-6 w-6" strokeWidth={2} /></Button></SheetTrigger>
