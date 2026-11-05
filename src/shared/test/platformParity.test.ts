@@ -331,6 +331,18 @@ describe("paridad web ↔ apps nativas", () => {
     }
     expect(nutritionWeb).toContain("onUpgrade && !isIOSNative()");
     expect(nutritionApp).not.toContain("Descubre Autopilot Plus");
+    // Ajustes de ChatGPT: índice agrupado con iconos que lleva a cada sección, en las dos.
+    const settingsWeb = read("src/app/components/SettingsPanel.tsx");
+    const settingsApp = read("native/Autopilot/Features/Account/AccountView.swift");
+    for (const text of ["Gestiona tu cuenta, plan y preferencias.", "Mi cuenta", "Nombre, foto y privacidad", "Tus datos y objetivo", "Edad, peso, objetivo y disponibilidad", "Mi plan",
+      "Preferencias", "Vista del entreno y descanso entre series", "Cambia tu contraseña", "Privacidad y legal", "Exporta tus datos y política de privacidad", "Términos, cookies y avisos"]) {
+      expect(settingsWeb, text).toContain(text);
+      expect(settingsApp, text).toContain(text);
+    }
+    for (const id of ["ajustes-perfil", "ajustes-datos", "ajustes-plan", "ajustes-entreno", "ajustes-contrasena", "ajustes-privacidad", "ajustes-legal"]) {
+      expect(settingsWeb, id).toContain(`id="${id}"`);
+      expect(settingsApp, id).toContain(`.id("${id}")`);
+    }
   });
 
   it("Nutrición sin peso: Gratis ve «Calcula tus macros» en la web y en la app, no solo la tarjeta de Plus", () => {

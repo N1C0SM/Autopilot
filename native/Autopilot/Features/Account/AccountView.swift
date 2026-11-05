@@ -93,10 +93,66 @@ struct AccountView: View {
     private static let goals = [("lose_weight", "Perder peso"), ("gain_muscle", "Ganar músculo"), ("improve_endurance", "Mejorar resistencia")]
     private static let rests = [(45, "45 s"), (60, "1 min"), (90, "1.5 min"), (120, "2 min"), (180, "3 min")]
 
+    #if os(iOS)
+    @Environment(\.horizontalSizeClass) private var sizeClass
+    /// iPhone: el subtítulo va bajo el título grande; en iPad/Mac la barra ya lleva su pista.
+    private var sizeClassCompact: Bool { sizeClass == .compact }
+    #endif
+
+    /// Fila del índice de Ajustes (maqueta de ChatGPT): icono, título, detalle y chevron; lleva a su sección.
+    private func hubRow(_ symbol: String, _ title: String, _ detail: String, to target: String, proxy: ScrollViewProxy) -> some View {
+        Button {
+            Haptics.tap()
+            withAnimation(.snappy) { proxy.scrollTo(target, anchor: .top) }
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: symbol).font(.system(size: 18)).foregroundStyle(Palette.muted)
+                    .frame(width: 28).accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title).font(.apBody).foregroundStyle(Palette.foreground)
+                    Text(detail).font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(2)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Palette.muted.opacity(0.6)).accessibilityHidden(true)
+            }
+            .frame(minHeight: 56)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// Índice agrupado de Ajustes, como `SettingsPanel.tsx`: cada fila baja a su sección.
+    @ViewBuilder private func hub(_ proxy: ScrollViewProxy) -> some View {
+        #if os(iOS)
+        if sizeClassCompact {
+            Text("Gestiona tu cuenta, plan y preferencias.").font(.apSubhead).foregroundStyle(Palette.muted)
+        }
+        #endif
+        group("Mi cuenta") {
+            hubRow("person", "Perfil", "Nombre, foto y privacidad", to: "ajustes-perfil", proxy: proxy)
+            hubRow("target", "Tus datos y objetivo", "Edad, peso, objetivo y disponibilidad", to: "ajustes-datos", proxy: proxy)
+            if !isAdmin, profileLoaded {
+                hubRow("crown", "Mi plan", planName, to: "ajustes-plan", proxy: proxy)
+            }
+        }
+        group("Preferencias") {
+            hubRow("dumbbell", "Tu forma de entrenar", "Vista del entreno y descanso entre series", to: "ajustes-entreno", proxy: proxy)
+            hubRow("key", "Contraseña", "Cambia tu contraseña", to: "ajustes-contrasena", proxy: proxy)
+        }
+        group("Privacidad y legal") {
+            hubRow("checkmark.shield", "Privacidad y mis datos", "Exporta tus datos y política de privacidad", to: "ajustes-privacidad", proxy: proxy)
+            hubRow("doc.text", "Legal", "Términos, cookies y avisos", to: "ajustes-legal", proxy: proxy)
+        }
+    }
+
     var body: some View {
+        ScrollViewReader { proxy in
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
-                header
+                if !isAdmin { hub(proxy) }
+
+                header.id("ajustes-perfil")
 
                 group("Perfil") {
                     fieldRow("Nombre") { TextField("Nombre", text: $name).multilineTextAlignment(.trailing).textFieldStyle(.plain) }
@@ -109,6 +165,7 @@ struct AccountView: View {
                     toggleRow("Foto de perfil pública", "Si está apagado, se muestra un icono genérico.", avatarPublicBinding)
                 }
 
+                Color.clear.frame(height: 0).id("ajustes-datos")
                 group("Tus datos") {
                     fieldRow("Edad") { numberField($age) }
                     fieldRow("Altura (cm)") { numberField($height) }
@@ -158,6 +215,7 @@ struct AccountView: View {
                 }
                 }
 
+                Color.clear.frame(height: 0).id("ajustes-entreno")
                 group("Tu forma de entrenar", footer: "Elige cuánto quieres descansar al marcar una serie. El temporizador se inicia solo durante tu entreno.") {
                     VStack(alignment: .leading, spacing: 10) {
                         Text("Vista del entrenamiento").font(.apBody)
@@ -190,6 +248,7 @@ struct AccountView: View {
                     }
                 }
 
+                Color.clear.frame(height: 0).id("ajustes-contrasena")
                 group("Cambiar contraseña") {
                     fieldRow("Nueva") { SecureField("Mínimo 6 caracteres", text: $newPassword).multilineTextAlignment(.trailing).textFieldStyle(.plain) }
                     fieldRow("Confirmar") { SecureField("Repite la contraseña", text: $confirmPassword).multilineTextAlignment(.trailing).textFieldStyle(.plain) }
@@ -198,6 +257,7 @@ struct AccountView: View {
 
                 if !isAdmin, profileLoaded {
                     // Hasta tener la ficha no se enseña el plan: «Free» por defecto mentiría a quien paga.
+                    Color.clear.frame(height: 0).id("ajustes-plan")
                     group("Suscripción") {
                         HStack(spacing: 12) {
                             Image(systemName: "crown").foregroundStyle(paid ? Palette.gold : Palette.muted).frame(width: 28)
@@ -217,6 +277,7 @@ struct AccountView: View {
                     }
                 }
 
+                Color.clear.frame(height: 0).id("ajustes-privacidad")
                 group("Privacidad y mis datos", footer: "Conforme al RGPD tienes derecho a acceder, portar y eliminar tus datos en cualquier momento.") {
                     Button { Task { await exportData() } } label: {
                         VStack(alignment: .leading, spacing: 2) {
@@ -241,6 +302,7 @@ struct AccountView: View {
                     }
                 }
 
+                Color.clear.frame(height: 0).id("ajustes-legal")
                 group("Legal") {
                     linkRow("Términos", "https://autopilotplan.app/legal/terminos")
                     linkRow("Cookies", "https://autopilotplan.app/legal/cookies")
@@ -356,7 +418,7 @@ struct AccountView: View {
 
                 group("Sesión", footer: "Cierra tu sesión en este dispositivo.") {
                     Button { Task { await session.signOut() } } label: {
-                        Text("Cerrar sesión").font(.apBody).foregroundStyle(Palette.destructive).frame(maxWidth: .infinity, alignment: .leading)
+                        Label("Cerrar sesión", systemImage: "rectangle.portrait.and.arrow.right").font(.apBody).foregroundStyle(Palette.destructive).frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .buttonStyle(.plain)
                 }
@@ -372,6 +434,7 @@ struct AccountView: View {
             }
             .padding(.horizontal, pagePadding).padding(.top, 8).padding(.bottom, 16)
             .frame(maxWidth: .infinity, alignment: .leading)
+        }
         }
         .screenBackground()
         // Gesto nativo: tirar hacia abajo vuelve a pedir la ficha y los datos sin vaciar la pantalla.

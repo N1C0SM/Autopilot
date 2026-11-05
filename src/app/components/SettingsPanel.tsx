@@ -20,7 +20,7 @@ const ENABLE_CALENDAR = false;
 
 import {
   User, Crown, ExternalLink, Calendar, CalendarClock, Check, Unplug, Link2, RefreshCw,
-  Download, FileText,
+  Download, FileText, ChevronRight, Dumbbell, KeyRound, LogOut, ShieldCheck, Target,
 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -693,8 +693,62 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
 
   return (
     <div className="flex w-full flex-col gap-6">
+      {/* Ajustes de ChatGPT: banner de Plus y el índice agrupado; cada fila lleva a su sección de abajo. */}
+      {!adminMode && (
+        <div className="order-first flex flex-col gap-6">
+          <p className="-mt-2 type-subhead text-muted-foreground md:hidden">Gestiona tu cuenta, plan y preferencias.</p>
+          {!campaign && plans.plus && !iosNoPurchases && !hasPaidAccess && onUpgrade && (
+            <button
+              type="button"
+              onClick={() => { void hapticTap(); onUpgrade("training"); }}
+              className="flex min-h-[76px] w-full items-center gap-3.5 rounded-[22px] border border-primary/60 bg-primary/[0.08] px-4 py-3 text-left transition-transform duration-150 active:scale-[0.985] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Crown aria-hidden className="h-7 w-7 shrink-0 text-primary" strokeWidth={1.75} />
+              <span className="min-w-0 flex-1">
+                <span className="block type-headline">{plans.plusName}</span>
+                <span className="mt-0.5 block type-footnote text-muted-foreground">Más análisis, nutrición y funciones.</span>
+              </span>
+              <span className="flex h-9 shrink-0 items-center gap-1 rounded-full border border-primary/60 px-3.5 text-[13px] font-semibold text-primary">
+                Ver plan<ChevronRight aria-hidden className="h-3.5 w-3.5" strokeWidth={2.5} />
+              </span>
+            </button>
+          )}
+          {[
+            { title: "Mi cuenta", rows: [
+              { id: "ajustes-perfil", icon: User, title: "Perfil", subtitle: "Nombre, foto y privacidad", show: true },
+              { id: "ajustes-datos", icon: Target, title: "Tus datos y objetivo", subtitle: "Edad, peso, objetivo y disponibilidad", show: hasOnboarding },
+              { id: "ajustes-plan", icon: Crown, title: "Mi plan", subtitle: hasPaidAccess || !plans.plus || iosNoPurchases ? planName : `${planName} · Cambia a ${plans.plusName} para más funciones`, show: !campaign || consumerPlan !== "free" },
+            ] },
+            { title: "Preferencias", rows: [
+              { id: "ajustes-entreno", icon: Dumbbell, title: "Tu forma de entrenar", subtitle: "Vista del entreno y descanso entre series", show: true },
+              { id: "ajustes-contrasena", icon: KeyRound, title: "Contraseña", subtitle: "Cambia tu contraseña", show: true },
+            ] },
+            { title: "Privacidad y legal", rows: [
+              { id: "ajustes-privacidad", icon: ShieldCheck, title: "Privacidad y mis datos", subtitle: "Exporta tus datos y política de privacidad", show: true },
+              { id: "ajustes-legal", icon: FileText, title: "Legal", subtitle: "Términos, cookies y avisos", show: true },
+            ] },
+          ].map((group) => (
+            <ListGroup key={group.title} header={group.title}>
+              {group.rows.filter((row) => row.show).map(({ id, icon: Icon, title, subtitle }) => (
+                <ListRow
+                  key={id}
+                  icon={<Icon className="text-muted-foreground" />}
+                  title={title}
+                  subtitle={subtitle}
+                  chevron
+                  onClick={() => {
+                    void hapticTap();
+                    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
+                />
+              ))}
+            </ListGroup>
+          ))}
+        </div>
+      )}
+
       {/* Profile */}
-      <div className="order-1 flex flex-col gap-6">
+      <div id="ajustes-perfil" className="order-1 flex scroll-mt-20 flex-col gap-6">
         <div className="flex flex-col items-center px-4 pt-2 text-center">
           <button
             type="button"
@@ -799,7 +853,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
 
       {/* Onboarding data */}
       {hasOnboarding && (
-        <div className={`order-2 flex flex-col gap-6${hideForAdmin}`}>
+        <div id="ajustes-datos" className={`order-2 flex scroll-mt-20 flex-col gap-6${hideForAdmin}`}>
           {mealsOutdated && (
             <div className="rounded-media bg-card px-4 py-3" role="status">
               <p className="type-body font-semibold">Tu plan de comidas está desactualizado</p>
@@ -903,7 +957,8 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
 
       {/* Workout preferences */}
       <ListGroup
-        className={`order-3${hideForAdmin}`}
+        id="ajustes-entreno"
+        className={`order-3 scroll-mt-20${hideForAdmin}`}
         header="Tu forma de entrenar"
         footer="Elige cuánto quieres descansar al marcar una serie. El temporizador se inicia solo durante tu entreno. Puedes cambiarlo cuando quieras. El descanso específico de cada ejercicio sigue apareciendo en tu plan."
       >
@@ -967,7 +1022,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
       </ListGroup>
 
       {/* Password */}
-      <div className="order-4">
+      <div id="ajustes-contrasena" className="order-4 scroll-mt-20">
         <ListGroup header="Cambiar contraseña">
           <FieldRow label="Nueva" htmlFor="settings-new-password">
             <Input
@@ -1004,7 +1059,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
       </div>
 
       {/* Subscription */}
-      {(!campaign || consumerPlan !== "free") && <div className={`order-5 space-y-3${hideForAdmin}`}>
+      {(!campaign || consumerPlan !== "free") && <div id="ajustes-plan" className={`order-5 scroll-mt-20 space-y-3${hideForAdmin}`}>
         <ListGroup header="Suscripción" footer={subscriptionFooter}>
           <ListRow
             icon={<Crown className={hasPaidAccess ? undefined : "text-muted-foreground"} />}
@@ -1122,7 +1177,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
       </ListGroup>}
 
       {/* Privacy & Data (RGPD) */}
-      <div className={`order-7 flex flex-col gap-6${hideForAdmin}`}>
+      <div id="ajustes-privacidad" className={`order-7 flex scroll-mt-20 flex-col gap-6${hideForAdmin}`}>
         <ListGroup
           header="Privacidad y mis datos"
           footer="Conforme al RGPD tienes derecho a acceder, portar y eliminar tus datos en cualquier momento."
@@ -1142,7 +1197,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
             to="/legal/privacidad"
           />
         </ListGroup>
-        <ListGroup header="Legal">
+        <ListGroup id="ajustes-legal" className="scroll-mt-20" header="Legal">
           <ListRow title="Términos" chevron to="/legal/terminos" />
           <ListRow title="Cookies" chevron to="/legal/cookies" />
           <ListRow title="Disclaimer médico" chevron to="/legal/disclaimer-medico" />
@@ -1156,6 +1211,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
       {/* Sign out */}
       <ListGroup className="order-8" header="Sesión" footer="Cierra tu sesión en este dispositivo.">
         <ListRow
+          icon={<LogOut className="text-destructive" />}
           title="Cerrar sesión"
           destructive
           onClick={async () => { sessionStorage.removeItem("autopilot_section"); await signOut(); navigate("/login", { replace: true }); }}
