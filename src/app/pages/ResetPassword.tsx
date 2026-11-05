@@ -114,7 +114,7 @@ const ResetPassword = () => {
       />
       <form id="reset-password-form" onSubmit={handleSubmit} className="mt-10">
         <AuthFieldGroup footer={formError ? <AuthFieldNote id="reset-password-error" tone="error">{formError}</AuthFieldNote> : null}>
-          <AuthFieldRow label="Nueva contraseña" htmlFor="password">
+          <AuthFieldRow label="Nueva contraseña" htmlFor="password" icon={LockKeyhole}>
             <Input
               id="password"
               type="password"
@@ -134,7 +134,7 @@ const ResetPassword = () => {
               placeholder="Nueva contraseña"
             />
           </AuthFieldRow>
-          <AuthFieldRow label="Confirmar contraseña" htmlFor="confirm">
+          <AuthFieldRow label="Confirmar contraseña" htmlFor="confirm" icon={LockKeyhole}>
             <Input
               id="confirm"
               type="password"

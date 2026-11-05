@@ -17,7 +17,7 @@ vi.mock("@/shared/integrations/supabase/client", () => ({
     rpc: vi.fn().mockResolvedValue({ data: null, error: null }),
   },
 }));
-vi.mock("@/shared/lib/planCatalog", () => ({ usePlanAvailability: () => ({ coach: false }) }));
+vi.mock("@/shared/lib/planCatalog", () => ({ usePlanAvailability: () => ({ coach: false }), usePlanCatalog: () => [] }));
 vi.mock("@/shared/lib/analytics", () => ({ track: vi.fn() }));
 vi.mock("@/shared/lib/nativeAuth", () => ({ signInWithApple: vi.fn() }));
 vi.mock("@/shared/lib/scanAttribution", () => ({ readAnonScanId: () => null }));

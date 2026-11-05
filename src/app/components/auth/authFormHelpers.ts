@@ -4,7 +4,7 @@ import { cn } from "@/shared/lib/utils";
 /** Clases para un `Input` dentro de `AuthFieldRow`: sin fondo propio, alineado con el texto. */
 export const authFieldInputClass = (withTrailing = false) =>
   cn(
-    "min-w-0 flex-1 rounded-none bg-transparent px-0 md:focus-visible:ring-0",
+    "min-w-0 flex-1 rounded-none border-0 bg-transparent px-0 md:focus-visible:ring-0",
     "[&:-webkit-autofill]:shadow-[inset_0_0_0_1000px_hsl(var(--background))] [&:-webkit-autofill]:[-webkit-text-fill-color:hsl(var(--foreground))]",
     withTrailing ? "pr-0" : "pr-5",
   );

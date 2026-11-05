@@ -240,14 +240,49 @@ describe("paridad web ↔ apps nativas", () => {
     const app = read("native/Autopilot/Features/Auth/LoginView.swift");
     expect(web).toContain("¿Olvidaste la contraseña?");
     expect(app).toContain("¿Olvidaste la contraseña?");
-    expect(web).toContain(`<Link to="/onboarding" onClick={() => void hapticTap()}>Crear una cuenta gratis</Link>`);
-    expect(app).toContain("Crear una cuenta gratis");
+    expect(web).toContain(`<Link to="/onboarding" onClick={() => void hapticTap()}`);
+    for (const text of ["¿Aún no tienes cuenta?", "Crear una cuenta gratis"]) {
+      expect(web, text).toContain(text);
+      expect(app, text).toContain(text);
+    }
     for (const text of ["Recuperar contraseña", "Te enviaremos un enlace a tu correo.", "Enviar enlace", "Revisa tu correo", "Volver al inicio de sesión"]) {
       expect(read("src/app/pages/ForgotPassword.tsx"), text).toContain(text);
       expect(app, text).toContain(text);
     }
     // Nada apunta al dominio antiguo desde el acceso.
     expect(app).not.toContain("autopilotplan.app");
+  });
+
+  it("Rediseño compartido: logo con AUTOPILOT, campos con icono, insignia Plus, semana en círculos y Progreso en dorado, igual en la web y en la app", () => {
+    // Acceso: la «A» con rayo y la palabra AUTOPILOT; campos con icono y ojo en la contraseña.
+    const authWeb = read("src/app/components/auth/AuthScreenParts.tsx");
+    const loginApp = read("native/Autopilot/Features/Auth/LoginView.swift");
+    const signupApp = read("native/Autopilot/Features/Auth/OnboardingView.swift");
+    expect(authWeb).toContain("<BrandMark size={56} />");
+    expect(authWeb).toContain("AUTOPILOT</span>");
+    for (const app of [loginApp, signupApp]) {
+      expect(app).toContain("BrandMark(size: 56)");
+      expect(app).toContain('Text("AUTOPILOT")');
+    }
+    expect(read("src/app/pages/Login.tsx")).toContain("icon={LockKeyhole}");
+    expect(loginApp).toContain('icon: "lock")');
+    expect(read("native/Autopilot/Design/Theme.swift")).toContain('reveal ? "Ocultar contraseña" : "Mostrar contraseña"');
+    // Insignia Plus con candado en las secciones bloqueadas del scan.
+    expect(read("src/app/components/scan/ScanPlusCard.tsx")).toContain("<PlusBadge />");
+    expect(read("native/Autopilot/Features/Scan/ScanView.swift")).toContain("PlusBadge()");
+    // Hoy: un círculo por día con check dorado si la sesión está hecha.
+    const homeWeb = read("src/app/components/dashboard/HomeOverview.tsx");
+    const homeApp = read("native/Autopilot/Features/Home/HomeView.swift");
+    expect(homeWeb).toContain('"flex h-8 w-8 items-center justify-center rounded-full"');
+    expect(homeApp).toContain(".frame(width: 32, height: 32)");
+    expect(homeWeb).toContain("completedDays.includes(day)");
+    expect(homeApp).toContain("snapshot?.doneDays");
+    // Plan: el día elegido en dorado macizo y hoy con anillo dorado.
+    expect(read("src/app/components/dashboard/TrainingPlanView.tsx")).toContain('? "bg-primary text-primary-foreground"');
+    expect(read("native/Autopilot/Features/Train/TrainView.swift")).toContain("if isToday && !isExpanded { Circle().strokeBorder(Palette.gold");
+    // Progreso: control segmentado con la sección activa en dorado.
+    expect(read("src/app/pages/Dashboard.tsx")).toContain("data-[state=active]:bg-primary data-[state=active]:text-primary-foreground");
+    expect(read("native/Autopilot/Features/Progress/ProgressScreen.swift")).toContain("selection: $tab, gold: true)");
   });
 
   it("Nutrición sin peso: Gratis ve «Calcula tus macros» en la web y en la app, no solo la tarjeta de Plus", () => {

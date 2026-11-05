@@ -783,12 +783,16 @@ struct ScanResultView: View {
             Text("Tu scan completo, con Plus").font(.inter(size: 28, weight: .bold)).tracking(-0.7)
             Text("Este es tu scan básico. Con Plus ves el análisis entero de tu físico:")
                 .font(.apSubhead).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
+            // Cada sección bloqueada en su fila, con la insignia Plus a la derecha (igual que la web).
             ForEach(result.locked_sections ?? [], id: \.self) { item in
-                HStack(alignment: .top, spacing: 10) {
-                    Image("lu-check").renderingMode(.template).resizable().frame(width: 14, height: 14)
-                        .foregroundStyle(Palette.gold).padding(.top, 3)
-                    Text(item).font(.apSubhead).fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 12) {
+                    Text(item).font(.apSubhead.weight(.medium)).fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                    PlusBadge()
                 }
+                .padding(.horizontal, 16).padding(.vertical, 12)
+                .frame(minHeight: 56)
+                .background(Palette.secondary.opacity(0.6), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             }
             Text("Incluido en Plus").font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.gold).padding(.top, 6)
         }

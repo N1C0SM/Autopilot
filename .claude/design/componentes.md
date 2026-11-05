@@ -21,6 +21,7 @@ Antes de escribir una pieza nueva, busca aquí. Si no encaja, amplía el compone
   - `photo={BRAND_PHOTOS.x}`: tarjeta alta con foto real y texto abajo;
   - `rest`: noche con luna dorada y estrellas (descanso). Nunca una foto de ejercicio para descansar.
 - **`IconTile`** — icono dentro de un cuadrado tintado; solo para listas y avisos, no como protagonista.
+- **`PlusBadge`** (`plus-badge.tsx` / `PlusBadge` en nativo) — píldora dorada tenue con candado de 12 px y «Plus» en 11 px: marca una función bloqueada del plan gratis, a la derecha de su fila.
 - **Hojas (`Sheet`, `Dialog` en móvil)** — se abren desde abajo con `rounded-t-[28px]`.
 
 ## Marca y contenido
@@ -45,4 +46,10 @@ Antes de escribir una pieza nueva, busca aquí. Si no encaja, amplía el compone
 
 ## Acceso (`src/app/components/auth/AuthScreenParts.tsx`)
 
-`AuthHero` (marca «Autopilot» + halo + icono circular dorado + titular redondeado), `AuthFieldGroup` / `AuthFieldRow` (cada campo es una píldora con anillo dorado al enfocar), `AuthFieldNote`, `AuthSymbol`, `AuthNotice`. Login, registro, recuperar y nueva contraseña los comparten: se cambian aquí, no en cada página.
+`AuthHero` (con `AuthAppMark`: la «A» con rayo dorada de 56 px y AUTOPILOT debajo; `kicker={false}` para no repetir la marca), `AuthFieldGroup` / `AuthFieldRow` (cada campo es una píldora de 56 px con icono gris opcional a la izquierda, ojo en la contraseña y anillo dorado al enfocar; en nativo, `PillField(icon:)`), `AuthFieldNote`, `AuthSymbol`, `AuthNotice`. Login, registro, recuperar y nueva contraseña los comparten: se cambian aquí, no en cada página.
+
+## Rediseño (ChatGPT, nov. 2026)
+
+- Semana de Hoy: un círculo de 32 px por día (dorado con check si está hecho, anillo dorado hoy, anillo gris si toca sesión, relleno tenue en descanso).
+- Selector de días del Plan: el día elegido en dorado macizo y hoy con anillo dorado.
+- Control segmentado de Progreso: 44 px, fondo de tarjeta y la sección activa en dorado (`SegmentedPill(gold: true)` en nativo). El resto de controles segmentados siguen en gris.

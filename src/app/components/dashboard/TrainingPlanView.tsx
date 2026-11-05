@@ -218,11 +218,11 @@ const TrainingPlanView = ({ dayPlans, initialDay, onOpenWorkout }: Props) => {
           const isToday = day === todayName;
           const isExpanded = expandedDay === day;
           const summary = plan ? sessionTitle(plan) : "descanso";
-          // El día elegido va tintado (el relleno macizo es solo para el botón de abrir la sesión).
+          // El día elegido va en dorado macizo y hoy con anillo dorado (selector de días del rediseño).
           const tone = isExpanded
-            ? "border border-primary/60 text-foreground"
+            ? "bg-primary text-primary-foreground"
             : isToday
-            ? "bg-secondary text-primary"
+            ? "border border-primary/60 text-primary"
             : plan
             ? "bg-secondary text-foreground"
             : "text-muted-foreground/60";

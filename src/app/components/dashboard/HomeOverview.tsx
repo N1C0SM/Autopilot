@@ -41,6 +41,8 @@ interface Props {
   profileName?: string;
   macros?: Macros | null;
   completedThisWeek?: number;
+  /** Días de la semana (lunes→hoy) con la sesión hecha: se marcan con un check dorado. */
+  completedDays?: string[];
   completedToday?: boolean;
   nutrition?: boolean;
   planStatus?: string;
@@ -126,6 +128,7 @@ const HomeOverview = ({
   profileName,
   macros,
   completedThisWeek = 0,
+  completedDays = [],
   completedToday = false,
   nutrition = true,
   planStatus,
@@ -282,6 +285,7 @@ const HomeOverview = ({
   const weekMarks = DAYS_ORDER.map((day, index) => ({
     letter: ["L", "M", "X", "J", "V", "S", "D"][index],
     scheduled: scheduledDays.some((plan) => plan.day === day),
+    done: completedDays.includes(day) || (index === todayIndex && completedToday),
     isToday: index === todayIndex,
   }));
 
@@ -412,11 +416,25 @@ const HomeOverview = ({
           <p className="text-[13px] font-medium text-muted-foreground">Esta semana</p>
           <p className="text-[13px] tabular-nums text-muted-foreground"><span className="font-semibold text-foreground">{sessionCount}</span> de {scheduledDays.length} sesiones</p>
         </div>
-        <div aria-hidden="true" className="mt-2.5 grid grid-cols-7 gap-1">
+        {/* Un círculo por día: dorado con check si está hecho, anillo dorado hoy, anillo gris si toca sesión y relleno tenue si es descanso. */}
+        <div aria-hidden="true" className="mt-3 grid grid-cols-7 gap-1">
           {weekMarks.map((mark) => (
-            <span key={mark.letter} className="flex flex-col items-center gap-1.5">
+            <span key={mark.letter} className="flex flex-col items-center gap-2">
               <span className={cn("text-[12px]", mark.isToday ? "font-semibold text-foreground" : "text-muted-foreground")}>{mark.letter}</span>
-              <span className={cn("h-1 w-full rounded-full", mark.scheduled ? (mark.isToday ? "bg-primary" : "bg-foreground/35") : "bg-secondary")} />
+              <span
+                className={cn(
+                  "flex h-8 w-8 items-center justify-center rounded-full",
+                  mark.done
+                    ? "bg-primary text-primary-foreground"
+                    : mark.isToday
+                      ? "border-2 border-primary"
+                      : mark.scheduled
+                        ? "border border-foreground/25"
+                        : "bg-secondary",
+                )}
+              >
+                {mark.done ? <Check className="h-4 w-4" strokeWidth={3} /> : null}
+              </span>
             </span>
           ))}
         </div>

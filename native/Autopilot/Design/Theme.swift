@@ -155,28 +155,51 @@ extension ButtonStyle where Self == PressableCardStyle {
     static func pressableCard(scale: CGFloat) -> PressableCardStyle { PressableCardStyle(scale: scale) }
 }
 
-/// Campo en píldora con etiqueta accesible.
+/// Campo en píldora con etiqueta accesible. Con `icon` lleva un SF Symbol gris a la izquierda y, si es `secure`, un ojo para mostrar la contraseña: igual que `AuthFieldRow` en la web.
 struct PillField: View {
     let label: String
     @Binding var text: String
     var secure = false
     var contentType: TextContentTypeCompat = .none
+    var icon: String? = nil
+    @State private var reveal = false
 
     var body: some View {
-        Group {
+        HStack(spacing: 12) {
+            if let icon {
+                Image(systemName: icon)
+                    .font(.system(size: 17, weight: .regular))
+                    .foregroundStyle(Palette.muted)
+                    .frame(width: 22)
+                    .accessibilityHidden(true)
+            }
+            Group {
+                if secure && !reveal {
+                    SecureField(label, text: $text)
+                } else {
+                    TextField(label, text: $text)
+                }
+            }
+            .textFieldStyle(.plain)
+            .font(.apBody)
+            .textContentTypeCompat(contentType)
+            .accessibilityLabel(label)
             if secure {
-                SecureField(label, text: $text)
-            } else {
-                TextField(label, text: $text)
+                Button { Haptics.selection(); reveal.toggle() } label: {
+                    Image(systemName: reveal ? "eye.slash" : "eye")
+                        .font(.system(size: 17))
+                        .foregroundStyle(Palette.muted)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(reveal ? "Ocultar contraseña" : "Mostrar contraseña")
             }
         }
-        .textFieldStyle(.plain)
-        .font(.apBody)
-        .textContentTypeCompat(contentType)
-        .padding(.horizontal, 20)
-        .frame(minHeight: 52)
+        .padding(.leading, 20)
+        .padding(.trailing, secure ? 6 : 20)
+        .frame(minHeight: icon == nil ? 52 : 56)
         .background(Palette.secondary, in: Capsule())
-        .accessibilityLabel(label)
     }
 }
 

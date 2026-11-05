@@ -83,11 +83,13 @@ struct HomeView: View {
         .frame(height: 400)
     }
 
-    /// Semana compacta — idéntica a la web: letra + barra fina, sin círculos grandes.
+    /// Semana compacta — idéntica a la web: letra + círculo de 32 pt (check dorado si está hecho,
+    /// anillo dorado hoy, anillo gris si toca sesión, relleno tenue si es descanso).
     private var weekPlan: some View {
         let labels = ["L", "M", "X", "J", "V", "S", "D"]
         let scheduled = Set(snapshot?.scheduled.map(\.day) ?? [])
-        let sessionCount = min(snapshot?.scheduled.count ?? 0, scheduled.count)
+        let done = Set(snapshot?.doneDays ?? []).intersection(scheduled)
+        let sessionCount = min(done.count, scheduled.count)
         return VStack(alignment: .leading, spacing: 10) {
             // Header
             HStack(alignment: .firstTextBaseline) {
@@ -102,26 +104,34 @@ struct HomeView: View {
                 }
                 .monospacedDigit()
             }
-            // 7 barras — h-1 exacto de la web
+            // 7 círculos — mismos estados que la web
             HStack(spacing: 4) {
                 ForEach(DayNames.all.indices, id: \.self) { i in
                     let day = DayNames.all[i]
                     let isToday = i == todayIndex
                     let isScheduled = scheduled.contains(day)
-                    VStack(spacing: 6) {
+                    let isDone = done.contains(day) || (isToday && snapshot?.completedToday == true)
+                    VStack(spacing: 8) {
                         Text(labels[i])
                             .font(.inter(size: 12, weight: isToday ? .semibold : .regular))
                             .foregroundStyle(isToday ? Palette.foreground : Palette.muted)
-                        // Barra fina — igual que la web (h-1 = 4pt)
-                        RoundedRectangle(cornerRadius: 2, style: .continuous)
-                            .fill(isScheduled
-                                  ? (isToday ? Palette.gold : Palette.foreground.opacity(0.35))
-                                  : Palette.secondary)
-                            .frame(height: 4)
+                        ZStack {
+                            if isDone {
+                                Circle().fill(Palette.gold)
+                                Image(systemName: "checkmark").font(.system(size: 13, weight: .bold)).foregroundStyle(Palette.background)
+                            } else if isToday {
+                                Circle().strokeBorder(Palette.gold, lineWidth: 2)
+                            } else if isScheduled {
+                                Circle().strokeBorder(Palette.foreground.opacity(0.25), lineWidth: 1)
+                            } else {
+                                Circle().fill(Palette.secondary)
+                            }
+                        }
+                        .frame(width: 32, height: 32)
                     }
                     .frame(maxWidth: .infinity)
                     .accessibilityElement(children: .ignore)
-                    .accessibilityLabel("\(day)\(isToday ? ", hoy" : "")\(isScheduled ? ", sesión programada" : "")")
+                    .accessibilityLabel("\(day)\(isToday ? ", hoy" : "")\(isDone ? ", sesión hecha" : (isScheduled ? ", sesión programada" : ""))")
                 }
             }
         }
@@ -769,10 +779,13 @@ struct HomeView: View {
         let scheduled = model.days.filter { $0.type == "actividad" || !($0.exercises ?? []).isEmpty }
         let plan = model.days.first { $0.day == DayNames.today && ($0.isGym ? !($0.exercises ?? []).isEmpty : $0.type == "actividad") }
         let completed = model.completions.contains { $0.date == LocalDate.string() }
+        let weekStart = LocalDate.daysAgo(todayIndex)
+        let doneDays = Array(Set(model.completions.filter { $0.date >= weekStart }.map(\.day)))
         let draftDay = session.userIdString.flatMap { ActiveWorkout.restore(userId: $0)?.day.day }
         return TodaySnapshot(plan: plan,
                              scheduled: scheduled,
                              completedToday: completed,
+                             doneDays: doneDays,
                              resumable: plan != nil && draftDay == plan?.day,
                              firstName: firstName,
                              calories: calories,
@@ -835,6 +848,8 @@ private struct TodaySnapshot: Codable {
     /// Sesiones de la semana (para contar la próxima sesión).
     var scheduled: [DayPlan] = []
     var completedToday = false
+    /// Días de esta semana (lunes→hoy) con la sesión hecha.
+    var doneDays: [String]?
     /// Hay un entreno a medias de hoy: la acción pasa a ser «Continuar entreno».
     var resumable = false
     var firstName = ""

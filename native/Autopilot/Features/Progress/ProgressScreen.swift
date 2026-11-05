@@ -57,7 +57,7 @@ struct ProgressScreen: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                SegmentedPill(options: ["Fuerza", "Físico", "Récords", "Scan"], selection: $tab)
+                SegmentedPill(options: ["Fuerza", "Físico", "Récords", "Scan"], selection: $tab, gold: true)
                 switch tab {
                 case 0: strength
                 case 1: physique

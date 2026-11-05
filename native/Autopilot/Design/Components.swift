@@ -169,6 +169,8 @@ struct FloatingTabBar: View {
 struct SegmentedPill: View {
     let options: [String]
     @Binding var selection: Int
+    /// Sección activa en dorado (Progreso, como en la web); por defecto, gris.
+    var gold = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -180,13 +182,13 @@ struct SegmentedPill: View {
                 } label: {
                     Text(options[i]).font(.inter(size: 13, weight: i == selection ? .semibold : .medium))
                         .lineLimit(1).minimumScaleFactor(0.7)
-                        .foregroundStyle(i == selection ? Palette.foreground : Palette.muted)
+                        .foregroundStyle(i == selection ? (gold ? Palette.background : Palette.foreground) : Palette.muted)
                         .frame(maxWidth: .infinity)
                         .frame(minHeight: 44)
                         .background {
                             // La píldora activa conserva sus 32 pt visuales dentro del área de 44.
                             if i == selection {
-                                RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Palette.accent)
+                                RoundedRectangle(cornerRadius: gold ? 16 : 9, style: .continuous).fill(gold ? Palette.gold : Palette.accent)
                                     .frame(height: 32)
                                     .shadow(color: .black.opacity(0.25), radius: 2, y: 1)
                             }
@@ -473,6 +475,21 @@ extension View {
         #else
         sheet(item: item) { content($0).frame(minWidth: 600, minHeight: 700) }
         #endif
+    }
+}
+
+/// Insignia «Plus» con candado: marca una función bloqueada del plan gratis (como `PlusBadge` en la web).
+struct PlusBadge: View {
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "lock.fill").font(.system(size: 10, weight: .semibold))
+            Text("Plus").font(.inter(size: 11, weight: .semibold))
+        }
+        .foregroundStyle(Palette.gold)
+        .padding(.horizontal, 8).padding(.vertical, 5)
+        .background(Palette.gold.opacity(0.15), in: Capsule())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Incluido en Plus")
     }
 }
 

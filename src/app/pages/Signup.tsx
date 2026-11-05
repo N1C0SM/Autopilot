@@ -8,7 +8,7 @@ import Screen from "@/shared/components/native/Screen";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { Eye, EyeOff, Gift, Sparkles, Camera } from "lucide-react";
+import { Camera, Check, Eye, EyeOff, Gift, LockKeyhole, Mail, Sparkles, UserRound } from "lucide-react";
 import { AppleSignInButton } from "@/app/components/auth/AppleSignInButton";
 import { AuthAppMark, AuthFieldGroup, AuthFieldNote, AuthFieldRow, AuthHero, AuthImage, AuthNotice } from "@/app/components/auth/AuthScreenParts";
 import { authFieldInputClass, authSecondaryActionClass, focusNextOnEnter, hideWithKeyboardClass } from "@/app/components/auth/authFormHelpers";
@@ -16,7 +16,7 @@ import { useAuth } from "@/shared/contexts/AuthContext";
 import { track } from "@/shared/lib/analytics";
 import { postVerificationPath, readSignupEmail, readVerifyContext, saveSignupEmail, saveVerifyContext } from "@/shared/lib/signupVerification";
 import { signInWithApple } from "@/shared/lib/nativeAuth";
-import { usePlanAvailability } from "@/shared/lib/planCatalog";
+import { usePlanAvailability, usePlanCatalog } from "@/shared/lib/planCatalog";
 import { readAnonScanId } from "@/shared/lib/scanAttribution";
 import { appleSignInEnabled } from "@/shared/lib/platform";
 import { hapticNotify, hapticSelection, hapticTap } from "@/shared/lib/native";
@@ -42,6 +42,8 @@ const Signup = () => {
   const planParam = (searchParams.get("plan") || "").toLowerCase();
   const nextParam = searchParams.get("next");
   const plans = usePlanAvailability();
+  // Lo que incluye la cuenta gratis, tal como lo deja el admin en Planes.
+  const freeFeatures = usePlanCatalog().find((plan) => plan.key === "free")?.features.slice(0, 4) ?? [];
   // A Coach link from an old email or ad falls back to Plus while Coach is hidden in Admin.
   const selectedPlan: "training" | "full" | null =
     isFree ? null : planParam === "training" ? "training" : planParam === "full" ? (plans.coach ? "full" : "training") : null;
@@ -204,9 +206,12 @@ const Signup = () => {
           }}
         />
       )}
-      <Button asChild variant="plain" size="sm" className={cn(authSecondaryActionClass, hideWithKeyboardClass)}>
-        <Link to="/login" onClick={() => void hapticTap()}>Ya tengo cuenta</Link>
-      </Button>
+      <p className={cn("flex flex-wrap items-center justify-center gap-x-1.5 type-subhead text-muted-foreground", hideWithKeyboardClass)}>
+        ¿Ya tienes cuenta?
+        <Link to="/login" onClick={() => void hapticTap()} className={cn(authSecondaryActionClass, "inline-flex w-auto items-center text-primary transition-opacity active:opacity-60")}>
+          Iniciar sesión
+        </Link>
+      </p>
       <p className="text-center type-footnote text-muted-foreground">
         Al crear una cuenta aceptas nuestros{" "}
         <Link to="/legal/terminos" className="underline underline-offset-2 active:opacity-60">términos</Link>
@@ -230,6 +235,7 @@ const Signup = () => {
       </Helmet>
 
       <AuthHero
+        kicker={false}
         mark={<AuthAppMark />}
         title="Crea tu cuenta"
         description={
@@ -285,7 +291,7 @@ const Signup = () => {
             </>
           }
         >
-          <AuthFieldRow label="Tu nombre" htmlFor="name">
+          <AuthFieldRow label="Tu nombre" htmlFor="name" icon={UserRound}>
             <Input
               id="name"
               type="text"
@@ -303,6 +309,7 @@ const Signup = () => {
           <AuthFieldRow
             label="Correo electrónico"
             htmlFor="email"
+            icon={Mail}
             trailing={checkingEmail ? <Spinner size="sm" label="Verificando correo" className="mr-4" /> : null}
           >
             <Input
@@ -328,6 +335,7 @@ const Signup = () => {
           <AuthFieldRow
             label="Contraseña"
             htmlFor="password"
+            icon={LockKeyhole}
             trailing={
               <button
                 type="button"
@@ -359,6 +367,17 @@ const Signup = () => {
           </AuthFieldRow>
         </AuthFieldGroup>
       </form>
+
+      {!hasNotices && freeFeatures.length > 0 && (
+        <ul className="mx-auto mt-6 space-y-2.5 px-1" aria-label="Incluido gratis">
+          {freeFeatures.map((feature) => (
+            <li key={feature} className="flex items-start gap-3 type-subhead text-foreground/85">
+              <Check aria-hidden="true" strokeWidth={2.5} className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+              {feature}
+            </li>
+          ))}
+        </ul>
+      )}
 
       {!fromQuiz && (
         <p className="mt-6 text-center type-subhead text-muted-foreground">

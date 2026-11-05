@@ -106,6 +106,7 @@ interface DashboardSnapshot {
   macros: Macros | null;
   meals: Meal[];
   completedThisWeek: number;
+  completedDays?: string[];
   completedToday: boolean;
 }
 
@@ -177,6 +178,7 @@ const Dashboard = () => {
   // Tras un scan, «Físico» vuelve a pedir las fotos (como la app).
   const [photosVersion, setPhotosVersion] = useState(0);
   const [completedThisWeek, setCompletedThisWeek] = useState(cached?.completedThisWeek ?? 0);
+  const [completedDays, setCompletedDays] = useState<string[]>(cached?.completedDays ?? []);
   const [completedToday, setCompletedToday] = useState(cached?.completedToday ?? false);
   const [workoutMode, setWorkoutMode] = useState(false);
   const [autoStartWorkout, setAutoStartWorkout] = useState(false);
@@ -322,6 +324,7 @@ const Dashboard = () => {
               .filter((day): day is string => Boolean(day && scheduledDays.has(day))),
           );
           setCompletedThisWeek(days.size);
+          setCompletedDays([...days]);
         }
         if (np) {
           setMacros(parseMacroTargets(np.macros_json));
@@ -341,12 +344,12 @@ const Dashboard = () => {
     writeScreen<DashboardSnapshot>(user.id, "dashboard", {
       profileName, profileAvatar, planStatus, paymentStatus, coaching, consumerPlan,
       coachAssigned, nutrition, subscriptionTier, dayPlans, macros, meals,
-      completedThisWeek, completedToday,
+      completedThisWeek, completedDays, completedToday,
     });
   }, [
     user, loading, loadError, planStatus, paymentStatus, profileName, profileAvatar, coaching,
     consumerPlan, coachAssigned, nutrition, subscriptionTier, dayPlans, macros, meals,
-    completedThisWeek, completedToday,
+    completedThisWeek, completedDays, completedToday,
   ]);
 
   useEffect(() => {
@@ -701,6 +704,7 @@ const Dashboard = () => {
             profileName={profileName}
             macros={nutrition ? macros : null}
             completedThisWeek={completedThisWeek}
+            completedDays={completedDays}
             completedToday={completedToday}
           />
           {!campaign && coaching && user && <RenewalFlow userId={user.id} subscriptionTier={subscriptionTier} />}
@@ -890,11 +894,11 @@ const Dashboard = () => {
           }}
           className="w-full min-w-0 space-y-4"
         >
-          <TabsList aria-label="Tu progreso" className="mx-auto mb-4 flex w-full max-w-md lg:max-w-lg">
-            <TabsTrigger value="evolution">Fuerza</TabsTrigger>
-            <TabsTrigger value="photos">Físico</TabsTrigger>
-            <TabsTrigger value="records">Récords</TabsTrigger>
-            <TabsTrigger value="scan">Scan</TabsTrigger>
+          {/* Control segmentado del rediseño: 44 px, fondo de tarjeta y la sección activa en dorado (igual que `SegmentedPill(gold:)` en nativo). */}
+          <TabsList aria-label="Tu progreso" className="mx-auto mb-4 flex h-11 w-full max-w-md border-0 bg-card lg:max-w-lg">
+            {([["evolution", "Fuerza"], ["photos", "Físico"], ["records", "Récords"], ["scan", "Scan"]] as const).map(([value, label]) => (
+              <TabsTrigger key={value} value={value} className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">{label}</TabsTrigger>
+            ))}
           </TabsList>
           {/* Deslizar a los lados cambia de sección, como las páginas nativas. */}
           <div

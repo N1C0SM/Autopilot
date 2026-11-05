@@ -414,6 +414,8 @@ struct WeeklyRoutineView: View {
                         if isExpanded { Circle().fill(Palette.gold) }
                         else if plan != nil { Circle().fill(Palette.secondary) }
                     }
+                    // Hoy, sin elegir: anillo dorado, igual que el selector de la web.
+                    .overlay { if isToday && !isExpanded { Circle().strokeBorder(Palette.gold.opacity(0.6), lineWidth: 1) } }
                     .contentShape(Circle())
                 }
                 .buttonStyle(.plain)

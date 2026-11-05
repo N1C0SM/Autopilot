@@ -105,7 +105,7 @@ const ForgotPassword = () => {
       />
       <form id="forgot-password-form" onSubmit={handleSubmit} className="mt-10">
         <AuthFieldGroup footer={formError ? <AuthFieldNote id="forgot-password-error" tone="error">{formError}</AuthFieldNote> : null}>
-          <AuthFieldRow label="Correo electrónico" htmlFor="email">
+          <AuthFieldRow label="Correo electrónico" htmlFor="email" icon={Mail}>
             <Input
               id="email"
               type="email"

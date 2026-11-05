@@ -560,8 +560,19 @@ struct CreateAccountView: View {
             ScrollView {
                 VStack(spacing: 28) {
                     VStack(spacing: 12) {
-                        Image(systemName: codeSent ? "envelope.badge" : "sparkles").font(.system(size: 36, weight: .semibold))
-                            .foregroundStyle(Palette.gold).accessibilityHidden(true)
+                        if codeSent {
+                            Image(systemName: "envelope.badge").font(.system(size: 36, weight: .semibold))
+                                .foregroundStyle(Palette.gold).accessibilityHidden(true)
+                        } else {
+                            // Logo con AUTOPILOT, como en el registro web (`AuthAppMark`)
+                            VStack(spacing: 12) {
+                                BrandMark(size: 56)
+                                Text("AUTOPILOT").font(.inter(size: 22, weight: .bold)).tracking(1.3)
+                            }
+                            .padding(.bottom, 10)
+                            .accessibilityElement(children: .ignore)
+                            .accessibilityLabel("Autopilot")
+                        }
                         Text(codeSent ? "Introduce el código" : "Crea tu cuenta").font(.apLargeTitle).accessibilityAddTraits(.isHeader)
                         Text(codeSent ? "Te hemos enviado un código de 8 dígitos a \(email). Escríbelo aquí para activar tu cuenta."
                                       : "Último paso para desbloquear tu plan.")
@@ -575,9 +586,9 @@ struct CreateAccountView: View {
                                     if digits != v { code = digits }
                                 }
                         } else {
-                            PillField(label: "Nombre", text: $name)
-                            PillField(label: "Correo electrónico", text: $email, contentType: .email)
-                            PillField(label: "Contraseña, mínimo 6 caracteres", text: $password, secure: true, contentType: .password)
+                            PillField(label: "Nombre", text: $name, icon: "person")
+                            PillField(label: "Correo electrónico", text: $email, contentType: .email, icon: "envelope")
+                            PillField(label: "Contraseña, mínimo 6 caracteres", text: $password, secure: true, contentType: .password, icon: "lock")
                         }
                         if let error {
                             Text(error).font(.apFootnote).foregroundStyle(Palette.destructive)

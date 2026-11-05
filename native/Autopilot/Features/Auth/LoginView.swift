@@ -23,19 +23,16 @@ struct LoginView: View {
         ScrollView {
             VStack(spacing: 28) {
                 VStack(spacing: 14) {
-                    // Icono con halo dorado
-                    ZStack {
-                        Circle()
-                            .fill(Palette.gold.opacity(0.08))
-                            .frame(width: 96, height: 96)
-                        Circle()
-                            .strokeBorder(Palette.gold.opacity(0.18), lineWidth: 1.5)
-                            .frame(width: 96, height: 96)
-                        Image("Logo").resizable().scaledToFit()
-                            .frame(width: 62, height: 62)
-                            .clipShape(Circle())
+                    // Logo: la «A» con rayo y AUTOPILOT debajo (igual que `AuthAppMark` en la web)
+                    VStack(spacing: 12) {
+                        BrandMark(size: 56)
+                        Text("AUTOPILOT")
+                            .font(.inter(size: 22, weight: .bold))
+                            .tracking(1.3)
                     }
-                    .accessibilityHidden(true)
+                    .padding(.bottom, 10)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("Autopilot")
 
                     Text(session.addingAccount ? "Añadir cuenta" : "Hola de nuevo")
                         .font(.inter(size: 28, weight: .bold))
@@ -49,11 +46,11 @@ struct LoginView: View {
                 .padding(.top, 40)
 
                 VStack(spacing: 12) {
-                    PillField(label: "Usuario o correo", text: $identifier, contentType: .username)
+                    PillField(label: "Usuario o correo", text: $identifier, contentType: .username, icon: "envelope")
                         .focused($focus, equals: .identifier)
                         .submitLabel(.next)
                         .onSubmit { focus = .password }
-                    PillField(label: "Contraseña", text: $password, secure: true, contentType: .password)
+                    PillField(label: "Contraseña", text: $password, secure: true, contentType: .password, icon: "lock")
                         .focused($focus, equals: .password)
                         .submitLabel(.go)
                         .onSubmit { Task { await submit() } }
@@ -101,9 +98,13 @@ struct LoginView: View {
                             .accessibilityHint("Elige entre las cuentas guardadas en este dispositivo")
                     }
                     if let onCreateAccount {
-                        Button("Crear una cuenta gratis") { Haptics.tap(); onCreateAccount() }
-                            .font(.apSubhead).foregroundStyle(Palette.muted).frame(minHeight: 44)
-                            .accessibilityHint("Prepara tu rutina y crea la cuenta al final")
+                        HStack(spacing: 6) {
+                            Text("¿Aún no tienes cuenta?").foregroundStyle(Palette.muted)
+                            Button("Crear una cuenta gratis") { Haptics.tap(); onCreateAccount() }
+                                .foregroundStyle(Palette.gold).frame(minHeight: 44)
+                                .accessibilityHint("Prepara tu rutina y crea la cuenta al final")
+                        }
+                        .font(.apSubhead)
                     }
                 }
             }
@@ -191,7 +192,7 @@ struct ForgotPasswordSheet: View {
                     .font(.apSubhead).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
             }
             if !sent {
-                PillField(label: "Correo electrónico", text: $email, contentType: .email)
+                PillField(label: "Correo electrónico", text: $email, contentType: .email, icon: "envelope")
                 if let error {
                     Text(error).font(.apFootnote).foregroundStyle(Palette.destructive)
                         .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 8)

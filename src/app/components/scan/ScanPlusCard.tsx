@@ -1,4 +1,5 @@
-import { Check, LockKeyhole } from "lucide-react";
+import { LockKeyhole } from "lucide-react";
+import { PlusBadge } from "@/shared/components/ui/plus-badge";
 import { Button } from "@/shared/components/ui/button";
 import { hapticTap } from "@/shared/lib/native";
 import { isIOSNative } from "@/shared/lib/platform";
@@ -17,11 +18,12 @@ export default function ScanPlusCard({ sections, onUpgrade }: { sections?: strin
         </span>
         <p className="mt-4 text-[28px] font-bold leading-tight tracking-tight">Tu scan completo, con Plus</p>
         <p className="mt-1 type-subhead text-muted-foreground">Este es tu scan básico. Con Plus ves el análisis entero de tu físico:</p>
-        <ul className="mt-4 space-y-2.5">
+        {/* Cada sección bloqueada en su fila, con la insignia Plus a la derecha. */}
+        <ul className="mt-4 space-y-2">
           {items.map((item) => (
-            <li key={item} className="flex items-start gap-2.5 type-subhead">
-              <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" strokeWidth={1.75} aria-hidden="true" />
-              {item}
+            <li key={item} className="flex min-h-14 items-center gap-3 rounded-2xl bg-secondary/60 px-4 py-3">
+              <span className="min-w-0 flex-1 type-subhead font-medium">{item}</span>
+              <PlusBadge />
             </li>
           ))}
         </ul>
