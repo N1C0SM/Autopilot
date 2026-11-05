@@ -8,7 +8,6 @@ import { Button } from "@/shared/components/ui/button";
 import { Apple, Flame } from "lucide-react";
 import { Input } from "@/shared/components/ui/input";
 import { hapticNotify, hapticTap } from "@/shared/lib/native";
-import { ProgressRing } from "@/shared/components/ui/progress-ring";
 
 export default function BasicNutrition({ userId, onEdit, onUpgrade }: { userId: string; onEdit: () => void; onUpgrade?: () => void }) {
   const [targets, setTargets] = useState<NutritionPreview | null>(null);
@@ -112,45 +111,35 @@ export default function BasicNutrition({ userId, onEdit, onUpgrade }: { userId: 
 
   return (
     <section className="w-full space-y-8 py-4">
-      <h2 className="type-title1">Tus objetivos diarios</h2>
-      <div className="flex items-center gap-6">
-        <ProgressRing
-          value={100}
-          size={144}
-          stroke={14}
-          label={`Objetivo: ${targets.calories} kcal al día`}
-        >
-          <span className="flex flex-col items-center">
-            <span className="type-figure text-[36px] font-bold leading-none tabular-nums text-foreground">
-              {targets.calories?.toLocaleString("es-ES")}
-            </span>
-            <span className="mt-1 type-footnote text-muted-foreground">kcal / día</span>
-          </span>
-        </ProgressRing>
-        <div className="flex items-center gap-3">
-          <ProgressRing
-            value={100}
-            size={64}
-            stroke={7}
-            label={`Proteína: ${targets.protein} g al día`}
-          >
-            <span className="font-rounded text-[17px] font-bold tabular-nums text-foreground">
-              {targets.protein}
-            </span>
-          </ProgressRing>
+      <div className="rounded-[22px] border border-foreground/[0.08] bg-card p-5 sm:p-7">
+        <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="type-headline tabular-nums">{targets.protein} g</p>
-            <p className="type-subhead text-muted-foreground">proteína / día</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Hoy · Objetivo</p>
+            <h2 className="mt-1.5 text-[22px] font-bold tracking-tight">Tus objetivos diarios</h2>
           </div>
+          <Button variant="outline" size="sm" onClick={onEdit}>Actualizar datos</Button>
         </div>
+        <div className="mt-6 grid gap-6 sm:grid-cols-2 sm:gap-10">
+          {[
+            { label: "Energía", value: targets.calories?.toLocaleString("es-ES"), unit: "kcal / día" },
+            { label: "Proteína", value: targets.protein, unit: "g / día" },
+          ].map((m) => (
+            <div key={m.label} role="group" aria-label={`${m.label}: ${m.value} ${m.unit}`}>
+              <p className="text-[13px] font-medium text-muted-foreground">{m.label}</p>
+              <p className="mt-1 flex items-baseline gap-1.5">
+                <span className="text-[40px] font-bold leading-none tracking-tight tabular-nums sm:text-[48px]">{m.value}</span>
+                <span className="text-[14px] text-muted-foreground">{m.unit}</span>
+              </p>
+              <div aria-hidden="true" className="mt-4 h-[3px] w-full rounded-full bg-foreground/[0.08]">
+                <div className="h-full w-full rounded-full bg-primary/70" />
+              </div>
+            </div>
+          ))}
+        </div>
+        <p className="mt-6 border-t border-foreground/[0.08] pt-4 text-[13px] leading-[18px] text-muted-foreground">
+          Estimación inicial según tus datos y objetivo. No sustituye una valoración nutricional individual.
+        </p>
       </div>
-      <p className="type-footnote text-muted-foreground">
-        Estimación inicial según tus datos y objetivo. No sustituye una valoración nutricional
-        individual.
-      </p>
-      <Button variant="plain" onClick={onEdit}>
-        Actualizar mis datos
-      </Button>
       <MealsPlusCard onUpgrade={onUpgrade} />
     </section>
   );

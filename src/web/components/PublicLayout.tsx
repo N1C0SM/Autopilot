@@ -132,7 +132,7 @@ export default function PublicLayout({ title, description, children }: { title: 
         {/* En móvil, dos columnas de enlaces y redes en línea: el pie pasa de ~1.100 px a ~600. */}
         <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-[1.4fr_1fr_1fr_1fr] sm:gap-10">
           <div className="col-span-2 sm:col-span-1">
-            <Link to="/" className="font-rounded text-[28px] font-bold tracking-tight text-primary">Autopilot</Link>
+            <Link to="/" aria-label="Autopilot, inicio" className="inline-flex items-center gap-2 text-[20px] font-bold tracking-[0.01em] text-foreground"><BrandMark size={26} />AUTOPILOT</Link>
             <p className="mt-3 max-w-xs type-subhead text-muted-foreground">Entrena con plan. Registra cada serie. Mira cómo progresas.</p>
             <Button variant="tinted" asChild className="mt-6"><Link to="/onboarding" onClick={() => void hapticTap()}>Crear mi rutina gratis</Link></Button>
             <AppStoreBadges size="compact" align="start" className="mt-5" />
