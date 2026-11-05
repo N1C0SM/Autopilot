@@ -32,7 +32,7 @@ export function LandingHero({ ctaRef }: { ctaRef: React.Ref<HTMLDivElement> }) {
         <p className="mt-5 max-w-md text-[17px] leading-[26px] text-foreground/85 sm:text-[19px] sm:leading-[28px]">Tu sistema de entrenamiento, nutrición y progreso. Simple, personal y basado en datos.</p>
         <div ref={ctaRef} className="mt-8 flex flex-col gap-3 sm:flex-row">
           <Button variant="hero" size="lg" asChild className="sm:px-8"><Link to="/onboarding" onClick={cta("hero")}>Empezar gratis <ArrowRight className="ml-1 h-4 w-4" /></Link></Button>
-          <Button variant="outline" size="lg" asChild className="rounded-full border-foreground/30 bg-transparent sm:px-8"><a href="#demo" onClick={() => { void hapticTap(); track("plan_preview_view", { source: "hero" }); }}><Play className="mr-1 h-4 w-4 fill-current" />Ver demo</a></Button>
+          <a href="#demo" onClick={() => { void hapticTap(); track("plan_preview_view", { source: "hero" }); }} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-foreground/30 px-8 text-[17px] font-semibold text-foreground transition-colors hover:bg-foreground/5 active:opacity-70"><Play className="h-4 w-4 fill-current" />Ver demo</a>
         </div>
         <ul className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-[14px] text-foreground/80">
           {["Gratis para siempre", "Sin tarjeta", "Sin compromiso"].map((t) => <li key={t} className="flex items-center gap-1.5"><Check className="h-4 w-4" />{t}</li>)}
