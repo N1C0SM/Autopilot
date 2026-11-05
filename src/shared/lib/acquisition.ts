@@ -135,8 +135,12 @@ export function isCountableVisitor(
   return true;
 }
 
+let countableOverride: boolean | null = null;
+/** Solo pruebas: fuerza si el navegador actual cuenta como visitante real. */
+export function __setCountableForTests(value: boolean | null): void { countableOverride = value; }
+
 export async function recordAcquisitionEvent(kind: AcquisitionEventKind, touch: FirstTouch | null = readFirstTouch()): Promise<void> {
-  if (isStaffDevice() || !isCountableVisitor()) return;
+  if (isStaffDevice() || !(countableOverride ?? isCountableVisitor())) return;
   try {
     await rpc("record_acquisition_event", {
       _kind: kind,
