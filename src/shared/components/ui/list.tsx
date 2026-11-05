@@ -26,7 +26,7 @@ interface ListGroupProps extends Omit<React.HTMLAttributes<HTMLElement>, "title"
 const ListGroup = ({ header, footer, inset, className, children, ...props }: ListGroupProps) => (
   <section className={className} {...props}>
     {header ? <h2 className="type-group-header px-4 pb-1.5">{header}</h2> : null}
-    <div className={cn("overflow-hidden rounded-card", inset ? "bg-secondary" : "bg-card")}>{children}</div>
+    <div className={cn("overflow-hidden rounded-card border border-foreground/[0.06]", inset ? "bg-secondary" : "bg-card")}>{children}</div>
     {footer ? <p className="px-4 pt-1.5 type-footnote text-muted-foreground">{footer}</p> : null}
   </section>
 );
@@ -80,7 +80,7 @@ const ListRow = ({
       {leading ? (
         <span className="flex shrink-0 items-center py-2">{leading}</span>
       ) : icon ? (
-        <span className="flex h-[29px] w-[29px] shrink-0 items-center justify-center rounded-[8px] bg-primary/15 text-primary [&_svg]:size-[17px] [&_svg]:stroke-[2.25]">{icon}</span>
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center text-muted-foreground [&_svg]:size-[18px] [&_svg]:stroke-[1.5]">{icon}</span>
       ) : null}
       {/* El separador nace donde empieza el texto, no en el borde de la tarjeta. */}
       <span className="flex min-h-[44px] min-w-0 flex-1 items-center gap-3 py-[11px] group-[:not(:last-child)]/row:sep-b">
@@ -102,7 +102,7 @@ const ListRow = ({
           </span>
         ) : null}
         {chevron ? (
-          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/60" strokeWidth={2.5} aria-hidden="true" />
+          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/50" strokeWidth={1.5} aria-hidden="true" />
         ) : null}
       </span>
     </>

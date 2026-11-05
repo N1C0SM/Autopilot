@@ -133,7 +133,7 @@ const PRsList = ({ userId }: Props) => {
           <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-black/10" />
         </>}
         <div className={`relative flex flex-col justify-end p-5 ${images[top.exercise_name] ? "min-h-[16rem]" : ""}`}>
-          <p className="flex items-center gap-1.5 type-subhead font-semibold text-primary"><Trophy className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />Tu mejor marca</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Tu mejor marca</p>
           <p className="mt-2 type-figure text-[64px] font-bold leading-none tracking-tight tabular-nums text-white">
             {kg(topHasEstimate ? top.estimated_1rm! : top.weight)}
             <span className="ml-1.5 type-title3 text-white/70">kg</span>
