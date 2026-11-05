@@ -48,7 +48,7 @@ function ExplainerVideo() {
     return () => { active = false; };
   }, []);
   if (!video.url) return null;
-  return <div className="mx-auto max-w-5xl px-5 pb-16 sm:px-8"><video src={video.url} poster={video.poster || undefined} controls playsInline preload="metadata" aria-label="Presentación de Autopilot" className="aspect-video w-full rounded-[28px] bg-card shadow-[0_40px_80px_-30px_rgba(0,0,0,0.7)]" /></div>;
+  return <div className="mx-auto max-w-5xl px-5 pb-16 sm:px-8"><video src={video.url} poster={video.poster || undefined} controls playsInline preload="metadata" aria-label="Presentación de Autopilot" className="aspect-video w-full rounded-2xl border border-border bg-card" /></div>;
 }
 
 export default function PublicInfo({ page }: { page: Page }) {
@@ -85,7 +85,7 @@ export default function PublicInfo({ page }: { page: Page }) {
       {page === "team" && <><TrainersSection /><TeamTestimonials /></>}
       {page === "faq" && <section className="mx-auto max-w-6xl px-5 pb-10 sm:px-8" aria-label="Respuestas">
         <Helmet><script type="application/ld+json">{JSON.stringify({ "@context": "https://schema.org", "@type": "FAQPage", mainEntity: faqs.map(faq => ({ "@type": "Question", name: faq.q, acceptedAnswer: { "@type": "Answer", text: faq.a } })) })}</script></Helmet>
-        <Accordion type="single" collapsible className="mx-auto max-w-3xl rounded-[28px] bg-card px-5 sm:px-8 [&>:last-child]:border-b-0">{faqs.map((faq, index) => <AccordionItem key={faq.q} value={`faq-${index}`}><AccordionTrigger className="min-h-14 text-left type-headline">{faq.q}</AccordionTrigger><AccordionContent>{faq.a}</AccordionContent></AccordionItem>)}</Accordion>
+        <Accordion type="single" collapsible className="mx-auto max-w-3xl rounded-2xl border border-border bg-card px-5 sm:px-8 [&>:last-child]:border-b-0">{faqs.map((faq, index) => <AccordionItem key={faq.q} value={`faq-${index}`}><AccordionTrigger className="min-h-14 text-left type-headline">{faq.q}</AccordionTrigger><AccordionContent>{faq.a}</AccordionContent></AccordionItem>)}</Accordion>
       </section>}
     </Suspense>
     <FinalCta source={`page_${page}`} />
