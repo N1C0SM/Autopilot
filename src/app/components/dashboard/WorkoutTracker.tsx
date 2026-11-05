@@ -5,7 +5,7 @@ import { supabase } from "@/shared/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Check, ChevronLeft, CloudOff, Dumbbell, Flame, Clock, CalendarDays,
-  TrendingDown, Plus, X, Trophy, Info, Play, MoreHorizontal,
+  TrendingDown, Plus, X, Info, Play, MoreHorizontal,
 } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Spinner } from "@/shared/components/ui/spinner";
@@ -1619,7 +1619,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                         {swaps[ex.name] || ex.name}
                       </span>
                       {isInSuperset && (
-                        <span className="shrink-0 rounded-full bg-primary/15 px-2 py-0.5 type-caption1 font-medium text-primary">
+                        <span className="shrink-0 rounded-full border border-foreground/15 px-2 py-0.5 type-caption1 font-medium text-muted-foreground">
                           Superserie {supersetPosition}/{supersetChain.length}
                         </span>
                       )}
@@ -1765,7 +1765,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                               ? "border-destructive text-destructive"
                               : "border-muted-foreground/40 text-muted-foreground/40";
                           return (
-                          <div key={si} aria-current={si === firstPendingIndex ? "step" : undefined} className={`pl-3 transition-colors duration-300 ${si === firstPendingIndex ? "rounded-chip ring-1 ring-inset ring-primary/50 bg-primary/5" : set.done && !isWarmup ? "rounded-chip bg-primary/10" : ""}`}>
+                          <div key={si} aria-current={si === firstPendingIndex ? "step" : undefined} className={`pl-3 transition-colors duration-300 ${si === firstPendingIndex ? "rounded-chip ring-1 ring-inset ring-primary/40" : set.done && !isWarmup ? "rounded-chip bg-foreground/[0.04]" : ""}`}>
                             <div className={`py-2 pr-2 ${si > 0 ? "sep-t" : ""}`}>
                             {/* Segmento principal de la serie */}
                             <div className={SET_GRID}>
@@ -1851,12 +1851,11 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
 
                             {livePR && (
                               <motion.div
-                                initial={prefersReducedMotion ? { opacity: 0 } : { scale: 0.7, opacity: 0 }}
-                                animate={prefersReducedMotion ? { opacity: 1 } : { scale: 1, opacity: 1 }}
-                                transition={prefersReducedMotion ? { duration: 0.2 } : { type: "spring", stiffness: 420, damping: 14 }}
+                                initial={{ opacity: 0, y: 2 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.25, ease: "easeOut" }}
                                 className="mt-2 flex w-fit origin-left items-center gap-1.5 rounded-full border border-primary/40 bg-transparent px-2.5 py-0.5 type-footnote font-semibold text-primary">
-                                <Trophy className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
-                                <span>Récord personal · {livePR}</span>
+                                                                <span>Récord personal · {livePR}</span>
                               </motion.div>
                             )}
 
@@ -2006,7 +2005,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                       </div>
                       <button type="button" aria-label="Restar 30 segundos" onClick={() => { void hapticSelection(); adjustRest(-30); }} className="h-11 min-w-11 px-2 type-body tabular-nums text-primary transition-opacity active:opacity-60 [touch-action:manipulation]">−30</button>
                       <button type="button" aria-label="Sumar 30 segundos" onClick={() => { void hapticSelection(); adjustRest(30); }} className="h-11 min-w-11 px-2 type-body tabular-nums text-primary transition-opacity active:opacity-60 [touch-action:manipulation]">+30</button>
-                      <button type="button" aria-label="Omitir descanso" onClick={() => { void hapticTap(); setRestTimer(null); }} className="-mr-2 h-11 rounded-chip bg-primary/10 px-3 type-body font-semibold text-primary transition-opacity active:opacity-60 [touch-action:manipulation]">
+                      <button type="button" aria-label="Omitir descanso" onClick={() => { void hapticTap(); setRestTimer(null); }} className="-mr-2 h-9 rounded-full border border-foreground/20 px-3.5 type-subhead font-medium text-foreground transition-opacity active:opacity-60 [touch-action:manipulation]">
                         Omitir
                       </button>
                     </div>

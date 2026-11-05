@@ -220,7 +220,7 @@ const TrainingPlanView = ({ dayPlans, initialDay, onOpenWorkout }: Props) => {
           const summary = plan ? sessionTitle(plan) : "descanso";
           // El día elegido va tintado (el relleno macizo es solo para el botón de abrir la sesión).
           const tone = isExpanded
-            ? "bg-primary/15 text-primary"
+            ? "border border-primary/60 text-foreground"
             : isToday
             ? "bg-secondary text-primary"
             : plan
