@@ -103,7 +103,7 @@ struct Card<Content: View>: View {
 
 /// Botón en píldora. `.primary` es la acción dorada (una por pantalla).
 struct PillButtonStyle: ButtonStyle {
-    enum Kind { case primary, secondary, destructive }
+    enum Kind { case primary, secondary, outline, destructive }
     var kind: Kind = .primary
     var height: CGFloat = 50
     @Environment(\.isEnabled) private var isEnabled
@@ -113,8 +113,10 @@ struct PillButtonStyle: ButtonStyle {
             .font(.apHeadline)
             .frame(maxWidth: .infinity, minHeight: height)
             .padding(.horizontal, 24)
-            .foregroundStyle(kind == .primary ? Color.black : Palette.foreground)
-            .background(kind == .primary ? Palette.gold : (kind == .destructive ? Palette.destructive : Palette.secondary), in: Capsule())
+            .foregroundStyle(kind == .primary ? Palette.background : Palette.foreground)
+            .background(kind == .primary ? Palette.gold : (kind == .destructive ? Palette.destructive : (kind == .outline ? Color.clear : Palette.secondary)), in: Capsule())
+            // Contorno claro de la portada («Ver demo», «Iniciar sesión»): acción secundaria sin relleno.
+            .overlay { if kind == .outline { Capsule().strokeBorder(Palette.foreground.opacity(0.3), lineWidth: 1) } }
             .opacity(isEnabled ? (configuration.isPressed ? 0.75 : 1) : 0.4)
             // Microinteracción: la píldora se hunde un punto al pulsarla. Con «Reducir
             // movimiento» solo cambia la opacidad (que ya es instantánea, sin animación).
@@ -127,6 +129,7 @@ struct PillButtonStyle: ButtonStyle {
 extension ButtonStyle where Self == PillButtonStyle {
     static var pill: PillButtonStyle { PillButtonStyle() }
     static var pillSecondary: PillButtonStyle { PillButtonStyle(kind: .secondary) }
+    static var pillOutline: PillButtonStyle { PillButtonStyle(kind: .outline) }
     static var pillDestructive: PillButtonStyle { PillButtonStyle(kind: .destructive) }
 }
 
