@@ -60,7 +60,7 @@ function DevicesMockup() {
   const side = [[House, "Hoy"], [Dumbbell, "Entrenamiento"], [Apple, "Nutrición"], [LineChart, "Progreso"], [BookOpen, "Academia"]] as const;
   return <div aria-hidden="true" className="relative mx-auto h-[300px] w-full max-w-[480px] sm:h-[330px]">
     <div className="absolute bottom-6 left-0 w-[78%]">
-      <div className="rounded-t-[14px] border-[6px] border-b-0 border-[#1d1c1b] bg-card p-3 shadow-2xl">
+      <div className="rounded-t-[14px] border-[6px] border-b-0 border-secondary bg-card p-3 shadow-2xl">
         <div className="flex h-[170px] gap-3 sm:h-[190px]">
           <div className="w-[30%] space-y-2.5 text-[8px] text-muted-foreground"><p className="mb-3 flex items-center gap-1 text-[9px] font-bold text-foreground"><span className="text-primary">▲</span> AUTOPILOT</p>{side.map(([I, l]) => <p key={l} className="flex items-center gap-1.5"><I className="h-2.5 w-2.5" />{l}</p>)}</div>
           <div className="flex-1"><p className="text-[13px] font-semibold">Progreso</p>
@@ -70,9 +70,9 @@ function DevicesMockup() {
               <path d="M0 82 L25 76 L45 79 L70 66 L90 68 L115 52 L135 55 L160 36 L180 30 L200 12" fill="none" stroke="hsl(var(--primary))" strokeWidth="1.6" /></svg></div>
         </div>
       </div>
-      <div className="h-3 rounded-b-[10px] bg-gradient-to-b from-[#2a2928] to-[#121110]" />
+      <div className="h-3 rounded-b-[10px] bg-gradient-to-b from-accent to-card" />
     </div>
-    <div className="absolute bottom-0 right-0 w-[40%] max-w-[190px] rounded-[30px] border-[5px] border-[#1d1c1b] bg-background p-3 shadow-2xl">
+    <div className="absolute bottom-0 right-0 w-[40%] max-w-[190px] rounded-[30px] border-[5px] border-secondary bg-background p-3 shadow-2xl">
       <div className="flex justify-between text-[8px] font-semibold"><span>9:41</span><span>●●●</span></div>
       <div className="mt-3 flex items-start justify-between"><div><p className="text-[16px] font-bold italic">Hoy</p><p className="text-[10px] text-muted-foreground">Push A</p></div><span className="grid h-6 w-6 place-items-center rounded-full bg-primary text-primary-foreground"><Play className="h-3 w-3 fill-current" /></span></div>
       <ul className="mt-3 space-y-3">{rows.map(([n, s]) => <li key={n} className="flex items-center gap-2"><span className="h-7 w-9 rounded-md bg-secondary" /><span className="flex-1 leading-tight"><span className="block text-[9px] font-semibold">{n}</span><span className="text-[8px] text-muted-foreground">{s}</span></span><Circle className="h-3 w-3 text-muted-foreground" /></li>)}</ul>
