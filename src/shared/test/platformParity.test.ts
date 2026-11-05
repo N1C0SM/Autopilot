@@ -343,6 +343,15 @@ describe("paridad web ↔ apps nativas", () => {
       expect(settingsWeb, id).toContain(`id="${id}"`);
       expect(settingsApp, id).toContain(`.id("${id}")`);
     }
+    // Onboarding de ChatGPT: preguntas en negrita, opciones en tarjetas con icono y círculo de selección.
+    const quizWeb = read("src/app/pages/Configurator.tsx");
+    const quizApp = read("native/Autopilot/Features/Auth/OnboardingView.swift");
+    for (const text of ["¿Cómo vas a entrenar?", "¿Cuál es tu objetivo principal?", "¿Dónde entrenas habitualmente?"]) {
+      expect(quizWeb, text).toContain(text);
+      expect(quizApp, text).toContain(text);
+    }
+    expect(quizWeb).toContain("<SelectMark on={on} />");
+    expect(quizApp).toContain("selectMark(on)");
   });
 
   it("Nutrición sin peso: Gratis ve «Calcula tus macros» en la web y en la app, no solo la tarjeta de Plus", () => {

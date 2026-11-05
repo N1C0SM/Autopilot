@@ -3,7 +3,7 @@ import { clearConfiguratorDraft, readConfiguratorDraft, saveConfiguratorDraft } 
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { toast } from "sonner";
-import { Check } from "lucide-react";
+import { Check, Dumbbell, Flame, HeartPulse, RefreshCw, User, Users, type LucideIcon } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Checkbox } from "@/shared/components/ui/checkbox";
@@ -25,8 +25,8 @@ const DOW = [
   { v: 4, s: "J", l: "Jueves" }, { v: 5, s: "V", l: "Viernes" }, { v: 6, s: "S", l: "Sábado" }, { v: 0, s: "D", l: "Domingo" },
 ];
 const GOALS = [
-  { v: "lose_weight", l: "Perder grasa" }, { v: "gain_muscle", l: "Ganar músculo" },
-  { v: "recomp", l: "Recomposición" }, { v: "general_health", l: "Fuerza y salud" },
+  { v: "lose_weight", l: "Perder grasa", icon: Flame }, { v: "gain_muscle", l: "Ganar músculo", icon: Dumbbell },
+  { v: "recomp", l: "Recomposición", icon: RefreshCw }, { v: "general_health", l: "Fuerza y salud", icon: HeartPulse },
 ];
 const FOCUS = [
   { v: "gimnasio", l: "Gimnasio", photo: BRAND_PHOTOS.gym },
@@ -42,7 +42,7 @@ const STYLE = [
   { v: "direct", l: "Directo y exigente" }, { v: "flexible", l: "Flexible y realista" }, { v: "technical", l: "Técnico y analítico" },
 ];
 // Filas de una línea, iguales que «Perder grasa» / «Ganar músculo».
-const MODE = [{ v: "individual", l: "Individual" }, { v: "pareja", l: "En pareja" }];
+const MODE = [{ v: "individual", l: "Individual", icon: User }, { v: "pareja", l: "En pareja", icon: Users }];
 const TIMES = Array.from({ length: 32 }, (_, i) => {
   const m = 7 * 60 + i * 30;
   return `${String(Math.floor(m / 60)).padStart(2, "0")}:${m % 60 ? "30" : "00"}`;
@@ -66,49 +66,61 @@ const draftResumeStep = (cfg: Cfg): number => {
   return 2;
 };
 
-type Option = { v: string | number; l: string; d?: string };
+type Option = { v: string | number; l: string; d?: string; icon?: LucideIcon };
+
+/** Círculo de selección del rediseño: anillo vacío o dorado con check. */
+const SelectMark = ({ on }: { on: boolean }) => (
+  <span aria-hidden="true" className={cn("flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-colors", on ? "bg-primary text-primary-foreground" : "border-2 border-foreground/25")}>
+    {on ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : null}
+  </span>
+);
 
 /** Opciones con foto, como las fichas de material de la landing: misma identidad dentro y fuera. */
 const PhotoChoices = ({ header, options, value, onChange }: {
   header: string; options: { v: string; l: string; photo: string }[]; value: string; onChange: (v: string) => void;
 }) => (
   <section>
-    <h2 className="type-group-header px-4 pb-1.5">{header}</h2>
+    <h2 className="px-1 pb-2.5 type-headline">{header}</h2>
     <div className="grid grid-cols-3 gap-2.5">
       {options.map((o) => {
         const on = o.v === value;
         return <button key={o.v} type="button" aria-pressed={on} onClick={() => { void hapticSelection(); onChange(o.v); }}
-          className={cn("relative flex aspect-[4/5] items-end overflow-hidden rounded-media bg-card p-3 text-left ring-2 transition-[transform,box-shadow] duration-200 ease-out active:scale-[0.97]", on ? "ring-primary" : "ring-transparent")}>
+          className={cn("relative flex aspect-[4/5] items-end overflow-hidden rounded-media bg-card p-3 text-left ring-2 transition-[transform,box-shadow] duration-200 ease-out active:scale-[0.97]", on ? "ring-primary" : "ring-border")}>
           <img src={o.photo} alt="" decoding="async" className="absolute inset-0 h-full w-full object-cover object-[50%_35%]" />
           <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-transparent" />
           <span className="relative type-headline text-white">{o.l}</span>
-          <Check aria-hidden="true" strokeWidth={3} className={cn("absolute right-2 top-2 h-6 w-6 rounded-full bg-primary p-1 text-primary-foreground transition-opacity", on ? "opacity-100" : "opacity-0")} />
+          <span className="absolute right-2 top-2"><SelectMark on={on} /></span>
         </button>;
       })}
     </div>
   </section>
 );
 
-const Choices = ({ header, options, value, onChange }: {
+const Choices = ({ header, options, value, onChange, columns = false }: {
   header?: string; options: Option[]; value: string | number; onChange: (v: string | number) => void;
+  /** Dos opciones lado a lado (Individual / En pareja), como la maqueta. */
+  columns?: boolean;
 }) => (
   <section>
-    {header ? <h2 className="type-group-header px-4 pb-1.5">{header}</h2> : null}
-    <div className="overflow-hidden rounded-media bg-card">
+    {header ? <h2 className="px-1 pb-2.5 type-headline">{header}</h2> : null}
+    {/* Cada opción en su tarjeta: icono, texto y círculo de selección; la elegida con borde dorado. */}
+    <div className={columns ? "grid grid-cols-2 gap-2.5" : "space-y-2.5"}>
       {options.map((o) => {
         const on = o.v === value;
+        const Icon = o.icon;
         return (
           <button key={o.v} type="button" aria-pressed={on}
             onClick={() => { void hapticSelection(); onChange(o.v); }}
-            className="group/row flex min-h-[56px] sm:min-h-[60px] w-full items-center gap-3 pl-4 sm:pl-5 text-left transition-colors duration-150 active:bg-accent">
-            <span className="flex min-h-[56px] sm:min-h-[60px] min-w-0 flex-1 items-center gap-3 py-3 sm:py-3.5 pr-4 sm:pr-5 group-[:not(:last-child)]/row:sep-b">
-              <span className="min-w-0 flex-1">
-                <span className="block type-headline sm:text-[18px]">{o.l}</span>
-                {o.d ? <span className="mt-0.5 block type-subhead sm:text-[15px] text-muted-foreground">{o.d}</span> : null}
-              </span>
-              <Check aria-hidden="true" strokeWidth={2.75}
-                className={cn("h-5 w-5 shrink-0 text-primary", on ? "opacity-100" : "opacity-0")} />
+            className={cn(
+              "flex min-h-[56px] sm:min-h-[60px] w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition-[transform,background-color,border-color] duration-150 active:scale-[0.985]",
+              on ? "border-primary bg-primary/[0.08]" : "border-border bg-card",
+            )}>
+            {Icon ? <Icon aria-hidden="true" className={cn("h-5 w-5 shrink-0", on ? "text-primary" : "text-muted-foreground")} strokeWidth={1.9} /> : null}
+            <span className="min-w-0 flex-1">
+              <span className="block type-headline sm:text-[18px]">{o.l}</span>
+              {o.d ? <span className="mt-0.5 block type-subhead sm:text-[15px] text-muted-foreground">{o.d}</span> : null}
             </span>
+            <SelectMark on={on} />
           </button>
         );
       })}
@@ -346,14 +358,14 @@ const Configurator = () => {
       <div className="mt-8 space-y-8 pb-4">
         {step === 0 && (
           <>
-            <Choices options={MODE} value={c.mode} onChange={(v) => set("mode", String(v))} />
+            <Choices header="¿Cómo vas a entrenar?" columns options={MODE} value={c.mode} onChange={(v) => set("mode", String(v))} />
             {c.mode === "pareja" && (
               <Field header="Tu pareja de entreno">
                 <Input type="email" inputMode="email" autoComplete="off" autoCapitalize="none" autoCorrect="off" spellCheck={false} enterKeyHint="done" aria-label="Email de tu pareja de entreno" placeholder="Email de tu pareja de entreno" value={c.partner_email} onChange={(e) => set("partner_email", e.target.value)} />
               </Field>
             )}
-            <Choices header="Objetivo" options={GOALS} value={c.goal} onChange={(v) => set("goal", String(v))} />
-            <PhotoChoices header={t("¿Dónde entrenas?", "¿Dónde entrenáis?")} options={FOCUS} value={c.focus} onChange={(v) => set("focus", v)} />
+            <Choices header={t("¿Cuál es tu objetivo principal?", "¿Cuál es vuestro objetivo principal?")} options={GOALS} value={c.goal} onChange={(v) => set("goal", String(v))} />
+            <PhotoChoices header={t("¿Dónde entrenas habitualmente?", "¿Dónde entrenáis habitualmente?")} options={FOCUS} value={c.focus} onChange={(v) => set("focus", v)} />
           </>
         )}
 

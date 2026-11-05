@@ -225,14 +225,14 @@ struct OnboardingDraft: Codable, Equatable {
 
 /// Opciones del configurador de la web, con los mismos valores que se guardan.
 private enum Quiz {
-    struct Option: Identifiable { let v: String; let l: String; var d: String? = nil; var id: String { v } }
+    struct Option: Identifiable { let v: String; let l: String; var d: String? = nil; var icon: String? = nil; var id: String { v } }
     struct Day: Identifiable { let v: Int; let s: String; let l: String; var id: Int { v } }
 
-    static let goals = [Option(v: "lose_weight", l: "Perder grasa"), Option(v: "gain_muscle", l: "Ganar músculo"),
-                        Option(v: "recomp", l: "Recomposición"), Option(v: "general_health", l: "Fuerza y salud")]
+    static let goals = [Option(v: "lose_weight", l: "Perder grasa", icon: "flame"), Option(v: "gain_muscle", l: "Ganar músculo", icon: "dumbbell"),
+                        Option(v: "recomp", l: "Recomposición", icon: "arrow.triangle.2.circlepath"), Option(v: "general_health", l: "Fuerza y salud", icon: "heart.text.square")]
     static let focuses = [Option(v: "gimnasio", l: "Gimnasio"), Option(v: "calistenia", l: "Calistenia"), Option(v: "mixto", l: "Mixto")]
     // Filas de una línea, iguales que «Perder grasa» / «Ganar músculo».
-    static let modes = [Option(v: "individual", l: "Individual"), Option(v: "pareja", l: "En pareja")]
+    static let modes = [Option(v: "individual", l: "Individual", icon: "person"), Option(v: "pareja", l: "En pareja", icon: "person.2")]
     static let durations = [Option(v: "40", l: "30–45 min"), Option(v: "55", l: "45–60 min"), Option(v: "75", l: "60–90 min")]
     static let structures = [Option(v: "full_body", l: "Full Body"), Option(v: "torso_pierna", l: "Torso / Pierna"),
                              Option(v: "ppl", l: "Empuje / Tirón / Pierna"), Option(v: "coach", l: "No lo sé, que Autopilot elija")]
@@ -317,12 +317,12 @@ struct OnboardingQuizView: View {
     @ViewBuilder private var content: some View {
         switch step {
         case 0:
-            choices(nil, Quiz.modes, c.mode) { c.mode = $0 }
+            choices("¿Cómo vas a entrenar?", Quiz.modes, c.mode, columns: true) { c.mode = $0 }
             if c.duo {
                 group("Tu pareja de entreno") { PillField(label: "Email de tu pareja de entreno", text: $c.partnerEmail, contentType: .email) }
             }
-            choices("Objetivo", Quiz.goals, c.goal) { c.goal = $0 }
-            group(t("¿Dónde entrenas?", "¿Dónde entrenáis?")) {
+            choices(t("¿Cuál es tu objetivo principal?", "¿Cuál es vuestro objetivo principal?"), Quiz.goals, c.goal) { c.goal = $0 }
+            question(t("¿Dónde entrenas habitualmente?", "¿Dónde entrenáis habitualmente?")) {
                 HStack(spacing: 10) { ForEach(Quiz.focuses) { photoChoice($0) } }
             }
         case 1:
@@ -409,28 +409,58 @@ struct OnboardingQuizView: View {
         }
     }
 
-    private func choices(_ header: String?, _ options: [Quiz.Option], _ value: String, _ set: @escaping (String) -> Void) -> some View {
-        let list = VStack(spacing: 0) {
-            ForEach(Array(options.enumerated()), id: \.element.id) { i, o in
-                Button { Haptics.selection(); set(o.v) } label: {
-                    HStack(spacing: 12) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(o.l).font(.apHeadline)
-                            if let d = o.d { Text(d).font(.apSubhead).foregroundStyle(Palette.muted) }
-                        }
-                        Spacer(minLength: 0)
-                        Image(systemName: "checkmark").font(.system(size: 17, weight: .bold)).foregroundStyle(Palette.gold)
-                            .opacity(o.v == value ? 1 : 0)
-                    }
-                    .padding(.horizontal, 16).frame(minHeight: 56).contentShape(Rectangle())
-                    .overlay(alignment: .bottom) { if i < options.count - 1 { Palette.separator.frame(height: 0.5).padding(.leading, 16) } }
-                }
-                .buttonStyle(.plain)
-                .accessibilityAddTraits(o.v == value ? .isSelected : [])
+    /// Pregunta del rediseño (como `type-headline` de la web) sobre sus opciones.
+    private func question<Content: View>(_ header: String, @ViewBuilder _ content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(header).font(.apHeadline).padding(.horizontal, 4).accessibilityAddTraits(.isHeader)
+            content()
+        }
+    }
+
+    /// Círculo de selección del rediseño: anillo vacío o dorado con check (`SelectMark` de la web).
+    private func selectMark(_ on: Bool) -> some View {
+        ZStack {
+            if on {
+                Circle().fill(Palette.gold)
+                Image(systemName: "checkmark").font(.system(size: 11, weight: .heavy)).foregroundStyle(Color.black)
+            } else {
+                Circle().strokeBorder(Palette.foreground.opacity(0.25), lineWidth: 2)
             }
         }
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-        return Group { if let header { group(header) { list } } else { list } }
+        .frame(width: 24, height: 24)
+        .accessibilityHidden(true)
+    }
+
+    /// Cada opción en su tarjeta (maqueta de ChatGPT): icono, texto y círculo; la elegida con borde dorado.
+    private func choices(_ header: String?, _ options: [Quiz.Option], _ value: String, columns: Bool = false, _ set: @escaping (String) -> Void) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
+        let cards = ForEach(options) { o in
+            let on = o.v == value
+            Button { Haptics.selection(); set(o.v) } label: {
+                HStack(spacing: 12) {
+                    if let icon = o.icon {
+                        Image(systemName: icon).font(.system(size: 18)).foregroundStyle(on ? Palette.gold : Palette.muted)
+                            .frame(width: 22).accessibilityHidden(true)
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(o.l).font(.apHeadline).lineLimit(2).minimumScaleFactor(0.85)
+                        if let d = o.d { Text(d).font(.apSubhead).foregroundStyle(Palette.muted) }
+                    }
+                    Spacer(minLength: 0)
+                    selectMark(on)
+                }
+                .padding(.horizontal, 16).padding(.vertical, 12).frame(minHeight: 56)
+                .background(on ? Palette.gold.opacity(0.08) : Palette.card, in: shape)
+                .overlay(shape.strokeBorder(on ? Palette.gold : Color.white.opacity(0.08), lineWidth: 1))
+                .contentShape(shape)
+            }
+            .buttonStyle(.plain)
+            .accessibilityAddTraits(on ? .isSelected : [])
+        }
+        let list = Group {
+            if columns { HStack(spacing: 10) { cards } } else { VStack(spacing: 10) { cards } }
+        }
+        return Group { if let header { question(header) { list } } else { list } }
     }
 
     private func photoChoice(_ o: Quiz.Option) -> some View {
@@ -446,12 +476,9 @@ struct OnboardingQuizView: View {
                 .overlay(alignment: .bottomLeading) {
                     Text(o.l).font(.apHeadline).foregroundStyle(.white).lineLimit(1).minimumScaleFactor(0.8).padding(12)
                 }
-            .overlay(alignment: .topTrailing) {
-                Image(systemName: "checkmark.circle.fill").font(.system(size: 24)).foregroundStyle(Color.black, Palette.gold)
-                    .padding(8).opacity(on ? 1 : 0)
-            }
+            .overlay(alignment: .topTrailing) { selectMark(on).padding(8) }
             .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).stroke(on ? Palette.gold : .clear, lineWidth: 2))
+            .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).stroke(on ? Palette.gold : Color.white.opacity(0.12), lineWidth: 2))
         }
         .buttonStyle(.pressableCard)
         .accessibilityLabel(o.l).accessibilityAddTraits(on ? .isSelected : [])
