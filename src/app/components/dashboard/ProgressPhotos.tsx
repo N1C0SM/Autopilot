@@ -671,17 +671,18 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
 
       {/* Aún no hay dos fotos del mismo ángulo: aviso con el patrón de la bienvenida */}
       {ready && photos.length > 0 && posePhotos.length < 2 && (
-        <section className="flex items-start gap-3.5 rounded-media bg-card p-4">
-          <IconTile icon={Columns2} />
-          <div className="min-w-0 flex-1">
-            <h2 className="type-headline">Compara tu evolución</h2>
+        <section className="rounded-[22px] border border-border bg-card p-5">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Antes · Después</p>
+            <h2 className="mt-2 text-[22px] font-semibold tracking-tight">Compara tu evolución</h2>
             <p className="mt-1 type-subhead text-muted-foreground">
               Con dos scans del mismo ángulo verás el antes y el después lado a lado.
             </p>
             {onGoScan && (
               <Button
-                variant="plain"
-                className="-ml-4 mt-0.5"
+                variant="outline"
+                size="sm"
+                className="mt-4"
                 onClick={() => {
                   void hapticTap();
                   onGoScan();

@@ -116,9 +116,9 @@ const WorkoutProgress = ({ userId, compact = false }: Props) => {
           <div className={`relative flex items-end gap-2 p-5 ${exerciseImages[selectedExercise] ? "min-h-[11rem]" : ""}`}>
             <span className="min-w-0 flex-1">
               <span className="block type-footnote font-semibold text-primary">{historyByExercise[selectedExercise]?.length ?? 0} {(historyByExercise[selectedExercise]?.length ?? 0) === 1 ? "sesión" : "sesiones"}</span>
-              <span className="mt-0.5 block text-[26px] font-bold leading-tight tracking-tight text-white">{selectedExercise}</span>
+              <span className="mt-0.5 block text-[26px] font-semibold leading-tight tracking-tight text-white">{selectedExercise}</span>
             </span>
-            <ChevronsUpDown className="mb-1 h-5 w-5 shrink-0 text-white/70" strokeWidth={2} aria-hidden="true" />
+            <ChevronsUpDown className="mb-1 h-5 w-5 shrink-0 text-white/70" strokeWidth={1.5} aria-hidden="true" />
           </div>
           <select
             aria-label="Ejercicio"
@@ -168,7 +168,7 @@ const WorkoutProgress = ({ userId, compact = false }: Props) => {
           className={compact ? "flex-1 py-8" : "py-8"}
         />
       ) : (
-        <div className={compact ? "mt-3 flex flex-1 flex-col rounded-media bg-card p-4" : "mt-3 rounded-media bg-card p-4"}>
+        <div className={compact ? "mt-3 flex flex-1 flex-col rounded-[22px] border border-border bg-card p-5" : "mt-3 rounded-[22px] border border-border bg-card p-5"}>
           <ExerciseProgressChart
             compact={compact}
             exerciseName={selectedExercise}
