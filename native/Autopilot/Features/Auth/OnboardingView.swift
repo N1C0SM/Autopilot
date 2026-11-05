@@ -565,9 +565,9 @@ struct CreateAccountView: View {
                                 .foregroundStyle(Palette.gold).accessibilityHidden(true)
                         } else {
                             // Logo con AUTOPILOT, como en el registro web (`AuthAppMark`)
-                            VStack(spacing: 12) {
-                                BrandMark(size: 56)
-                                Text("AUTOPILOT").font(.inter(size: 22, weight: .bold)).tracking(1.3)
+                            VStack(spacing: 10) {
+                                BrandMark(size: 44)
+                                Text("AUTOPILOT").font(.inter(size: 20, weight: .bold)).tracking(1.3)
                             }
                             .padding(.bottom, 10)
                             .accessibilityElement(children: .ignore)

@@ -258,10 +258,10 @@ describe("paridad web ↔ apps nativas", () => {
     const authWeb = read("src/app/components/auth/AuthScreenParts.tsx");
     const loginApp = read("native/Autopilot/Features/Auth/LoginView.swift");
     const signupApp = read("native/Autopilot/Features/Auth/OnboardingView.swift");
-    expect(authWeb).toContain("<BrandMark size={56} />");
+    expect(authWeb).toContain("<BrandMark size={44} />");
     expect(authWeb).toContain("AUTOPILOT</span>");
     for (const app of [loginApp, signupApp]) {
-      expect(app).toContain("BrandMark(size: 56)");
+      expect(app).toContain("BrandMark(size: 44)");
       expect(app).toContain('Text("AUTOPILOT")');
     }
     expect(read("src/app/pages/Login.tsx")).toContain("icon={LockKeyhole}");

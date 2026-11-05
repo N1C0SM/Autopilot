@@ -24,10 +24,10 @@ struct LoginView: View {
             VStack(spacing: 28) {
                 VStack(spacing: 14) {
                     // Logo: la «A» con rayo y AUTOPILOT debajo (igual que `AuthAppMark` en la web)
-                    VStack(spacing: 12) {
-                        BrandMark(size: 56)
+                    VStack(spacing: 10) {
+                        BrandMark(size: 44)
                         Text("AUTOPILOT")
-                            .font(.inter(size: 22, weight: .bold))
+                            .font(.inter(size: 20, weight: .bold))
                             .tracking(1.3)
                     }
                     .padding(.bottom, 10)

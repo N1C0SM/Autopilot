@@ -11,8 +11,8 @@ import { cn } from "@/shared/lib/utils";
 /** Logo de la app: la «A» con rayo en dorado y la palabra AUTOPILOT debajo (igual en iPhone y Mac). */
 export const AuthAppMark = ({ className }: { className?: string }) => (
   <div className={cn("mx-auto flex flex-col items-center", className)}>
-    <BrandMark size={56} />
-    <span className="mt-3 text-[22px] font-bold leading-none tracking-[0.06em] text-foreground">AUTOPILOT</span>
+    <BrandMark size={44} />
+    <span className="mt-2.5 text-[20px] font-bold leading-none tracking-[0.06em] text-foreground">AUTOPILOT</span>
   </div>
 );
 
