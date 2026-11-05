@@ -33,16 +33,16 @@ describe("short public home", () => {
   it("takes the clear primary action to the routine configurator", async () => {
     open();
     const main = await screen.findByRole("main");
-    expect(within(main).getByRole("heading", { level: 1 })).toHaveTextContent("Entrena con plan.");
+    expect(within(main).getByRole("heading", { level: 1 })).toHaveTextContent("Convierte la disciplina");
     expect(within(main).getByRole("img", { name: "Pantalla de Autopilot con el entrenamiento del día" })).toBeInTheDocument();
-    fireEvent.click(within(main).getAllByRole("link", { name: /Crear mi rutina gratis/ })[0]);
+    fireEvent.click(within(main).getAllByRole("link", { name: /Empezar gratis/ })[0]);
     expect(screen.getByTestId("destination")).toHaveTextContent("/onboarding");
   });
 
   it("shows demo, real prices and the four key questions on the home", async () => {
     open();
     const main = await screen.findByRole("main");
-    expect(within(main).getByRole("link", { name: "Probar la demo" })).toHaveAttribute("href", "#demo");
+    expect(within(main).getByRole("link", { name: /Ver demo/ })).toHaveAttribute("href", "#demo");
     expect(main.querySelector("#demo")).not.toBeNull();
     // Plus price appears in several pricing blocks on purpose; it must appear at least once.
     expect((await within(main).findAllByText("14,99 €")).length).toBeGreaterThan(0);
