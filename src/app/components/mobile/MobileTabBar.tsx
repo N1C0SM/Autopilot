@@ -1,4 +1,4 @@
-import { MessageCircle, Dumbbell, Apple, TrendingUp, Home, type LucideIcon } from "lucide-react";
+import { MessageCircle, Dumbbell, Flame as Apple, TrendingUp, Home, type LucideIcon } from "lucide-react";
 import type { UserSection } from "@/app/components/UserSidebar";
 import FloatingMobileNav from "@/app/components/mobile/FloatingMobileNav";
 

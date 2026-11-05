@@ -102,8 +102,8 @@ const NotificationsBell = ({ userId }: Props) => {
           onClick={() => void hapticTap()}
         >
           {/* Mismo círculo que el avatar: todos los botones de la barra hablan igual. */}
-          <span className="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-secondary">
-            <Bell className="h-[17px] w-[17px]" strokeWidth={2.25} aria-hidden="true" />
+          <span className="flex h-[30px] w-[30px] items-center justify-center">
+            <Bell className="h-[17px] w-[17px]" strokeWidth={1.5} aria-hidden="true" />
           </span>
           {unreadCount > 0 && (
             <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 type-caption2 font-bold tabular-nums text-primary-foreground">
