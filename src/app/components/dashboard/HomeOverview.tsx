@@ -1,6 +1,6 @@
 import { readMealsDone as readMealsDoneFor } from "@/shared/lib/mealsDone";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { Apple, Check, ChevronRight, Clock, LockKeyhole, TrendingUp } from "lucide-react";
+import { Flame as Apple, Check, ChevronRight, Clock, LockKeyhole, TrendingUp } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { EmptyState } from "@/shared/components/ui/empty-state";
 import { supabase } from "@/shared/integrations/supabase/client";

@@ -1,5 +1,4 @@
 import { createPortal } from "react-dom";
-import { motion } from "framer-motion";
 import type { ComponentType } from "react";
 import type { LucideIcon } from "lucide-react";
 import { Lock } from "lucide-react";
@@ -66,20 +65,13 @@ const FloatingMobileNav = ({ active, items, label, layoutId, onChange, className
                 isActive ? "text-primary" : "text-muted-foreground"
               }`}
             >
-              {isActive && (
-                <motion.span
-                  layoutId={`${layoutId}-active`}
-                  className="absolute inset-0 rounded-full bg-secondary"
-                  transition={{ type: "spring", stiffness: 380, damping: 36 }}
-                />
-              )}
               <span className="relative z-10 flex h-7 items-center justify-center">
-                {isActive && ActiveIcon ? <ActiveIcon className="h-6 w-6" /> : <Icon className="h-6 w-6" strokeWidth={isActive ? 2.25 : 2} />}
+                {isActive && ActiveIcon ? <ActiveIcon className="h-[22px] w-[22px]" /> : <Icon className="h-[22px] w-[22px]" strokeWidth={1.5} />}
                 {locked && (
                   <Lock className="absolute -bottom-0.5 -right-2 h-3 w-3 rounded-full bg-card p-[1px] text-muted-foreground" />
                 )}
               </span>
-              <span className="relative z-10 max-w-full truncate px-0.5 type-caption2 font-medium">
+              <span className="relative z-10 max-w-full truncate px-0.5 text-[10.5px] font-medium tracking-[0.01em]">
                 {itemLabel}
               </span>
             </button>

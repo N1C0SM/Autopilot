@@ -10,7 +10,7 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/shared/components/ui/sidebar";
-import { Home, Dumbbell, Apple, MessageCircle, Settings, LogOut, Sparkles, Lock, ArrowLeftRight } from "lucide-react";
+import { Home, Dumbbell, Flame as Apple, MessageCircle, Settings, LogOut, TrendingUp as Sparkles, Lock, ArrowLeftRight } from "lucide-react";
 import { openAccountPicker } from "@/shared/lib/accounts";
 import { supportsMultipleAccounts } from "@/shared/lib/platform";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/tooltip";
@@ -93,7 +93,7 @@ const UserSidebar = ({
                     tooltip={hint}
                     onClick={() => { void hapticTap(); onNavigate(item.section); }}
                     aria-current={isActive ? "page" : undefined}
-                    className="data-[active=true]:bg-primary/15 data-[active=true]:hover:bg-primary/20"
+                    className="data-[active=true]:bg-transparent data-[active=true]:text-primary data-[active=true]:font-semibold [&_svg]:stroke-[1.5]"
                   >
                     <item.icon aria-hidden="true" />
                     {!collapsed && (
