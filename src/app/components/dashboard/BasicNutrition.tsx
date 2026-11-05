@@ -1,7 +1,7 @@
-import MealsPlusCard from "@/app/components/dashboard/MealsPlusCard";
+import NutritionPlusSection from "@/app/components/dashboard/NutritionPlusSection";
 import { useEffect, useState } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
-import { resolveNutritionPreview, type NutritionPreview } from "@/shared/lib/nutrition";
+import { parseMacroTargets, resolveNutritionPreview, type MacroTargets, type NutritionPreview } from "@/shared/lib/nutrition";
 import { Spinner } from "@/shared/components/ui/spinner";
 import { EmptyState } from "@/shared/components/ui/empty-state";
 import { Button } from "@/shared/components/ui/button";
@@ -11,6 +11,8 @@ import { hapticNotify, hapticTap } from "@/shared/lib/native";
 
 export default function BasicNutrition({ userId, onEdit, onUpgrade }: { userId: string; onEdit: () => void; onUpgrade?: () => void }) {
   const [targets, setTargets] = useState<NutritionPreview | null>(null);
+  /** Macros guardados del plan (si los hay): carbohidratos y grasas en la tarjeta de calorías. */
+  const [saved, setSaved] = useState<MacroTargets | null>(null);
   const [failed, setFailed] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -41,6 +43,7 @@ export default function BasicNutrition({ userId, onEdit, onUpgrade }: { userId: 
         const preview = resolveNutritionPreview({ ...(ob.data ?? {}), weight }, plan.data?.macros_json);
         
         setTargets(preview);
+        setSaved(parseMacroTargets(plan.data?.macros_json));
         setFailed(false);
       } catch (error) {
         console.error("Error in BasicNutrition load:", error);
@@ -103,44 +106,48 @@ export default function BasicNutrition({ userId, onEdit, onUpgrade }: { userId: 
   if (!targets.hasWeight) {
     return (
       <section className="w-full space-y-8 py-4">
+        <p className="-mb-4 -mt-3 type-subhead text-muted-foreground md:hidden">Plan de alimentación básico.</p>
         <MacrosWeightCard userId={userId} />
-        <MealsPlusCard onUpgrade={onUpgrade} />
+        <NutritionPlusSection onUpgrade={onUpgrade} />
       </section>
     );
   }
 
   return (
     <section className="w-full space-y-8 py-4">
-      <div className="rounded-[22px] border border-foreground/[0.08] bg-card p-5 sm:p-7">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Hoy · Objetivo</p>
-            <h2 className="mt-1.5 text-[22px] font-bold tracking-tight">Tus objetivos diarios</h2>
+      <p className="-mb-4 -mt-3 type-subhead text-muted-foreground md:hidden">Plan de alimentación básico.</p>
+      {/* Calorías del día y macros a la derecha (maqueta de ChatGPT); solo cifras reales del plan o del cálculo inicial. */}
+      <div className="rounded-[22px] border border-border bg-card p-5">
+        <div className="flex items-center gap-4">
+          <div role="group" aria-label={`Calorías diarias: ${targets.calories?.toLocaleString("es-ES")} kcal`} className="flex min-w-0 flex-1 items-center gap-3">
+            <Flame aria-hidden className="h-9 w-9 shrink-0 text-primary" strokeWidth={1.75} />
+            <span className="min-w-0">
+              <span className="block type-footnote text-muted-foreground">Calorías diarias</span>
+              <span className="block whitespace-nowrap text-[28px] font-bold leading-tight tracking-tight tabular-nums">
+                {targets.calories?.toLocaleString("es-ES")}<span className="ml-1 text-[17px] font-semibold">kcal</span>
+              </span>
+            </span>
           </div>
-          <Button variant="outline" size="sm" onClick={onEdit}>Actualizar datos</Button>
+          <ul aria-label="Macros del día" className="shrink-0 space-y-1.5 border-l border-border pl-4">
+            {[
+              { label: "Proteína", value: targets.protein, dot: "bg-primary" },
+              { label: "Carbohidratos", value: saved ? Math.round(saved.carbs) : null, dot: "bg-primary/60" },
+              { label: "Grasas", value: saved ? Math.round(saved.fats) : null, dot: "bg-primary/30" },
+            ].filter((m) => m.value !== null).map((m) => (
+              <li key={m.label} className="flex items-center gap-2 type-footnote">
+                <span aria-hidden className={`h-2 w-2 shrink-0 rounded-full ${m.dot}`} />
+                <span className="text-muted-foreground">{m.label}</span>
+                <span className="ml-auto pl-3 font-semibold tabular-nums">{m.value} g</span>
+              </li>
+            ))}
+          </ul>
         </div>
-        <div className="mt-6 grid gap-6 sm:grid-cols-2 sm:gap-10">
-          {[
-            { label: "Energía", value: targets.calories?.toLocaleString("es-ES"), unit: "kcal / día" },
-            { label: "Proteína", value: targets.protein, unit: "g / día" },
-          ].map((m) => (
-            <div key={m.label} role="group" aria-label={`${m.label}: ${m.value} ${m.unit}`}>
-              <p className="text-[13px] font-medium text-muted-foreground">{m.label}</p>
-              <p className="mt-1 flex items-baseline gap-1.5">
-                <span className="text-[40px] font-bold leading-none tracking-tight tabular-nums sm:text-[48px]">{m.value}</span>
-                <span className="text-[14px] text-muted-foreground">{m.unit}</span>
-              </p>
-              <div aria-hidden="true" className="mt-4 h-[3px] w-full rounded-full bg-foreground/[0.08]">
-                <div className="h-full w-full rounded-full bg-primary/70" />
-              </div>
-            </div>
-          ))}
+        <div className="mt-4 flex items-end justify-between gap-4 border-t border-border pt-3">
+          <p className="type-caption1 text-muted-foreground">Estimación inicial según tus datos y objetivo. No sustituye una valoración nutricional individual.</p>
+          <Button variant="outline" size="sm" className="shrink-0" onClick={onEdit}>Actualizar datos</Button>
         </div>
-        <p className="mt-6 border-t border-foreground/[0.08] pt-4 text-[13px] leading-[18px] text-muted-foreground">
-          Estimación inicial según tus datos y objetivo. No sustituye una valoración nutricional individual.
-        </p>
       </div>
-      <MealsPlusCard onUpgrade={onUpgrade} />
+      <NutritionPlusSection onUpgrade={onUpgrade} />
     </section>
   );
 }

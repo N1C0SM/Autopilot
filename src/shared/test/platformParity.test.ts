@@ -320,6 +320,17 @@ describe("paridad web ↔ apps nativas", () => {
     }
     expect(progressWeb).toContain("exerciseRecord(history)");
     expect(progressApp).toContain("static func record(_ entries: [ExerciseEntry])");
+    // Nutrición de ChatGPT (Gratis): tarjeta de calorías con macros y «Más en Plus» con candados, sin pagos externos en la app.
+    const nutritionWeb = read("src/app/components/dashboard/BasicNutrition.tsx") + read("src/app/components/dashboard/NutritionPlusSection.tsx");
+    const nutritionApp = read("native/Autopilot/Features/Other/OtherViews.swift");
+    for (const text of ["Plan de alimentación básico.", "Calorías diarias", "Carbohidratos", "Grasas", "Más en Plus", "Desbloquea tu plan de comidas completo y personalizado.",
+      "Comidas de cada día", "Ajustadas a tus macros y a lo que te gusta.", "Seguimiento de macros", "Marca cada comida y se suman sus macros.", "Menú a tu gusto", "Regenera tus comidas cuando quieras.", "Incluido en Plus",
+      "Estimación inicial según tus datos y objetivo. No sustituye una valoración nutricional individual."]) {
+      expect(nutritionWeb, text).toContain(text);
+      expect(nutritionApp, text).toContain(text);
+    }
+    expect(nutritionWeb).toContain("onUpgrade && !isIOSNative()");
+    expect(nutritionApp).not.toContain("Descubre Autopilot Plus");
   });
 
   it("Nutrición sin peso: Gratis ve «Calcula tus macros» en la web y en la app, no solo la tarjeta de Plus", () => {

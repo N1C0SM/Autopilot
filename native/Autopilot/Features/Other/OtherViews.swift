@@ -76,6 +76,12 @@ struct NutritionView: View {
                 if failed {
                     retryCard
                 } else if loaded {
+                    // Subtítulo de la maqueta para Gratis, bajo el título grande (en Mac la barra lleva su pista).
+                    #if os(iOS)
+                    if hasAccess == false && singleColumn {
+                        Text("Plan de alimentación básico.").font(.apSubhead).foregroundStyle(Palette.muted).padding(.bottom, -16)
+                    }
+                    #endif
                     content
                 } else {
                     // Skeleton en vez de una pantalla vacía mientras llega la red.
@@ -91,6 +97,87 @@ struct NutritionView: View {
         .task { await load() }
     }
 
+    /// Lo que Plus añade a Nutrición (`NUTRITION_PLUS_ROWS` de la web): solo funciones reales.
+    struct PlusRow: Hashable { let symbol: String; let title: String; let detail: String }
+    static let plusRows = [
+        PlusRow(symbol: "fork.knife", title: "Comidas de cada día", detail: "Ajustadas a tus macros y a lo que te gusta."),
+        PlusRow(symbol: "chart.bar", title: "Seguimiento de macros", detail: "Marca cada comida y se suman sus macros."),
+        PlusRow(symbol: "arrow.triangle.2.circlepath", title: "Menú a tu gusto", detail: "Regenera tus comidas cuando quieras."),
+    ]
+
+    /// «Más en Plus» (maqueta de ChatGPT): filas con candado; sin enlace a pagos externos en la app.
+    private var plusSection: some View {
+        let card = RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+        return VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Más en Plus").font(.apTitle2)
+                Text("Desbloquea tu plan de comidas completo y personalizado.").font(.apSubhead).foregroundStyle(Palette.muted)
+            }
+            ForEach(Self.plusRows, id: \.self) { row in
+                HStack(spacing: 14) {
+                    Image(systemName: row.symbol).font(.system(size: 19)).foregroundStyle(Palette.muted)
+                        .frame(width: 24).accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(row.title).font(.apHeadline)
+                        Text(row.detail).font(.apFootnote).foregroundStyle(Palette.muted)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    Image(systemName: "lock.fill").font(.system(size: 13, weight: .semibold)).foregroundStyle(Palette.gold)
+                        .accessibilityLabel("Incluido en Plus")
+                }
+                .padding(.horizontal, 16).padding(.vertical, 12)
+                .frame(maxWidth: .infinity, minHeight: 72, alignment: .leading)
+                .background(Palette.card, in: card)
+                .overlay(card.strokeBorder(Color.white.opacity(0.08), lineWidth: 1))
+            }
+            Text("Incluido en Plus").font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.gold)
+        }
+    }
+
+    /// Calorías del día con los macros a la derecha (maqueta de ChatGPT), igual que `BasicNutrition` de la web.
+    private func caloriesCard(kcal: Double, p: Double, c: Double, f: Double) -> some View {
+        let card = RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+        let rows: [(String, Double, Color)] = [("Proteína", p, Palette.gold), ("Carbohidratos", c, Palette.gold.opacity(0.6)), ("Grasas", f, Palette.gold.opacity(0.3))]
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 16) {
+                HStack(spacing: 12) {
+                    Image(systemName: "flame").font(.system(size: 30)).foregroundStyle(Palette.gold).accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("Calorías diarias").font(.apFootnote).foregroundStyle(Palette.muted)
+                        (Text(NumberText.integer(Int(kcal))).font(.inter(size: 28, weight: .bold).monospacedDigit())
+                            + Text(" kcal").font(.inter(size: 17, weight: .semibold)))
+                            .lineLimit(1).minimumScaleFactor(0.7)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityElement(children: .combine)
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(rows.filter { $0.1 > 0 }, id: \.0) { row in
+                        HStack(spacing: 8) {
+                            Circle().fill(row.2).frame(width: 8, height: 8)
+                            Text(row.0).font(.apFootnote).foregroundStyle(Palette.muted)
+                            Spacer(minLength: 12)
+                            Text("\(Int(row.1.rounded())) g").font(.apFootnote.weight(.semibold).monospacedDigit())
+                        }
+                        .accessibilityElement(children: .combine)
+                    }
+                }
+                .fixedSize()
+                .padding(.leading, 16)
+                .overlay(alignment: .leading) { Rectangle().fill(Color.white.opacity(0.08)).frame(width: 1) }
+            }
+            Text("Estimación inicial según tus datos y objetivo. No sustituye una valoración nutricional individual.")
+                .font(.apCaption).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 12)
+                .overlay(alignment: .top) { Rectangle().fill(Color.white.opacity(0.08)).frame(height: 1) }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Palette.card, in: card)
+        .overlay(card.strokeBorder(Color.white.opacity(0.08), lineWidth: 1))
+    }
+
     @ViewBuilder private var content: some View {
         let p = macros?.protein ?? 0, c = macros?.carbs ?? 0, f = macros?.fats ?? 0
         let energy = p * 4 + c * 4 + f * 9
@@ -102,16 +189,17 @@ struct NutritionView: View {
             VStack(alignment: .leading, spacing: 32) {
                 if let id = session.userId { MacrosWeightCard(userId: id) { await load() } }
                 if hasAccess == false {
-                    // Sin Plus (la RLS no deja leer el plan): el aviso de Plus debajo.
-                    EmptyCard(photo: Self.defaultDish, title: "Tus comidas, hechas para ti",
-                              message: "Con Plus, Autopilot te prepara las comidas de cada día con tus gustos, alergias y objetivo del onboarding, ajustadas a tus macros. Incluido en Plus.")
+                    // Sin Plus (la RLS no deja leer el plan): «Más en Plus» debajo, como la web.
+                    plusSection
                 }
             }
         } else {
             // Una sola columna, como la web (también en Mac): el resumen arriba y las comidas debajo.
             VStack(alignment: .leading, spacing: 32) {
                 VStack(alignment: .leading, spacing: 32) {
-                    if hasMeals || showTargets { summary(kcal: kcal, p: p, c: c, f: f, energy: energy, hasMeals: hasMeals, showTargets: showTargets) }
+                    // Sin comidas, la tarjeta de calorías de la maqueta; con comidas, el resumen con su anillo.
+                    if hasMeals { summary(kcal: kcal, p: p, c: c, f: f, energy: energy, hasMeals: hasMeals, showTargets: showTargets) }
+                    else if showTargets { caloriesCard(kcal: kcal, p: p, c: c, f: f) }
                     if hasMeals && macros == nil { macroNotice }
                 }
                 if hasMeals {
@@ -123,9 +211,8 @@ struct NutritionView: View {
                             Task { await generateMeals() }
                         }
                     } else if hasAccess == false {
-                        // Como `MealsPlusCard` de la web; en iOS sin enlace a pagos externos.
-                        EmptyCard(photo: Self.defaultDish, title: "Tus comidas, hechas para ti",
-                                  message: "Con Plus te preguntamos qué te gusta y qué no comes, y Autopilot te prepara las comidas de cada día ajustadas a tus macros. Incluido en Plus.")
+                        // Como `NutritionPlusSection` de la web; en iOS sin enlace a pagos externos.
+                        plusSection
                     } else if generating || hasAccess == nil {
                         EmptyCard(photo: Self.defaultDish, title: "Preparando tus comidas…",
                                   message: "Autopilot está creando tus comidas con tus gustos y lo que no comes.")
