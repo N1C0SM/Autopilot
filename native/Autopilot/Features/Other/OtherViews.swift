@@ -144,14 +144,17 @@ struct NutritionView: View {
         let rows: [(String, Double, Color)] = [("Proteína", p, Palette.gold), ("Carbohidratos", c, Palette.gold.opacity(0.6)), ("Grasas", f, Palette.gold.opacity(0.3))]
         return VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 16) {
-                HStack(spacing: 12) {
-                    Image(systemName: "flame").font(.system(size: 30)).foregroundStyle(Palette.gold).accessibilityHidden(true)
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text("Calorías diarias").font(.apFootnote).foregroundStyle(Palette.muted)
-                        (Text(NumberText.integer(Int(kcal))).font(.inter(size: 28, weight: .bold).monospacedDigit())
-                            + Text(" kcal").font(.inter(size: 17, weight: .semibold)))
-                            .lineLimit(1).minimumScaleFactor(0.7)
+                // Llama pequeña junto a la etiqueta: con la llama grande al lado, «Calorías» se partía en dos líneas en el iPhone.
+                VStack(alignment: .leading, spacing: 2) {
+                    Label {
+                        Text("Calorías diarias").lineLimit(1).minimumScaleFactor(0.85)
+                    } icon: {
+                        Image(systemName: "flame.fill").foregroundStyle(Palette.gold).accessibilityHidden(true)
                     }
+                    .font(.apFootnote).foregroundStyle(Palette.muted)
+                    (Text(NumberText.integer(Int(kcal))).font(.inter(size: 28, weight: .bold).monospacedDigit())
+                        + Text(" kcal").font(.inter(size: 17, weight: .semibold)))
+                        .lineLimit(1).minimumScaleFactor(0.7)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .accessibilityElement(children: .combine)

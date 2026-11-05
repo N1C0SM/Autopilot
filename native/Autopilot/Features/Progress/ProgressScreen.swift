@@ -20,6 +20,8 @@ struct ProgressScreen: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.horizontalSizeClass) private var sizeClass
     @StateObject private var model = ProgressModel()
+    /// Para «Ir a entrenar» desde Récords vacío (como `onNavigate` de Inicio).
+    var onNavigate: (AppSection) -> Void = { _ in }
     @State private var tab = 0
     @State private var viewing: ProgressModel.Photo?
     /// «Scan» se monta la primera vez que se abre y se queda vivo: cambiar de pestaña no lo reinicia.
@@ -334,33 +336,47 @@ struct ProgressScreen: View {
 
     /// Sin fotos: portada con foto real y lo que tendrá aquí (como `ProgressPhotos` de la web).
     private var photosEmpty: some View {
+        progressHero(photo: Self.brandGymPhoto, eyebrow: "TU FÍSICO", title: "Empieza a documentar tu progreso",
+                     message: "Tus fotos se guardan solas cada vez que haces un análisis físico en Scan.",
+                     perks: Self.physiquePerks, button: "Hacer mi primer scan") { tab = 3 }
+    }
+
+    /// Sin récords: misma portada que Físico, con lo que guarda Récords y el camino a Entrenar (como `PRsList` de la web).
+    private var recordsEmpty: some View {
+        progressHero(photo: Self.brandDumbbellsPhoto, eyebrow: "TUS RÉCORDS", title: "Tu primer récord está a un entreno",
+                     message: "Cada vez que registras una serie con peso, guardamos tu mejor marca de ese ejercicio.",
+                     perks: Self.recordPerks, button: "Ir a entrenar") { onNavigate(.train) }
+    }
+
+    /// Portada de una sección vacía de Progreso: foto real, titular, lo que tendrá aquí (todo real) y una acción.
+    private func progressHero(photo: String, eyebrow: String, title: String, message: String, perks: [Perk], button: String, action: @escaping () -> Void) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             Color.clear.frame(height: 208)
                 .overlay {
-                    CachedAsyncImage(url: URL(string: Self.brandGymPhoto)) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
+                    CachedAsyncImage(url: URL(string: photo)) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
                 }
                 .clipped()
                 .overlay { LinearGradient(colors: [.black.opacity(0.1), .black.opacity(0.45), Palette.card], startPoint: .top, endPoint: .bottom) }
                 .overlay(alignment: .bottomLeading) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("TU FÍSICO").font(.apCaption.weight(.semibold)).tracking(1.6).foregroundStyle(Palette.gold)
-                        Text("Empieza a documentar tu progreso").font(.inter(size: 26, weight: .bold)).foregroundStyle(.white)
+                        Text(eyebrow).font(.apCaption.weight(.semibold)).tracking(1.6).foregroundStyle(Palette.gold)
+                        Text(title).font(.inter(size: 26, weight: .bold)).foregroundStyle(.white)
                             .fixedSize(horizontal: false, vertical: true)
                             .accessibilityAddTraits(.isHeader)
                     }
                     .padding(.horizontal, 20).padding(.bottom, 12)
                 }
             VStack(alignment: .leading, spacing: 12) {
-                Text("Tus fotos se guardan solas cada vez que haces un análisis físico en Scan.").font(.apSubhead).foregroundStyle(Palette.muted)
+                Text(message).font(.apSubhead).foregroundStyle(Palette.muted)
                     .fixedSize(horizontal: false, vertical: true)
-                ForEach(Self.physiquePerks, id: \.self) { perk in
+                ForEach(perks, id: \.self) { perk in
                     Label {
                         Text(perk.text).font(.apSubhead)
                     } icon: {
                         Image(systemName: perk.symbol).foregroundStyle(Palette.gold)
                     }
                 }
-                Button("Hacer mi primer scan") { Haptics.tap(); tab = 3 }
+                Button(button) { Haptics.tap(); action() }
                     .buttonStyle(.pill).padding(.top, 8)
             }
             .padding(.horizontal, 20).padding(.top, 8).padding(.bottom, 20)
@@ -371,12 +387,19 @@ struct ProgressScreen: View {
     }
 
     private static let brandGymPhoto = "https://enebrcdrdnfkyduzyrzm.supabase.co/storage/v1/object/public/site-assets/exercise-images/a31c7206-d2a4-4b31-856a-f5dec09b890e-1791475829849.png"
+    private static let brandDumbbellsPhoto = "https://enebrcdrdnfkyduzyrzm.supabase.co/storage/v1/object/public/site-assets/exercise-images/d5e30e05-0791-4886-84a0-7b2695728225-1791475865184.png"
     /// Lo que guarda Físico: comparación del mismo ángulo, fotos por mes y fotos privadas.
     private struct Perk: Hashable { let symbol: String; let text: String }
     private static let physiquePerks = [
         Perk(symbol: "rectangle.split.2x1", text: "El antes y el ahora, lado a lado"),
         Perk(symbol: "calendar", text: "Tus fotos ordenadas por mes"),
         Perk(symbol: "lock", text: "Privadas: solo las ves tú"),
+    ]
+    /// Lo que guarda Récords: la mejor marca de cada ejercicio, los nuevos del mes y su fecha.
+    private static let recordPerks = [
+        Perk(symbol: "trophy", text: "Tu mejor marca de cada ejercicio"),
+        Perk(symbol: "sparkles", text: "Los récords nuevos de cada mes"),
+        Perk(symbol: "calendar", text: "El día en que rompiste cada uno"),
     ]
 
     private var compareTeaser: some View {
@@ -418,8 +441,7 @@ struct ProgressScreen: View {
             } else if !model.recordsLoaded {
                 recordsSkeleton
             } else if model.records.isEmpty {
-                EmptyStateView(symbol: "trophy", title: "Sin récords aún", message: "Registra tus entrenos con peso y rompe tu primer récord personal.")
-                    .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
+                recordsEmpty
             } else if let best = model.bestRecord {
                 if isWide {
                     // Escritorio como la web (`lg:grid-cols-[280px_1fr]`): la mejor marca fija a
@@ -1736,7 +1758,7 @@ struct ExerciseProgressSection: View {
         let shownOthers = showAll ? others : Array(others.prefix(3))
         let card = RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
         VStack(alignment: .leading, spacing: 12) {
-            // Ejercicio principal: foto, último récord y su subida, con la gráfica en la misma tarjeta.
+            // Ejercicio principal: foto, mejor marca (la serie de más 1RM) y su subida, con la gráfica en la misma tarjeta.
             VStack(alignment: .leading, spacing: 16) {
                 Menu {
                     Picker("Ejercicio", selection: Binding(get: { name }, set: { Haptics.selection(); selected = $0 })) {
@@ -1822,11 +1844,17 @@ struct ExerciseProgressSection: View {
                         .multilineTextAlignment(.leading).frame(maxWidth: .infinity, alignment: .leading)
                     Image(systemName: "chevron.up.chevron.down").font(.inter(size: 14, weight: .semibold)).foregroundStyle(Palette.muted)
                 }
-                Text("Último récord").font(.apFootnote).foregroundStyle(Palette.muted).padding(.top, 2)
-                HStack(spacing: 10) {
-                    Text(best.label ?? "—").font(.inter(size: 26, weight: .bold).monospacedDigit()).foregroundStyle(Palette.foreground)
-                        .lineLimit(1).minimumScaleFactor(0.7)
-                    gainChip(best.gain)
+                if let label = best.label {
+                    Text("Mejor marca").font(.apFootnote).foregroundStyle(Palette.muted).padding(.top, 2)
+                    HStack(spacing: 10) {
+                        Text(label).font(.inter(size: 26, weight: .bold).monospacedDigit()).foregroundStyle(Palette.foreground)
+                            .lineLimit(1).minimumScaleFactor(0.7)
+                        gainChip(best.gain)
+                    }
+                } else {
+                    // Sin peso no hay marca que enseñar: se dice cuántas sesiones lleva, sin guiones.
+                    Text("\(entries.count) \(entries.count == 1 ? "sesión registrada" : "sesiones registradas")")
+                        .font(.apSubhead).foregroundStyle(Palette.muted).padding(.top, 2)
                 }
             }
         }
@@ -1845,7 +1873,7 @@ struct ExerciseProgressSection: View {
                 photo(name, size: 48)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(name).font(.apHeadline).foregroundStyle(Palette.foreground).lineLimit(1)
-                    Text(best.label.map { "Último récord: \($0)" } ?? "\(entries.count) \(entries.count == 1 ? "sesión" : "sesiones")")
+                    Text(best.label.map { "Mejor marca: \($0)" } ?? "\(entries.count) \(entries.count == 1 ? "sesión" : "sesiones")")
                         .font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted).lineLimit(2)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -1873,7 +1901,8 @@ struct ExerciseProgressSection: View {
         let hasLine = values.count > 1
         let sessions = "\(history.count) \(history.count == 1 ? "sesión" : "sesiones")"
         VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
+            // Sin series con peso no se pinta «— kg»: ya lo explica el aviso de abajo.
+            if !values.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
                     (Text(latest.map(r) ?? "—").font(.inter(size: 32, weight: .bold).monospacedDigit()) + Text(" \(unit)").font(.apSubhead).foregroundColor(Palette.muted))
                         .lineLimit(1).minimumScaleFactor(0.7)
@@ -1890,26 +1919,9 @@ struct ExerciseProgressSection: View {
                     .font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                HStack(spacing: 0) {
-                    ForEach(Array(["1RM", "Volumen", "Reps"].enumerated()), id: \.offset) { i, l in
-                        Button {
-                            Haptics.selection()
-                            withAnimation(reduceMotion ? nil : .snappy) { metric = i }
-                        } label: {
-                            Text(l).font(.apFootnote.weight(i == metric ? .semibold : .medium))
-                                .padding(.horizontal, 10)
-                                // 44 pt de alto mínimo: el selector se toca cómodo con el pulgar.
-                                .frame(minWidth: 44, minHeight: 44)
-                                .background { if i == metric { RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Palette.accent) } }
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Ver \(l)")
-                        .accessibilityAddTraits(i == metric ? .isSelected : [])
-                    }
-                }
-                .padding(3).background(Palette.secondary, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             }
+            // Selector en su propia fila, como la web: «Volumen» ya no se parte en dos líneas.
+            SegmentedPill(options: ["1RM", "Volumen", "Reps"], selection: $metric)
             if hasLine {
                 let lo = values.min() ?? 0, pad = max(1, ((best ?? 0) - lo) * 0.15)
                 Chart(Array(data.enumerated()), id: \.offset) { i, e in

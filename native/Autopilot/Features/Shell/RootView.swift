@@ -439,7 +439,7 @@ struct SectionView: View {
             switch section {
             case .home: HomeView(onNavigate: onNavigate)
             case .train: TrainView()
-            case .progress: ProgressScreen()
+            case .progress: ProgressScreen(onNavigate: onNavigate)
             case .nutrition: NutritionView()
             case .scan: ScanView()
             case .settings, .account: AccountView()

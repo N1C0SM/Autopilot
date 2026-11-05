@@ -158,21 +158,23 @@ struct FloatingTabBar: View {
     }
 }
 
-/// Control segmentado de la web (`TabsList`): fondo oscuro y la opción activa en gris claro.
-/// La píldora visible mide 32 pt, pero cada opción tiene 44 pt de área táctil (mínimo de Apple).
+/// Control segmentado de la web (`TabsList`): pista en cápsula y la opción activa en una cápsula que se desliza.
+/// La cápsula visible mide 32 pt (36 en dorado, como `h-11` en Progreso), pero cada opción tiene 44 pt de área táctil (mínimo de Apple).
 struct SegmentedPill: View {
     let options: [String]
     @Binding var selection: Int
     /// Sección activa en dorado (Progreso, como en la web); por defecto, gris.
     var gold = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Namespace private var pill
 
     var body: some View {
+        let pillHeight: CGFloat = gold ? 36 : 32
         HStack(spacing: 0) {
             ForEach(options.indices, id: \.self) { i in
                 Button {
                     Haptics.selection()
-                    withAnimation(reduceMotion ? nil : .snappy(duration: 0.2)) { selection = i }
+                    withAnimation(reduceMotion ? nil : .snappy(duration: 0.25)) { selection = i }
                 } label: {
                     Text(options[i]).font(.inter(size: 13, weight: i == selection ? .semibold : .medium))
                         .lineLimit(1).minimumScaleFactor(0.7)
@@ -180,11 +182,11 @@ struct SegmentedPill: View {
                         .frame(maxWidth: .infinity)
                         .frame(minHeight: 44)
                         .background {
-                            // La píldora activa conserva sus 32 pt visuales dentro del área de 44.
+                            // La cápsula activa se desliza a la opción tocada, sin sombra, como `rounded-full` en la web.
                             if i == selection {
-                                RoundedRectangle(cornerRadius: gold ? 16 : 9, style: .continuous).fill(gold ? Palette.gold : Palette.accent)
-                                    .frame(height: 32)
-                                    .shadow(color: .black.opacity(0.25), radius: 2, y: 1)
+                                Capsule().fill(gold ? Palette.gold : Palette.accent)
+                                    .frame(height: pillHeight)
+                                    .matchedGeometryEffect(id: "pill", in: pill)
                             }
                         }
                         .contentShape(Rectangle())
@@ -194,8 +196,8 @@ struct SegmentedPill: View {
                 .accessibilityAddTraits(i == selection ? .isSelected : [])
             }
         }
-        .padding(4)
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .padding(.horizontal, 4)
+        .background { Capsule().fill(Palette.card).frame(height: pillHeight + 8) }
         .frame(maxWidth: 448)
         .frame(maxWidth: .infinity)
         // Control de geometría fija: se limita el crecimiento del texto para que no se trunque.

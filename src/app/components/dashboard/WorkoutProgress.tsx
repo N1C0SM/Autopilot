@@ -166,7 +166,7 @@ const WorkoutProgress = ({ userId, compact = false }: Props) => {
         />
       ) : (
         <>
-          {/* Ejercicio principal: foto, último récord y su subida, con la gráfica en la misma tarjeta (maqueta de ChatGPT). */}
+          {/* Ejercicio principal: foto, mejor marca (la serie de más 1RM) y su subida, con la gráfica en la misma tarjeta (maqueta de ChatGPT). */}
           <div className={compact ? "flex flex-1 flex-col rounded-[22px] border border-border bg-card p-4" : "rounded-[22px] border border-border bg-card p-4"}>
             <div className="relative flex items-start gap-3.5 rounded-2xl transition-opacity duration-150 active:opacity-70 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring">
               <ExercisePhoto src={exerciseImages[selectedExercise]} size="lg" />
@@ -175,11 +175,20 @@ const WorkoutProgress = ({ userId, compact = false }: Props) => {
                   <span className="line-clamp-2 min-w-0 flex-1 type-headline">{selectedExercise}</span>
                   <ChevronsUpDown className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={1.5} aria-hidden="true" />
                 </span>
-                <span className="mt-1 block type-footnote text-muted-foreground">Último récord</span>
-                <span className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
-                  <span className="text-[26px] font-bold leading-tight tracking-tight tabular-nums">{record.label ?? "—"}</span>
-                  <GainChip kg={record.gainKg} />
-                </span>
+                {record.label ? (
+                  <>
+                    <span className="mt-1 block type-footnote text-muted-foreground">Mejor marca</span>
+                    <span className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                      <span className="text-[26px] font-bold leading-tight tracking-tight tabular-nums">{record.label}</span>
+                      <GainChip kg={record.gainKg} />
+                    </span>
+                  </>
+                ) : (
+                  // Sin peso no hay marca que enseñar: se dice cuántas sesiones lleva, sin guiones.
+                  <span className="mt-1 block type-subhead text-muted-foreground">
+                    {history.length} {history.length === 1 ? "sesión registrada" : "sesiones registradas"}
+                  </span>
+                )}
               </span>
               <select
                 aria-label="Ejercicio"
@@ -216,7 +225,7 @@ const WorkoutProgress = ({ userId, compact = false }: Props) => {
                       <span className="min-w-0 flex-1">
                         <span className="block truncate type-headline">{exercise}</span>
                         <span className="mt-0.5 block line-clamp-2 type-footnote tabular-nums text-muted-foreground">
-                          {best.label ? `Último récord: ${best.label}` : `${historyByExercise[exercise].length} ${historyByExercise[exercise].length === 1 ? "sesión" : "sesiones"}`}
+                          {best.label ? `Mejor marca: ${best.label}` : `${historyByExercise[exercise].length} ${historyByExercise[exercise].length === 1 ? "sesión" : "sesiones"}`}
                         </span>
                       </span>
                       <GainChip kg={best.gainKg} />

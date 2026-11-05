@@ -120,9 +120,11 @@ export default function BasicNutrition({ userId, onEdit, onUpgrade }: { userId: 
       <div className="rounded-[22px] border border-border bg-card p-5">
         <div className="flex items-center gap-4">
           <div role="group" aria-label={`Calorías diarias: ${targets.calories?.toLocaleString("es-ES")} kcal`} className="flex min-w-0 flex-1 items-center gap-3">
-            <Flame aria-hidden className="h-9 w-9 shrink-0 text-primary" strokeWidth={1.75} />
             <span className="min-w-0">
-              <span className="block type-footnote text-muted-foreground">Calorías diarias</span>
+              {/* Llama pequeña junto a la etiqueta: con la grande al lado, «Calorías» se partía en dos líneas en el móvil. */}
+              <span className="flex items-center gap-1.5 whitespace-nowrap type-footnote text-muted-foreground">
+                <Flame aria-hidden className="h-4 w-4 shrink-0 fill-primary text-primary" strokeWidth={1.75} />Calorías diarias
+              </span>
               <span className="block whitespace-nowrap text-[28px] font-bold leading-tight tracking-tight tabular-nums">
                 {targets.calories?.toLocaleString("es-ES")}<span className="ml-1 text-[17px] font-semibold">kcal</span>
               </span>

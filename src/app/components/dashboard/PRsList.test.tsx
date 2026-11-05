@@ -56,6 +56,7 @@ describe("personal records", () => {
     mocks.limit.mockResolvedValue({ data: [], error: null });
     render(<PRsList userId="user" />);
 
-    expect(await screen.findByText("Sin récords aún")).toBeVisible();
+    expect(await screen.findByRole("heading", { name: "Tu primer récord está a un entreno" })).toBeVisible();
+    expect(screen.getByText("Tu mejor marca de cada ejercicio")).toBeVisible();
   });
 });

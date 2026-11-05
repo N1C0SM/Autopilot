@@ -316,10 +316,10 @@ describe("paridad web ↔ apps nativas", () => {
     // La tarjeta de la rutina va bajo la semana en las dos.
     expect(planWeb).toContain("{tools}");
     expect(planApp).toContain("if let routineBar { routineBar }");
-    // Progreso de ChatGPT: «Tu fuerza» con el último récord, la subida en kg y «Tu constancia» debajo.
+    // Progreso de ChatGPT: «Tu fuerza» con la mejor marca (no la última: es la serie de más 1RM), la subida en kg y «Tu constancia» debajo.
     const progressWeb = read("src/app/components/dashboard/WorkoutProgress.tsx") + read("src/app/pages/Dashboard.tsx");
     const progressApp = read("native/Autopilot/Features/Progress/ProgressScreen.swift");
-    for (const text of ["Tu fuerza", "Evolución de tus principales ejercicios.", "Último récord", "Ver todos mis ejercicios", "Ver menos ejercicios", "Tu constancia", "Evolución de tu fuerza, tu físico y tus récords."]) {
+    for (const text of ["Tu fuerza", "Evolución de tus principales ejercicios.", "Mejor marca", "Ver todos mis ejercicios", "Ver menos ejercicios", "Tu constancia", "Evolución de tu fuerza, tu físico y tus récords."]) {
       expect(progressWeb, text).toContain(text);
       expect(progressApp, text).toContain(text);
     }
@@ -619,7 +619,8 @@ describe("paridad web ↔ apps nativas", () => {
     const app = read("native/Autopilot/Features/Progress/ProgressScreen.swift");
     const photos = read("src/app/components/dashboard/ProgressPhotos.tsx");
     const records = read("src/app/components/dashboard/PRsList.tsx");
-    expect(app).toContain('Text("TU FÍSICO")');
+    expect(app).toContain('eyebrow: "TU FÍSICO"');
+    expect(app).toContain('eyebrow: "TUS RÉCORDS"');
     for (const text of ["Empieza a documentar", "El antes y el ahora, lado a lado", "Tus fotos ordenadas por mes", "Privadas: solo las ves tú", "Hacer mi primer scan"]) {
       expect(photos, text).toContain(text);
       expect(app, text).toContain(text);

@@ -936,7 +936,7 @@ const Dashboard = () => {
               <ProgressPhotos key={photosVersion} userId={user.id} onGoScan={() => setProgressTab("scan")} />
             </TabsContent>
             <TabsContent value="records" forceMount tabIndex={-1} className="mt-0 data-[state=inactive]:hidden">
-              <PRsList userId={user.id} />
+              <PRsList userId={user.id} onGoTrain={() => setSection("training")} />
             </TabsContent>
             <TabsContent value="scan" tabIndex={-1} className="mt-0">
               {/* Igual que la app (iPhone/Mac): el scan público de la landing es otra pantalla. */}
