@@ -12,8 +12,6 @@ interface NavBarProps {
   /** El título pequeño es el encabezado de la pantalla (no hay título grande). */
   titleAsHeading?: boolean;
   leading?: ReactNode;
-  /** Marca centrada (logo con AUTOPILOT): se ve mientras el título pequeño está oculto. */
-  center?: ReactNode;
   trailing?: ReactNode;
   className?: string;
 }
@@ -23,7 +21,7 @@ interface NavBarProps {
  * 17 pt, transparente arriba del todo y con material cuando el contenido pasa por debajo.
  */
 const NavBar = forwardRef<HTMLElement, NavBarProps>(
-  ({ title, subtitle, titleVisible = true, solid = true, titleAsHeading = true, leading, center, trailing, className }, ref) => {
+  ({ title, subtitle, titleVisible = true, solid = true, titleAsHeading = true, leading, trailing, className }, ref) => {
     const Title = titleAsHeading ? "h1" : "div";
     return (
       <header
@@ -41,17 +39,6 @@ const NavBar = forwardRef<HTMLElement, NavBarProps>(
       >
         <div className="relative flex h-11 items-center justify-between px-2">
           <div className="relative z-10 flex min-w-0 items-center">{leading}</div>
-          {center ? (
-            <div
-              aria-hidden="true"
-              className={cn(
-                "pointer-events-none absolute inset-x-0 mx-auto flex justify-center transition-opacity duration-200",
-                title && titleVisible ? "opacity-0" : "opacity-100",
-              )}
-            >
-              {center}
-            </div>
-          ) : null}
           {title ? (
             <Title
               aria-hidden={titleVisible ? undefined : true}

@@ -4,7 +4,6 @@ import { supportsMultipleAccounts } from "@/shared/lib/platform";
 import { BookOpen } from "lucide-react";
 import NotificationsBell from "@/app/components/NotificationsBell";
 import NavBar from "@/shared/components/native/NavBar";
-import { BrandMark } from "@/shared/components/ui/brand-mark";
 import { hapticTap } from "@/shared/lib/native";
 
 interface Props {
@@ -47,13 +46,6 @@ const MobileHeader = forwardRef<HTMLElement, Props>(
         ref={ref}
         className="fixed left-0 right-0 top-0 md:hidden"
         title={title}
-        center={
-          // Marca del rediseño: la «A» con rayo y AUTOPILOT, centrada (igual que la cabecera nativa).
-          <span className="flex flex-col items-center gap-0.5">
-            <BrandMark size={20} />
-            <span className="text-[11px] font-bold leading-none tracking-[0.12em] text-foreground">AUTOPILOT</span>
-          </span>
-        }
         titleVisible={titleVisible}
         titleAsHeading={titleAsHeading}
         solid={solid}

@@ -38,17 +38,15 @@ describe("dashboard home overview", () => {
       />,
     );
 
-    expect(screen.getByText("Hola, Nicolás.")).toBeVisible();
-    expect(screen.getByText("A entrenar.")).toBeVisible();
-    const greeting = screen.getByRole("heading", { level: 2 });
-    expect(greeting).toHaveTextContent("Hola, Nicolás.");
-    expect(greeting).toHaveTextContent("A entrenar.");
+    // Rediseño: «Hoy» como título grande y el saludo debajo, en gris.
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("Hoy");
+    expect(screen.getByText("Hola, Nicolás. A entrenar.")).toBeVisible();
     // El saludo es corto: la sesión se nombra solo en su tarjeta.
     expect(screen.queryByText(/Hoy toca/)).not.toBeInTheDocument();
     const startButton = screen.getByRole("button", { name: "Empezar Pull B · Espalda y bíceps" });
     expect(within(startButton).getByText("Pull B")).toBeVisible();
     expect(within(startButton).getByText("1 ejercicio")).toBeVisible();
-    expect(within(startButton).getByText("Empezar entreno")).toBeVisible();
+    expect(within(startButton).getByText("Entrenamiento de hoy")).toBeVisible();
     fireEvent.click(startButton);
     expect(onNavigate).toHaveBeenCalledWith("training");
     expect(mocks.hapticTap).toHaveBeenCalledTimes(1);
@@ -129,11 +127,11 @@ describe("dashboard home overview", () => {
 
         expect(screen.getByText("Plan de nutrición")).toBeVisible();
     const nutritionCard = screen.getByRole("button", { name: /Nutrición/ });
-    const progressCard = screen.getByRole("button", { name: /Récords/ });
+    const progressCard = screen.getByRole("button", { name: /Tu progreso/ });
     expect(nutritionCard).toBeVisible();
     expect(progressCard).toBeVisible();
-    // Los widgets van juntos en su rejilla, después de la acción principal.
-    expect(nutritionCard.closest("[data-home-rows]")).toBe(progressCard.closest("[data-home-rows]"));
+    // «Tu progreso» y «Tu plan» van juntos, después de la acción principal.
+    expect(progressCard.closest("[data-home-rows]")).toBe(screen.getByRole("button", { name: /Tu plan/ }).closest("[data-home-rows]"));
     const startButton = screen.getByRole("button", { name: /Empezar Entrenamiento de fuerza/ });
     expect(startButton).toBeVisible();
     const allButtons = screen.getAllByRole("button");

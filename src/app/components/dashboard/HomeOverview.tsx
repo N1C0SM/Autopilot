@@ -1,6 +1,6 @@
 import { readMealsDone as readMealsDoneFor } from "@/shared/lib/mealsDone";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { Flame as Apple, Check, ChevronRight, Clock, LockKeyhole, TrendingUp } from "lucide-react";
+import { Flame as Apple, BarChart3, Check, ChevronRight, Clock, Dumbbell, Layers, LockKeyhole } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { EmptyState } from "@/shared/components/ui/empty-state";
 import { supabase } from "@/shared/integrations/supabase/client";
@@ -294,27 +294,23 @@ const HomeOverview = ({
 
   return (
     <div className="flex w-full flex-col pb-4 lg:grid lg:grid-cols-[minmax(0,1.55fr)_minmax(300px,1fr)] lg:grid-rows-[auto_auto_1fr] lg:items-start lg:gap-x-10 xl:gap-x-14">
-      {/* Cabecera compacta: fecha y saludo discreto, sin titular de marketing */}
+      {/* Cabecera del rediseño (ChatGPT): «Hoy» grande y el saludo en gris */}
       <header className="lg:col-span-2">
-        <p className="text-[13px] font-medium text-muted-foreground">{greetingDate}</p>
-        <h2 data-nav-title className="mt-0.5 type-large-title leading-tight text-foreground sm:text-[44px] sm:leading-[48px]">
-          {firstName ? `Hola, ${firstName}.` : "Hola."}
-          <br />
-          <span className="font-normal text-muted-foreground">
-            {completedToday
-              ? "Buen trabajo."
-              : todayPlan?.type === "gimnasio"
-                ? "A entrenar."
-                : todayPlan?.type === "actividad"
-                  ? `A ${todayPlan.sport || "moverte"}.`
-                  : "Hoy, a recuperar."}
-          </span>
-        </h2>
+        <h2 data-nav-title className="type-large-title leading-tight text-foreground sm:text-[44px] sm:leading-[48px]">Hoy</h2>
+        <p className="mt-1 type-subhead text-muted-foreground">
+          {firstName ? `Hola, ${firstName}.` : "Hola."}{" "}
+          {completedToday
+            ? "Buen trabajo."
+            : todayPlan?.type === "gimnasio"
+              ? "A entrenar."
+              : todayPlan?.type === "actividad"
+                ? `A ${todayPlan.sport || "moverte"}.`
+                : "Hoy, a recuperar."}
+        </p>
       </header>
 
       {/* Entrenamiento de hoy */}
       <section className="mt-6 lg:row-span-2 lg:mt-8" aria-label="Entrenamiento de hoy">
-        <p className="mb-2 type-footnote font-medium text-muted-foreground">Entrenamiento de hoy</p>
         {activeWorkout && activeWorkoutIsToday ? (
           <div className="rounded-2xl bg-card p-4">
             <p className="text-[13px] font-medium text-primary">En curso</p>
@@ -339,34 +335,35 @@ const HomeOverview = ({
               if (onStartWorkout) onStartWorkout();
               else onNavigate("training");
             }}
-            className="group block w-full overflow-hidden rounded-[22px] border border-border bg-card text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="group relative flex min-h-[156px] w-full overflow-hidden rounded-[22px] border border-border bg-card text-left transition-transform duration-150 active:scale-[0.985] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             aria-label={`Empezar ${sessionTitle}`}
           >
+            {/* Rediseño (ChatGPT): texto a la izquierda, foto a la derecha fundida con la tarjeta y chevron dorado. */}
             {dayPhoto && (
-              <span aria-hidden="true" className="relative block aspect-[1.8] w-full lg:aspect-[2.1] overflow-hidden bg-secondary">
-                <img key={dayPhoto} src={dayPhoto} alt="" decoding="async" className="absolute inset-0 h-full w-full object-cover object-[50%_30%]" />
+              <span aria-hidden="true" className="absolute inset-y-0 right-0 w-[55%] overflow-hidden bg-secondary">
+                <img key={dayPhoto} src={dayPhoto} alt="" decoding="async" className="h-full w-full object-cover object-[50%_30%]" />
+                <span className="absolute inset-0 bg-gradient-to-r from-card via-card/55 to-transparent" />
               </span>
             )}
-            <span className="block p-4">
-              <span className="flex items-center gap-3.5">
-                <span className="block min-w-0 flex-1">
-                  <span className="mb-1 block type-footnote font-semibold uppercase tracking-wide text-primary">
-                    Hoy · {todayPlan?.type === "actividad" ? "actividad" : "entreno"}
-                  </span>
-                <span className="block truncate type-headline font-semibold leading-6">{sessionName}</span>
-                {sessionFocus && <span className="block truncate type-subhead text-muted-foreground">{sessionFocus}</span>}
-                {sessionDetail.length > 0 && (
-                  <span className="mt-0.5 block type-footnote tabular-nums text-muted-foreground">
+            <span className={cn("relative flex min-w-0 flex-1 flex-col p-[18px]", dayPhoto ? "pr-32" : "pr-16")}>
+              <span className="type-footnote text-muted-foreground">
+                {todayPlan?.type === "actividad" ? "Actividad de hoy" : "Entrenamiento de hoy"}
+              </span>
+              <span className="mt-1.5 line-clamp-2 text-[22px] font-bold leading-7 tracking-[-0.02em]">{sessionName}</span>
+              {sessionFocus && <span className="mt-0.5 line-clamp-2 type-subhead text-muted-foreground">{sessionFocus}</span>}
+              {sessionDetail.length > 0 && (
+                <span className="mt-auto flex items-center gap-1.5 pt-3.5 type-footnote tabular-nums text-muted-foreground">
+                  <Dumbbell aria-hidden="true" className="h-3.5 w-3.5 shrink-0" strokeWidth={2} />
+                  <span>
                     {sessionDetail.map((part, index) => (
                       <span key={`${index}-${part}`}>{index > 0 && " · "}{part}</span>
                     ))}
                   </span>
-                )}
                 </span>
-              </span>
-              <span className="mt-4 flex h-12 w-full items-center justify-center rounded-full bg-primary text-[17px] font-semibold text-primary-foreground transition-opacity duration-150 group-active:opacity-80">
-                Empezar entreno
-              </span>
+              )}
+            </span>
+            <span aria-hidden="true" className="absolute bottom-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-primary/20 text-primary transition-opacity group-active:opacity-80">
+              <ChevronRight className="h-5 w-5" strokeWidth={2.5} />
             </span>
           </button>
         ) : completedToday ? (
@@ -410,11 +407,40 @@ const HomeOverview = ({
         )}
       </section>
 
+      {/* Rediseño (ChatGPT): «Tu progreso» y «Tu plan» en tarjetas con icono dorado y chevron */}
+      <ul data-home-rows className="mt-3 space-y-3 lg:mt-4">
+        <li>
+          <HomeRow
+            icon={<BarChart3 className="h-[22px] w-[22px]" strokeWidth={1.75} />}
+            title="Tu progreso"
+            detail={lastPr
+                ? `${lastPr.exercise_name} · ${lastPr.weight.toLocaleString("es-ES")} kg × ${lastPr.reps}`
+                : "Sigue tu evolución semana a semana."}
+            onClick={() => onNavigate("progress")}
+          />
+        </li>
+        <li>
+          <HomeRow
+            icon={<Layers className="h-[22px] w-[22px]" strokeWidth={1.75} />}
+            title="Tu plan"
+            detail="Revisa y ajusta tu plan de entrenamiento."
+            onClick={() => onNavigate("training")}
+          />
+        </li>
+      </ul>
+
       {/* Semana compacta: sesiones hechas y días con sesión, sin navegación por días */}
-      <section className="mt-6 rounded-[22px] border border-border bg-card p-4 lg:mt-8 lg:p-5" aria-label={`Esta semana: ${sessionCount} de ${scheduledDays.length} sesiones`}>
-        <div className="flex items-baseline justify-between">
+      <section className="mt-3 rounded-[22px] border border-border bg-card p-4 lg:mt-4 lg:p-5" aria-label={`Esta semana: ${sessionCount} de ${scheduledDays.length} sesiones`}>
+        <div className="flex items-center justify-between">
           <p className="type-headline text-foreground">Esta semana</p>
-          <p className="text-[13px] tabular-nums text-muted-foreground"><span className="font-semibold text-foreground">{sessionCount}</span> de {scheduledDays.length} sesiones</p>
+          <button
+            type="button"
+            onClick={() => { void hapticTap(); onNavigate("training"); }}
+            className="-mr-2 inline-flex min-h-11 items-center gap-1 px-2 type-subhead font-semibold text-primary transition-opacity active:opacity-60"
+          >
+            Ver detalle
+            <ChevronRight className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />
+          </button>
         </div>
         {/* Un círculo por día: dorado con check si está hecho, anillo dorado hoy, anillo gris si toca sesión y relleno tenue si es descanso. */}
         <div aria-hidden="true" className="mt-3 grid grid-cols-7 gap-1">
@@ -440,51 +466,36 @@ const HomeOverview = ({
         </div>
       </section>
 
-      {/* Progreso: filas con valores reales */}
-      <section className="mt-7 lg:mt-4 lg:rounded-[22px] lg:border lg:border-border lg:bg-card lg:px-5 lg:pb-2 lg:pt-5">
-        <p className="mb-1 type-title3 text-foreground">Progreso</p>
-        <ul data-home-rows className="divide-y divide-border/60">
-          <li>
-            <HomeRow
-              icon={nutrition ? <Apple className="h-5 w-5" strokeWidth={1.75} /> : <LockKeyhole className="h-5 w-5" strokeWidth={1.75} />}
-              title="Nutrición"
-              detail={<><span>{nutritionMain}</span>{nutritionExtra && <span>{` · ${nutritionExtra}`}</span>}</>}
-              value={nutrition && calorieTarget ? `${calorieTarget.toLocaleString("es-ES")} kcal` : undefined}
-              onClick={() => onNavigate("nutrition")}
-            />
-          </li>
-          <li>
-            <HomeRow
-              icon={<TrendingUp className="h-5 w-5" strokeWidth={1.75} />}
-              title={lastPr ? lastPr.exercise_name : "Récords"}
-              detail={lastPr
-                ? `${lastPr.reps} reps · ${new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "short" }).format(new Date(lastPr.achieved_at))}`
-                : "Tu primer récord llegará entrenando"}
-              value={lastPr ? `${lastPr.weight.toLocaleString("es-ES")} kg` : undefined}
-              onClick={() => onNavigate("progress")}
-            />
-          </li>
-        </ul>
-      </section>
+      {/* Nutrición en su tarjeta: kcal del día o, sin plan, la insignia Plus */}
+      <div className="mt-3 lg:mt-4">
+        <HomeRow
+          icon={nutrition ? <Apple className="h-[22px] w-[22px]" strokeWidth={1.75} /> : <LockKeyhole className="h-5 w-5" strokeWidth={1.75} />}
+          locked={!nutrition}
+          title="Nutrición"
+          detail={<><span>{nutritionMain}</span>{nutritionExtra && <span>{` · ${nutritionExtra}`}</span>}</>}
+          value={nutrition && calorieTarget ? `${calorieTarget.toLocaleString("es-ES")} kcal` : undefined}
+          onClick={() => onNavigate("nutrition")}
+        />
+      </div>
       {discardDialog}
     </div>
   );
 };
 
-/** Fila de Hoy: icono de línea, título, detalle y valor a la derecha. */
-const HomeRow = ({ icon, title, detail, value, onClick }: { icon: ReactNode; title: string; detail: ReactNode; value?: string; onClick: () => void }) => (
+/** Fila-tarjeta de Hoy (rediseño): título y una línea gris; valor, icono dorado (gris con candado si está bloqueada) y chevron. */
+const HomeRow = ({ icon, title, detail, value, locked = false, onClick }: { icon: ReactNode; title: string; detail: ReactNode; value?: string; locked?: boolean; onClick: () => void }) => (
   <button
     type="button"
     onClick={() => { void hapticTap(); onClick(); }}
-    className="flex min-h-[60px] w-full items-center gap-3 py-3 text-left transition-opacity active:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    className="flex min-h-[72px] w-full items-center gap-3.5 rounded-[22px] border border-border bg-card px-[18px] py-4 text-left transition-transform duration-150 active:scale-[0.985] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
   >
-    <span aria-hidden="true" className="flex h-5 w-5 shrink-0 text-muted-foreground">{icon}</span>
     <span className="min-w-0 flex-1">
-      <span className="block truncate type-subhead font-medium text-foreground">{title}</span>
-      <span className="block truncate type-footnote tabular-nums text-muted-foreground">{detail}</span>
+      <span className="block truncate type-headline text-foreground">{title}</span>
+      <span className="mt-0.5 line-clamp-2 type-footnote tabular-nums text-muted-foreground">{detail}</span>
     </span>
     {value && <span className="shrink-0 type-subhead font-semibold tabular-nums text-foreground">{value}</span>}
-    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/70" strokeWidth={2} aria-hidden="true" />
+    <span aria-hidden="true" className={cn("flex shrink-0", locked ? "text-muted-foreground" : "text-primary")}>{icon}</span>
+    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={2.5} aria-hidden="true" />
   </button>
 );
 
