@@ -16,6 +16,7 @@ import MobileAppShell from "@/app/components/mobile/MobileAppShell";
 import { useIsMobile } from "@/shared/hooks/use-mobile";
 import { SidebarProvider, SidebarTrigger } from "@/shared/components/ui/sidebar";
 import { recordAcquisitionEvent } from "@/shared/lib/acquisition";
+import { GoogleSignInButton } from "@/app/components/auth/GoogleSignInButton";
 import {
   Upload,
   Sparkles,
