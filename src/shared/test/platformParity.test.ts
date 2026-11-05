@@ -648,6 +648,10 @@ describe("paridad web ↔ apps nativas", () => {
       expect(progressApp, text).toContain(text);
     }
     expect(progressApp).toContain('eyebrow: "TU FUERZA"');
+    // Tu constancia sin series con peso: entrenos en vez de «0 kg» y sin gráfica vacía.
+    const noKg = "Registra series con peso y aquí verás tus kilos de cada semana.";
+    expect(read("src/app/components/dashboard/TrainingOverviewCard.tsx")).toContain(noKg);
+    expect(progressApp).toContain(noKg);
     expect(progressApp).toContain('Text("TU ÚLTIMO SCAN")');
     expect(progressWeb).toContain(">Tu último scan<");
   });

@@ -180,22 +180,28 @@ struct ProgressScreen: View {
         }
     }
 
+    /// Semanas con etiqueta: una sí y otra no, terminando en la actual (a 12 pt no se pisan, como la web).
+    private var shownWeekLabels: Set<String> {
+        Set(model.weekly.enumerated().filter { (model.weekly.count - 1 - $0.offset) % 2 == 0 }.map(\.element.label))
+    }
+
     private var strengthCard: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        let hasKg = model.kg4w > 0
+        return VStack(alignment: .leading, spacing: 0) {
             // Eyebrow dorado
             Text("ÚLTIMAS 4 SEMANAS")
                 .font(.apCaption.weight(.semibold))
                 .tracking(1.6)
                 .foregroundStyle(Palette.gold)
 
-            // Cifra protagonista
+            // Cifra protagonista. Sin series con peso, «0 kg» desanimaba: se cuentan los entrenos.
             HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(NumberText.integer(model.kg4w))
+                Text(hasKg ? NumberText.integer(model.kg4w) : "\(model.workouts4w)")
                     .font(.figure(size: 52))
                     .lineLimit(1).minimumScaleFactor(0.55)
                     .contentTransition(.numericText())
                     .animation(reduceMotion ? nil : .snappy, value: model.kg4w)
-                Text("kg levantados")
+                Text(hasKg ? "kg levantados" : (model.workouts4w == 1 ? "entreno" : "entrenos"))
                     .font(.apTitle3)
                     .foregroundStyle(Palette.muted)
             }
@@ -203,11 +209,18 @@ struct ProgressScreen: View {
 
             // 3 KPIs en fila
             HStack(alignment: .top, spacing: 12) {
-                stat("\(model.workouts4w)", model.workouts4w == 1 ? "entreno" : "entrenos")
+                if hasKg { stat("\(model.workouts4w)", model.workouts4w == 1 ? "entreno" : "entrenos") }
                 stat("\(model.streakWeeks)", model.streakWeeks == 1 ? "semana de racha" : "semanas de racha")
-                stat(NumberText.integer(model.kgThisWeek), "kg esta semana")
+                if hasKg { stat(NumberText.integer(model.kgThisWeek), "kg esta semana") }
             }
             .padding(.top, 14)
+
+            if !hasKg {
+                Text("Registra series con peso y aquí verás tus kilos de cada semana.")
+                    .font(.apSubhead).foregroundStyle(Palette.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 16)
+            } else {
 
             // Gráfica de barras
             // Barras finas como la web: la semana actual en dorado y el resto en gris.
@@ -223,15 +236,16 @@ struct ProgressScreen: View {
             .chartYAxis(.hidden)
             .chartXAxis {
                 // Una fecha sí y otra no, terminando en la semana actual: a 12 pt no se pisan (como la web).
-                AxisMarks(values: model.weekly.enumerated().filter { (model.weekly.count - 1 - $0.offset) % 2 == 0 }.map(\.element.label)) { _ in
-                    AxisValueLabel()
-                        .font(.apCaption)
-                        .foregroundStyle(Palette.muted)
+                AxisMarks { value in
+                    if let label = value.as(String.self), shownWeekLabels.contains(label) {
+                        AxisValueLabel { Text(label).font(.apCaption).foregroundStyle(Palette.muted) }
+                    }
                 }
             }
             .frame(height: 160)
             .padding(.top, 20)
             .accessibilityLabel("Kilos levantados por semana")
+            }
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
