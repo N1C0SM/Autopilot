@@ -128,8 +128,8 @@ struct MainShell: View {
     @EnvironmentObject private var session: SessionModel
     @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var selection: AppSection?
-    /// Pestaña en la que se ha abierto Ajustes (desde el avatar): cada pestaña tiene su propia pila.
-    @State private var settingsTab: AppSection?
+    /// Pestañas con Ajustes abierto (desde el avatar): cada pestaña tiene su propia pila.
+    @State private var settingsTabs: Set<AppSection> = []
     @EnvironmentObject private var accounts: AccountStore
     /// Sección visible del panel de Admin en iPhone y estado del cajón lateral.
     @State private var adminSection: AppSection = .adminDashboard
@@ -257,16 +257,16 @@ struct MainShell: View {
             ForEach(AppSection.userTabs) { tab in
                 NavigationStack {
                     SectionView(section: tab, onNavigate: { target in
-                        if AppSection.userTabs.contains(target) { selection = target } else if target == .settings { settingsTab = tab }
+                        if AppSection.userTabs.contains(target) { selection = target } else if target == .settings { settingsTabs.insert(tab) }
                     })
                         .toolbar {
                             ToolbarItem(placement: .topBarTrailing) {
                                 HeaderButtons(initial: initial, avatar: accounts.accounts.first { $0.id == session.userIdString }?.avatar) {
-                                    settingsTab = tab
+                                    settingsTabs.insert(tab)
                                 }
                             }
                         }
-                        .navigationDestination(isPresented: Binding(get: { settingsTab == tab }, set: { if !$0 { settingsTab = nil } })) {
+                        .navigationDestination(isPresented: Binding(get: { settingsTabs.contains(tab) }, set: { if !$0 { settingsTabs.remove(tab) } })) {
                             AccountView().navigationTitle("Ajustes").toolbar(.hidden, for: .tabBar)
                         }
                         .toolbar(.hidden, for: .tabBar)
@@ -278,7 +278,7 @@ struct MainShell: View {
         }
         .overlay(alignment: .bottom) {
             FloatingTabBar(tabs: AppSection.userTabs, selection: current) { tab in
-                if settingsTab == tab { settingsTab = nil }
+                if settingsTabs.contains(tab) { settingsTabs.remove(tab) }
                 else { NotificationCenter.default.post(name: .tabReselected, object: tab) }
             }
             .padding(.bottom, 4).padding(.top, 8)

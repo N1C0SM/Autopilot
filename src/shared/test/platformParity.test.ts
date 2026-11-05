@@ -540,6 +540,10 @@ describe("paridad web ↔ apps nativas", () => {
     expect(shell.slice(0, shell.indexOf("private var adminShell"))).not.toContain(".toolbar(.hidden, for: .navigationBar)");
     expect(swift).toContain(".navigationBarTitleDisplayMode(section == .home ? .inline : .large)");
     expect(read("native/Autopilot/App/AutopilotApp.swift")).toContain("NavigationBarStyle.apply()");
+    // Volver arriba lleva el UIScrollView a su principio real, para que el título grande se despliegue.
+    expect(read("native/Autopilot/Design/Components.swift")).toContain("y: -scroll.adjustedContentInset.top");
+    // Ajustes puede quedar abierto en varias pestañas a la vez, cada una con su pila.
+    expect(shell).toContain("settingsTabs.contains(tab)");
     for (const [file, tab] of [
       ["native/Autopilot/Features/Home/HomeView.swift", "home"],
       ["native/Autopilot/Features/Train/TrainView.swift", "train"],
@@ -548,7 +552,6 @@ describe("paridad web ↔ apps nativas", () => {
     ]) {
       const src = read(file);
       expect(src, file).toContain(`.scrollsToTopOnReselect(.${tab})`);
-      expect(src, file).toContain(".id(ScrollTop.id)");
     }
   });
 
@@ -577,6 +580,10 @@ describe("paridad web ↔ apps nativas", () => {
     expect(webSwipe).toContain("const FULL_SWIPE = 180;");
     expect(appSwipe).toContain("private let reveal: CGFloat = 88");
     expect(appSwipe).toContain("private let fullSwipe: CGFloat = 180");
+    // Con una sola serie la fila no se queda abierta, y quitar con un campo activo guarda antes de quitar.
+    expect(webSwipe).toContain("if (enabled) return;");
+    expect(appSwipe).toContain(".onChange(of: enabled)");
+    expect(app).toContain("guard Keyboard.endEditing() else { workout.removeSet(exercise.name, at: index); return }");
   });
 
   it("Las hojas que se cierran deslizando enseñan la barrita, en la web y en la app", () => {

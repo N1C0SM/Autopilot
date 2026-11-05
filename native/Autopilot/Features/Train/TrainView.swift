@@ -65,9 +65,8 @@ struct TrainView: View {
             .padding(.top, wideLayout ? 32 : 8)
             .padding(.bottom, wideLayout ? 32 : 96)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .id(ScrollTop.id)
+            .scrollsToTopOnReselect(.train)
         }
-        .scrollsToTopOnReselect(.train)
         .screenBackground()
         .refreshable { await load() }
         .task {

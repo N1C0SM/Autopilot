@@ -114,35 +114,72 @@ struct HeaderButtons: View {
     }
 }
 
+/// Teclado y campo activo.
+enum Keyboard {
+    /// Termina la edición en curso (el campo activo guarda lo escrito). Devuelve si había un campo activo.
+    @discardableResult static func endEditing() -> Bool {
+        #if os(iOS)
+        return UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        #else
+        guard let window = NSApp.keyWindow, window.firstResponder is NSText else { return false }
+        return window.makeFirstResponder(nil)
+        #endif
+    }
+}
+
 extension Notification.Name {
     /// Se ha vuelto a tocar la pestaña activa (`object` = `AppSection`).
     static let tabReselected = Notification.Name("tabReselected")
 }
 
-/// Ancla del principio de cada pestaña para volver arriba al tocarla otra vez.
-enum ScrollTop { static let id = "scroll-top" }
-
 extension View {
-    /// En la raíz de cada pestaña: tocar la pestaña activa la lleva al principio (y el título grande vuelve).
-    /// El contenido del `ScrollView` lleva `.id(ScrollTop.id)`.
-    func scrollsToTopOnReselect(_ section: AppSection) -> some View { modifier(ScrollToTopOnReselect(section: section)) }
+    /// En el contenido de la raíz de cada pestaña (dentro del `ScrollView`): tocar la pestaña activa
+    /// vuelve al principio como la barra de estado de iOS, con el título grande otra vez desplegado.
+    @ViewBuilder func scrollsToTopOnReselect(_ section: AppSection) -> some View {
+        #if os(iOS)
+        background(ScrollTopAnchor(section: section).frame(width: 0, height: 0).accessibilityHidden(true))
+        #else
+        self
+        #endif
+    }
 }
 
-private struct ScrollToTopOnReselect: ViewModifier {
+#if os(iOS)
+/// Vista invisible dentro del `ScrollView`: busca el `UIScrollView` que la contiene y lo lleva a su
+/// principio real (`adjustedContentInset`), que es lo que hace volver el título grande. `scrollTo`
+/// de SwiftUI solo alinea el contenido y deja el título encogido.
+private struct ScrollTopAnchor: UIViewRepresentable {
     let section: AppSection
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    func body(content: Content) -> some View {
-        ScrollViewReader { proxy in
-            content.onReceive(NotificationCenter.default.publisher(for: .tabReselected)) { note in
-                guard note.object as? AppSection == section else { return }
-                withAnimation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.9)) {
-                    proxy.scrollTo(ScrollTop.id, anchor: .top)
-                }
+    func makeUIView(context: Context) -> AnchorView { AnchorView(section: section) }
+    func updateUIView(_ view: AnchorView, context: Context) {}
+
+    final class AnchorView: UIView {
+        private var token: NSObjectProtocol?
+
+        init(section: AppSection) {
+            super.init(frame: .zero)
+            isUserInteractionEnabled = false
+            token = NotificationCenter.default.addObserver(forName: .tabReselected, object: nil, queue: .main) { [weak self] note in
+                guard (note.object as? AppSection) == section else { return }
+                self?.scrollToTop()
             }
+        }
+
+        required init?(coder: NSCoder) { nil }
+
+        deinit { if let token { NotificationCenter.default.removeObserver(token) } }
+
+        private func scrollToTop() {
+            var view = superview
+            while let current = view, !(current is UIScrollView) { view = current.superview }
+            guard let scroll = view as? UIScrollView else { return }
+            scroll.setContentOffset(CGPoint(x: scroll.contentOffset.x, y: -scroll.adjustedContentInset.top),
+                                    animated: !UIAccessibility.isReduceMotionEnabled)
         }
     }
 }
+#endif
 
 extension View {
     /// Deslizar a la izquierda descubre «Quitar», y deslizar del todo quita la fila, como Hevy y las
@@ -178,6 +215,12 @@ private struct SwipeToRemove: ViewModifier {
                 }
             }
             .simultaneousGesture(drag, including: enabled ? .all : .subviews)
+            // Si la fila deja de poder quitarse (queda una sola serie), se cierra: si no, quedaría abierta.
+            .onChange(of: enabled) { _, on in
+                guard !on else { return }
+                isOpen = false
+                offset = 0
+            }
     }
 
     private var drag: some Gesture {

@@ -1,4 +1,4 @@
-import { useRef, useState, type PointerEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from "react";
 import { animate, motion, useDragControls, useMotionValue, useReducedMotion } from "framer-motion";
 import { Trash2 } from "lucide-react";
 import { hapticNotify } from "@/shared/lib/native";
@@ -25,6 +25,13 @@ const SwipeToRemove = ({ label, enabled = true, onRemove, children }: Props) => 
   const reduceMotion = useReducedMotion();
   const [open, setOpen] = useState(false);
   const startX = useRef(0);
+
+  // Si la fila deja de poder quitarse (queda una sola serie), se cierra: si no, quedaría abierta.
+  useEffect(() => {
+    if (enabled) return;
+    setOpen(false);
+    x.set(0);
+  }, [enabled, x]);
 
   const settle = (target: number) => {
     setOpen(target !== 0);

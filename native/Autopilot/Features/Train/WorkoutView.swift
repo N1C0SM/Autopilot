@@ -870,13 +870,11 @@ struct SetLine: View {
                 .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(isCurrent ? Palette.gold.opacity(0.5) : .clear, lineWidth: 1))
         )
         .overlay(alignment: .top) { if separator && !isCurrent { Rectangle().fill(Palette.separator).frame(height: 0.5).padding(.leading, 12) } }
-        .accessibilityAction(named: "Quitar serie") { workout.removeSet(exercise.name, at: index) }
+        .accessibilityAction(named: "Quitar serie") { removeSet() }
         // Deslizar a la izquierda para quitar la serie, como en Hevy (y en la web).
-        .swipeToRemove("Quitar serie", enabled: (workout.draft.logs[exercise.name]?.count ?? 0) > 1) {
-            workout.removeSet(exercise.name, at: index)
-        }
+        .swipeToRemove("Quitar serie", enabled: (workout.draft.logs[exercise.name]?.count ?? 0) > 1) { removeSet() }
         .contextMenu {
-            Button(role: .destructive) { Haptics.warning(); workout.removeSet(exercise.name, at: index) } label: {
+            Button(role: .destructive) { Haptics.warning(); removeSet() } label: {
                 Label("Quitar serie", systemImage: "trash")
             }
             Button { Haptics.selection(); workout.toggleWarmup(exercise.name, set: index) } label: {
@@ -890,6 +888,17 @@ struct SetLine: View {
                     Label("Desmarcar serie", systemImage: "arrow.uturn.backward")
                 }
             }
+        }
+    }
+
+    /// Los campos guardan por posición: si se quita la serie con un campo activo, lo escrito caería en
+    /// la serie siguiente. Primero se termina la edición (se guarda donde toca) y después se quita.
+    private func removeSet() {
+        guard Keyboard.endEditing() else { workout.removeSet(exercise.name, at: index); return }
+        let name = exercise.name, at = index
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(120))
+            workout.removeSet(name, at: at)
         }
     }
 }

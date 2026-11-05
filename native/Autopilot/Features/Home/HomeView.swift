@@ -121,9 +121,8 @@ struct HomeView: View {
             .padding(.horizontal, horizontalPadding)
             .padding(.top, wideLayout ? 24 : 8)
             .padding(.bottom, 96)
-            .id(ScrollTop.id)
+            .scrollsToTopOnReselect(.home)
         }
-        .scrollsToTopOnReselect(.home)
         .screenBackground()
         .refreshable { await load() }
         .task {
@@ -458,6 +457,9 @@ struct HomeView: View {
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
         .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
+        // El margen alrededor de la píldora también abre el detalle, como antes (la píldora va primero).
+        .contentShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
+        .onTapGesture { openSheet() }
         // Gesto nativo: mantener pulsada la tarjeta ofrece atajos sin quitar el toque principal.
         .contextMenu {
             Button { openSheet() } label: { Label("Ver el detalle", systemImage: "list.bullet.rectangle") }
