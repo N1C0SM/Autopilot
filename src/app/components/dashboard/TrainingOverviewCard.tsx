@@ -39,7 +39,9 @@ export function TrainingOverviewCard({ overview }: { overview: TrainingOverview 
                 tickLine={false}
                 axisLine={false}
                 interval={0}
-                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                // Una fecha sí y otra no, terminando en la semana actual: a 12 px no se pisan (como la app).
+                tickFormatter={(value: string, index: number) => ((data.length - 1 - index) % 2 === 0 ? value : "")}
+                tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
               />
               <Tooltip
                 cursor={{ fill: "hsl(var(--foreground) / 0.06)", radius: 8 }}

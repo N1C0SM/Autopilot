@@ -166,10 +166,10 @@ struct ProgressScreen: View {
             if !model.history.isEmpty {
                 ExerciseProgressSection(history: model.history, images: model.exerciseImages, names: model.exerciseNames)
             } else {
-                // Cuenta recién creada: sin esto la pestaña parecía rota (solo la tarjeta a 0 kg).
-                EmptyStateView(symbol: "dumbbell", title: "Tu progreso empieza con tu primer entreno",
-                               message: "Marca tus series al entrenar y aquí verás tus kilos, tu racha y tus récords.")
-                    .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
+                // Cuenta recién creada: misma portada que Físico y Récords, con foto real y el camino a Entrenar.
+                progressHero(photo: Self.brandPullupPhoto, eyebrow: "TU FUERZA", title: "Tu progreso empieza con tu primer entreno",
+                             message: "Marca tus series al entrenar y aquí verás tus kilos, tu racha y tus récords.",
+                             perks: Self.strengthPerks, button: "Empezar a entrenar") { onNavigate(.train) }
             }
         } else if let error = model.detailsError {
             ProgressRetryCard(title: "No hemos podido cargar «Por ejercicio»", message: error) {
@@ -184,8 +184,8 @@ struct ProgressScreen: View {
         VStack(alignment: .leading, spacing: 0) {
             // Eyebrow dorado
             Text("ÚLTIMAS 4 SEMANAS")
-                .font(.inter(size: 11, weight: .bold))
-                .tracking(0.1)
+                .font(.apCaption.weight(.semibold))
+                .tracking(1.6)
                 .foregroundStyle(Palette.gold)
 
             // Cifra protagonista
@@ -210,19 +210,22 @@ struct ProgressScreen: View {
             .padding(.top, 14)
 
             // Gráfica de barras
+            // Barras finas como la web: la semana actual en dorado y el resto en gris.
             Chart(model.weekly, id: \.label) { w in
                 BarMark(
                     x: .value("Semana", w.label),
-                    y: .value("kg", max(w.kg, model.maxWeekly * 0.02))
+                    y: .value("kg", max(w.kg, model.maxWeekly * 0.02)),
+                    width: .fixed(14)
                 )
-                .foregroundStyle(w.kg > 0 ? Palette.gold : Palette.gold.opacity(0.2))
-                .cornerRadius(8)
+                .foregroundStyle(w.label == model.weekly.last?.label ? Palette.gold : Color.white.opacity(0.14))
+                .cornerRadius(3)
             }
             .chartYAxis(.hidden)
             .chartXAxis {
-                AxisMarks { _ in
+                // Una fecha sí y otra no, terminando en la semana actual: a 12 pt no se pisan (como la web).
+                AxisMarks(values: model.weekly.enumerated().filter { (model.weekly.count - 1 - $0.offset) % 2 == 0 }.map(\.element.label)) { _ in
                     AxisValueLabel()
-                        .font(.inter(.caption2))
+                        .font(.apCaption)
                         .foregroundStyle(Palette.muted)
                 }
             }
@@ -232,19 +235,12 @@ struct ProgressScreen: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(alignment: .topTrailing) {
-            // Halo dorado en esquina
-            RadialGradient(
-                colors: [Palette.gold.opacity(0.16), .clear],
-                center: .topTrailing,
-                startRadius: 0, endRadius: 240
-            )
-        }
+        // Sobria como la web: sin halo dorado y con el mismo filo blanco que el resto de tarjetas.
         .background(Palette.card)
         .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
-                .strokeBorder(Palette.gold.opacity(0.08), lineWidth: 1)
+                .strokeBorder(Color.white.opacity(0.08), lineWidth: 1)
         )
     }
 
@@ -387,6 +383,7 @@ struct ProgressScreen: View {
     }
 
     private static let brandGymPhoto = "https://enebrcdrdnfkyduzyrzm.supabase.co/storage/v1/object/public/site-assets/exercise-images/a31c7206-d2a4-4b31-856a-f5dec09b890e-1791475829849.png"
+    private static let brandPullupPhoto = "https://enebrcdrdnfkyduzyrzm.supabase.co/storage/v1/object/public/site-assets/exercise-images/7ab0b27f-f296-4fa6-bf07-8f8b026b0832-1791475152675.png"
     private static let brandDumbbellsPhoto = "https://enebrcdrdnfkyduzyrzm.supabase.co/storage/v1/object/public/site-assets/exercise-images/d5e30e05-0791-4886-84a0-7b2695728225-1791475865184.png"
     /// Lo que guarda Físico: comparación del mismo ángulo, fotos por mes y fotos privadas.
     private struct Perk: Hashable { let symbol: String; let text: String }
@@ -395,6 +392,12 @@ struct ProgressScreen: View {
         Perk(symbol: "calendar", text: "Tus fotos ordenadas por mes"),
         Perk(symbol: "lock", text: "Privadas: solo las ves tú"),
     ]
+    /// Lo que tendrá Fuerza: todo real (gráfica por ejercicio, racha semanal y récords).
+    private static let strengthPerks = [
+        Perk(symbol: "chart.line.uptrend.xyaxis", text: "Tu fuerza en cada ejercicio"),
+        Perk(symbol: "flame", text: "Tu racha de semanas entrenando"),
+        Perk(symbol: "trophy", text: "Tus récords personales"),
+    ]
     /// Lo que guarda Récords: la mejor marca de cada ejercicio, los nuevos del mes y su fecha.
     private static let recordPerks = [
         Perk(symbol: "trophy", text: "Tu mejor marca de cada ejercicio"),
@@ -402,30 +405,44 @@ struct ProgressScreen: View {
         Perk(symbol: "calendar", text: "El día en que rompiste cada uno"),
     ]
 
-    private var compareTeaser: some View {
-        HStack(alignment: .top, spacing: 14) {
-            IconTile(symbol: "rectangle.split.2x1")
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Compara tu evolución").font(.apHeadline)
-                Text("Con dos scans del mismo ángulo verás el antes y el después lado a lado.").font(.apSubhead).foregroundStyle(Palette.muted)
-                Button("Hacer un scan") { Haptics.tap(); tab = 3 }
-                    .font(.apHeadline).foregroundStyle(Palette.gold).buttonStyle(.plain).frame(minHeight: 44)
+    /// Aún sin pareja del mismo ángulo: su último scan en grande (foto real) y cómo conseguir la comparación.
+    @ViewBuilder private var compareTeaser: some View {
+        if let latest = model.photos.first {
+            HStack(alignment: .top, spacing: 16) {
+                Button { viewing = latest } label: {
+                    Color.clear.frame(width: 112, height: 150)
+                        .overlay { RemoteThumb(url: latest.url) { Palette.secondary } }
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Ver tu último scan, del \(latest.shortDate)")
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("TU ÚLTIMO SCAN").font(.apCaption.weight(.semibold)).tracking(1.6).foregroundStyle(Palette.gold)
+                    Text(latest.longDate.isEmpty ? "Sin fecha" : latest.longDate).font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted).padding(.top, 4)
+                    Text("Compara tu evolución").font(.apHeadline).padding(.top, 12)
+                    Text("Con otro scan del mismo ángulo verás el antes y el ahora, lado a lado.").font(.apSubhead).foregroundStyle(Palette.muted)
+                        .fixedSize(horizontal: false, vertical: true).padding(.top, 4)
+                    Button("Hacer un scan") { Haptics.tap(); tab = 3 }
+                        .buttonStyle(.pillSecondary).padding(.top, 14)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).strokeBorder(Color.white.opacity(0.08), lineWidth: 1))
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
     }
 
     private func photoTile(_ p: ProgressModel.Photo, label: String) -> some View {
         Color.clear.aspectRatio(3/4, contentMode: .fit)
             .overlay { RemoteThumb(url: p.url) { Palette.secondary } }
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay(alignment: .bottomLeading) {
                 // Sin fecha legible no se pinta una píldora vacía.
                 if !label.isEmpty {
-                    Text(label).font(.inter(.caption2).weight(.medium).monospacedDigit()).foregroundStyle(.white)
-                        .padding(.horizontal, 6).padding(.vertical, 2).background(.black.opacity(0.55), in: Capsule()).padding(6)
+                    Text(label).font(.apCaption.weight(.medium).monospacedDigit()).foregroundStyle(.white)
+                        .padding(.horizontal, 8).padding(.vertical, 2).background(.black.opacity(0.55), in: Capsule()).padding(8)
                 }
             }
     }

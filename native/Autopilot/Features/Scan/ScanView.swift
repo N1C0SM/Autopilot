@@ -210,19 +210,15 @@ struct ScanView: View {
                 Image(platformImage: image).resizable().scaledToFill()
                     .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
             } else {
+                // Tarjeta lisa como el resto (sin borde discontinuo ni silueta dibujada, que parecían de juguete).
                 RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
-                    .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 6]))
-                    .foregroundStyle(Palette.gold.opacity(0.35))
-                Image(systemName: silhouette)
-                    .font(.inter(size: 150, weight: .ultraLight))
-                    .foregroundStyle(Color.white.opacity(0.06))
-                    .accessibilityHidden(true)
-                // Todo centrado: cruz, título y pista.
+                    .strokeBorder(Color.white.opacity(0.08), lineWidth: 1)
+                // Todo centrado: cámara, título y pista.
                 VStack(spacing: 8) {
-                    Image(systemName: "plus")
-                        .font(.inter(size: 20, weight: .bold)).foregroundStyle(Palette.gold)
+                    Image(systemName: "camera.fill")
+                        .font(.inter(size: 20, weight: .semibold)).foregroundStyle(Palette.gold)
                         .frame(width: 54, height: 54)
-                        .background(Palette.gold.opacity(0.14), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .background(Palette.gold.opacity(0.14), in: Circle())
                     Text(title).font(.apHeadline)
                     Text(hint).font(.apSubhead).foregroundStyle(Palette.muted)
                 }

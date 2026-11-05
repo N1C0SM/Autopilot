@@ -1,6 +1,8 @@
 import { useExerciseImages } from "@/shared/hooks/useExerciseImages";
 import { useEffect, useMemo, useState } from "react";
-import { BarChart3, ChevronRight, ChevronsUpDown, Dumbbell, TrendingUp, WifiOff } from "lucide-react";
+import { BarChart3, ChevronRight, ChevronsUpDown, Dumbbell, Flame, TrendingUp, Trophy, WifiOff } from "lucide-react";
+import { BRAND_PHOTOS } from "@/shared/lib/brandPhotos";
+import { ProgressHero } from "@/app/components/progress/ProgressHero";
 import { Button } from "@/shared/components/ui/button";
 import { EmptyState } from "@/shared/components/ui/empty-state";
 import { Skeleton } from "@/shared/components/ui/skeleton";
@@ -14,7 +16,16 @@ import ExerciseProgressChart from "@/app/components/dashboard/ExerciseProgressCh
 interface Props {
   userId: string;
   compact?: boolean;
+  /** «Empezar a entrenar» desde la portada sin entrenos (como `onNavigate(.train)` en la app). */
+  onGoTrain?: () => void;
 }
+
+/** Lo que tendrá Fuerza: todo real (gráfica por ejercicio, racha semanal y récords). */
+const STRENGTH_PERKS = [
+  { icon: TrendingUp, text: "Tu fuerza en cada ejercicio" },
+  { icon: Flame, text: "Tu racha de semanas entrenando" },
+  { icon: Trophy, text: "Tus récords personales" },
+];
 
 // Hairlines between stats: two columns under 390 px (second row with a top rule), four from 390 px.
 const STAT_CELL = [
@@ -39,7 +50,7 @@ const ExercisePhoto = ({ src, size }: { src?: string; size: "md" | "lg" }) => (
   </span>
 );
 
-const WorkoutProgress = ({ userId, compact = false }: Props) => {
+const WorkoutProgress = ({ userId, compact = false, onGoTrain }: Props) => {
   const [historyByExercise, setHistoryByExercise] = useState<Record<string, ExerciseHistoryEntry[]>>({});
   const [selectedExercise, setSelectedExercise] = useState("");
   const [metric, setMetric] = useState<"volumeKg" | "reps" | "bestEstimated1RmKg">("volumeKg");
@@ -158,11 +169,15 @@ const WorkoutProgress = ({ userId, compact = false }: Props) => {
           />
         </div>
       ) : exercises.length === 0 ? (
-        <EmptyState
-          icon={Dumbbell}
+        // Sin entrenos: misma portada que Físico y Récords, con foto real y el camino a Entrenar.
+        <ProgressHero
+          photo={BRAND_PHOTOS.pullupBar}
+          photoPosition="50% 30%"
+          eyebrow="Tu fuerza"
           title="Tu progreso empieza con tu primer entreno"
-          description="Marca tus series al entrenar y aquí verás tus kilos, tu racha y tus récords."
-          className={compact ? "flex-1 py-8" : "py-8"}
+          message="Marca tus series al entrenar y aquí verás tus kilos, tu racha y tus récords."
+          perks={STRENGTH_PERKS}
+          action={onGoTrain ? { label: "Empezar a entrenar", onClick: onGoTrain } : undefined}
         />
       ) : (
         <>

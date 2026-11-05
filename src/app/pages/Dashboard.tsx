@@ -930,7 +930,7 @@ const Dashboard = () => {
               tabIndex={-1}
               className="mt-0 flex min-h-[420px] flex-col data-[state=inactive]:hidden lg:min-h-0 lg:h-[calc(100dvh-10rem)] md:h-[calc(100dvh-12rem)] md:overflow-hidden"
             >
-              <WorkoutProgress userId={user.id} compact />
+              <WorkoutProgress userId={user.id} compact onGoTrain={() => setSection("training")} />
             </TabsContent>
             <TabsContent value="photos" forceMount tabIndex={-1} className="mt-0 data-[state=inactive]:hidden">
               <ProgressPhotos key={photosVersion} userId={user.id} onGoScan={() => setProgressTab("scan")} />

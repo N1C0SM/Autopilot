@@ -386,10 +386,16 @@ const HomeOverview = ({
             <span className="shrink-0 text-[15px] font-medium text-primary">Resumen</span>
           </button>
         ) : (
-          <div className="rounded-2xl bg-card p-4">
-            <h3 className="text-[17px] font-semibold leading-6">Hoy toca descansar</h3>
-            <p className="mt-0.5 text-[15px] text-muted-foreground">{nextSession ?? "Tu plan aún no tiene sesiones."}</p>
-            <Button type="button" variant="secondary" size="lg" className="mt-4 w-full" onClick={() => { void hapticTap(); onNavigate("training"); }}>Entrenar igualmente</Button>
+          // Día de descanso: la misma tarjeta que la sesión de hoy, con foto real fundida a la derecha y sin dibujos (como `RestCard` en la app).
+          <div className="relative overflow-hidden rounded-[22px] border border-border bg-card p-[18px]">
+            <img src={BRAND_PHOTOS.gym} alt="" aria-hidden="true" decoding="async" className="absolute inset-y-0 right-0 h-full w-[210px] object-cover object-[50%_35%] opacity-80" />
+            <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-r from-card via-card/80 to-card/10" />
+            <div className="relative">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Día de descanso</p>
+              <h3 className="mt-1.5 pr-24 text-[22px] font-bold leading-tight tracking-tight">Hoy toca descansar</h3>
+              <p className="mt-1 pr-24 type-subhead text-muted-foreground">{nextSession ?? "Tu plan aún no tiene sesiones."}</p>
+              <Button type="button" variant="secondary" size="lg" className="mt-5 w-full" onClick={() => { void hapticTap(); onNavigate("training"); }}>Entrenar igualmente</Button>
+            </div>
           </div>
         )}
         {activeWorkout && !activeWorkoutIsToday && (

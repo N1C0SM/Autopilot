@@ -5,43 +5,35 @@ import ImageIO
 struct RestCard<Action: View>: View {
     let title: String
     let message: String
+    /// Foto real de marca, fundida a la derecha como en «Entrenamiento de hoy» (`BRAND_PHOTOS.gym` de la web).
+    var photo = "https://enebrcdrdnfkyduzyrzm.supabase.co/storage/v1/object/public/site-assets/exercise-images/a31c7206-d2a4-4b31-856a-f5dec09b890e-1791475829849.png"
     @ViewBuilder var action: Action
 
-    /// EmptyState `rest` de la web: halo, luna creciente de 96 pt con resplandor y cinco estrellas.
+    /// Día de descanso: la misma tarjeta que la sesión de hoy, con foto real y sin dibujos (la luna y las
+    /// estrellas parecían infantiles). Igual que el descanso de `HomeOverview` en la web.
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Spacer(minLength: 144)
-            Text(title).font(.apTitle1).tracking(-0.7).padding(.top, 8).accessibilityAddTraits(.isHeader)
-            Text(message).font(.apSubhead).foregroundStyle(Palette.muted).padding(.top, 4).fixedSize(horizontal: false, vertical: true)
+            Text("DÍA DE DESCANSO").font(.apCaption.weight(.semibold)).tracking(1.6).foregroundStyle(Palette.gold)
+            Text(title).font(.inter(size: 22, weight: .bold)).tracking(-0.4)
+                .padding(.top, 6).padding(.trailing, 96)
+                .accessibilityAddTraits(.isHeader)
+            Text(message).font(.apSubhead).foregroundStyle(Palette.muted)
+                .padding(.top, 4).padding(.trailing, 96)
+                .fixedSize(horizontal: false, vertical: true)
             action.padding(.top, 20)
         }
-        .padding(20)
-        .frame(maxWidth: .infinity, minHeight: 288, alignment: .bottomLeading)
-        .background {
-            GeometryReader { geo in
-                ZStack(alignment: .topLeading) {
-                    Circle().fill(RadialGradient(colors: [Palette.gold.opacity(0.22), .clear], center: .center, startRadius: 0, endRadius: 144))
-                        .frame(width: 288, height: 288).offset(x: geo.size.width - 288 + 64, y: -80)
-                    Circle().fill(Palette.gold.opacity(0.9))
-                        .frame(width: 96, height: 96)
-                        .mask {
-                            Rectangle().overlay {
-                                Circle().frame(width: 77, height: 77).position(x: 28.8, y: 33.6).blendMode(.destinationOut)
-                            }
-                            .compositingGroup()
-                        }
-                        .shadow(color: Palette.gold.opacity(0.45), radius: 30)
-                        .offset(x: geo.size.width - 96 - 32, y: 32)
-                    ForEach([(0.18, 0.22), (0.34, 0.58), (0.12, 0.72), (0.46, 0.30), (0.26, 0.44)], id: \.0) { t, l in
-                        Circle().fill(Color.white.opacity(0.5)).frame(width: 4, height: 4)
-                            .offset(x: l * geo.size.width, y: t * geo.size.height)
-                    }
-                }
-            }
-            .accessibilityHidden(true)
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(alignment: .trailing) {
+            CachedAsyncImage(url: URL(string: photo)) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
+                .frame(width: 210).frame(maxHeight: .infinity).clipped()
+                .opacity(0.8)
+                .overlay { LinearGradient(colors: [Palette.card, Palette.card.opacity(0.8), Palette.card.opacity(0.1)], startPoint: .leading, endPoint: .trailing) }
+                .accessibilityHidden(true)
         }
         .background(Palette.card)
-        .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).strokeBorder(Color.white.opacity(0.08), lineWidth: 1))
     }
 }
 

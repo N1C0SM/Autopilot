@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ArrowRight, Lock, PersonStanding, Plus, Quote, RotateCcw, Ruler, Shirt, Sparkles, Sun, Target, X } from "lucide-react";
+import { ArrowRight, Camera, Lock, PersonStanding, Plus, Quote, RotateCcw, Ruler, Shirt, Sparkles, Sun, Target, X } from "lucide-react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { useAuth } from "@/shared/contexts/AuthContext";
 import { Button } from "@/shared/components/ui/button";
@@ -325,13 +325,10 @@ function PhotoTile({ title, hint, badge, image, onFile }: {
         <img src={image} alt="" className="absolute inset-0 h-full w-full object-cover" />
       ) : (
         <>
-          <span aria-hidden="true" className="absolute inset-0 rounded-[22px] border-[1.5px] border-dashed border-primary/35" />
-          <PersonStanding aria-hidden="true" strokeWidth={0.75}
-            className="absolute left-1/2 top-1/2 h-[150px] w-[150px] -translate-x-1/2 -translate-y-1/2 text-foreground/[0.06]" />
-          {/* Todo centrado: cruz, título y pista. */}
+          {/* Tarjeta lisa como el resto (sin borde discontinuo ni silueta dibujada). Todo centrado: cámara, título y pista. */}
           <span className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center">
-            <span className="flex h-[54px] w-[54px] items-center justify-center rounded-[16px] bg-primary/15 text-primary">
-              <Plus className="h-5 w-5" strokeWidth={3} aria-hidden="true" />
+            <span className="flex h-[54px] w-[54px] items-center justify-center rounded-full bg-primary/15 text-primary">
+              <Camera className="h-5 w-5" strokeWidth={2.25} aria-hidden="true" />
             </span>
             <span className="type-headline">{title}</span>
             <span className="type-subhead text-muted-foreground">{hint}</span>

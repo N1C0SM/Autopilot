@@ -7,6 +7,7 @@ import { ListGroup, ListRow } from "@/shared/components/ui/list";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { hapticTap } from "@/shared/lib/native";
 import { BRAND_PHOTOS } from "@/shared/lib/brandPhotos";
+import { ProgressHero } from "@/app/components/progress/ProgressHero";
 import { useExerciseImages } from "@/shared/hooks/useExerciseImages";
 
 interface PR {
@@ -127,38 +128,15 @@ const PRsList = ({ userId, onGoTrain }: Props) => {
   if (prs.length === 0) {
     return (
       // Sin récords: misma portada que Físico, con foto real, lo que guarda Récords y el camino a Entrenar.
-      <section aria-labelledby="records-empty-title" className="overflow-hidden rounded-[28px] bg-card ring-1 ring-primary/15">
-        <div className="relative h-52">
-          <img src={BRAND_PHOTOS.dumbbells} alt="" decoding="async" className="absolute inset-0 h-full w-full object-cover object-[50%_40%]" />
-          <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-card via-black/45 to-black/10" />
-          <div className="absolute inset-x-5 bottom-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Tus récords</p>
-            <h2 id="records-empty-title" className="mt-1 text-[26px] font-bold leading-tight tracking-tight text-white">Tu primer récord está a un entreno</h2>
-          </div>
-        </div>
-        <div className="px-5 pb-5 pt-2">
-          <p className="type-subhead text-muted-foreground">Cada vez que registras una serie con peso, guardamos tu mejor marca de ese ejercicio.</p>
-          <ul className="mt-4 space-y-3">
-            {RECORD_PERKS.map(({ icon: Icon, text }) => (
-              <li key={text} className="flex items-center gap-3 type-subhead">
-                <Icon className="h-5 w-5 shrink-0 text-primary" strokeWidth={1.75} aria-hidden="true" />{text}
-              </li>
-            ))}
-          </ul>
-          {onGoTrain && (
-            <Button
-              size="lg"
-              className="mt-5 w-full"
-              onClick={() => {
-                void hapticTap();
-                onGoTrain();
-              }}
-            >
-              Ir a entrenar
-            </Button>
-          )}
-        </div>
-      </section>
+      <ProgressHero
+        photo={BRAND_PHOTOS.dumbbells}
+        photoPosition="50% 40%"
+        eyebrow="Tus récords"
+        title="Tu primer récord está a un entreno"
+        message="Cada vez que registras una serie con peso, guardamos tu mejor marca de ese ejercicio."
+        perks={RECORD_PERKS}
+        action={onGoTrain ? { label: "Ir a entrenar", onClick: onGoTrain } : undefined}
+      />
     );
   }
 

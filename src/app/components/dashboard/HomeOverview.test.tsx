@@ -102,12 +102,15 @@ describe("dashboard home overview", () => {
     expect(container.querySelector("img")).toHaveAttribute("src", "https://cdn.example.com/cover.jpg");
   });
 
-  it("does not invent a session photo on a rest day", () => {
+  it("does not invent a session photo on a rest day: only the decorative brand photo", () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-10-04T12:00:00"));
     const { container } = render(<HomeOverview dayPlans={[{ day: "Lunes", type: "gimnasio", exercises: [] }]} onNavigate={vi.fn()} />);
     expect(screen.getByText("Hoy toca descansar")).toBeVisible();
-    expect(container.querySelector("img")).toBeNull();
+    const images = Array.from(container.querySelectorAll("img"));
+    expect(images).toHaveLength(1);
+    expect(images[0]).toHaveAttribute("src", BRAND_PHOTOS.gym);
+    expect(images[0]).toHaveAttribute("aria-hidden", "true");
   });
 
   it("shows the weekly progress and nutrition cards while keeping paid nutrition reachable", () => {

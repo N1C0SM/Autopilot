@@ -631,6 +631,27 @@ describe("paridad web ↔ apps nativas", () => {
     }
   });
 
+  it("Sin aire infantil: descanso con foto real, Scan sin siluetas y portadas de Progreso iguales en la web y en la app", () => {
+    const restApp = read("native/Autopilot/Design/Components.swift");
+    const homeWeb = read("src/app/components/dashboard/HomeOverview.tsx");
+    expect(restApp).toContain('Text("DÍA DE DESCANSO")');
+    expect(homeWeb).toContain(">Día de descanso<");
+    expect(restApp).not.toContain("Circle().frame(width: 77, height: 77)");
+    const scanApp = read("native/Autopilot/Features/Scan/ScanView.swift");
+    const scanWeb = read("src/app/components/scan/ProgressScan.tsx");
+    expect(scanApp).not.toContain("dash: [6, 6]");
+    expect(scanWeb).not.toContain("border-dashed border-primary/35");
+    const progressApp = read("native/Autopilot/Features/Progress/ProgressScreen.swift");
+    const progressWeb = read("src/app/components/dashboard/WorkoutProgress.tsx") + read("src/app/components/dashboard/ProgressPhotos.tsx");
+    for (const text of ["Tu fuerza en cada ejercicio", "Tu racha de semanas entrenando", "Tus récords personales", "Empezar a entrenar", "Compara tu evolución", "Con otro scan del mismo ángulo verás el antes y el ahora, lado a lado."]) {
+      expect(progressWeb, text).toContain(text);
+      expect(progressApp, text).toContain(text);
+    }
+    expect(progressApp).toContain('eyebrow: "TU FUERZA"');
+    expect(progressApp).toContain('Text("TU ÚLTIMO SCAN")');
+    expect(progressWeb).toContain(">Tu último scan<");
+  });
+
   it("Biblioteca de ejercicios: misma entrada en Entrenar, mismos filtros y mismas secciones de ficha, en la web y en la app", () => {
     const app = read("native/Autopilot/Features/Train/ExerciseLibraryView.swift");
     const swiftArray = (name: string) => {

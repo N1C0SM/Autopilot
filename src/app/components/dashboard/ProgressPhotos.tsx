@@ -4,6 +4,7 @@ import { supabase } from "@/shared/integrations/supabase/client";
 import { motion, AnimatePresence, useDragControls, useReducedMotion } from "framer-motion";
 import { Trash2, X, ChevronLeft, ChevronRight, ImageOff, WifiOff, Sparkles, Info, Columns2, CalendarDays, Lock } from "lucide-react";
 import { BRAND_PHOTOS } from "@/shared/lib/brandPhotos";
+import { ProgressHero } from "@/app/components/progress/ProgressHero";
 import BeforeAfterCompare from "@/app/components/dashboard/BeforeAfterCompare";
 import { Button } from "@/shared/components/ui/button";
 import { EmptyState } from "@/shared/components/ui/empty-state";
@@ -634,38 +635,14 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
 
       {/* Sin fotos: portada con foto real y lo que tendrá aquí (todo real: comparación, meses, privadas). */}
       {ready && photos.length === 0 && (
-        <section className="overflow-hidden rounded-[28px] bg-card ring-1 ring-primary/15">
-          <div className="relative h-52">
-            <img src={BRAND_PHOTOS.gym} alt="" decoding="async" className="absolute inset-0 h-full w-full object-cover object-[50%_35%]" />
-            <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-card via-black/45 to-black/10" />
-            <div className="absolute inset-x-5 bottom-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Tu físico</p>
-              <h2 className="mt-1 text-[26px] font-bold leading-tight tracking-tight text-white">Empieza a documentar tu progreso</h2>
-            </div>
-          </div>
-          <div className="px-5 pb-5 pt-2">
-            <p className="type-subhead text-muted-foreground">Tus fotos se guardan solas cada vez que haces un análisis físico en Scan.</p>
-            <ul className="mt-4 space-y-3">
-              {PHYSIQUE_PERKS.map(({ icon: Icon, text }) => (
-                <li key={text} className="flex items-center gap-3 type-subhead">
-                  <Icon className="h-5 w-5 shrink-0 text-primary" strokeWidth={1.75} aria-hidden="true" />{text}
-                </li>
-              ))}
-            </ul>
-            {onGoScan && (
-              <Button
-                size="lg"
-                className="mt-5 w-full"
-                onClick={() => {
-                  void hapticTap();
-                  onGoScan();
-                }}
-              >
-                Hacer mi primer scan
-              </Button>
-            )}
-          </div>
-        </section>
+        <ProgressHero
+          photo={BRAND_PHOTOS.gym}
+          eyebrow="Tu físico"
+          title="Empieza a documentar tu progreso"
+          message="Tus fotos se guardan solas cada vez que haces un análisis físico en Scan."
+          perks={PHYSIQUE_PERKS}
+          action={onGoScan ? { label: "Hacer mi primer scan", onClick: onGoScan } : undefined}
+        />
       )}
 
       {/* Protagonista: el antes y el ahora del mismo ángulo */}
@@ -690,30 +667,47 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
       )}
 
       {/* Aún no hay dos fotos del mismo ángulo: aviso con el patrón de la bienvenida */}
-      {ready && photos.length > 0 && posePhotos.length < 2 && (
-        <section className="rounded-[22px] border border-border bg-card p-5">
-          <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Antes · Después</p>
-            <h2 className="mt-2 text-[22px] font-semibold tracking-tight">Compara tu evolución</h2>
-            <p className="mt-1 type-subhead text-muted-foreground">
-              Con dos scans del mismo ángulo verás el antes y el después lado a lado.
-            </p>
-            {onGoScan && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-4"
-                onClick={() => {
-                  void hapticTap();
-                  onGoScan();
-                }}
-              >
-                Hacer un scan
-              </Button>
-            )}
-          </div>
-        </section>
-      )}
+      {/* Aún sin pareja del mismo ángulo: su último scan en grande (foto real) y cómo conseguir la comparación. */}
+      {ready && photos.length > 0 && posePhotos.length < 2 && (() => {
+        const latest = photos[0];
+        const latestUrl = signed.get(latest.photo_url);
+        return (
+          <section className="flex gap-4 rounded-[22px] border border-border bg-card p-4">
+            <button
+              type="button"
+              onClick={() => {
+                void hapticTap();
+                setViewingPhoto(0);
+              }}
+              aria-label={`Ver tu último scan, del ${formatDate(latest.taken_at)}`}
+              className="relative aspect-[3/4] w-28 shrink-0 overflow-hidden rounded-[16px] bg-secondary transition-opacity duration-150 active:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {latestUrl && !broken.has(latest.photo_url)
+                ? <img src={latestUrl} alt="" decoding="async" onError={() => onImageError(latest)} className="h-full w-full object-cover" />
+                : <PhotoPlaceholder />}
+            </button>
+            <div className="flex min-w-0 flex-1 flex-col">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Tu último scan</p>
+              <p className="mt-1 type-footnote tabular-nums text-muted-foreground">{latest.taken_at ? longDate(latest.taken_at) : "Sin fecha"}</p>
+              <h2 className="mt-3 type-headline">Compara tu evolución</h2>
+              <p className="mt-1 type-subhead text-muted-foreground">Con otro scan del mismo ángulo verás el antes y el ahora, lado a lado.</p>
+              {onGoScan && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-4 self-start"
+                  onClick={() => {
+                    void hapticTap();
+                    onGoScan();
+                  }}
+                >
+                  Hacer un scan
+                </Button>
+              )}
+            </div>
+          </section>
+        );
+      })()}
 
       {comparing && photos.length >= 2 && (
         <BeforeAfterCompare photos={photos} signed={signed} onClose={() => setComparing(false)} />
@@ -735,7 +729,7 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
                     setViewingPhoto(photos.indexOf(photo));
                   }}
                   aria-label={`Progreso: ver foto del ${formatDate(photo.taken_at)}`}
-                  className="relative aspect-[3/4] overflow-hidden rounded-[10px] bg-secondary transition-opacity duration-150 active:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="relative aspect-[3/4] overflow-hidden rounded-[14px] bg-secondary transition-opacity duration-150 active:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {photoUrl && !broken.has(photo.photo_url) ? (
                     <img
@@ -749,7 +743,7 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
                   ) : (
                     <PhotoPlaceholder label={photoUrl ? failedLabel(photo.photo_url) : undefined} />
                   )}
-                  <span className="absolute bottom-1.5 left-1.5 rounded-full bg-black/55 px-1.5 py-0.5 type-caption2 font-medium tabular-nums text-white backdrop-blur-md">
+                  <span className="absolute bottom-2 left-2 rounded-full bg-black/55 px-2 py-0.5 type-caption1 font-medium tabular-nums text-white backdrop-blur-md">
                     {shortDate(photo.taken_at)}
                   </span>
                 </button>
