@@ -72,11 +72,7 @@ export const ExerciseThumb = ({
         completed ? "bg-success/15" : "bg-secondary"
       } ${className}`}
     >
-      {spec ? (
-        <div className="h-full w-full p-1.5">
-          <ExerciseMotionGlyph spec={spec} className={completed ? "opacity-60" : ""} />
-        </div>
-      ) : showImage ? (
+      {showImage ? (
         <img
           src={fastImage(image, 192)}
           alt={name ?? ""}
@@ -85,6 +81,10 @@ export const ExerciseThumb = ({
           onError={() => setBroken(image)}
           className={`h-full w-full object-cover ${completed ? "opacity-70" : ""}`}
         />
+      ) : spec ? (
+        <div className="h-full w-full p-1.5">
+          <ExerciseMotionGlyph spec={spec} className={completed ? "opacity-60" : ""} />
+        </div>
       ) : (
         <div className="flex h-full w-full items-center justify-center">
           <Dumbbell className={`h-4 w-4 ${completed ? "text-success" : "text-muted-foreground"}`} />
@@ -113,7 +113,7 @@ const ExerciseMedia = ({ video, image, name, pattern, stimulus, load, className 
   // Intro de marca de 1 s al reproducir (la «A» con el rayo latiendo sobre negro) y marca de agua fija.
   const [intro, setIntro] = useState(false);
   const spec = useMotion(name, { pattern, stimulus, load });
-  const [photo, setPhoto] = useState(false);
+  const [photo, setPhoto] = useState(Boolean(image));
 
   if (video && isDirectFile(video)) {
     return (
