@@ -47,7 +47,7 @@ import { ListGroup, ListRow } from "@/shared/components/ui/list";
 import NavBar from "@/shared/components/native/NavBar";
 import { hapticTap, hapticSelection, shareFileOrImage } from "@/shared/lib/native";
 import { supabase } from "@/shared/integrations/supabase/client";
-import { applyScanPlan, canApplyScanToPlan, hasScanInferences, userSpecificGoal, type ScanApplyResult } from "@/shared/lib/scanApply";
+import { applyScanPlan, canApplyScanToPlan, hasScanInferences, parseScanProtocol, scanPriorities, userSpecificGoal, type ScanApplyResult } from "@/shared/lib/scanApply";
 import { toast } from "sonner";
 import { useAuth } from "@/shared/contexts/AuthContext";
 import poseFrontImg from "@/shared/assets/pose-front.png";
@@ -55,6 +55,7 @@ import poseBackImg from "@/shared/assets/pose-back.png";
 import ProjectionTimeline from "@/app/components/scan/ProjectionTimeline";
 import LockedInsightsGrid from "@/app/components/scan/LockedInsightsGrid";
 import ScanPlusCard from "@/app/components/scan/ScanPlusCard";
+import ScanApplyPlanCard from "@/app/components/scan/ScanApplyPlanCard";
 import StickyConversionBar from "@/app/components/scan/StickyConversionBar";
 import ScanCoverageCard from "@/app/components/scan/ScanCoverageCard";
 import ScanShareCard from "@/app/components/scan/ScanShareCard";
@@ -834,9 +835,9 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
 
   const startWorkoutFromScan = () => {
     void hapticTap();
-    if (result && canApplyPlan && hasScanInferences(result, scanOnboarding) && planApplyState === "idle") {
-      void applyScanToPlan(result);
-    }
+    // Empezar el entreno no cambia el plan: aplicar el scan es una decisión
+    // explícita en la tarjeta, para que nadie entrene con una rutina distinta
+    // de la que acaba de elegir.
     if (onStartWorkout) {
       onStartWorkout();
       return;
@@ -892,14 +893,28 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
     };
     lastApply.current = res;
     switch (outcome) {
-      case "applied":
-        done({ title: "Plan actualizado", description: priorityLine(res.priorities) ?? "Tu nuevo entrenamiento ya está en tu cuenta.", tone: "ok" }, "Plan actualizado con tu scan");
+      case "applied": {
+        const priorities = priorityLine(res.priorities);
+        const protocol = parseScanProtocol(r.protocol);
+        const hasNutrition = protocol?.proteinPerKg !== undefined || protocol?.calorieAdjustmentKcal !== undefined;
+        const hasKeyLifts = !!protocol?.keyLifts.length;
+        done({
+          title: "Plan actualizado",
+          description: hasNutrition
+            ? priorities
+              ? `${priorities} Nutrición recalculada con tu scan.`
+              : "Rutina y nutrición recalculadas con tu scan."
+            : priorities
+              ?? (hasKeyLifts ? "Tus ejercicios clave ya están en la rutina." : "Tu nuevo entrenamiento ya está en tu cuenta."),
+          tone: "ok",
+        }, "Plan actualizado con tu scan");
         break;
+      }
       case "nutrition_only":
         done({ title: "Plan actualizado", description: "Tu entrenamiento sigue igual; tus macros se han ajustado al scan.", tone: "ok" }, "Macros ajustados con tu scan");
         break;
       case "unchanged":
-        done({ title: "Tu plan ya encajaba", description: "Hemos guardado lo que propone el scan para tus próximos ajustes.", tone: "ok" }, "Scan aplicado. Tu plan ya encajaba");
+        done({ title: "Tu plan ya encajaba", description: "El plan ya reflejaba lo que propone el scan. No hacía falta cambiar nada.", tone: "ok" }, "Scan aplicado. Tu plan ya encajaba");
         break;
       case "unknown":
         done({ title: "No pudimos confirmarlo", description: "No sabemos si llegó a aplicarse. Revisa tu plan en unos minutos o reinténtalo.", tone: "warn" }, "No pudimos confirmar si se aplicó");
@@ -1772,9 +1787,9 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                       </p>
                     </div>
                     <Button
-                      variant="hero"
+                      variant="secondary"
                       size="default"
-                      className="shrink-0 shadow-sm"
+                      className="shrink-0"
                       onClick={() => { void hapticTap(); void handleShare(); }}
                       disabled={sharing}
                     >
@@ -1789,27 +1804,15 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
               {(user || routeUserId) && (
                 <section aria-label="Tu plan">
                   {planApplyState === "idle" && (
-                    <FindingRow
-                      icon={ClipboardList}
-                      title="Tu plan sigue igual"
-                      description="El scan no cambia nada por sí solo. Aplícalo solo si te encaja."
-                      action={
-                        !hasScanInferences(result, scanOnboarding) ? (
-                          <p className="pl-3 type-footnote text-muted-foreground">
-                            Este scan no propone cambios, así que no hay nada que aplicar.
-                          </p>
-                        ) : canApplyPlan ? (
-                          <Button variant="plain" size="sm" onClick={() => { void hapticTap(); applyScanToPlan(result); }}>
-                            Aplicar a mi plan
-                          </Button>
-                        ) : (
-                          <p className="pl-3 type-footnote text-muted-foreground">
-                            {plans.plus
-                              ? "Ajustar tu plan con cada scan es parte de Plus."
-                              : "Tu plan gratuito mantiene su rutina inicial."}
-                          </p>
-                        )
-                      }
+                    <ScanApplyPlanCard
+                      protocol={result.protocol}
+                      priorities={scanPriorities(result)}
+                      canApply={canApplyPlan}
+                      hasChanges={hasScanInferences(result, scanOnboarding)}
+                      canUpgrade={plans.plus || plans.coach}
+                      plusName={plans.plus ? plans.plusName : plans.coachName}
+                      onApply={() => applyScanToPlan(result)}
+                      onUpgrade={() => navigate("/planes")}
                     />
                   )}
                   {planApplyState === "applying" && (
@@ -2318,16 +2321,6 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                         Ver rutina semanal
                       </Button>
                     </>
-                  )}
-                  {user && canApplyPlan && hasScanInferences(result, scanOnboarding) && (planApplyState === "idle" || planApplyState === "error") && (
-                    <Button
-                      variant="secondary"
-                      size="lg"
-                      className="w-full"
-                      onClick={() => { void hapticTap(); applyScanToPlan(result, planApplyState === "error"); }}
-                    >
-                      {planApplyState === "error" ? "Reintentar aplicar a mi plan" : "Aplicar a mi plan"}
-                    </Button>
                   )}
                   {!user && !routeUserId && (
                     <Button size="lg" className="w-full" onClick={() => { void hapticTap(); navigate(signupWithPlan); }}>

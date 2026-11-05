@@ -5,8 +5,14 @@ import { getConsumerPlan, type BillingProfile } from "@/shared/lib/entitlements"
 import {
   libraryMusclesFor, MAX_PRIORITIES, parsePriorityMuscles, scanPriorityMuscles, withoutPriority, withPriority, type MuscleScore,
 } from "../../../supabase/functions/_shared/scan-focus";
+import {
+  hasScanProtocolSignal, parseScanProtocol, type ScanProtocolInput, type ScanProtocolPlan,
+} from "../../../supabase/functions/_shared/scan-protocol";
 
 type Client = typeof import("@/shared/integrations/supabase/client").supabase;
+
+export { parseScanProtocol } from "../../../supabase/functions/_shared/scan-protocol";
+export type { ScanProtocolInput, ScanProtocolPlan } from "../../../supabase/functions/_shared/scan-protocol";
 
 /** Lo que el análisis del scan puede proponer. Nunca se aplica solo. */
 export type ScanInferences = {
@@ -15,9 +21,7 @@ export type ScanInferences = {
   inferred_intensity?: number;
   inferred_specific_goals?: string[];
   muscle_breakdown?: MuscleScore[];
-  protocol?: {
-    training_days_per_week?: number;
-  };
+  protocol?: ScanProtocolInput;
 };
 
 /** Objetivos que puede proponer el scan (los mismos que el configurador y el editor del admin; «skill_based» no lo propone nunca). */
@@ -39,7 +43,12 @@ type Current = Partial<Pick<Tables<"onboarding">, "specific_goal" | "goal">> | n
  * (`primary_focus`/`equipment_type`): una foto no dice si entrenas en gimnasio,
  * y cambiarlo convertiría un plan de gimnasio en uno de calistenia. No cambia un
  * objetivo de habilidad («skill_based») ni sustituye el texto del usuario: solo
- * le añade, cambia o quita «Prioridad: …». Devuelve `{}` cuando no hay nada que aplicar.
+ * le añade, cambia o quita «Prioridad: …». Devuelve `{}` cuando no hay nada que
+ * aplicar.
+ *
+ * Los días que recomienda el protocolo no se escriben en `availability`: los
+ * días que puede entrenar el usuario los dijo él, y el plan los respeta. El
+ * protocolo se muestra tal cual, sin cambiar la semana de nadie.
  */
 export function buildScanPlanUpdates(r: ScanInferences, current?: Current): TablesUpdate<"onboarding"> {
   const updates = applicableUpdates(r, current);
@@ -47,15 +56,6 @@ export function buildScanPlanUpdates(r: ScanInferences, current?: Current): Tabl
   // intensity_level es un entero en la base de datos: 7,5 haría fallar el guardado.
   if (typeof r.inferred_intensity === "number" && Number.isFinite(r.inferred_intensity)) {
     updates.intensity_level = Math.round(Math.min(10, Math.max(1, r.inferred_intensity)));
-  }
-  // APLICAR DÍAS DE ENTRENAMIENTO del scan
-  console.log("[SCAN-APPLY] protocol data:", r.protocol);
-  if (r.protocol?.training_days_per_week && Number.isInteger(r.protocol.training_days_per_week)) {
-    const days = Math.min(7, Math.max(2, r.protocol.training_days_per_week));
-    console.log(`[SCAN-APPLY] Setting availability.days to ${days} from scan protocol`);
-    updates.availability = { days };
-  } else {
-    console.log("[SCAN-APPLY] No training_days_per_week found in protocol, not setting availability");
   }
   return updates;
 }
@@ -84,24 +84,33 @@ function applicableUpdates(r: ScanInferences, current?: Current): TablesUpdate<"
  * también cuenta quitar una prioridad antigua, y no cuenta lo que ya tiene.
  */
 export function hasScanInferences(r: ScanInferences, current?: Current): boolean {
-  return Object.keys(applicableUpdates(r, current)).length > 0;
+  return Object.keys(applicableUpdates(r, current)).length > 0 || protocolChangesPlan(r);
 }
 
-/** ¿El scan trae algo con lo que decidir (un objetivo válido o notas por grupo)? */
+/**
+ * El protocolo cambia algo del plan de este usuario: nutrición o ejercicios
+ * clave. Los días no cuentan: se respeta la semana que eligió el usuario.
+ */
+function protocolChangesPlan(r: ScanInferences): boolean {
+  const protocol = parseScanProtocol(r.protocol);
+  if (!protocol) return false;
+  return protocol.proteinPerKg !== undefined ||
+    protocol.calorieAdjustmentKcal !== undefined ||
+    protocol.keyLifts.length > 0;
+}
+
+/** ¿El scan trae algo con lo que decidir (un objetivo válido, notas por grupo o protocolo)? */
 const scanHasSignal = (r: ScanInferences) =>
-  !!r.muscle_breakdown?.length || (!!r.inferred_goal && GOALS.has(r.inferred_goal));
+  !!r.muscle_breakdown?.length || (!!r.inferred_goal && GOALS.has(r.inferred_goal)) || hasScanProtocolSignal(r.protocol);
 
 /**
- * Plus y Coach pueden aplicar scan a su plan (entrenamiento + nutrición).
- * Free o sin plan: solo pueden aplicar el scan básico si la función lo permite;
- * usuarios sin pago activo no pueden regenerar su plan con el scan.
+ * Plus y Coach pueden aplicar el scan a su plan (entrenamiento + nutrición).
+ * Free mantiene su rutina inicial: la opción se le muestra bloqueada hasta que
+ * tenga Plus. Un admin siempre puede, para probarlo.
  */
 export function canApplyScanToPlan(billing: BillingProfile | null | undefined, isAdmin: boolean): boolean {
   if (isAdmin) return true;
-  if (!billing) return false;
-  // Un billing con payment_status distinto de 'paid' (ej. 'unpaid') no tiene acceso.
-  if ((billing as { payment_status?: string }).payment_status === "unpaid") return false;
-  return true;
+  return getConsumerPlan(billing) !== "free";
 }
 
 export type ScanApplyOutcome =
@@ -179,6 +188,25 @@ const compare = (before: PlanPrint, after: PlanPrint): "applied" | "nutrition_on
 };
 
 /**
+ * Protocolo que se manda a generate-plan. Va normalizado (y con los nombres que
+ * entiende el servidor) para que se aplique exactamente lo que la tarjeta enseña:
+ * macros y ejercicios clave. Los días no viajan porque los elige el usuario.
+ */
+function scanProtocolBody(value: ScanInferences["protocol"]): { scan_protocol?: Record<string, unknown> } {
+  const protocol: ScanProtocolPlan | null = parseScanProtocol(value);
+  if (!protocol) return {};
+  return {
+    scan_protocol: {
+      ...(protocol.proteinPerKg !== undefined ? { protein_g_per_kg: protocol.proteinPerKg } : {}),
+      ...(protocol.calorieAdjustmentKcal !== undefined
+        ? { calorie_adjustment_kcal: protocol.calorieAdjustmentKcal }
+        : {}),
+      ...(protocol.keyLifts.length ? { key_lifts: protocol.keyLifts } : {}),
+    },
+  };
+}
+
+/**
  * Aplica lo aprobado del scan al onboarding y regenera el plan. Si el servidor
  * no lo regenera, devuelve el onboarding a como estaba, para que «tu plan no ha
  * cambiado» sea verdad. No marca el plan como pendiente: el Dashboard oculta
@@ -191,12 +219,6 @@ export async function applyScanPlan(
   r: ScanInferences,
   opts: { retryOf?: ScanApplyResult | null } = {},
 ): Promise<ScanApplyResult> {
-  console.log("[APPLY-SCAN] Starting with scan data:", {
-    hasProtocol: !!r.protocol,
-    trainingDays: r.protocol?.training_days_per_week,
-    hasGoal: !!r.inferred_goal,
-    hasBreakdown: !!r.muscle_breakdown?.length
-  });
   const result = (outcome: ScanApplyOutcome, extra: Partial<ScanApplyResult> = {}): ScanApplyResult => ({ outcome, priorities: [], ...extra });
   if (!scanHasSignal(r)) return result("no_changes");
 
@@ -226,7 +248,7 @@ export async function applyScanPlan(
   // Sin nada nuevo para este usuario no se regenera, salvo al reintentar (lo del scan ya quedó guardado).
   const current = onboarding as Tables<"onboarding">;
   const proposed = buildScanPlanUpdates(r, current);
-  if (Object.keys(proposed).length === 0 && !opts.retryOf) {
+  if (Object.keys(proposed).length === 0 && !protocolChangesPlan(r) && !opts.retryOf) {
     return result("no_changes", { saved: { goal: current.goal, specific_goal: current.specific_goal } });
   }
 
@@ -264,7 +286,7 @@ export async function applyScanPlan(
     }
   }
 
-  const guarded = await generatePlanGuarded(client as never, { user_id: userId }, { userId });
+  const guarded = await generatePlanGuarded(client as never, { user_id: userId, ...scanProtocolBody(r.protocol) }, { userId });
   const { data, error } = guarded;
   if (guarded.kept) {
     await restore();

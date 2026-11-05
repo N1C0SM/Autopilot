@@ -85,3 +85,52 @@ describe("cálculo de macros con dieta", () => {
     expect(calcNutritionMacros(Number.POSITIVE_INFINITY, "gain_muscle")).toBeNull();
   });
 });
+
+describe("ajuste del protocolo del scan", () => {
+  it("sin ajuste, el resultado es exactamente el mismo de siempre", () => {
+    expect(calcNutritionMacros(80, "gain_muscle", "estandar", null))
+      .toEqual(calcNutritionMacros(80, "gain_muscle"));
+  });
+
+  it("usa la proteína por kilo del scan", () => {
+    expect(calcNutritionMacros(80, "gain_muscle", "estandar", { proteinPerKg: 2 })).toEqual({
+      protein: 160,
+      carbs: 320,
+      fats: 80,
+      calories: 160 * 4 + 320 * 4 + 80 * 9,
+    });
+  });
+
+  it("reparte el déficit calórico entre carbohidratos y grasas sin tocar la proteína", () => {
+    // 80 kg · ganar músculo = 2000 kcal flexibles (320 C · 4 + 80 G · 9).
+    // −500 kcal = escala 0,75 → 240 C y 60 G; la proteína sigue en 176 g.
+    expect(calcNutritionMacros(80, "gain_muscle", "estandar", { calorieAdjustmentKcal: -500 })).toEqual({
+      protein: 176,
+      carbs: 240,
+      fats: 60,
+      calories: 176 * 4 + 240 * 4 + 60 * 9,
+    });
+  });
+
+  it("combina proteína y calorías, y respeta los límites del producto", () => {
+    expect(calcNutritionMacros(80, "gain_muscle", "estandar", { proteinPerKg: 2.4, calorieAdjustmentKcal: -500 }))
+      .toMatchObject({ protein: 192, carbs: 240, fats: 60 });
+    // Fuera de rango: proteína 1–3 g/kg y ajuste ±1000 kcal; la escala no baja de 0,55.
+    expect(calcNutritionMacros(80, "gain_muscle", "estandar", { proteinPerKg: 9, calorieAdjustmentKcal: -5000 }))
+      .toMatchObject({ protein: 240, carbs: 176, fats: 44 });
+    // Los mismos topes que valida el editor (350 P / 700 C / 180 G).
+    expect(calcNutritionMacros(200, "gain_muscle")).toMatchObject({ protein: 350, carbs: 700, fats: 180 });
+  });
+
+  it("mantiene la dieta: un déficit en keto sigue siendo keto", () => {
+    const keto = calcNutritionMacros(80, "lose_weight", "keto");
+    const adjusted = calcNutritionMacros(80, "lose_weight", "keto", { calorieAdjustmentKcal: -300 });
+    expect(keto).not.toBeNull();
+    expect(adjusted).not.toBeNull();
+    expect(adjusted!.protein).toBe(keto!.protein);
+    expect(adjusted!.carbs).toBeLessThan(keto!.carbs);
+    expect(adjusted!.fats).toBeLessThan(keto!.fats);
+    // La proporción carbohidratos/grasas se conserva.
+    expect(adjusted!.carbs / adjusted!.fats).toBeCloseTo(keto!.carbs / keto!.fats, 1);
+  });
+});

@@ -88,6 +88,26 @@ describe("lo que aplica un scan al plan", () => {
     expect(buildScanPlanUpdates({ inferred_goal: "recomp", inferred_intensity: 14 })).toEqual({ goal: "recomp", intensity_level: 10 });
     expect(buildScanPlanUpdates({ inferred_goal: "recomp", inferred_intensity: Number.NaN })).toEqual({ goal: "recomp" });
   });
+
+  it("no cambia la semana del usuario aunque el protocolo recomiende otros días", () => {
+    // Los días que puede entrenar los dijo el usuario: el scan no los reescribe.
+    expect(buildScanPlanUpdates({ protocol: { training_days_per_week: 4 } })).toEqual({});
+    expect(buildScanPlanUpdates(
+      { protocol: { training_days_per_week: 5 } },
+      { availability: { days: 3, hours: 60, training_days: [0, 2] } },
+    )).toEqual({});
+    // Pero la recomendación llega intacta al servidor, que solo usa lo aplicable.
+    expect(buildScanPlanUpdates({ inferred_goal: "recomp", protocol: { training_days_per_week: 5 } }))
+      .toEqual({ goal: "recomp" });
+  });
+
+  it("el protocolo cuenta como propuesta solo por lo que de verdad cambia el plan", () => {
+    expect(hasScanInferences({ protocol: { protein_g_per_kg: 2.2 } })).toBe(true);
+    expect(hasScanInferences({ protocol: { calorie_adjustment_kcal: -300 } })).toBe(true);
+    expect(hasScanInferences({ protocol: { key_lifts: ["Press militar"] } })).toBe(true);
+    expect(hasScanInferences({ protocol: { training_days_per_week: 5 } })).toBe(false);
+    expect(hasScanInferences({ protocol: { training_days_per_week: 5, cardio_minutes_per_week: 120 } })).toBe(false);
+  });
 });
 
 describe("quién puede aplicar un scan a su plan", () => {
@@ -98,6 +118,8 @@ describe("quién puede aplicar un scan a su plan", () => {
     expect(canApplyScanToPlan(plus, false)).toBe(true);
     expect(canApplyScanToPlan(coach, false)).toBe(true);
     expect(canApplyScanToPlan({ payment_status: "unpaid" }, false)).toBe(false);
+    expect(canApplyScanToPlan({ payment_status: "paid", subscription_tier: "training", subscription_status: "canceled" }, false)).toBe(false);
+    expect(canApplyScanToPlan({ payment_status: "paid" }, false)).toBe(false);
     expect(canApplyScanToPlan(null, false)).toBe(false);
   });
 
@@ -400,5 +422,52 @@ describe("aplicar un scan al plan", () => {
     const { client, invoke } = fakeClient({ updatedRows: 0 });
     expect(await run(client, "u1", scan)).toBe("failed");
     expect(invoke).not.toHaveBeenCalled();
+  });
+
+  it("manda el protocolo del scan a generate-plan para ajustar nutrición y ejercicios clave", async () => {
+    const { client, writes, invoke } = fakeClient({});
+    const res = await applyScanPlan(client, "u1", {
+      protocol: { protein_g_per_kg: 2.2, calorie_adjustment_kcal: -300, key_lifts: ["Press militar", "Remo Pendlay"] },
+    });
+    expect(res.outcome).toBe("applied");
+    expect(writes).toEqual([]);
+    expect(invoke).toHaveBeenCalledWith("generate-plan", {
+      body: {
+        user_id: "u1",
+        scan_protocol: {
+          protein_g_per_kg: 2.2,
+          calorie_adjustment_kcal: -300,
+          key_lifts: ["Press militar", "Remo Pendlay"],
+        },
+      },
+    });
+  });
+
+  it("normaliza el protocolo fuera de rango antes de mandarlo", async () => {
+    const { client, invoke } = fakeClient({});
+    await run(client, "u1", { protocol: { protein_g_per_kg: 9, calorie_adjustment_kcal: -5000 } });
+    expect(invoke).toHaveBeenCalledWith("generate-plan", {
+      body: { user_id: "u1", scan_protocol: { protein_g_per_kg: 3, calorie_adjustment_kcal: -1000 } },
+    });
+  });
+
+  it("no toca availability ni regenera cuando el scan solo recomienda días", async () => {
+    const { client, writes, invoke } = fakeClient({
+      onboarding: { id: "o1", goal: "gain_muscle", specific_goal: "Pino", availability: { hours: 60 } },
+    });
+    expect(await run(client, "u1", { protocol: { training_days_per_week: 5 } })).toBe("no_changes");
+    expect(writes).toEqual([]);
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
+  it("aplica los días solo si ya hay otro cambio, sin tocarlos en onboarding", async () => {
+    const { client, writes, invoke } = fakeClient({
+      onboarding: { id: "o1", goal: "gain_muscle", specific_goal: "Pino", availability: { days: 3 } },
+    });
+    expect(await run(client, "u1", { protocol: { training_days_per_week: 5, protein_g_per_kg: 2.2 } })).toBe("applied");
+    expect(writes).toEqual([]);
+    expect(invoke).toHaveBeenCalledWith("generate-plan", {
+      body: { user_id: "u1", scan_protocol: { protein_g_per_kg: 2.2 } },
+    });
   });
 });

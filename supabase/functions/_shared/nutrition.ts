@@ -115,14 +115,36 @@ const GOAL_MACROS: Record<string, readonly [number, number, number]> = {
 };
 const DEFAULT_GOAL_MACROS = [1.8, 3.5, 1.0] as const;
 
+/** Lo que un scan puede cambiar de la fórmula, siempre dentro de rangos seguros. */
+export interface MacroAdjustment {
+  /** Gramos de proteína por kilo que recomienda el scan (1–3). */
+  proteinPerKg?: number;
+  /** Diferencia diaria frente al mantenimiento: negativa es déficit, positiva superávit. */
+  calorieAdjustmentKcal?: number;
+}
+
+const PROTEIN_PER_KG_MIN = 1;
+const PROTEIN_PER_KG_MAX = 3;
+const CALORIE_ADJUSTMENT_LIMIT = 1_000;
+/** El ajuste mueve carbohidratos y grasas sin desmontar la dieta (keto sigue keto). */
+const CALORIE_SCALE_MIN = 0.55;
+const CALORIE_SCALE_MAX = 1.45;
+
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
 /**
  * Macros diarios objetivo adaptados al objetivo y a la dieta. Devuelve null si
  * no hay un peso corporal válido: nunca se inventan targets sin peso.
+ *
+ * `adjustment` es opcional: lo usa la aplicación del scan («Aplicar a mi plan»)
+ * para llevar la proteína por kilo y el ajuste calórico que recomienda el
+ * análisis. Sin ajuste, el resultado es exactamente el de siempre.
  */
 export function calcNutritionMacros(
   weightKg: number,
   goal: string,
   diet: DietType = "estandar",
+  adjustment?: MacroAdjustment | null,
 ): CalculatedMacros | null {
   if (!Number.isFinite(weightKg) || weightKg <= 0) return null;
 
@@ -153,11 +175,39 @@ export function calcNutritionMacros(
       break;
   }
 
+  // La proteína del scan manda sobre la del objetivo/dieta, dentro de su rango.
+  if (adjustment?.proteinPerKg != null && Number.isFinite(adjustment.proteinPerKg)) {
+    protein = clamp(adjustment.proteinPerKg, PROTEIN_PER_KG_MIN, PROTEIN_PER_KG_MAX);
+  }
+
   const macros = {
     protein: Math.round(weightKg * protein),
     carbs: Math.round(weightKg * carbs),
     fats: Math.round(weightKg * fats),
   };
+
+  // El ajuste calórico se reparte entre carbohidratos y grasas en su proporción:
+  // el déficit/superávit del scan no toca la proteína ni convierte una dieta en otra.
+  const adjustmentKcal = adjustment?.calorieAdjustmentKcal;
+  if (adjustmentKcal != null && Number.isFinite(adjustmentKcal) && adjustmentKcal !== 0) {
+    const flexibleKcal = macros.carbs * 4 + macros.fats * 9;
+    if (flexibleKcal > 0) {
+      const scale = clamp(
+        1 + clamp(adjustmentKcal, -CALORIE_ADJUSTMENT_LIMIT, CALORIE_ADJUSTMENT_LIMIT) / flexibleKcal,
+        CALORIE_SCALE_MIN,
+        CALORIE_SCALE_MAX,
+      );
+      macros.carbs = Math.round(macros.carbs * scale);
+      macros.fats = Math.round(macros.fats * scale);
+    }
+  }
+
+  // Los mismos límites que valida el editor: un scan nunca guarda un target que
+  // el resto del producto rechazaría.
+  macros.protein = Math.min(macros.protein, MACRO_INPUT_LIMITS.protein);
+  macros.carbs = Math.min(macros.carbs, MACRO_INPUT_LIMITS.carbs);
+  macros.fats = Math.min(macros.fats, MACRO_INPUT_LIMITS.fats);
+
   return {
     ...macros,
     calories: macros.protein * 4 + macros.carbs * 4 + macros.fats * 9,

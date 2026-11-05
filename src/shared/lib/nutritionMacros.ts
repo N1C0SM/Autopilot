@@ -10,4 +10,5 @@ export {
   detectDiet,
   type CalculatedMacros,
   type DietType,
+  type MacroAdjustment,
 } from "../../../supabase/functions/_shared/nutrition";

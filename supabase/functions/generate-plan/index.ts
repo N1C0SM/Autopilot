@@ -1,8 +1,9 @@
 import type { DayPlan, GymExerciseEntry } from "../_shared/training-types.ts";
 import { jsonObject, errorMessage } from "../_shared/runtime-values.ts";
 import { getConsumerPlan, hasCoaching, resolveFeatures } from "../_shared/entitlements.ts";
-import { parseBodyWeight, nutritionMacroError } from "../_shared/nutrition.ts";
+import { calcNutritionMacros, detectDiet, parseBodyWeight, nutritionMacroError, type DietType } from "../_shared/nutrition.ts";
 import { parsePriorityMuscles } from "../_shared/scan-focus.ts";
+import { parseScanProtocol, type ScanProtocolPlan } from "../_shared/scan-protocol.ts";
 const GYM_EQUIPMENT_RE = /polea|cable|mancuerna|dumbbell|kettlebell|pesa rusa|goblet|barra ol[ií]mpica|press banca|m[aá]quina|prensa|smith|multipower|landmine|lastr|disco|barra t\b|trap bar|glute-ham|ghr|farmer/i;
 function isBodyweightOk(ex: { name?: string | null; exercise_type?: string | null }): boolean {
   if (ex.exercise_type === "Gimnasio") return false;
@@ -53,6 +54,8 @@ interface UserConfig {
   specificGoal: string;
   /** Lagging groups the user approved from a scan («… · Prioridad: hombros, pecho» in specific_goal). */
   priorityMuscles: string[];
+  /** Key lifts the scan recommended; among the same pattern/priority, they win. */
+  keyLifts?: string[];
 }
 
 interface Rules {
@@ -170,6 +173,41 @@ function getRepScheme(stimulus: string | null, priority: number, rules: Rules): 
   return { series, reps, rest };
 }
 
+// ─── Key lifts from the scan ───
+
+const KEY_LIFT_STOP_WORDS = new Set([
+  "con", "sin", "para", "del", "las", "los", "una", "unos", "unas", "por",
+  "pesado", "pesada", "ligero", "ligera", "libre", "guiado", "guiada",
+  "barra", "mancuerna", "mancuernas", "polea", "maquina", "máquina", "smith",
+]);
+
+const normalizeExerciseName = (value: string): string =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+
+/**
+ * Posición del ejercicio clave del scan al que se parece este nombre
+ * (menor = más arriba). Infinity cuando no coincide con ninguno.
+ */
+function keyLiftRank(name: string, keyLifts: string[]): number {
+  if (!keyLifts.length) return Number.POSITIVE_INFINITY;
+  const exercise = normalizeExerciseName(name);
+  if (!exercise) return Number.POSITIVE_INFINITY;
+  for (let i = 0; i < keyLifts.length; i++) {
+    const lift = normalizeExerciseName(keyLifts[i]);
+    if (!lift) continue;
+    if (exercise === lift || exercise.includes(lift) || lift.includes(exercise)) return i;
+    const words = lift.split(" ").filter((w) => w.length > 2 && !KEY_LIFT_STOP_WORDS.has(w));
+    const hits = words.filter((w) => exercise.includes(w)).length;
+    if (words.length && hits >= Math.min(2, words.length)) return i;
+  }
+  return Number.POSITIVE_INFINITY;
+}
+
 // ─── Smart exercise picker ───
 
 function pickExercisesForSession(
@@ -180,6 +218,13 @@ function pickExercisesForSession(
   skillProfile: SkillProfile | null,
 ): PickedExercise[] {
   const { userLevel, goal, exerciseType } = config;
+  const keyLifts = config.keyLifts ?? [];
+  /** Desempate estable: el ejercicio clave del scan antes que otro cualquiera. */
+  const byKeyLift = (a: ExerciseRow, b: ExerciseRow) => {
+    const aKey = keyLiftRank(a.name, keyLifts);
+    const bKey = keyLiftRank(b.name, keyLifts);
+    return aKey === bKey ? 0 : aKey < bKey ? -1 : 1;
+  };
 
   // Boost target muscles with skill-specific muscles
   const boostedMuscles = [...targetMuscles];
@@ -230,6 +275,10 @@ function pickExercisesForSession(
         !usedIds.has(ex.id)
       )
       .sort((a, b) => {
+        // Entre el mismo patrón y prioridad, manda el ejercicio clave del scan.
+        const aKey = keyLiftRank(a.name, keyLifts);
+        const bKey = keyLiftRank(b.name, keyLifts);
+        if (aKey !== bKey) return aKey - bKey;
         // Prefer skill-priority muscles
         if (skillProfile) {
           const aSkill = skillProfile.priorityMuscles.includes(a.muscle_group || "") ? 0 : 1;
@@ -321,13 +370,13 @@ function pickExercisesForSession(
   const p2Candidates = allAvailable
     .filter(ex => (ex.priority ?? 2) === 2 && !usedIds.has(ex.id))
     .sort((a, b) => {
-      // Prefer skill muscles
+      // Prefer skill muscles, then the scan's key lifts
       if (skillProfile) {
         const aSkill = skillProfile.priorityMuscles.includes(a.muscle_group || "") ? 0 : 1;
         const bSkill = skillProfile.priorityMuscles.includes(b.muscle_group || "") ? 0 : 1;
         if (aSkill !== bSkill) return aSkill - bSkill;
       }
-      return (a.recommended_order ?? 2) - (b.recommended_order ?? 2);
+      return (a.recommended_order ?? 2) - (b.recommended_order ?? 2) || byKeyLift(a, b);
     });
 
   let p2Added = 0;
@@ -338,7 +387,7 @@ function pickExercisesForSession(
 
   const p3Candidates = allAvailable
     .filter(ex => (ex.priority ?? 2) === 3 && !usedIds.has(ex.id))
-    .sort((a, b) => (a.recommended_order ?? 2) - (b.recommended_order ?? 2));
+    .sort((a, b) => (a.recommended_order ?? 2) - (b.recommended_order ?? 2) || byKeyLift(a, b));
 
   let p3Added = 0;
   for (const ex of p3Candidates) {
@@ -350,7 +399,7 @@ function pickExercisesForSession(
   if (totalSets < rules.min_sets_per_session) {
     const remaining = allAvailable
       .filter(ex => !usedIds.has(ex.id))
-      .sort((a, b) => (a.priority ?? 2) - (b.priority ?? 2));
+      .sort((a, b) => (a.priority ?? 2) - (b.priority ?? 2) || byKeyLift(a, b));
     for (const ex of remaining) {
       if (totalSets >= rules.min_sets_per_session) break;
       tryAdd(ex);
@@ -363,7 +412,7 @@ function pickExercisesForSession(
   if (picked.length < MIN_EXERCISES) {
     const remaining = allAvailable
       .filter(ex => !usedIds.has(ex.id))
-      .sort((a, b) => (a.priority ?? 2) - (b.priority ?? 2));
+      .sort((a, b) => (a.priority ?? 2) - (b.priority ?? 2) || byKeyLift(a, b));
     for (const ex of remaining) {
       if (picked.length >= MIN_EXERCISES) break;
       const stimulus = getEffectiveStimulus(ex.stimulus_type, goal, skillProfile);
@@ -600,54 +649,9 @@ function getEffectiveStimulus(exerciseStimulus: string | null, goal: string, ski
 }
 
 // ─── Nutrition helpers ───
-
-type DietType = "estandar" | "paleo" | "keto" | "vegana" | "vegetariana" | "mediterranea" | "sin_gluten" | "sin_lactosa";
-
-function detectDiet(prefs: string | null | undefined): DietType {
-  if (!prefs) return "estandar";
-  const p = prefs.toLowerCase();
-  if (p.includes("keto") || p.includes("cetog")) return "keto";
-  if (p.includes("paleo")) return "paleo";
-  if (p.includes("vegan") && !p.includes("vegetar")) return "vegana";
-  if (p.includes("vegetar") || p.includes("ovolac")) return "vegetariana";
-  if (p.includes("mediterr")) return "mediterranea";
-  if (p.includes("sin gluten") || p.includes("celiac")) return "sin_gluten";
-  if (p.includes("sin lactosa") || p.includes("intoler")) return "sin_lactosa";
-  return "estandar";
-}
-
-// Macros adaptados a goal Y dieta (keto recorta carbs, vegana ajusta proteína, etc.)
-function calcMacros(weight: number, goal: string, diet: DietType) {
-  // Base por goal (gr/kg)
-  let p = 1.8, c = 3.5, f = 1.0;
-  switch (goal) {
-    case "gain_muscle":      p = 2.2; c = 4.0; f = 1.0; break;
-    case "lose_weight":      p = 2.4; c = 2.0; f = 0.8; break;
-    case "recomp":           p = 2.2; c = 3.0; f = 0.9; break;
-    case "improve_endurance":p = 1.8; c = 4.5; f = 0.9; break;
-    case "skill_based":      p = 2.0; c = 3.5; f = 1.0; break;
-  }
-  // Ajuste por dieta
-  switch (diet) {
-    case "keto":
-      // Muy bajo en carbs, grasa alta, proteína moderada
-      c = 0.5; f = Math.max(f * 2.2, 1.8); p = Math.max(p, 2.0); break;
-    case "paleo":
-      // Sin azúcares ni cereales: menos carbs, más grasas saludables
-      c = c * 0.7; f = f * 1.3; break;
-    case "vegana":
-      // Más proteína vegetal compensada y carbs ligeramente más altos
-      p = p * 1.1; c = c * 1.1; break;
-    case "mediterranea":
-      f = f * 1.15; break;
-    default: break;
-  }
-  return {
-    protein: Math.round(weight * p),
-    carbs:   Math.round(weight * c),
-    fats:    Math.round(weight * f),
-  };
-}
+// La fórmula de macros vive en _shared/nutrition.ts: generate-plan,
+// sync-nutrition-macros y auto-tasks calculan exactamente lo mismo. Aquí solo
+// queda el banco de comidas de respaldo (la IA lo sustituye cuando puede).
 
 // Banco de comidas por dieta + goal
 function getMeals(goal: string, diet: DietType, allergies?: string | null) {
@@ -917,9 +921,12 @@ serve(async (req) => {
 
     let targetUserId = user.id;
     let force = false;
+    // Lo que el scan puede mover del plan (proteína, calorías, ejercicios clave).
+    let scanProtocol: ScanProtocolPlan | null = null;
     try {
       const body = await req.json();
       force = body?.force === true;
+      scanProtocol = parseScanProtocol(body?.scan_protocol);
       if (body.user_id && body.user_id !== user.id) {
         const [{ data: isAdmin }, { data: isTrainer }] = await Promise.all([
           supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }),
@@ -1099,6 +1106,7 @@ serve(async (req) => {
       intensityLevel,
       specificGoal,
       priorityMuscles: parsePriorityMuscles(specificGoal),
+      keyLifts: scanProtocol?.keyLifts ?? [],
     };
 
     const { data: allExercises } = await supabase
@@ -1295,8 +1303,17 @@ serve(async (req) => {
       }
     }
 
-    const diet = detectDiet(onb.nutrition_preferences);
-    const macros = includeNutrition && weight !== null ? calcMacros(weight, goal, diet) : null;
+    const diet = detectDiet(onb.nutrition_preferences, onb.allergies);
+    // El protocolo del scan (si viene al aplicar el scan) ajusta la proteína por
+    // kilo y las calorías; sin protocolo, el resultado es el de siempre.
+    const macros = includeNutrition && weight !== null
+      ? calcNutritionMacros(weight, goal, diet, scanProtocol
+        ? {
+          proteinPerKg: scanProtocol.proteinPerKg,
+          calorieAdjustmentKcal: scanProtocol.calorieAdjustmentKcal,
+        }
+        : null)
+      : null;
     let meals = getMeals(goal, diet, onb.allergies);
 
     // Try AI-personalized meals based on user's actual food preferences.
