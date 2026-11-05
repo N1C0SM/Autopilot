@@ -36,6 +36,7 @@ serve(async (req) => {
       ? [profile.stripe_customer_id]
       : (await stripe.customers.list({ email: user.email, limit: 100 })).data.map((c: { id: string }) => c.id);
     let chosen: { sub: Stripe.Subscription; tier: string; customerId: string } | null = null;
+    let missingCustomer = false;
     for (const customerId of customers) {
       try {
         for await (const sub of stripe.subscriptions.list({ customer: customerId, status: "all", limit: 100 })) {
@@ -47,6 +48,7 @@ serve(async (req) => {
       } catch (err) {
         // Cliente de otro modo de Stripe (prueba/real) o borrado: se ignora en vez de romper la app.
         if ((err as { code?: string })?.code !== "resource_missing") throw err;
+        missingCustomer = true;
       }
     }
     if (chosen) {
@@ -64,6 +66,10 @@ serve(async (req) => {
       await syncStripeEntitlement(db, user.id, tier, sub.status, subscriptionEnd, sub.id);
       return json({ subscribed: true, tier, subscription_end: subscriptionEnd,
         plan: sub.items.data[0]?.price.recurring?.interval === "year" ? "yearly" : "monthly" });
+    }
+    // El cliente guardado no existe en este modo de Stripe: no se toca el plan, solo se informa.
+    if (missingCustomer) {
+      return json({ subscribed: profile.payment_status === "paid", tier: profile.subscription_tier ?? "free", subscription_end: profile.subscription_end, plan: null, source: "unverified" });
     }
     // Preserve historical one-time coaching purchases; metadata/old free flags are not proof.
     if (profile.stripe_payment_id && hasCoaching(profile)) {
