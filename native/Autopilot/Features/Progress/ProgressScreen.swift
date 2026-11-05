@@ -332,20 +332,52 @@ struct ProgressScreen: View {
         }
     }
 
+    /// Sin fotos: portada con foto real y lo que tendrá aquí (como `ProgressPhotos` de la web).
     private var photosEmpty: some View {
-        HStack(alignment: .top, spacing: 14) {
-            IconTile(symbol: "sparkles")
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Empieza a documentar tu progreso").font(.apHeadline)
-                Text("Tus fotos se guardan solas cada vez que haces un análisis en Scan.").font(.apSubhead).foregroundStyle(Palette.muted)
+        VStack(alignment: .leading, spacing: 0) {
+            Color.clear.frame(height: 208)
+                .overlay {
+                    CachedAsyncImage(url: URL(string: Self.brandGymPhoto)) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
+                }
+                .clipped()
+                .overlay { LinearGradient(colors: [.black.opacity(0.1), .black.opacity(0.45), Palette.card], startPoint: .top, endPoint: .bottom) }
+                .overlay(alignment: .bottomLeading) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("TU FÍSICO").font(.apCaption.weight(.semibold)).tracking(1.6).foregroundStyle(Palette.gold)
+                        Text("Empieza a documentar tu progreso").font(.inter(size: 26, weight: .bold)).foregroundStyle(.white)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .accessibilityAddTraits(.isHeader)
+                    }
+                    .padding(.horizontal, 20).padding(.bottom, 12)
+                }
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Tus fotos se guardan solas cada vez que haces un análisis físico en Scan.").font(.apSubhead).foregroundStyle(Palette.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+                ForEach(Self.physiquePerks, id: \.self) { perk in
+                    Label {
+                        Text(perk.text).font(.apSubhead)
+                    } icon: {
+                        Image(systemName: perk.symbol).foregroundStyle(Palette.gold)
+                    }
+                }
                 Button("Hacer mi primer scan") { Haptics.tap(); tab = 3 }
-                    .font(.apHeadline).foregroundStyle(Palette.gold).buttonStyle(.plain).frame(minHeight: 44)
+                    .buttonStyle(.pill).padding(.top, 8)
             }
+            .padding(.horizontal, 20).padding(.top, 8).padding(.bottom, 20)
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .background(Palette.card)
+        .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous).strokeBorder(Palette.gold.opacity(0.15), lineWidth: 1))
     }
+
+    private static let brandGymPhoto = "https://enebrcdrdnfkyduzyrzm.supabase.co/storage/v1/object/public/site-assets/exercise-images/a31c7206-d2a4-4b31-856a-f5dec09b890e-1791475829849.png"
+    /// Lo que guarda Físico: comparación del mismo ángulo, fotos por mes y fotos privadas.
+    private struct Perk: Hashable { let symbol: String; let text: String }
+    private static let physiquePerks = [
+        Perk(symbol: "rectangle.split.2x1", text: "El antes y el ahora, lado a lado"),
+        Perk(symbol: "calendar", text: "Tus fotos ordenadas por mes"),
+        Perk(symbol: "lock", text: "Privadas: solo las ves tú"),
+    ]
 
     private var compareTeaser: some View {
         HStack(alignment: .top, spacing: 14) {
@@ -395,6 +427,7 @@ struct ProgressScreen: View {
                     // Escritorio: la mejor marca a todo el ancho arriba y la lista debajo.
                     VStack(alignment: .leading, spacing: 24) {
                         recordsHero(best).frame(maxWidth: .infinity)
+                        recordsStats
                         VStack(alignment: .leading, spacing: 16) {
                             recordsHeader
                             recordsTable
@@ -405,6 +438,7 @@ struct ProgressScreen: View {
                     // iPhone: una columna, exactamente como hasta ahora.
                     VStack(alignment: .leading, spacing: 16) {
                         recordsHero(best)
+                        recordsStats
                         recordsHeader
                         recordsTable
                     }
@@ -474,6 +508,31 @@ struct ProgressScreen: View {
         .accessibilityElement(children: .combine)
     }
 
+    /// Cifras de los propios récords (como `PRsList` de la web): cuántos, nuevos este mes y el último.
+    private var recordsStats: some View {
+        let month = String(LocalDate.string().prefix(7))
+        let thisMonth = model.records.filter { $0.day.hasPrefix(month) }.count
+        let latest = model.records.max { $0.day < $1.day }
+        return HStack(spacing: 8) {
+            recordStat(String(model.records.count), "Ejercicios con récord")
+            recordStat(String(thisMonth), "Nuevos este mes", accent: thisMonth > 0)
+            recordStat(latest?.shortDateText ?? "—", "Último récord")
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Resumen de tus récords")
+    }
+
+    private func recordStat(_ value: String, _ label: String, accent: Bool = false) -> some View {
+        VStack(spacing: 4) {
+            Text(value).font(.figure(size: 26)).foregroundStyle(accent ? Palette.gold : Palette.foreground)
+                .lineLimit(1).minimumScaleFactor(0.6)
+            Text(label).font(.apCaption).foregroundStyle(Palette.muted)
+                .multilineTextAlignment(.center).lineLimit(2)
+        }
+        .frame(maxWidth: .infinity).padding(.horizontal, 8).padding(.vertical, 16)
+        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+    }
+
     private var recordsHeader: some View {
         Text("TUS RÉCORDS PERSONALES")
             .font(.apFootnote).foregroundStyle(Palette.muted)
@@ -501,7 +560,16 @@ struct ProgressScreen: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(pr.name).font(.apBody)
                     // Sin fecha (dato raro en el servidor) no se deja una línea vacía.
-                    if !pr.dateText.isEmpty { Text(pr.dateText).font(.apFootnote).foregroundStyle(Palette.muted) }
+                    if !pr.dateText.isEmpty {
+                        HStack(spacing: 6) {
+                            Text(pr.dateText).font(.apFootnote).foregroundStyle(Palette.muted)
+                            if pr.day.hasPrefix(String(LocalDate.string().prefix(7))) {
+                                Text("Nuevo").font(.inter(size: 11, weight: .semibold)).foregroundStyle(Palette.gold)
+                                    .padding(.horizontal, 6).padding(.vertical, 1)
+                                    .background(Palette.gold.opacity(0.15), in: Capsule())
+                            }
+                        }
+                    }
                 }
                 Spacer(minLength: 8)
                 VStack(alignment: .trailing, spacing: 4) {
@@ -892,6 +960,9 @@ final class ProgressModel: ObservableObject {
         let weightText: String
         let e1rmText: String
         let image: String?
+        /// Día del récord («yyyy-MM-dd») para «Nuevos este mes» y «Último récord».
+        var day: String = ""
+        var shortDateText: String = ""
     }
 
     struct Photo: Identifiable, Hashable {
@@ -1447,6 +1518,12 @@ private enum ProgressCompute {
         dayMonthStyle.format(date).replacingOccurrences(of: ".", with: "")
     }
 
+    /// «28 oct», para la cifra «Último récord».
+    static func recordShortDate(_ raw: String) -> String {
+        guard !raw.isEmpty, let date = ymd.date(from: String(raw.prefix(10))) else { return "" }
+        return date.formatted(.dateTime.day().month(.abbreviated).locale(Locale(identifier: "es_ES")))
+    }
+
     static func recordDate(_ raw: String) -> String {
         guard !raw.isEmpty, let date = ymd.date(from: String(raw.prefix(10))) else { return "" }
         return recordDateStyle.format(date)
@@ -1571,7 +1648,9 @@ private enum ProgressCompute {
                 dateText: recordDate(row.achieved_at ?? ""),
                 weightText: Progression.kgText(weight),
                 e1rmText: Progression.kgText(e1rm),
-                image: images[row.exercise_name])
+                image: images[row.exercise_name],
+                day: String((row.achieved_at ?? "").prefix(10)),
+                shortDateText: recordShortDate(row.achieved_at ?? ""))
         }
     }
 
@@ -1701,7 +1780,7 @@ struct ExerciseProgressSection: View {
         // Mismo empate que la web: ante igual 1RM gana el primero.
         let top = weighted.first { $0.best1Rm == best.best1Rm } ?? best
         let kg = top.bestKg ?? 0
-        let label = "\(kg.rounded() == kg ? String(Int(kg)) : String(kg)) kg × \(top.bestReps ?? 0)"
+        let label = "\(kg.rounded() == kg ? String(Int(kg)) : String(kg).replacingOccurrences(of: ".", with: ",")) kg × \(top.bestReps ?? 0)"
         let gain = ((kg - (first.bestKg ?? 0)) * 10).rounded() / 10
         return (label, top != first && gain > 0 ? gain : nil)
     }

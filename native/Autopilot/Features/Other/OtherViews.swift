@@ -29,7 +29,10 @@ struct NutritionView: View {
     /// Foto propia de cada plato (clave: el plato). Sin foto propia, la fila va sin foto.
     @State private var photos: [String: URL] = [:]
     /// Sin comidas: nil = comprobando, true = tiene Plus (se generan), false = aviso de Plus.
+    /// Se recuerda por usuario: al volver a abrir no aparece el estado de «preparando» de Plus.
     @State private var hasAccess: Bool?
+    /// El acceso guardado se vuelve a confirmar una vez por apertura (por si cambió el plan).
+    @State private var accessChecked = false
     @State private var generating = false
     @State private var generateFailed = false
     /// Confirmación de «Regenerar comidas» (como en la web).
@@ -213,7 +216,10 @@ struct NutritionView: View {
                     } else if hasAccess == false {
                         // Como `NutritionPlusSection` de la web; en iOS sin enlace a pagos externos.
                         plusSection
-                    } else if generating || hasAccess == nil {
+                    } else if hasAccess == nil {
+                        // Aún no se sabe si hay Plus: nada de «preparando» ni foto de plato (eso es de Plus).
+                        EmptyView()
+                    } else if generating {
                         EmptyCard(photo: Self.defaultDish, title: "Preparando tus comidas…",
                                   message: "Autopilot está creando tus comidas con tus gustos y lo que no comes.")
                     } else {
@@ -498,23 +504,27 @@ struct NutritionView: View {
         // Lo marcado del día es local: se pinta de inmediato y no depende de la red.
         if let data = UserDefaults.standard.data(forKey: doneKey), let arr = try? JSONDecoder().decode([String].self, from: data) { done = Set(arr) }
         guard let id = session.userId else { loaded = true; failed = false; return }
+        if hasAccess == nil { hasAccess = UserDefaults.standard.object(forKey: Self.accessKey(id)) as? Bool }
 
         // La última copia del plan se pinta al instante; la red la sustituye después.
         if !loaded, let cached = Snapshots.load(Row.self, Self.cacheKey(id)) {
             macros = cached.macros_json
-            meals = cached.meals_json ?? []
+            // Sin Plus no se pintan comidas guardadas de otra época: solo las de quien tiene acceso.
+            meals = hasAccess == false ? [] : (cached.meals_json ?? [])
             photos = Self.cachedPhotos(meals)
             loaded = true
         }
 
         do {
             let row = try await fetchPlan(id)
-            if let row { Snapshots.save(row, Self.cacheKey(id)) }
             // Sin Plus la RLS no deja leer el plan: los macros se calculan con el onboarding
             // (misma fórmula que `resolveNutritionPreview` de la web). Los macros son siempre gratis.
             macros = row?.macros_json
             if macros?.protein == nil && macros?.calories == nil { macros = await estimatedMacros(id) }
             meals = row?.meals_json ?? []
+            // La copia en disco es lo que se ve ahora, también sin fila: así no reaparecen al
+            // abrir comidas viejas (de cuando había Plus) que el servidor ya no devuelve.
+            Snapshots.save(Row(macros_json: macros, meals_json: meals), Self.cacheKey(id))
             // Las fotos ya guardadas se pintan en el primer frame: sin parpadeo ni salto.
             photos = Self.cachedPhotos(meals)
             loaded = true
@@ -522,9 +532,10 @@ struct NutritionView: View {
             if !meals.isEmpty {
                 // Fotos de todas las comidas en paralelo; la lista ya está pintada.
                 await prefetchPhotos()
-            } else if hasAccess == nil {
+            } else if !accessChecked {
                 // Sin comidas: con Plus se generan solas (el servidor vuelve a comprobar el acceso).
                 // Lo decide el servidor: si responde «no_access», toca el aviso de Plus.
+                accessChecked = true
                 await prepareMeals(id)
             }
         } catch {
@@ -537,6 +548,13 @@ struct NutritionView: View {
 
     /// Copia en disco del plan por usuario (macros y comidas).
     static func cacheKey(_ id: UUID) -> String { "nutrition|\(id.uuidString.lowercased())" }
+    private static func accessKey(_ id: UUID) -> String { "nutrition-access.\(id.uuidString.lowercased())" }
+
+    /// Guarda la última respuesta del servidor sobre Plus (solo respuestas reales, nunca un fallo de red).
+    private func setAccess(_ value: Bool) {
+        hasAccess = value
+        if let id = session.userId { UserDefaults.standard.set(value, forKey: Self.accessKey(id)) }
+    }
 
     /// Si nunca dijo qué le gusta comer, primero se comprueba el acceso (sin generar nada) y,
     /// con Plus, se le pregunta; si ya lo dijo, se preparan las comidas directamente.
@@ -544,15 +562,17 @@ struct NutritionView: View {
         struct Prefs: Decodable { let nutrition_preferences: String? }
         let prefs: Prefs? = try? await Backend.client.from("onboarding").select("nutrition_preferences")
             .eq("user_id", value: id).single().execute().value
-        if let p = prefs?.nutrition_preferences, !p.trimmingCharacters(in: .whitespaces).isEmpty {
-            await generateMeals()
-            return
-        }
+        let hasPrefs = !(prefs?.nutrition_preferences ?? "").trimmingCharacters(in: .whitespaces).isEmpty
+        // Con Plus (o sin saberlo aún) y preferencias, se preparan directamente; si lo último que
+        // dijo el servidor fue «sin Plus», primero se comprueba sin pedir que genere nada.
+        if hasPrefs && hasAccess != false { await generateMeals(); return }
         struct Result: Decodable { let reason: String? }
         let result: Result? = try? await Backend.client.functions.invoke("sync-nutrition-macros", options: FunctionInvokeOptions(body: [String: String]()))
-        if result?.reason == "no_access" { hasAccess = false; return }
-        hasAccess = true
-        needsSetup = true
+        // Sin respuesta (red) no se decide nada: nunca se enseña lo de Plus a quien no lo tiene.
+        guard let result else { return }
+        if result.reason == "no_access" { setAccess(false); return }
+        setAccess(true)
+        if hasPrefs { await generateMeals() } else { needsSetup = true }
     }
 
     /// Comidas del día con las preferencias del onboarding (`sync-nutrition-macros`, igual que la web).
@@ -562,8 +582,8 @@ struct NutritionView: View {
         generating = true; generateFailed = false
         let result: Result? = try? await Backend.client.functions.invoke("sync-nutrition-macros", options: FunctionInvokeOptions(body: Body()))
         generating = false
-        if result?.reason == "no_access" { hasAccess = false; return }
-        hasAccess = true
+        if result?.reason == "no_access" { setAccess(false); return }
+        if result != nil { setAccess(true) }
         guard result?.meals_updated == true, let id = session.userId, let row = (try? await fetchPlan(id)) ?? nil else { generateFailed = true; return }
         // Copia en disco al día, como `load()`: sin red se abren las comidas nuevas, no las viejas.
         Snapshots.save(row, Self.cacheKey(id))

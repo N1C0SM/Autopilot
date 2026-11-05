@@ -66,7 +66,7 @@ export function buildExerciseHistory(logs: WorkoutLogRecord[]): Record<string, E
       completedSets: validSets.length,
       loadedSets: weightedSets.length,
       reps: validSets.reduce((sum, set) => sum + set.reps, 0),
-      bestSetLabel: bestSet ? `${bestSet.weight} kg × ${bestSet.reps}` : null,
+      bestSetLabel: bestSet ? `${bestSet.weight.toLocaleString("es-ES")} kg × ${bestSet.reps}` : null,
     };
 
     grouped[log.exercise_name] ??= {};

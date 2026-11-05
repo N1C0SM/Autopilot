@@ -21,6 +21,12 @@ interface Props {
   userId: string;
 }
 
+/** «2026-11» de una fecha ISO o «YYYY-MM-DD», en hora local. */
+const toMonthKey = (date: string) => {
+  const d = new Date(date);
+  return Number.isNaN(d.getTime()) ? "" : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+};
+
 const PRsList = ({ userId }: Props) => {
   const [prs, setPrs] = useState<PR[]>([]);
   const [loading, setLoading] = useState(true);
@@ -123,6 +129,12 @@ const PRsList = ({ userId }: Props) => {
   const kg = (n: number) => n.toLocaleString("es-ES", { maximumFractionDigits: 1 });
   const top = prs[0];
   const topHasEstimate = top.estimated_1rm != null;
+  // Cifras de cabecera, todas de los propios récords: cuántos, cuántos de este mes y el último.
+  const monthKey = toMonthKey(new Date().toISOString());
+  const isThisMonth = (pr: PR) => toMonthKey(pr.achieved_at) === monthKey;
+  const thisMonth = prs.filter(isThisMonth).length;
+  const latest = prs.reduce((a, b) => (a.achieved_at > b.achieved_at ? a : b));
+  const shortDate = (date: string) => new Date(date).toLocaleDateString("es-ES", { day: "numeric", month: "short" });
 
   return (
     <div className="space-y-8 lg:grid lg:grid-cols-[280px_1fr] lg:gap-12 lg:space-y-0 lg:items-start">
@@ -146,13 +158,28 @@ const PRsList = ({ userId }: Props) => {
         </div>
       </section>
 
+      <div className="space-y-8">
+      <div className="grid grid-cols-3 gap-2" aria-label="Resumen de tus récords">
+        {[
+          { value: String(prs.length), label: "Ejercicios con récord", accent: false },
+          { value: String(thisMonth), label: "Nuevos este mes", accent: thisMonth > 0 },
+          { value: shortDate(latest.achieved_at), label: "Último récord", accent: false },
+        ].map((stat) => (
+          <div key={stat.label} className="flex min-w-0 flex-col gap-1 rounded-[22px] bg-card px-3 py-4 text-center">
+            <p className={`truncate font-rounded text-[26px] font-bold leading-none tabular-nums ${stat.accent ? "text-primary" : ""}`}>{stat.value}</p>
+            <p className="type-caption1 text-muted-foreground">{stat.label}</p>
+          </div>
+        ))}
+      </div>
       <ListGroup header="Tus récords personales">
         {prs.slice(0, 20).map((pr) => (
           <ListRow
             key={pr.id}
             leading={<span aria-hidden="true" className="block h-11 w-11 overflow-hidden rounded-media bg-secondary">{images[pr.exercise_name] && <img src={images[pr.exercise_name]} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover object-[50%_30%]" />}</span>}
             title={pr.exercise_name}
-            subtitle={formatDate(pr.achieved_at)}
+            subtitle={isThisMonth(pr)
+              ? <span className="inline-flex items-center gap-1.5">{formatDate(pr.achieved_at)}<span className="rounded-full bg-primary/15 px-1.5 py-px type-caption2 font-semibold text-primary">Nuevo</span></span>
+              : formatDate(pr.achieved_at)}
             trailing={
               <span className="block text-right">
                 <span className="block type-body font-semibold tabular-nums">
@@ -168,6 +195,7 @@ const PRsList = ({ userId }: Props) => {
           />
         ))}
       </ListGroup>
+      </div>
     </div>
   );
 };

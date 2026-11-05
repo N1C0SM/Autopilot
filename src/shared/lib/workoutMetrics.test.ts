@@ -68,7 +68,7 @@ describe("buildExerciseHistory", () => {
     expect(history.Sentadilla[0]).toMatchObject({
       volumeKg: 484,
       bestEstimated1RmKg: 76.6,
-      bestSetLabel: "60.5 kg × 8",
+      bestSetLabel: "60,5 kg × 8",
     });
   });
 });

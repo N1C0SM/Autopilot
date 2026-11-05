@@ -615,6 +615,21 @@ describe("paridad web ↔ apps nativas", () => {
     }
   });
 
+  it("Físico vacío y Récords (diseño premium): mismos textos y cifras en la web y en la app", () => {
+    const app = read("native/Autopilot/Features/Progress/ProgressScreen.swift");
+    const photos = read("src/app/components/dashboard/ProgressPhotos.tsx");
+    const records = read("src/app/components/dashboard/PRsList.tsx");
+    expect(app).toContain('Text("TU FÍSICO")');
+    for (const text of ["Empieza a documentar", "El antes y el ahora, lado a lado", "Tus fotos ordenadas por mes", "Privadas: solo las ves tú", "Hacer mi primer scan"]) {
+      expect(photos, text).toContain(text);
+      expect(app, text).toContain(text);
+    }
+    for (const text of ["Ejercicios con récord", "Nuevos este mes", "Último récord", "Nuevo"]) {
+      expect(records, text).toContain(text);
+      expect(app, text).toContain(text);
+    }
+  });
+
   it("Biblioteca de ejercicios: misma entrada en Entrenar, mismos filtros y mismas secciones de ficha, en la web y en la app", () => {
     const app = read("native/Autopilot/Features/Train/ExerciseLibraryView.swift");
     const swiftArray = (name: string) => {

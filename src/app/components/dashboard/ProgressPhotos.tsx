@@ -2,7 +2,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { formatDecimal } from "@/shared/lib/numberFormat";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { motion, AnimatePresence, useDragControls, useReducedMotion } from "framer-motion";
-import { Camera, Trash2, X, ChevronLeft, ChevronRight, ImageOff, WifiOff, Sparkles, Info } from "lucide-react";
+import { Trash2, X, ChevronLeft, ChevronRight, ImageOff, WifiOff, Sparkles, Info, Columns2, CalendarDays, Lock } from "lucide-react";
+import { BRAND_PHOTOS } from "@/shared/lib/brandPhotos";
 import BeforeAfterCompare from "@/app/components/dashboard/BeforeAfterCompare";
 import { Button } from "@/shared/components/ui/button";
 import { EmptyState } from "@/shared/components/ui/empty-state";
@@ -81,6 +82,13 @@ const PhotoPlaceholder = ({ label = "Cargando foto…" }: { label?: string }) =>
 );
 
 type ScanData = NonNullable<Photo["scan"]>;
+
+/** Lo que guarda la pestaña Físico: comparación del mismo ángulo, fotos por mes y fotos privadas. */
+const PHYSIQUE_PERKS = [
+  { icon: Columns2, text: "El antes y el ahora, lado a lado" },
+  { icon: CalendarDays, text: "Tus fotos ordenadas por mes" },
+  { icon: Lock, text: "Privadas: solo las ves tú" },
+];
 
 const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
 
@@ -624,17 +632,30 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
         </div>
       )}
 
-      {/* Empty state */}
+      {/* Sin fotos: portada con foto real y lo que tendrá aquí (todo real: comparación, meses, privadas). */}
       {ready && photos.length === 0 && (
-        <EmptyState
-          icon={Camera}
-          title="Empieza a documentar tu progreso"
-          description="Tus fotos se guardan solas cada vez que haces un análisis físico en Scan."
-          className="min-h-[55dvh]"
-          action={
-            onGoScan ? (
+        <section className="overflow-hidden rounded-[28px] bg-card ring-1 ring-primary/15">
+          <div className="relative h-52">
+            <img src={BRAND_PHOTOS.gym} alt="" decoding="async" className="absolute inset-0 h-full w-full object-cover object-[50%_35%]" />
+            <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-card via-black/45 to-black/10" />
+            <div className="absolute inset-x-5 bottom-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Tu físico</p>
+              <h2 className="mt-1 text-[26px] font-bold leading-tight tracking-tight text-white">Empieza a documentar tu progreso</h2>
+            </div>
+          </div>
+          <div className="px-5 pb-5 pt-2">
+            <p className="type-subhead text-muted-foreground">Tus fotos se guardan solas cada vez que haces un análisis físico en Scan.</p>
+            <ul className="mt-4 space-y-3">
+              {PHYSIQUE_PERKS.map(({ icon: Icon, text }) => (
+                <li key={text} className="flex items-center gap-3 type-subhead">
+                  <Icon className="h-5 w-5 shrink-0 text-primary" strokeWidth={1.75} aria-hidden="true" />{text}
+                </li>
+              ))}
+            </ul>
+            {onGoScan && (
               <Button
                 size="lg"
+                className="mt-5 w-full"
                 onClick={() => {
                   void hapticTap();
                   onGoScan();
@@ -642,9 +663,9 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
               >
                 Hacer mi primer scan
               </Button>
-            ) : undefined
-          }
-        />
+            )}
+          </div>
+        </section>
       )}
 
       {/* Protagonista: el antes y el ahora del mismo ángulo */}
