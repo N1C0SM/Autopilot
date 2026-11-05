@@ -32,7 +32,6 @@ import { hapticImpact, hapticNotify, hapticSelection, hapticSignature, hapticTap
 import SwipeSetEntry from "@/app/components/dashboard/SwipeSetEntry";
 import LogAllSetsButton from "@/app/components/dashboard/LogAllSetsButton";
 import NumericWeightPicker from "@/app/components/dashboard/NumericWeightPicker";
-import { WeightAdjuster } from "@/app/components/dashboard/WeightAdjuster";
 import {
   addWorkoutSetDrop,
   createWorkoutSetLogs,
@@ -1796,15 +1795,6 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                                   aria-invalid={Boolean(inputError && mainError && set.weight.trim())}
                                   className={`${NUMBER_FIELD} ${si === firstPendingIndex ? CURRENT_FIGURE : ""} ${isWarmup || (!set.done && prevSets?.[si]?.done && set.weight === prevSets[si].weight) ? "text-muted-foreground" : ""}`}
                                 />
-                                {si === firstPendingIndex && !set.done && (
-                                  <div className="mt-2">
-                                    <WeightAdjuster
-                                      value={set.weight}
-                                      onChange={(newWeight) => updateSet(ex.name, si, "weight", newWeight)}
-                                      disabled={false}
-                                    />
-                                  </div>
-                                )}
                                 </>
                                 )}
                               </div>
