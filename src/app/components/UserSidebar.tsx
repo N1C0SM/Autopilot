@@ -1,3 +1,4 @@
+import { BrandMark } from "@/shared/components/ui/brand-mark";
 import {
   Sidebar,
   SidebarContent,
@@ -67,11 +68,12 @@ const UserSidebar = ({
     <Sidebar collapsible="icon">
       <SidebarHeader className="px-4 pb-1 pt-4 group-data-[collapsible=icon]:px-2">
         {collapsed ? (
-          <span className="type-headline text-center text-primary">A</span>
+          <span className="flex justify-center"><BrandMark size={24} label="Autopilot" /></span>
         ) : (
-          <div className="flex items-baseline gap-2">
-            <span className="type-title3 text-primary">Autopilot</span>
-            <span className="type-subhead text-muted-foreground">App</span>
+          <div className="flex items-center gap-2">
+            <BrandMark size={24} />
+            <span className="text-[18px] font-bold tracking-[0.01em]">AUTOPILOT</span>
+            
           </div>
         )}
       </SidebarHeader>

@@ -303,7 +303,7 @@ const UserGoalPanel = ({ userId, email }: Props) => {
             <div>
               <div className="flex items-baseline justify-between gap-3">
                 <span className="type-subhead text-muted-foreground">Similitud con el objetivo</span>
-                <span className={cn("font-rounded text-[34px] font-bold leading-[41px] tabular-nums", comparison.congratulate ? "text-primary" : "text-foreground")}>
+                <span className={cn(" text-[34px] font-bold leading-[41px] tabular-nums", comparison.congratulate ? "text-primary" : "text-foreground")}>
                   {comparison.similarity}
                   <span className="ml-0.5 type-title3 text-muted-foreground">%</span>
                 </span>

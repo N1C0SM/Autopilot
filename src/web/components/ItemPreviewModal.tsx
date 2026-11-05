@@ -77,7 +77,7 @@ export default function ItemPreviewModal({ item, variant, onClose }: { item: Pre
         )}
 
         <div className="space-y-2">
-          {item.price && <p className="text-center type-large-title font-rounded tabular-nums">{item.price}</p>}
+          {item.price && <p className="text-center type-large-title tabular-nums">{item.price}</p>}
           {item.url ? (
             <Button asChild variant="hero" size="lg" className="w-full">
               <a href={item.url} target="_blank" rel="noreferrer sponsored" onClick={() => { void hapticTap(); track(variant.event, { item: item.title }); }}>

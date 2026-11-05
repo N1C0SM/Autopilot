@@ -1,4 +1,5 @@
 import { ArrowLeftRight } from "lucide-react";
+import { BrandMark } from "@/shared/components/ui/brand-mark";
 import { openAccountPicker } from "@/shared/lib/accounts";
 import { supportsMultipleAccounts } from "@/shared/lib/platform";
 import {
@@ -58,10 +59,11 @@ const AdminSidebar = ({ section, onNavigate, userCount, onSignOut }: Props) => {
     <Sidebar collapsible="icon">
       <SidebarHeader className="px-4 pb-1 pt-4 group-data-[collapsible=icon]:px-2">
         {collapsed ? (
-          <span className="type-headline text-center text-primary">A</span>
+          <span className="flex justify-center"><BrandMark size={24} label="Autopilot" /></span>
         ) : (
-          <div className="flex items-baseline gap-2">
-            <span className="type-title3 text-primary">Autopilot</span>
+          <div className="flex items-center gap-2">
+            <BrandMark size={24} />
+            <span className="text-[18px] font-bold tracking-[0.01em]">AUTOPILOT</span>
             <span className="type-subhead text-muted-foreground">Admin</span>
           </div>
         )}

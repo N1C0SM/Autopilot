@@ -727,7 +727,7 @@ const Dashboard = () => {
               {/* Entrenar queda limpio: las herramientas de la rutina viven solo en «Rutina semanal». */}
               {trainingView === "plan" && !workoutMode && !autoStartWorkout && (
                 // Herramientas de la rutina en su tarjeta: modo del plan a la izquierda, acciones en píldoras.
-                <div className="mb-3 flex w-full items-center gap-2 rounded-media bg-card py-2 pl-4 pr-2">
+                <div className="mb-3 flex w-full items-center gap-2 rounded-[22px] border border-foreground/[0.08] bg-card py-2 pl-5 pr-2">
                   <span className="min-w-0 flex-1 truncate type-subhead font-medium">
                     {isManualPlan(dayPlans) ? "Rutina personalizada" : "Piloto automático"}
                   </span>
@@ -743,7 +743,7 @@ const Dashboard = () => {
                         type="button"
                         aria-label={aria}
                         onClick={() => { void hapticTap(); on(); }}
-                        className="flex h-9 items-center gap-1.5 rounded-full bg-secondary px-3 type-footnote font-semibold text-primary transition active:opacity-50"
+                        className="flex h-9 items-center gap-1.5 rounded-full border border-foreground/20 bg-transparent px-3.5 text-[13px] font-medium text-foreground transition hover:bg-foreground/5 active:opacity-50"
                       >
                         <Icon className="h-4 w-4 shrink-0" aria-hidden />
                         <span className={compact ? "hidden sm:inline" : undefined}>{label}</span>

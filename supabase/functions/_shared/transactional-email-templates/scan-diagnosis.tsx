@@ -34,7 +34,7 @@ interface ScanDiagnosisProps {
   style?: number
 }
 
-const GOLD = '#D8B25E'
+const GOLD = '#E8BB73'
 const LOGO = 'https://autopilotplan.com/pwa-192.png'
 
 const figure = (n?: number) =>
@@ -119,7 +119,7 @@ const ScanDiagnosisEmail = ({
                   <Column key={title} style={tileColumn}>
                     <div style={tile}>
                       <Text style={label}>{title}</Text>
-                      <Text style={{ ...tileFigure, color: accent ? GOLD : '#FFFFFF' }}>{value}</Text>
+                      <Text style={{ ...tileFigure, color: accent ? GOLD : '#F7F5F3' }}>{value}</Text>
                     </div>
                   </Column>
                 ))}
@@ -182,7 +182,7 @@ const ScanDiagnosisEmail = ({
                   {withoutPlan && (
                     <Column style={halfColumn}>
                       <Text style={label}>Por tu cuenta</Text>
-                      <Text style={{ ...monthsFigure, color: '#A8A8AE' }}>{withoutPlan}</Text>
+                      <Text style={{ ...monthsFigure, color: '#B1AEA9' }}>{withoutPlan}</Text>
                     </Column>
                   )}
                 </Row>
@@ -262,7 +262,7 @@ const heroTitle: React.CSSProperties = {
   fontFamily: ROUNDED,
   fontSize: '34px',
   fontWeight: 700,
-  color: '#FFFFFF',
+  color: '#F7F5F3',
   letterSpacing: '-0.03em',
   lineHeight: '1.08',
   margin: '0 0 16px',
@@ -270,13 +270,13 @@ const heroTitle: React.CSSProperties = {
 
 const heroLead: React.CSSProperties = {
   fontSize: '16px',
-  color: '#A8A8AE',
+  color: '#B1AEA9',
   lineHeight: '1.5',
   margin: '0',
 }
 
 const card: React.CSSProperties = {
-  backgroundColor: '#141416',
+  backgroundColor: '#151414',
   borderRadius: '22px',
   padding: '20px 22px',
 }
@@ -294,7 +294,7 @@ const scoreCard: React.CSSProperties = {
 const label: React.CSSProperties = {
   fontSize: '13px',
   fontWeight: 600,
-  color: '#A8A8AE',
+  color: '#B1AEA9',
   margin: '0 0 4px',
 }
 
@@ -302,7 +302,7 @@ const scoreFigure: React.CSSProperties = {
   fontFamily: ROUNDED,
   fontSize: '72px',
   fontWeight: 700,
-  color: '#FFFFFF',
+  color: '#F7F5F3',
   letterSpacing: '-0.04em',
   lineHeight: '1',
   margin: '0 0 8px',
@@ -312,21 +312,21 @@ const scoreFigure: React.CSSProperties = {
 const scoreOutOf: React.CSSProperties = {
   fontSize: '24px',
   fontWeight: 600,
-  color: '#A8A8AE',
+  color: '#B1AEA9',
   letterSpacing: '0',
   marginLeft: '4px',
 }
 
 const muted: React.CSSProperties = {
   fontSize: '15px',
-  color: '#A8A8AE',
+  color: '#B1AEA9',
   lineHeight: '1.55',
   margin: '0',
 }
 
 const small: React.CSSProperties = {
   fontSize: '13px',
-  color: '#A8A8AE',
+  color: '#B1AEA9',
   lineHeight: '1.5',
 }
 
@@ -366,7 +366,7 @@ const quote: React.CSSProperties = {
   fontFamily: DISPLAY,
   fontSize: '20px',
   fontWeight: 700,
-  color: '#FFFFFF',
+  color: '#F7F5F3',
   letterSpacing: '-0.01em',
   lineHeight: '1.35',
   margin: '0 0 10px',
@@ -375,7 +375,7 @@ const quote: React.CSSProperties = {
 const strong: React.CSSProperties = {
   fontSize: '17px',
   fontWeight: 600,
-  color: '#FFFFFF',
+  color: '#F7F5F3',
   lineHeight: '1.45',
   margin: '0',
 }
@@ -384,7 +384,7 @@ const cardTitle: React.CSSProperties = {
   fontFamily: DISPLAY,
   fontSize: '20px',
   fontWeight: 700,
-  color: '#FFFFFF',
+  color: '#F7F5F3',
   margin: '0 0 14px',
 }
 
@@ -394,7 +394,7 @@ const priorityRowSpaced: React.CSSProperties = { width: '100%', marginTop: '12px
 const priorityLabel: React.CSSProperties = {
   fontSize: '15px',
   fontWeight: 600,
-  color: '#FFFFFF',
+  color: '#F7F5F3',
   lineHeight: '1.4',
   paddingRight: '12px',
 }
@@ -407,7 +407,7 @@ const pill = (priority: string): React.CSSProperties => ({
   fontSize: '12px',
   fontWeight: 700,
   backgroundColor: /alta/i.test(priority) ? 'rgba(216,178,94,0.15)' : 'rgba(255,255,255,0.08)',
-  color: /alta/i.test(priority) ? GOLD : '#A8A8AE',
+  color: /alta/i.test(priority) ? GOLD : '#B1AEA9',
 })
 
 const ctaSection: React.CSSProperties = { padding: '16px 28px 36px' }
@@ -423,6 +423,6 @@ const ctaButton: React.CSSProperties = {
 const footerBrand: React.CSSProperties = {
   fontSize: '13px',
   fontWeight: 600,
-  color: '#A8A8AE',
+  color: '#B1AEA9',
   margin: '0 0 6px',
 }

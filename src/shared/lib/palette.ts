@@ -11,18 +11,18 @@
  */
 
 /** Dorado de marca (token `--primary`). */
-export const BRAND_GOLD = "#D8B25E";
+export const BRAND_GOLD = "#E8BB73";
 
 /** Lienzo de las imágenes exportadas (historia de entrenamiento, scan). */
 export const INK = {
-  base: "#000000",
-  mid: "#08080a",
-  deep: "#000000",
-  card: "#141416",
-  line: "#262629",
+  base: "#0B0A0A",
+  mid: "#0B0A0A",
+  deep: "#0B0A0A",
+  card: "#151414",
+  line: "#282625",
   silhouette: "#3d3d40",
   /** Fondo del lienzo que captura html2canvas en el scan. */
-  scanCanvas: "#000000",
+  scanCanvas: "#0B0A0A",
 } as const;
 
 /** Sombreado del mapa muscular: luces y sombras sobre la silueta (no son color de marca). */
@@ -36,11 +36,11 @@ export const MASK_OPAQUE = "#000";
 
 /** Texto sobre esas imágenes: mismos pasos que `foreground` y `muted-foreground`. */
 export const INK_TEXT = {
-  primary: "#ffffff",
-  body: "#e4e4e7",
-  secondary: "#a8a8ae",
-  tertiary: "#a8a8ae",
-  faint: "#a8a8ae",
+  primary: "#F7F5F3",
+  body: "#E3E1DD",
+  secondary: "#B1AEA9",
+  tertiary: "#B1AEA9",
+  faint: "#B1AEA9",
 } as const;
 
 /** Mapa muscular: de «poco trabajado» a «mucho» en la sesión. */
@@ -93,14 +93,14 @@ export const EMAIL_ERROR = "#b00020";
  */
 export const MONACO_THEME = {
   background: "#1C1C1E",
-  foreground: "#FFFFFF",
+  foreground: "#F7F5F3",
   lineHighlight: "#2C2C2E",
   lineNumber: "#8E8E93",
   lineNumberActive: "#EBEBF5",
   caret: BRAND_GOLD,
-  selection: "#D8B25E44",
-  selectionInactive: "#D8B25E22",
-  bracketMatch: "#D8B25E33",
+  selection: "#E8BB7344",
+  selectionInactive: "#E8BB7322",
+  bracketMatch: "#E8BB7333",
   bracketMatchBorder: BRAND_GOLD,
   indentGuide: "#38383A",
   indentGuideActive: "#636366",

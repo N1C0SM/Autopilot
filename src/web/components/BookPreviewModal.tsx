@@ -107,7 +107,7 @@ export default function BookPreviewModal({
             </p>
           ) : book.url ? (
             <>
-              <p className="text-center type-large-title font-rounded tabular-nums">{book.price || "Gratis"}</p>
+              <p className="text-center type-large-title tabular-nums">{book.price || "Gratis"}</p>
               <Button asChild variant="hero" size="lg" className="w-full">
                 <a href={book.url} target="_blank" rel="noreferrer" onClick={() => buy(book, "preview_modal")}>
                   {book.is_pack || /pack/i.test(book.title) ? "Comprar pack" : "Comprar ahora"}

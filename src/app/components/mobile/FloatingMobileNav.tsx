@@ -48,7 +48,7 @@ const FloatingMobileNav = ({ active, items, label, layoutId, onChange, className
       className="pointer-events-none absolute -inset-x-3 -top-6 bg-gradient-to-t from-background via-background/95 to-transparent"
       style={{ bottom: "calc(-0.75rem - env(safe-area-inset-bottom, 0px))" }}
     />
-    <ul className="relative mx-auto flex h-[var(--mobile-nav-height)] max-w-[30rem] items-stretch gap-0.5 rounded-full bg-card p-1 shadow-[0_8px_24px_rgba(0,0,0,0.5)]">
+    <ul className="relative mx-auto flex h-[var(--mobile-nav-height)] max-w-[30rem] items-stretch gap-0.5 rounded-full border border-border bg-card/90 p-1 backdrop-blur-xl">
       {items.map(({ key, label: itemLabel, icon: Icon, activeIcon: ActiveIcon, locked }) => {
         const isActive = active === key;
         return (
@@ -63,13 +63,13 @@ const FloatingMobileNav = ({ active, items, label, layoutId, onChange, className
               aria-current={isActive ? "page" : undefined}
               aria-label={itemLabel}
               className={`relative flex h-full w-full flex-col items-center justify-center gap-0.5 rounded-full px-0.5 transition-transform duration-150 ease-out active:scale-[0.94] ${
-                isActive ? "text-primary-foreground" : "text-muted-foreground"
+                isActive ? "text-primary" : "text-muted-foreground"
               }`}
             >
               {isActive && (
                 <motion.span
                   layoutId={`${layoutId}-active`}
-                  className="absolute inset-0 rounded-full bg-primary/90"
+                  className="absolute inset-0 rounded-full bg-secondary"
                   transition={{ type: "spring", stiffness: 380, damping: 36 }}
                 />
               )}

@@ -1367,11 +1367,11 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
               const [name, ...rest] = String(trainingTitle || selectedDay).split(" · ");
               return (
                 <>
-                  {sessionCover && <div aria-hidden="true" className="relative mb-4 h-48 overflow-hidden rounded-[28px] bg-card">
+                  {sessionCover && <div aria-hidden="true" className="relative mb-4 h-48 overflow-hidden rounded-[22px] border border-border bg-card">
                     <img key={sessionCover} src={sessionCover} alt="" decoding="async" className="absolute inset-0 h-full w-full object-cover object-[50%_30%] animate-in fade-in duration-500" />
                     <span className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
                   </div>}
-                  <h2 className="truncate font-rounded text-[32px] font-bold leading-tight tracking-tight">{name}</h2>
+                  <h2 className="truncate text-[32px] font-bold leading-tight tracking-tight">{name}</h2>
                   {rest.length > 0 && <p className="mt-0.5 truncate type-subhead text-muted-foreground">{rest.join(" · ")}</p>}
                 </>
               );
@@ -1511,40 +1511,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                   }}
                   style={{ touchAction: "pan-y" }}
                   aria-label="Desliza para cambiar de ejercicio"
-                  className={`relative flex w-full items-center justify-center overflow-hidden rounded-media bg-card md:cursor-grab md:active:cursor-grabbing ${img ? "aspect-[4/3] max-h-[24dvh] [@media(max-height:700px)]:max-h-[14dvh] md:max-h-[34dvh]" : "h-12"}`}>
-                  {img ? (
-                    <img src={img} alt={active.name} draggable={false} decoding="async" fetchPriority="high" loading="eager" className="h-full w-full object-contain" />
-                  ) : (
-                    <Dumbbell className="h-6 w-6 text-muted-foreground/60" strokeWidth={1.75} aria-hidden="true" />
-                  )}
-                  {vid && (
-                    <button
-                      type="button"
-                      aria-label={`Ver vídeo de técnica de ${active.name}`}
-                      onClick={() => { void hapticTap(); setTechnique({ name: active.name, image: img, video: vid, series: active.series != null ? String(active.series) : undefined, reps: active.reps != null ? String(active.reps) : undefined, rest: active.rest, category: active.muscle_group || meta?.muscle_group, type: active.exercise_type || meta?.exercise_type }); }}
-                      className="material absolute inset-0 m-auto flex h-14 w-14 items-center justify-center rounded-full text-foreground transition-opacity active:opacity-60"
-                    >
-                      <Play className="h-5 w-5 fill-current" aria-hidden="true" />
-                    </button>
-                  )}
-                </motion.div>
-                <motion.div
-                  key={expandedExercise}
-                  initial={{ opacity: 0.4, x: 0 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.18 }}
-                  drag="x"
-                  dragConstraints={{ left: 0, right: 0 }}
-                  dragElastic={0.35}
-                  onDragEnd={(_, info) => {
-                    const total = currentPlan.exercises?.length || 0;
-                    const swipe = info.offset.x + info.velocity.x * 0.2;
-                    if (swipe < -60 && expandedExercise < total - 1) { setExpandedExercise(expandedExercise + 1); void hapticTap(); }
-                    else if (swipe > 60 && expandedExercise > 0) { setExpandedExercise(expandedExercise - 1); void hapticTap(); }
-                  }}
-                  style={{ touchAction: "pan-y" }}
-                  aria-label="Desliza para cambiar de ejercicio"
-                  className={`relative flex w-full items-center justify-center overflow-hidden rounded-2xl bg-card md:cursor-grab md:active:cursor-grabbing ${img || loop ? "aspect-[4/3] max-h-[26dvh] [@media(max-height:700px)]:max-h-[22dvh] md:max-h-[40dvh]" : "h-12"}`}>
+                  className={`relative flex w-full items-center justify-center overflow-hidden rounded-media bg-card md:cursor-grab md:active:cursor-grabbing ${img || loop ? "aspect-[4/3] max-h-[26dvh] [@media(max-height:700px)]:max-h-[22dvh] md:max-h-[40dvh]" : "h-12"}`}>
                   {loop ? (
                     <video key={loop} ref={startLoop} src={loop} poster={img || undefined} autoPlay muted loop playsInline preload="auto" disablePictureInPicture aria-label={active.name} draggable={false} className="pointer-events-none h-full w-full object-cover" />
                   ) : img ? (
@@ -1803,7 +1770,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                             {/* Segmento principal de la serie */}
                             <div className={SET_GRID}>
                               {/* Set number */}
-                              <span className={`text-center font-rounded type-headline tabular-nums ${si === firstPendingIndex ? "text-primary" : "text-muted-foreground"} ${dim}`}>
+                              <span className={`text-center type-headline tabular-nums ${si === firstPendingIndex ? "text-primary" : "text-muted-foreground"} ${dim}`}>
                                 {isWarmup ? <Flame className="mx-auto h-4 w-4" aria-hidden="true" /> : si + 1}
                               </span>
                               <span className={`truncate text-center type-caption1 tabular-nums text-muted-foreground ${dim}`}>
@@ -1887,8 +1854,8 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                                 initial={prefersReducedMotion ? { opacity: 0 } : { scale: 0.7, opacity: 0 }}
                                 animate={prefersReducedMotion ? { opacity: 1 } : { scale: 1, opacity: 1 }}
                                 transition={prefersReducedMotion ? { duration: 0.2 } : { type: "spring", stiffness: 420, damping: 14 }}
-                                className="mt-2 flex w-fit origin-left items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-0.5 type-footnote font-semibold text-amber-400 ring-1 ring-inset ring-amber-500/30 shadow-[0_0_10px_rgba(234,179,8,0.15)]">
-                                <Trophy className="h-3.5 w-3.5 shrink-0 text-amber-400" aria-hidden="true" />
+                                className="mt-2 flex w-fit origin-left items-center gap-1.5 rounded-full border border-primary/40 bg-transparent px-2.5 py-0.5 type-footnote font-semibold text-primary">
+                                <Trophy className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
                                 <span>Récord personal · {livePR}</span>
                               </motion.div>
                             )}

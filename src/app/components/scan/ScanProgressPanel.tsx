@@ -88,7 +88,7 @@ export default function ScanProgressPanel({ userId, compact = false }: { userId:
           <h2 className="type-title2">Tu progreso</h2>
           <p className="type-subhead text-muted-foreground tabular-nums">{rows.length} scans</p>
         </div>
-        <div className={`flex items-center gap-1.5 font-rounded font-bold tabular-nums type-title3 ${trendColor}`}>
+        <div className={`flex items-center gap-1.5 font-bold tabular-nums type-title3 ${trendColor}`}>
           <TrendIcon className="w-5 h-5" aria-hidden="true" />
           {delta > 0 ? "+" : ""}
           {formatDecimal(delta, 1)} <span className="type-subhead font-normal text-muted-foreground">físico</span>
@@ -142,7 +142,7 @@ export default function ScanProgressPanel({ userId, compact = false }: { userId:
                 className={`w-full h-28 rounded-media mb-2 ${isLast ? "ring-2 ring-primary" : ""}`}
               />
               <div className="type-footnote text-muted-foreground">{label}</div>
-              <div className="font-rounded font-bold tabular-nums type-headline">
+              <div className=" font-bold tabular-nums type-headline">
                 {formatDecimal(r.physique ?? 0, 1)}
               </div>
             </div>

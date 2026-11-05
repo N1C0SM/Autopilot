@@ -42,8 +42,8 @@ export default function AppDownload() {
   );
 
   const android = (
-    <section className="rounded-[28px] bg-card p-6">
-      <h2 className="font-rounded type-title2">Android</h2>
+    <section className="rounded-2xl border border-border bg-card p-6">
+      <h2 className="type-title2 font-semibold">Android</h2>
       <p className="mt-1 type-subhead text-muted-foreground">Instalación directa, sin Google Play.</p>
       <Button asChild size="lg" className="mt-5 w-full">
         <a href={APK_URL} rel="noopener">Descargar APK</a>

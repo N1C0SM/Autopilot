@@ -131,7 +131,7 @@ export function PhoneHome({ heading, onSession, onNutrition, onProgress, name }:
 
 
       <div className="py-8">
-        <div className="relative mb-4 h-48 overflow-hidden rounded-[28px] bg-card"><img src={previewExercises[0].image} alt="Sentadilla goblet" loading="lazy" decoding="async" className="h-full w-full object-cover object-[50%_30%]" /></div>
+        <div className="relative mb-4 h-48 overflow-hidden rounded-[22px] bg-card"><img src={previewExercises[0].image} alt="Sentadilla goblet" loading="lazy" decoding="async" className="h-full w-full object-cover object-[50%_30%]" /></div>
         {(() => {
           const body = (
             <>

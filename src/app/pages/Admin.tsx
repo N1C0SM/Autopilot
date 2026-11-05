@@ -462,7 +462,7 @@ function QuickAction({ label, value, danger, onClick }: { label: string; value: 
   return (
     <ListRow
       title={label}
-      value={<span className={`font-rounded font-semibold tabular-nums ${danger && value > 0 ? "text-destructive" : ""}`}>{value}</span>}
+      value={<span className={` font-semibold tabular-nums ${danger && value > 0 ? "text-destructive" : ""}`}>{value}</span>}
       chevron
       onClick={onClick}
     />

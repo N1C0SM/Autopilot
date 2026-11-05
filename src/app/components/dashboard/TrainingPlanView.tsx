@@ -248,7 +248,7 @@ const TrainingPlanView = ({ dayPlans, initialDay, onOpenWorkout }: Props) => {
       {selectedPlan?.type === "gimnasio" && (
         <section aria-label={`Sesión del ${selectedDay.toLocaleLowerCase("es-ES")}`} className="space-y-6">
           {dayPhoto && (
-            <div aria-hidden="true" className="relative h-44 overflow-hidden rounded-[28px] bg-card">
+            <div aria-hidden="true" className="relative h-44 overflow-hidden rounded-[22px] border border-border bg-card">
               <img key={dayPhoto} src={dayPhoto} alt="" decoding="async" className="absolute inset-0 h-full w-full object-cover object-[50%_30%]" />
               <span className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
             </div>

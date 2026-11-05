@@ -252,7 +252,7 @@ const MealsList = ({ meals, macros, onOpenProfile, userId, onMealsGenerated }: P
                       <p className="type-footnote text-muted-foreground">{m.label}</p>
                       {!tracking && <p className="type-footnote tabular-nums text-muted-foreground">{m.share} %</p>}
                     </div>
-                    <p className="mt-0.5 font-rounded text-[22px] font-bold leading-7 tabular-nums">
+                    <p className="mt-0.5 text-[22px] font-bold leading-7 tabular-nums">
                       {fmt(tracking ? m.eaten : m.value)}
                       <span className="ml-0.5 type-subhead font-semibold text-muted-foreground">
                         {tracking ? `/${fmt(m.value)} g` : "g"}

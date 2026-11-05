@@ -29,7 +29,7 @@ const ScanShareCard = forwardRef<HTMLDivElement, { result: ScanShareData }>(({ r
       style={{
         width: 1080,
         height: 1920,
-        background: `radial-gradient(ellipse 900px 640px at 50% 0%, rgba(216,178,94,0.14) 0%, transparent 70%), ${INK.base}`,
+        background: `${INK.base}`,
         color: INK_TEXT.primary,
         fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', system-ui, sans-serif",
         padding: "82px 76px 70px",

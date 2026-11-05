@@ -116,7 +116,7 @@ const WorkoutProgress = ({ userId, compact = false }: Props) => {
           <div className={`relative flex items-end gap-2 p-5 ${exerciseImages[selectedExercise] ? "min-h-[11rem]" : ""}`}>
             <span className="min-w-0 flex-1">
               <span className="block type-footnote font-semibold text-primary">{historyByExercise[selectedExercise]?.length ?? 0} {(historyByExercise[selectedExercise]?.length ?? 0) === 1 ? "sesión" : "sesiones"}</span>
-              <span className="mt-0.5 block font-rounded text-[26px] font-bold leading-tight tracking-tight text-white">{selectedExercise}</span>
+              <span className="mt-0.5 block text-[26px] font-bold leading-tight tracking-tight text-white">{selectedExercise}</span>
             </span>
             <ChevronsUpDown className="mb-1 h-5 w-5 shrink-0 text-white/70" strokeWidth={2} aria-hidden="true" />
           </div>

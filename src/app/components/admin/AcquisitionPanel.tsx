@@ -195,7 +195,7 @@ function ChannelRow({ row, tracking }: { row: ChannelFunnel; tracking: boolean }
         {stats.map((s) => (
           <div key={s.label} className="min-w-0">
             <dt className="truncate type-caption1 text-muted-foreground">{s.label}</dt>
-            <dd className="font-rounded type-headline tabular-nums">{s.value}</dd>
+            <dd className=" type-headline tabular-nums">{s.value}</dd>
           </div>
         ))}
       </dl>

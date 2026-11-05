@@ -111,7 +111,7 @@ export default function OnboardingChoice() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.4, delay: 0.08 + i * 0.08 }}
                   whileTap={{ scale: 0.98 }}
-                  className={`group relative flex w-full flex-col overflow-hidden rounded-[28px] bg-card text-left ring-2 transition-[box-shadow] focus-visible:outline-none focus-visible:ring-primary ${active ? "ring-primary/60" : "ring-transparent"}`}
+                  className={`group relative flex w-full flex-col overflow-hidden rounded-[22px] bg-card text-left ring-2 transition-[box-shadow] focus-visible:outline-none focus-visible:ring-primary ${active ? "ring-primary/60" : "ring-transparent"}`}
                 >
                   {/* Foto de marca, como las fichas de la landing y del onboarding. */}
                   <div aria-hidden="true" className="relative h-36 w-full overflow-hidden">
@@ -122,7 +122,7 @@ export default function OnboardingChoice() {
                   <div className="flex w-full items-start gap-3 p-5 pt-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h2 className="font-rounded type-title3">{o.title}</h2>
+                        <h2 className=" type-title3">{o.title}</h2>
                         {o.badge && (
                           <span className="rounded-full bg-primary px-2 py-0.5 type-caption2 font-semibold text-primary-foreground">
                             {o.badge}

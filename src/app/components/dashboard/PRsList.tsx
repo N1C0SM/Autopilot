@@ -132,7 +132,6 @@ const PRsList = ({ userId }: Props) => {
           <img src={images[top.exercise_name]} alt="" decoding="async" className="absolute inset-0 h-full w-full object-cover object-[50%_30%] animate-in fade-in duration-500" />
           <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-black/10" />
         </>}
-        <span aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-[radial-gradient(closest-side,hsl(var(--primary)/0.2),transparent)]" />
         <div className={`relative flex flex-col justify-end p-5 ${images[top.exercise_name] ? "min-h-[16rem]" : ""}`}>
           <p className="flex items-center gap-1.5 type-subhead font-semibold text-primary"><Trophy className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />Tu mejor marca</p>
           <p className="mt-2 type-figure text-[64px] font-bold leading-none tracking-tight tabular-nums text-white">
@@ -156,7 +155,7 @@ const PRsList = ({ userId }: Props) => {
             subtitle={formatDate(pr.achieved_at)}
             trailing={
               <span className="block text-right">
-                <span className="block type-body font-rounded font-semibold tabular-nums">
+                <span className="block type-body font-semibold tabular-nums">
                   {kg(pr.weight)} kg × {pr.reps}
                 </span>
                 {pr.estimated_1rm != null && (

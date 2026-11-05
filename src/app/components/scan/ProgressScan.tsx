@@ -82,6 +82,20 @@ export default function ProgressScan({ onScanned }: { onScanned?: () => void }) 
   const [front, setFront] = useState<string | null>(null);
   const [back, setBack] = useState<string | null>(null);
   const [goal, setGoal] = useState("");
+  // Físico objetivo, igual que el Scan público: referencias del admin o foto propia.
+  const [presets, setPresets] = useState<{ id: string; name: string; image_url: string }[]>([]);
+  const [objective, setObjective] = useState<string | null>(null);
+  const [presetId, setPresetId] = useState<string | null>(null);
+  useEffect(() => {
+    void supabase.from("goal_physiques").select("id, name, image_url").order("sort_order", { ascending: true })
+      .then(({ data }) => setPresets(((data ?? []) as { id: string; name: string; image_url: string }[]).filter((p) => /^https?:/i.test(p.image_url ?? ""))));
+  }, []);
+  const pickObjective = async (file: File) => {
+    try {
+      setObjective(await toDataUrl(file));
+      setPresetId(null);
+    } catch { setError("No se pudo leer la foto del objetivo."); }
+  };
   const [bio, setBio] = useState<{ height?: number; weight?: number; age?: number; gender?: string }>({});
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<ScanResult | null>(null);
@@ -137,7 +151,7 @@ export default function ProgressScan({ onScanned }: { onScanned?: () => void }) 
     try {
       const { data, error: fnErr } = await supabase.functions.invoke("analyze-physique", {
         body: {
-          currentImage: front, backImage: back, objectiveImage: null,
+          currentImage: front, backImage: back, objectiveImage: objective,
           height_cm: bio.height, weight_kg: bio.weight, age: bio.age, gender: bio.gender,
         },
       });
@@ -235,6 +249,35 @@ export default function ProgressScan({ onScanned }: { onScanned?: () => void }) 
             </div>
           </div>
 
+          <div className="rounded-[22px] border border-foreground/[0.08] bg-card p-[18px]">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="type-headline">Tu físico objetivo</p>
+                <p className="type-footnote text-muted-foreground">Elige una referencia o sube tu foto. Solo con objetivo calculamos la similitud y los meses que te faltan.</p>
+              </div>
+              {objective && (
+                <Button variant="outline" size="sm" onClick={() => { void hapticTap(); setObjective(null); setPresetId(null); }}>Quitar</Button>
+              )}
+            </div>
+            <div className="mt-4 flex gap-3 overflow-x-auto pb-1">
+              <label className={cn("flex h-28 w-20 shrink-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-[14px] border text-center text-[11px] text-muted-foreground",
+                objective && !presetId ? "border-primary" : "border-dashed border-foreground/20")}>
+                {objective && !presetId
+                  ? <img src={objective} alt="Tu objetivo" className="h-full w-full rounded-[13px] object-cover" />
+                  : <><Plus className="h-5 w-5" aria-hidden="true" />Subir foto</>}
+                <input type="file" accept="image/*" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; if (f) void pickObjective(f); e.target.value = ""; }} />
+              </label>
+              {presets.map((p) => (
+                <button key={p.id} type="button" aria-pressed={presetId === p.id}
+                  onClick={() => { void hapticTap(); setPresetId(p.id); setObjective(p.image_url); }}
+                  className={cn("relative h-28 w-20 shrink-0 overflow-hidden rounded-[14px] border", presetId === p.id ? "border-primary" : "border-transparent")}>
+                  <img src={p.image_url} alt={p.name} className="h-full w-full object-cover" loading="lazy" />
+                  <span className="absolute inset-x-0 bottom-0 bg-background/70 px-1 py-0.5 text-[10px] text-foreground truncate">{p.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="rounded-media bg-card p-[18px]">
             <h3 className="type-title3 mb-2">Cómo tomar las fotos</h3>
             <TipRow icon={Ruler} title="Distancia" text="Cámara a 2-3 m, a la altura del ombligo, cuerpo entero y móvil en vertical." />
@@ -263,7 +306,7 @@ function PhotoTile({ title, hint, badge, image, onFile }: {
   title: string; hint: string; badge: string; image: string | null; onFile: (f: File) => void;
 }) {
   return (
-    <label className="relative block h-[240px] cursor-pointer overflow-hidden rounded-[28px] bg-card transition-transform duration-150 active:scale-[0.98]">
+    <label className="relative block h-[240px] cursor-pointer overflow-hidden rounded-[22px] border border-border bg-card transition-transform duration-150 active:scale-[0.98]">
       <input
         type="file"
         accept="image/*"
@@ -279,7 +322,7 @@ function PhotoTile({ title, hint, badge, image, onFile }: {
         <img src={image} alt="" className="absolute inset-0 h-full w-full object-cover" />
       ) : (
         <>
-          <span aria-hidden="true" className="absolute inset-0 rounded-[28px] border-[1.5px] border-dashed border-primary/35" />
+          <span aria-hidden="true" className="absolute inset-0 rounded-[22px] border-[1.5px] border-dashed border-primary/35" />
           <PersonStanding aria-hidden="true" strokeWidth={0.75}
             className="absolute left-1/2 top-1/2 h-[150px] w-[150px] -translate-x-1/2 -translate-y-1/2 text-foreground/[0.06]" />
           {/* Todo centrado: cruz, título y pista. */}
@@ -325,7 +368,7 @@ function FigureTile({ label, value, hint, accent }: { label: string; value: stri
   return (
     <div className="flex min-w-0 flex-col gap-0.5 rounded-media bg-card p-4">
       <p className="truncate type-footnote text-muted-foreground">{label}</p>
-      <p className={cn("truncate font-rounded text-[28px] font-bold leading-tight tabular-nums", accent ? "text-primary" : "text-foreground")}>{value}</p>
+      <p className={cn("truncate text-[28px] font-bold leading-tight tabular-nums", accent ? "text-primary" : "text-foreground")}>{value}</p>
       {hint && <p className="truncate type-footnote text-muted-foreground">{hint}</p>}
     </div>
   );
@@ -379,7 +422,7 @@ export function ScanResultView({ result, onAgain }: { result: ScanResult; onAgai
   const hasDetail = !!(bc || groups.length || pr || po?.issues?.length || po?.note || result.genetic_markers?.length || pc);
   return (
     <div className="flex flex-col gap-[18px]">
-      <section className="rounded-[28px] bg-card p-5"
+      <section className="rounded-[22px] border border-border bg-card p-5"
         aria-label={`Físico: ${result.physique == null ? "sin datos" : `${formatDecimal(result.physique, 1)} sobre 10`}`}>
         <div className="flex items-start justify-between gap-3" aria-hidden="true">
           <div className="flex flex-col gap-0.5">
@@ -389,7 +432,7 @@ export function ScanResultView({ result, onAgain }: { result: ScanResult; onAgai
           <IconTile icon={Sparkles} size="md" />
         </div>
         <p className="mt-2.5 flex items-baseline gap-1" aria-hidden="true">
-          <span className="font-rounded text-[64px] font-bold leading-none tracking-tight tabular-nums">{score(result.physique)}</span>
+          <span className=" text-[64px] font-bold leading-none tracking-tight tabular-nums">{score(result.physique)}</span>
           {result.physique != null && <span className="type-title3 text-muted-foreground">/10</span>}
         </p>
         <p className="mt-1 type-footnote text-muted-foreground" aria-hidden="true">

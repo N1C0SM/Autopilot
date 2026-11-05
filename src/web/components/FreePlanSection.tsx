@@ -13,10 +13,10 @@ export default function FreePlanSection() {
   const plans = usePlanAvailability();
   const free = plans.plans.find((p) => p.key === "free");
   if (!free) return null;
-  return <div className="mx-auto grid max-w-5xl items-center gap-10 rounded-[40px] bg-[radial-gradient(120%_120%_at_0%_0%,hsl(var(--primary)/0.14),transparent_55%)] bg-card px-6 py-10 sm:px-12 sm:py-14 md:grid-cols-[0.9fr_1.1fr] md:gap-16">
+  return <div className="mx-auto grid max-w-5xl items-center gap-10 rounded-[22px] border border-border bg-card px-6 py-10 sm:px-12 sm:py-14 md:grid-cols-[0.9fr_1.1fr] md:gap-16">
     <div>
       <p className="type-subhead font-semibold text-primary">Plan {free.name}</p>
-      <p className="mt-2 font-rounded text-[clamp(96px,18vw,168px)] font-bold leading-[0.9] tracking-tighter tabular-nums">0<span className="text-primary"> €</span></p>
+      <p className="mt-2 text-[clamp(96px,18vw,168px)] font-bold leading-[0.9] tracking-tighter tabular-nums">0<span className="text-primary"> €</span></p>
       <p className="mt-4 type-body text-muted-foreground">Sin tarjeta. Sin caducidad. Web y móvil.</p>
       <Button variant="hero" size="lg" asChild className="mt-8 w-full sm:w-auto sm:px-10">
         <Link to="/onboarding" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source: "free_plan" }); }}>Crear mi rutina gratis</Link>
