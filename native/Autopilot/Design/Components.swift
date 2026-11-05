@@ -115,11 +115,10 @@ struct HeaderButtons: View {
 }
 
 /// Barra flotante de la web (FloatingMobileNav + MobileTabBar): iconos Phosphor (normal / relleno),
-/// 68 pt de alto, píldora activa dorada al 90 % y texto negro, inactivas en gris.
+/// 68 pt de alto, la pestaña activa con icono y texto en dorado (sin píldora) e inactivas en gris.
 struct FloatingTabBar: View {
     let tabs: [AppSection]
     @Binding var selection: AppSection
-    @Namespace private var pill
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -136,14 +135,8 @@ struct FloatingTabBar: View {
                             .frame(height: 28)
                         Text(tab.tabTitle).font(.inter(size: 11, weight: .medium)).lineLimit(1)
                     }
-                    .foregroundStyle(active ? Color.black : Palette.muted)
+                    .foregroundStyle(active ? Palette.gold : Palette.muted)
                     .padding(.horizontal, 14).padding(.vertical, 6)
-                    .background {
-                        if active {
-                            Capsule().fill(Palette.gold.opacity(0.9))
-                                .matchedGeometryEffect(id: "pill", in: pill)
-                        }
-                    }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .contentShape(Rectangle())
                 }
@@ -155,7 +148,8 @@ struct FloatingTabBar: View {
         .padding(4)
         .frame(height: 68)
         .frame(maxWidth: 480)
-        .background(Palette.card, in: Capsule())
+        .background(Palette.card.opacity(0.9), in: Capsule())
+        .overlay(Capsule().strokeBorder(Palette.border, lineWidth: 1))
         .shadow(color: .black.opacity(0.5), radius: 12, y: 8)
         .padding(.horizontal, 12)
         // La barra se lee como un grupo de pestañas (VoiceOver anuncia «pestaña, seleccionada»).

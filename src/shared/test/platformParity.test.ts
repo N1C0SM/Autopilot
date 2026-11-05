@@ -283,6 +283,14 @@ describe("paridad web ↔ apps nativas", () => {
     // Progreso: control segmentado con la sección activa en dorado.
     expect(read("src/app/pages/Dashboard.tsx")).toContain("data-[state=active]:bg-primary data-[state=active]:text-primary-foreground");
     expect(read("native/Autopilot/Features/Progress/ProgressScreen.swift")).toContain("selection: $tab, gold: true)");
+    // Cabecera con la marca centrada y barra de pestañas con la activa en dorado, sin píldora.
+    expect(read("src/app/components/mobile/MobileHeader.tsx")).toContain("<BrandMark size={20} />");
+    expect(read("native/Autopilot/Features/Shell/RootView.swift")).toContain("BrandMark(size: 20)");
+    expect(read("src/app/components/mobile/FloatingMobileNav.tsx")).toContain('isActive ? "text-primary" : "text-muted-foreground"');
+    expect(read("native/Autopilot/Design/Components.swift")).toContain(".foregroundStyle(active ? Palette.gold : Palette.muted)");
+    // La semana de Hoy va en tarjeta en las dos.
+    expect(homeWeb).toContain('rounded-[22px] border border-border bg-card p-4');
+    expect(homeApp).toContain("return Card(padding: 16) {");
   });
 
   it("Nutrición sin peso: Gratis ve «Calcula tus macros» en la web y en la app, no solo la tarjeta de Plus", () => {

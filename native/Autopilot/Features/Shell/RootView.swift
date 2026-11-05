@@ -185,6 +185,12 @@ struct MainShell: View {
                             let current = selection ?? .home
                             VStack(alignment: .leading, spacing: 4) {
                                 ZStack {
+                                    // Marca del rediseño centrada: la «A» con rayo y AUTOPILOT (igual que `MobileHeader` en la web).
+                                    VStack(spacing: 3) {
+                                        BrandMark(size: 20)
+                                        Text("AUTOPILOT").font(.inter(size: 11, weight: .bold)).tracking(1.3)
+                                    }
+                                    .accessibilityHidden(true)
                                     // El saludo con la fecha ya dice que es hoy: sin título duplicado.
                                     HStack { Spacer(); HeaderButtons(initial: initial, avatar: accounts.accounts.first { $0.id == session.userIdString }?.avatar) { showSettings = true } }
                                 }

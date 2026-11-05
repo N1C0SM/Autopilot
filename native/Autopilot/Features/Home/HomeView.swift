@@ -90,12 +90,12 @@ struct HomeView: View {
         let scheduled = Set(snapshot?.scheduled.map(\.day) ?? [])
         let done = Set(snapshot?.doneDays ?? []).intersection(scheduled)
         let sessionCount = min(done.count, scheduled.count)
-        return VStack(alignment: .leading, spacing: 10) {
+        // En tarjeta, como en la web (rediseño): título, contador y los 7 círculos.
+        return Card(padding: 16) {
             // Header
             HStack(alignment: .firstTextBaseline) {
                 Text("Esta semana")
-                    .font(.inter(size: 13, weight: .medium))
-                    .foregroundStyle(Palette.muted)
+                    .font(.apHeadline)
                 Spacer()
                 HStack(spacing: 2) {
                     Text("\(sessionCount)").font(.inter(size: 13, weight: .semibold))

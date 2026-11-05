@@ -411,9 +411,9 @@ const HomeOverview = ({
       </section>
 
       {/* Semana compacta: sesiones hechas y días con sesión, sin navegación por días */}
-      <section className="mt-7 lg:mt-8 lg:rounded-[22px] lg:border lg:border-border lg:bg-card lg:p-5" aria-label={`Esta semana: ${sessionCount} de ${scheduledDays.length} sesiones`}>
+      <section className="mt-6 rounded-[22px] border border-border bg-card p-4 lg:mt-8 lg:p-5" aria-label={`Esta semana: ${sessionCount} de ${scheduledDays.length} sesiones`}>
         <div className="flex items-baseline justify-between">
-          <p className="text-[13px] font-medium text-muted-foreground">Esta semana</p>
+          <p className="type-headline text-foreground">Esta semana</p>
           <p className="text-[13px] tabular-nums text-muted-foreground"><span className="font-semibold text-foreground">{sessionCount}</span> de {scheduledDays.length} sesiones</p>
         </div>
         {/* Un círculo por día: dorado con check si está hecho, anillo dorado hoy, anillo gris si toca sesión y relleno tenue si es descanso. */}
