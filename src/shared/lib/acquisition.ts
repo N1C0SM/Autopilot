@@ -124,8 +124,23 @@ export async function resetAcquisitionEvents(): Promise<number> {
 const rpc = (fn: string, args: Record<string, unknown>) => (supabase as any).rpc(fn, args) as Promise<{ data: unknown; error: unknown }>;
 
 /** Registra una visita nueva o un scan con la fuente del primer contacto. Nunca rompe la experiencia. */
+/** Solo cuenta personas reales en la web publicada: fuera vista previa, robots y navegadores automatizados. */
+export function isCountableVisitor(
+  host = typeof window !== "undefined" ? window.location.hostname : "",
+  nav: { webdriver?: boolean; userAgent?: string } | undefined = typeof navigator !== "undefined" ? navigator : undefined,
+): boolean {
+  if (!/(^|\.)autopilotplan\.com$/i.test(host) && !/^autopilotplan\.lovable\.app$/i.test(host)) return false;
+  if (nav?.webdriver) return false;
+  if (/bot|crawl|spider|slurp|headless|lighthouse|preview|facebookexternalhit|meta-externalagent|bytespider|playwright|puppeteer/i.test(nav?.userAgent ?? "")) return false;
+  return true;
+}
+
+let countableOverride: boolean | null = null;
+/** Solo pruebas: fuerza si el navegador actual cuenta como visitante real. */
+export function __setCountableForTests(value: boolean | null): void { countableOverride = value; }
+
 export async function recordAcquisitionEvent(kind: AcquisitionEventKind, touch: FirstTouch | null = readFirstTouch()): Promise<void> {
-  if (isStaffDevice()) return;
+  if (isStaffDevice() || !(countableOverride ?? isCountableVisitor())) return;
   try {
     await rpc("record_acquisition_event", {
       _kind: kind,
