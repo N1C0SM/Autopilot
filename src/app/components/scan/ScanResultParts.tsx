@@ -66,7 +66,7 @@ export function StatRow({ stats, className }: { stats: Stat[]; className?: strin
         <div key={s.label} className={cn("flex min-w-0 flex-col-reverse py-2", cell(i))}>
           <dt className="truncate type-footnote text-muted-foreground">{s.label}</dt>
           <dd className="flex flex-wrap items-baseline gap-x-0.5">
-            <span className={cn("font-rounded type-title2 font-bold tabular-nums", s.tone)}>{s.value}</span>
+            <span className={cn(" type-title2 font-bold tabular-nums", s.tone)}>{s.value}</span>
             {s.unit ? <span className="type-footnote text-muted-foreground">{s.unit}</span> : null}
           </dd>
         </div>
@@ -130,7 +130,7 @@ export function MeterRow({
     <div className="py-3">
       <div className="flex items-baseline justify-between gap-3">
         <span className="min-w-0 type-body">{label}</span>
-        <span className="shrink-0 font-rounded type-headline font-bold tabular-nums">{value}</span>
+        <span className="shrink-0 type-headline font-bold tabular-nums">{value}</span>
       </div>
       <div className="mt-2 h-1 overflow-hidden rounded-full bg-secondary">
         <div className={cn("h-full rounded-full", dim ? "bg-primary/50" : "bg-primary")} style={{ width: `${width}%` }} />

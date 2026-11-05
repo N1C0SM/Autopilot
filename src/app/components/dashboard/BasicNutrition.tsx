@@ -172,7 +172,7 @@ function MacrosWeightCard({ userId }: { userId: string }) {
   };
 
   return (
-    <form className="space-y-4 rounded-[28px] bg-card p-5" onSubmit={(e) => { e.preventDefault(); void save(); }}>
+    <form className="space-y-4 rounded-[22px] border border-border bg-card p-5" onSubmit={(e) => { e.preventDefault(); void save(); }}>
       <Flame aria-hidden="true" className="h-7 w-7 text-primary" strokeWidth={1.75} />
       <div>
         <h2 className="type-title2">Calcula tus macros</h2>

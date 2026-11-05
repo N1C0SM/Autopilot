@@ -125,14 +125,14 @@ export function WorkoutSummary({
                 {diff > 0 ? (
                   <>
                     <TrendingUp className="h-5 w-5 text-success" strokeWidth={2.5} />
-                    <span className="font-rounded text-[22px] font-bold tabular-nums text-success">
+                    <span className=" text-[22px] font-bold tabular-nums text-success">
                       +{fmt(diff)} kg
                     </span>
                   </>
                 ) : diff < 0 ? (
                   <>
                     <TrendingDown className="h-5 w-5 text-warning" strokeWidth={2.5} />
-                    <span className="font-rounded text-[22px] font-bold tabular-nums text-warning">
+                    <span className=" text-[22px] font-bold tabular-nums text-warning">
                       {fmt(diff)} kg
                     </span>
                   </>
@@ -154,7 +154,7 @@ export function WorkoutSummary({
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.3, duration: 0.3 }}
-              className="mt-6 rounded-media bg-gradient-to-br from-amber-500/20 to-orange-500/20 p-4 ring-1 ring-inset ring-amber-500/30"
+              className="mt-6 rounded-media border border-primary/30 bg-card p-4"
             >
               <div className="flex items-center gap-2 mb-3">
                 <Trophy className="h-6 w-6 text-amber-400" strokeWidth={2} />

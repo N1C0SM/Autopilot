@@ -91,7 +91,7 @@ const longDate = (d: string) =>
 const Figure = ({ value, unit, label, accent }: { value: string; unit: string; label: string; accent?: boolean }) => (
   <div>
     <p className="whitespace-nowrap">
-      <span className={`font-rounded text-[28px] font-bold leading-tight tabular-nums ${accent ? "text-primary" : "text-foreground"}`}>{value}</span>
+      <span className={` text-[28px] font-bold leading-tight tabular-nums ${accent ? "text-primary" : "text-foreground"}`}>{value}</span>
       <span className="ml-0.5 type-footnote text-muted-foreground">{unit}</span>
     </p>
     <p className="type-footnote text-muted-foreground">{label}</p>

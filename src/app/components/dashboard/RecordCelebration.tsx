@@ -23,7 +23,6 @@ export default function RecordCelebration({ moment, onDone }: { moment: RecordMo
       aria-label={`Nuevo récord personal en ${moment.exercise}, ${moment.diff}. Toca para cerrar.`}
       className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 px-8 backdrop-blur-sm animate-in fade-in duration-200"
     >
-      <span aria-hidden="true" className="pointer-events-none absolute h-[36rem] w-[36rem] rounded-full bg-[radial-gradient(closest-side,hsl(var(--primary)/0.45),transparent)] animate-in zoom-in-50 duration-700 motion-reduce:animate-none" />
       <span className="relative flex flex-col items-center text-center animate-in zoom-in-90 fade-in duration-300 motion-reduce:animate-none">
         <BrandMark size={64} beat />
         <span className="mt-6 type-subhead font-semibold uppercase tracking-[0.12em] text-primary">Nuevo récord personal</span>
