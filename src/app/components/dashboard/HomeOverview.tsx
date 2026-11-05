@@ -1,6 +1,6 @@
 import { readMealsDone as readMealsDoneFor } from "@/shared/lib/mealsDone";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { Apple, Check, ChevronRight, Clock, LockKeyhole, Trophy } from "lucide-react";
+import { Flame as Apple, Check, ChevronRight, Clock, LockKeyhole, TrendingUp } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { EmptyState } from "@/shared/components/ui/empty-state";
 import { supabase } from "@/shared/integrations/supabase/client";
@@ -437,7 +437,7 @@ const HomeOverview = ({
           </li>
           <li>
             <HomeRow
-              icon={<Trophy className="h-5 w-5" strokeWidth={1.75} />}
+              icon={<TrendingUp className="h-5 w-5" strokeWidth={1.75} />}
               title={lastPr ? lastPr.exercise_name : "Récords"}
               detail={lastPr
                 ? `${lastPr.reps} reps · ${new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "short" }).format(new Date(lastPr.achieved_at))}`

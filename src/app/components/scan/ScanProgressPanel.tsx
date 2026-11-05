@@ -111,7 +111,7 @@ export default function ScanProgressPanel({ userId, compact = false }: { userId:
                     fontSize: 13,
                   }}
                 />
-                <Line type="monotone" dataKey="Físico" stroke="hsl(var(--primary))" strokeWidth={2.5} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="Físico" stroke="hsl(var(--primary))" strokeWidth={1.5} dot={false} />
                 <Line type="monotone" dataKey="Atractivo" stroke="hsl(var(--success))" strokeWidth={2} dot={{ r: 2 }} />
                 <Line type="monotone" dataKey="Potencial" stroke="hsl(var(--muted-foreground))" strokeWidth={2} dot={{ r: 2 }} strokeDasharray="4 4" />
               </LineChart>

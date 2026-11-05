@@ -21,15 +21,14 @@ export function TrainingOverviewCard({ overview }: { overview: TrainingOverview 
 
   return (
     <section aria-label="Resumen de tu entrenamiento" className="relative overflow-hidden rounded-[22px] border border-border bg-card p-5">
-      {/* Halo dorado como en la landing: la cifra es la protagonista. */}
-      <p className="relative type-subhead font-semibold text-primary">Últimas 4 semanas</p>
-      <p className="relative mt-1 type-figure text-[56px] font-bold leading-none tracking-tight tabular-nums">
+      <p className="relative text-xs font-semibold uppercase tracking-[0.16em] text-primary">Últimas 4 semanas</p>
+      <p className="relative mt-2 text-[52px] font-semibold leading-none tracking-tight tabular-nums">
         {fmt(overview.last4WeeksVolumeKg)}<span className="ml-1.5 type-title3 text-muted-foreground">kg levantados</span>
       </p>
       <div className="relative mt-4 flex flex-wrap gap-x-6 gap-y-1">
-        <div className="flex items-baseline gap-1.5"><span className=" type-title3 tabular-nums">{fmt(overview.totalSessions)}</span><span className="type-subhead text-muted-foreground">{overview.totalSessions === 1 ? "entreno" : "entrenos"}</span></div>
-        <div className="flex items-baseline gap-1.5"><span className=" type-title3 tabular-nums">{fmt(overview.streakWeeks)}</span><span className="type-subhead text-muted-foreground">{overview.streakWeeks === 1 ? "semana de racha" : "semanas de racha"}</span></div>
-        <div className="flex items-baseline gap-1.5"><span className=" type-title3 tabular-nums">{fmt(thisWeek)}</span><span className="type-subhead text-muted-foreground">kg esta semana</span></div>
+        <div className="flex items-baseline gap-1.5"><span className="text-[20px] font-semibold tabular-nums">{fmt(overview.totalSessions)}</span><span className="type-subhead text-muted-foreground">{overview.totalSessions === 1 ? "entreno" : "entrenos"}</span></div>
+        <div className="flex items-baseline gap-1.5"><span className="text-[20px] font-semibold tabular-nums">{fmt(overview.streakWeeks)}</span><span className="type-subhead text-muted-foreground">{overview.streakWeeks === 1 ? "semana de racha" : "semanas de racha"}</span></div>
+        <div className="flex items-baseline gap-1.5"><span className="text-[20px] font-semibold tabular-nums">{fmt(thisWeek)}</span><span className="type-subhead text-muted-foreground">kg esta semana</span></div>
       </div>
       <div className="relative">
         <div className="mt-5 h-40" role="img" aria-label={`Volumen de las últimas ${data.length} semanas: ${data.map((w) => `${w.label} ${fmt(w.volumeKg)} kg`).join(", ")}`}>
@@ -49,9 +48,9 @@ export function TrainingOverviewCard({ overview }: { overview: TrainingOverview 
                 formatter={(value: number, _name, item) => [`${fmt(value)} kg · ${item.payload.sessions} ${item.payload.sessions === 1 ? "entreno" : "entrenos"}`, ""]}
                 separator=""
               />
-              <Bar dataKey="volumeKg" radius={[6, 6, 6, 6]} minPointSize={3} animationDuration={700}>
+              <Bar dataKey="volumeKg" radius={[3, 3, 3, 3]} barSize={14} minPointSize={3} animationDuration={700}>
                 {data.map((week) => (
-                  <Cell key={week.weekStart} fill={week.current ? "hsl(var(--primary))" : "hsl(var(--primary) / 0.35)"} />
+                  <Cell key={week.weekStart} fill={week.current ? "hsl(var(--primary))" : "hsl(var(--foreground) / 0.14)"} />
                 ))}
               </Bar>
             </BarChart>
