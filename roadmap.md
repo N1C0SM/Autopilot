@@ -19,3 +19,8 @@
 - [x] HealthKit: guardar cada entrenamiento en Salud (duración, calorías) y leer el peso corporal (HealthKitManager.swift)
 - [x] Widgets de pantalla de inicio y de bloqueo: sesión de hoy y racha semanal
 - [ ] App para Apple Watch: registrar series y ver el descanso desde la muñeca
+
+## Rediseño landing (referencia del usuario)
+- [x] Portada idéntica a la referencia (cabecera, hero, dispositivos, problema, por qué, planes, cierre)
+- [x] Paleta carbón cálido + champán en web, iPhone/Mac, imágenes compartidas y correos
+- [ ] Repaso visual pantalla a pantalla de app móvil, web, Mac, compartir y correos

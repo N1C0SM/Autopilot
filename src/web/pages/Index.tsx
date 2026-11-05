@@ -1,19 +1,15 @@
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { Button } from "@/shared/components/ui/button";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/shared/components/ui/accordion";
 import PublicLayout from "@/web/components/PublicLayout";
 import { track } from "@/shared/lib/analytics";
-import { COACH_CONTACT_CHANNEL, type PlanKey } from "@/shared/config/tiers";
+import { type PlanKey } from "@/shared/config/tiers";
 import { usePlanAvailability } from "@/shared/lib/planCatalog";
 import { LANDING_META, landingDescription, landingFaqs } from "@/shared/lib/publicCopy";
 import { LandingHero, LandingExperience, LandingProblem, LandingWhy, LandingPlans, LandingFinal } from "@/web/components/LandingSections";
-import FreePlanSection from "@/web/components/FreePlanSection";
 import { hapticTap } from "@/shared/lib/native";
 
-const ProductPreview = lazy(() => import("@/web/components/ProductPreview"));
-const PricingTiers = lazy(() => import("@/web/components/PricingTiers"));
 
 const legacySections: Record<string, string> = {
   "#pricing": "/planes", "#planes": "/planes", "#ver-app": "/como-funciona#demo",
