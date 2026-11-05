@@ -150,8 +150,11 @@ describe("paridad web ↔ apps nativas", () => {
       expect(web, text).toContain(text);
       expect(app, text).toContain(text);
     }
-    expect(plusCard).toContain("Tu scan completo, con Plus");
-    expect(app).toContain("Tu scan completo, con Plus");
+    // Rediseño de ChatGPT: «Análisis completo (Plus)» con cada sección en su tarjeta.
+    for (const text of ["Análisis completo (Plus)", "Este es tu scan básico. Desbloquea el análisis avanzado de tu físico con recomendaciones personalizadas:"]) {
+      expect(plusCard, text).toContain(text);
+      expect(app, text).toContain(text);
+    }
     // La app guarda el resultado entero (con el detalle de Plus), no solo lo que pinta.
     expect(app).toMatch(/let fullResult = try JSONDecoder\(\)\.decode\(AnyJSON\.self, from: raw\)/);
     // La foto se sube como archivo en la web y en el Mac (allí la fototeca puede no existir),

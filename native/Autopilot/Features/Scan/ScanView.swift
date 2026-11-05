@@ -776,29 +776,30 @@ struct ScanResultView: View {
     /// Scan básico: lo que se desbloquea con Plus (como `ScanPlusCard` de la web). Sin enlace
     /// de pago en iOS (normas de la App Store).
     private var plusCard: some View {
+        // Maqueta de ChatGPT: «Análisis completo (Plus)» con cada sección bloqueada en su tarjeta.
         VStack(alignment: .leading, spacing: 10) {
-            Image("lu-lock").renderingMode(.template).resizable().frame(width: 18, height: 18)
-                .foregroundStyle(Palette.gold)
-                .frame(width: 40, height: 40).background(Palette.gold.opacity(0.15), in: Circle())
-            Text("Tu scan completo, con Plus").font(.inter(size: 28, weight: .bold)).tracking(-0.7)
-            Text("Este es tu scan básico. Con Plus ves el análisis entero de tu físico:")
-                .font(.apSubhead).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
-            // Cada sección bloqueada en su fila, con la insignia Plus a la derecha (igual que la web).
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Análisis completo (Plus)").font(.apTitle2)
+                Text("Este es tu scan básico. Desbloquea el análisis avanzado de tu físico con recomendaciones personalizadas:")
+                    .font(.apSubhead).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.bottom, 2)
             ForEach(result.locked_sections ?? [], id: \.self) { item in
                 HStack(spacing: 12) {
+                    Image("lu-lock").renderingMode(.template).resizable().frame(width: 18, height: 18)
+                        .foregroundStyle(Palette.muted).accessibilityHidden(true)
                     Text(item).font(.apSubhead.weight(.medium)).fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 0)
                     PlusBadge()
                 }
                 .padding(.horizontal, 16).padding(.vertical, 12)
                 .frame(minHeight: 56)
-                .background(Palette.secondary.opacity(0.6), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).strokeBorder(Color.white.opacity(0.08), lineWidth: 1))
             }
             Text("Incluido en Plus").font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.gold).padding(.top, 6)
         }
-        .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
     }
 
     // MARK: - Lectura estimada por IA (Plus)
