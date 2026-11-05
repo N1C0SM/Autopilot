@@ -69,10 +69,28 @@ describe("routine week navigation and saved session dates", () => {
     fireEvent(document, new Event("visibilitychange"));
     await waitFor(() => expect(screen.queryByRole("timer")).not.toBeInTheDocument());
   });
+  it("pausa la sesión: congela tiempo y descanso, la guarda en el borrador y al reanudar sigue donde estaba", async () => {
+    render(<WorkoutTracker userId="user" dayPlans={[plan("Lunes", "Remo")]} initialDay="Lunes" />);
+    fireEvent.click(await screen.findByRole("button", { name: "Empezar entrenamiento" }));
+    fireEvent.click(screen.getByRole("button", { name: "Marcar serie 1 de Remo" }));
+    vi.setSystemTime(new Date("2026-10-04T12:00:10"));
+    fireEvent.click(screen.getByRole("button", { name: "Pausar" }));
+    expect(readActiveWorkout("user")?.pausedAt).toBe(new Date("2026-10-04T12:00:10").getTime());
+    const frozen = screen.getByRole("timer").textContent;
+    vi.setSystemTime(new Date("2026-10-04T12:05:00"));
+    fireEvent(document, new Event("visibilitychange"));
+    expect(screen.getByRole("timer").textContent).toBe(frozen);
+    expect(screen.getByText("En pausa")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Reanudar" }));
+    expect(readActiveWorkout("user")?.pausedAt).toBeNull();
+    expect(screen.getByRole("timer").textContent).toBe(frozen);
+    expect(screen.getByLabelText("Tiempo de sesión")).toHaveTextContent("00:10");
+  });
   it("keeps either view on the same set log and adds one working set", async () => {
     render(<WorkoutTracker userId="user" dayPlans={[{ ...plan("Lunes", "Remo"), exercises: [...(plan("Lunes", "Remo").exercises || []), ...(plan("Lunes", "Press").exercises || [])] }]} initialDay="Lunes" />);
     fireEvent.click(await screen.findByRole("button", { name: "Empezar entrenamiento" }));
-    fireEvent.click(screen.getByRole("button", { name: "Añadir serie" }));
+    // La lista abre todos los ejercicios: el primero «Añadir serie» es el de Remo.
+    fireEvent.click(screen.getAllByRole("button", { name: "Añadir serie" })[0]);
     expect(readActiveWorkout("user")?.logs.Remo).toHaveLength(2);
     act(() => { setWorkoutView("user", "focus"); });
     expect(readActiveWorkout("user")?.logs.Remo).toHaveLength(2);
@@ -133,7 +151,7 @@ describe("routine week navigation and saved session dates", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Empezar entrenamiento" }));
     fireEvent.click(screen.getByRole("button", { name: "Marcar serie 1 de Press banca" }));
     expect(hapticImpact).toHaveBeenCalledWith("medium");
-    fireEvent.click(screen.getByRole("button", { name: "Terminar entrenamiento" }));
+    fireEvent.click(screen.getByRole("button", { name: "Finalizar" }));
     // El cierre pasa por el RPE: se puede omitir con este botón.
     fireEvent.click(await screen.findByRole("button", { name: "Completar sin valorar esfuerzo" }));
     fireEvent.click(await screen.findByRole("button", { name: "Cerrar resumen" }));
@@ -200,7 +218,7 @@ describe("routine week navigation and saved session dates", () => {
     render(<WorkoutTracker userId="user" dayPlans={[twoSets]} initialDay="Viernes" />);
     fireEvent.click(await screen.findByRole("button", { name: "Empezar entrenamiento" }));
     fireEvent.click(screen.getByRole("button", { name: "Marcar serie 1 de Press banca" }));
-    fireEvent.click(screen.getByRole("button", { name: "Terminar entrenamiento" }));
+    fireEvent.click(screen.getByRole("button", { name: "Finalizar" }));
 
     expect(await screen.findByText("¿Terminar con series pendientes?")).toBeVisible();
     expect(mocks.writes.some((write) => write.table === "day_completions")).toBe(false);

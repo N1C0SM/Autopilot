@@ -15,6 +15,8 @@ export interface ActiveWorkout {
   restTarget: number;
   /** Absolute session start (ms). Optional for drafts saved before the session clock existed. */
   startedAt?: number;
+  /** Marca absoluta de pausa (ms); null o ausente si la sesión corre. */
+  pausedAt?: number | null;
 }
 
 export function formatElapsed(ms: number): string {
