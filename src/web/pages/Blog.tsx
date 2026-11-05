@@ -155,7 +155,7 @@ const Blog = () => {
                       <IconTile icon={Icon} size="md" />
                     </div>
                     <div className="relative mt-6">
-                      <h2 className="font-rounded type-title2">{c.name}</h2>
+                      <h2 className="type-title2 font-semibold">{c.name}</h2>
                       <p className="mt-1.5 line-clamp-2 type-subhead leading-relaxed text-muted-foreground">{c.summary}</p>
                       <p className="mt-4 inline-flex items-center gap-1 type-footnote font-medium text-primary">
                         {lessons}
