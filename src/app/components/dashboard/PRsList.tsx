@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
-import { Trophy, WifiOff } from "lucide-react";
+import { Dumbbell, WifiOff } from "lucide-react";
 import { EmptyState } from "@/shared/components/ui/empty-state";
 import { Button } from "@/shared/components/ui/button";
 import { ListGroup, ListRow } from "@/shared/components/ui/list";
@@ -111,7 +111,7 @@ const PRsList = ({ userId }: Props) => {
   if (prs.length === 0) {
     return (
       <EmptyState
-        icon={Trophy}
+        icon={Dumbbell}
         title="Sin récords aún"
         description="Registra tus entrenos con peso y rompe tu primer récord personal."
         className="min-h-[55dvh]"
@@ -134,7 +134,7 @@ const PRsList = ({ userId }: Props) => {
         </>}
         <div className={`relative flex flex-col justify-end p-5 ${images[top.exercise_name] ? "min-h-[16rem]" : ""}`}>
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Tu mejor marca</p>
-          <p className="mt-2 type-figure text-[64px] font-bold leading-none tracking-tight tabular-nums text-white">
+          <p className="mt-2 text-[64px] font-semibold leading-none tracking-tight tabular-nums text-white">
             {kg(topHasEstimate ? top.estimated_1rm! : top.weight)}
             <span className="ml-1.5 type-title3 text-white/70">kg</span>
           </p>

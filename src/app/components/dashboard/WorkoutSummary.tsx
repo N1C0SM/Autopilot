@@ -1,6 +1,6 @@
 import { useRef, useState, type ElementType, type ReactNode } from "react";
 import { buildWorkoutReview, type ReviewExercise } from "@/shared/lib/workoutReview";
-import { Target, Trophy, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { Target, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { hapticSelection, hapticTap } from "@/shared/lib/native";
 import { cn } from "@/shared/lib/utils";
 import { CountUp } from "@/shared/components/ui/count-up";
@@ -151,14 +151,13 @@ export function WorkoutSummary({
           {/* Récords personales destacados */}
           {records.length > 0 && (
             <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
               transition={{ delay: 0.3, duration: 0.3 }}
-              className="mt-6 rounded-media border border-primary/30 bg-card p-4"
+              className="mt-6 rounded-[22px] border border-border bg-card p-5"
             >
               <div className="flex items-center gap-2 mb-3">
-                <Trophy className="h-6 w-6 text-primary" strokeWidth={2} />
-                <span className="type-title3 text-primary">
+                <span className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
                   {records.length} Récord{records.length > 1 ? 's' : ''} Personal{records.length > 1 ? 'es' : ''}
                 </span>
               </div>
