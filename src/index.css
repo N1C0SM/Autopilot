@@ -216,26 +216,26 @@ body.keyboard-open main {
          accent      = #333338   (21 %) pulsado / fila resaltada
          border      = #262629   (15 %) separador, nunca borde de tarjeta
          muted-fg    = #A8A8AE   67 %, AA sobre las tres superficies */
-    --background: 0 0% 0%;
-    --foreground: 0 0% 100%;
+    --background: 30 6% 4%;
+    --foreground: 40 20% 96%;
 
-    --card: 240 5% 8%;
+    --card: 30 4% 8%;
     --card-foreground: 0 0% 100%;
 
-    --popover: 240 5% 8%;
+    --popover: 30 4% 9%;
     --popover-foreground: 0 0% 100%;
 
     /* Dorado de marca #D8B25E. Un pelo más cálido que el anterior (43 61% 60 %). */
-    --primary: 41 61% 61%;
+    --primary: 37 72% 68%;
     --primary-foreground: 0 0% 0%;
 
-    --secondary: 240 5% 16%;
+    --secondary: 30 4% 14%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 240 5% 16%;
-    --muted-foreground: 240 4% 67%;
+    --muted: 30 4% 14%;
+    --muted-foreground: 35 5% 68%;
 
-    --accent: 240 5% 21%;
+    --accent: 30 4% 19%;
     --accent-foreground: 0 0% 100%;
 
     /* systemRed / systemGreen, dark appearance. El verde solo confirma (pago,
@@ -246,9 +246,9 @@ body.keyboard-open main {
     --success: 135 64% 50%;
     --success-foreground: 0 0% 100%;
 
-    --border: 240 4% 15%;
-    --input: 240 4% 15%;
-    --ring: 41 61% 61%;
+    --border: 30 4% 15%;
+    --input: 30 4% 15%;
+    --ring: 37 72% 68%;
 
     /* Radios semánticos: úsalos en pantallas nuevas en vez de md/lg/xl/3xl. */
     --radius: 0.75rem;
@@ -262,14 +262,14 @@ body.keyboard-open main {
        Solo se escala la tipografía, no la rejilla: las tarjetas no se deforman. */
     --type-scale: 1;
 
-    --sidebar-background: 240 5% 8%;
+    --sidebar-background: 30 4% 7%;
     --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 41 61% 61%;
+    --sidebar-primary: 37 72% 68%;
     --sidebar-primary-foreground: 0 0% 0%;
-    --sidebar-accent: 240 5% 16%;
+    --sidebar-accent: 30 4% 14%;
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 240 4% 15%;
-    --sidebar-ring: 41 61% 61%;
+    --sidebar-border: 30 4% 15%;
+    --sidebar-ring: 37 72% 68%;
 
     /* Inter (self-hosted, variable) on every platform: one typeface, typography-led design. */
     --font-display: "Inter Variable", "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
