@@ -10,7 +10,6 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Eye, EyeOff, Gift, Sparkles, Camera } from "lucide-react";
 import { AppleSignInButton } from "@/app/components/auth/AppleSignInButton";
-import { GoogleSignInButton } from "@/app/components/auth/GoogleSignInButton";
 import { AuthAppMark, AuthFieldGroup, AuthFieldNote, AuthFieldRow, AuthHero, AuthImage, AuthNotice } from "@/app/components/auth/AuthScreenParts";
 import { authFieldInputClass, authSecondaryActionClass, focusNextOnEnter, hideWithKeyboardClass } from "@/app/components/auth/authFormHelpers";
 import { useAuth } from "@/shared/contexts/AuthContext";
@@ -193,14 +192,6 @@ const Signup = () => {
           isFree ? "Crear cuenta gratis" : "Crear cuenta"
         )}
       </Button>
-      <GoogleSignInButton
-        next={postVerificationPath(nextParam ?? (fromQuiz ? "/onboarding" : null), fromScan)}
-        onBeforeRedirect={() => {
-          if (selectedPlan) {
-            try { sessionStorage.setItem("autopilot_selected_plan", selectedPlan); } catch { /* opcional */ }
-          }
-        }}
-      />
       {appleSignInEnabled() && (
         <AppleSignInButton
           label="sign-up"

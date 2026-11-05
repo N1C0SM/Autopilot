@@ -36,16 +36,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
-      // Vuelta de «Continuar con Google»: ir al destino guardado (ruta interna) solo con sesión.
-      if (session) {
-        try {
-          const next = sessionStorage.getItem("autopilot:oauth-next");
-          if (next && /^\/[^/]/.test(next) && window.location.pathname === "/") {
-            sessionStorage.removeItem("autopilot:oauth-next");
-            window.location.replace(next);
-          }
-        } catch { /* opcional */ }
-      }
     });
 
     void supabase.auth.getSession().then(({ data: { session }, error }) => {

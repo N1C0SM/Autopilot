@@ -13,8 +13,6 @@ import {
   parseTouch,
   readFirstTouch,
   recordAcquisitionEvent,
-  isCountableVisitor,
-  __setCountableForTests,
 } from "@/shared/lib/acquisition";
 
 const NOW = Date.parse("2026-10-29T12:00:00Z");
@@ -23,24 +21,6 @@ beforeEach(() => {
   localStorage.clear();
   rpc.mockReset();
   rpc.mockResolvedValue({ data: null, error: null });
-  __setCountableForTests(true);
-});
-
-describe("isCountableVisitor", () => {
-  const human = { webdriver: false, userAgent: "Mozilla/5.0 (iPhone) Threads" };
-  it("cuenta personas en la web publicada", () => {
-    expect(isCountableVisitor("autopilotplan.com", human)).toBe(true);
-    expect(isCountableVisitor("www.autopilotplan.com", human)).toBe(true);
-  });
-  it("no cuenta la vista previa ni localhost", () => {
-    expect(isCountableVisitor("localhost", human)).toBe(false);
-    expect(isCountableVisitor("id-preview--x.lovable.app", human)).toBe(false);
-  });
-  it("no cuenta navegadores automatizados ni robots", () => {
-    expect(isCountableVisitor("autopilotplan.com", { webdriver: true, userAgent: "" })).toBe(false);
-    expect(isCountableVisitor("autopilotplan.com", { userAgent: "Mozilla/5.0 HeadlessChrome/120" })).toBe(false);
-    expect(isCountableVisitor("autopilotplan.com", { userAgent: "Googlebot/2.1" })).toBe(false);
-  });
 });
 
 describe("parseTouch", () => {
