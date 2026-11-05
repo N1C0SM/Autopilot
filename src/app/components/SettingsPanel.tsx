@@ -700,7 +700,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
             type="button"
             aria-label="Cambiar foto de perfil"
             onClick={() => { void hapticTap(); fileInputRef.current?.click(); }}
-            className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-secondary transition-opacity active:opacity-70"
+            className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full border border-primary/40 bg-card transition-opacity active:opacity-70"
           >
             {avatarUrl && avatarUrl !== failedAvatarUrl ? (
               <img
@@ -712,7 +712,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
                 className="h-full w-full object-cover"
               />
             ) : initial ? (
-              <span aria-hidden="true" className="font-rounded type-large-title text-muted-foreground">{initial}</span>
+              <span aria-hidden="true" className="text-[30px] font-bold text-primary">{initial}</span>
             ) : (
               <User className="h-9 w-9 text-muted-foreground" />
             )}
@@ -725,7 +725,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
           <p className="mt-3 max-w-full truncate type-title2">{name || "Tu perfil"}</p>
           {email ? <p className="max-w-full truncate type-body text-muted-foreground">{email}</p> : null}
-          <Button variant="plain" className="mt-1" disabled={uploading} onClick={() => { void hapticTap(); fileInputRef.current?.click(); }}>
+          <Button variant="outline" size="sm" className="mt-4" disabled={uploading} onClick={() => { void hapticTap(); fileInputRef.current?.click(); }}>
             {uploading ? "Subiendo foto…" : "Cambiar foto"}
           </Button>
         </div>
