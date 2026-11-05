@@ -33,6 +33,8 @@ struct NutritionView: View {
     @State private var hasAccess: Bool?
     /// El acceso guardado se vuelve a confirmar una vez por apertura (por si cambió el plan).
     @State private var accessChecked = false
+    /// Mientras el servidor confirma el acceso no se enseña ninguna tarjeta (ni «Preparando…» ni «Sin comidas»).
+    @State private var preparing = false
     @State private var generating = false
     @State private var generateFailed = false
     /// Confirmación de «Regenerar comidas» (como en la web).
@@ -219,12 +221,12 @@ struct NutritionView: View {
                     } else if hasAccess == false {
                         // Como `NutritionPlusSection` de la web; en iOS sin enlace a pagos externos.
                         plusSection
-                    } else if hasAccess == nil {
-                        // Aún no se sabe si hay Plus: nada de «preparando» ni foto de plato (eso es de Plus).
-                        EmptyView()
                     } else if generating {
                         EmptyCard(photo: Self.defaultDish, title: "Preparando tus comidas…",
                                   message: "Autopilot está creando tus comidas con tus gustos y lo que no comes.")
+                    } else if hasAccess == nil || preparing {
+                        // Aún no se sabe si hay Plus: nada de «preparando» ni foto de plato (eso es de Plus).
+                        EmptyView()
                     } else {
                         VStack(alignment: .leading, spacing: 12) {
                             EmptyCard(photo: Self.defaultDish, title: "Sin comidas todavía",
@@ -512,8 +514,9 @@ struct NutritionView: View {
         // La última copia del plan se pinta al instante; la red la sustituye después.
         if !loaded, let cached = Snapshots.load(Row.self, Self.cacheKey(id)) {
             macros = cached.macros_json
-            // Sin Plus no se pintan comidas guardadas de otra época: solo las de quien tiene acceso.
-            meals = hasAccess == false ? [] : (cached.meals_json ?? [])
+            // Comidas guardadas solo si lo último que dijo el servidor fue Plus: sin saberlo
+            // (primera apertura tras actualizar) o sin Plus, nunca asoman comidas de otra época.
+            meals = hasAccess == true ? (cached.meals_json ?? []) : []
             photos = Self.cachedPhotos(meals)
             loaded = true
         }
@@ -539,7 +542,11 @@ struct NutritionView: View {
                 // Sin comidas: con Plus se generan solas (el servidor vuelve a comprobar el acceso).
                 // Lo decide el servidor: si responde «no_access», toca el aviso de Plus.
                 accessChecked = true
+                preparing = true
                 await prepareMeals(id)
+                preparing = false
+                // Si se cerró a mitad (p. ej. al abrir Ajustes), se vuelve a comprobar al volver.
+                if Task.isCancelled { accessChecked = false }
             }
         } catch {
             // Si la vista se cerró a mitad de la carga no hay error que enseñar.
@@ -559,16 +566,14 @@ struct NutritionView: View {
         if let id = session.userId { UserDefaults.standard.set(value, forKey: Self.accessKey(id)) }
     }
 
-    /// Si nunca dijo qué le gusta comer, primero se comprueba el acceso (sin generar nada) y,
-    /// con Plus, se le pregunta; si ya lo dijo, se preparan las comidas directamente.
+    /// Primero el servidor confirma el acceso (sin generar nada): con Plus, si nunca dijo qué le
+    /// gusta comer se le pregunta y, si ya lo dijo, se preparan las comidas.
     private func prepareMeals(_ id: UUID) async {
         struct Prefs: Decodable { let nutrition_preferences: String? }
         let prefs: Prefs? = try? await Backend.client.from("onboarding").select("nutrition_preferences")
             .eq("user_id", value: id).single().execute().value
         let hasPrefs = !(prefs?.nutrition_preferences ?? "").trimmingCharacters(in: .whitespaces).isEmpty
-        // Con Plus (o sin saberlo aún) y preferencias, se preparan directamente; si lo último que
-        // dijo el servidor fue «sin Plus», primero se comprueba sin pedir que genere nada.
-        if hasPrefs && hasAccess != false { await generateMeals(); return }
+        // Siempre se confirma antes de generar: quien tuvo Plus y ya no lo tiene no ve «Preparando…».
         struct Result: Decodable { let reason: String? }
         let result: Result? = try? await Backend.client.functions.invoke("sync-nutrition-macros", options: FunctionInvokeOptions(body: [String: String]()))
         // Sin respuesta (red) no se decide nada: nunca se enseña lo de Plus a quien no lo tiene.
