@@ -86,23 +86,24 @@ struct ScanView: View {
     // MARK: - Cabecera
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("AI SCAN").font(.apCaption.weight(.bold)).tracking(1.6).foregroundStyle(Palette.gold)
-            Text("Tu análisis corporal").font(.apTitle1)
+        VStack(spacing: 4) {
+            Text("Análisis físico con IA").font(.apTitle1)
                 .accessibilityAddTraits(.isHeader)
-            Text("Sube una foto frontal (y otra de espalda si quieres) y la IA valora tu físico y tu potencial.")
+            Text("Sube tus fotos y la IA analiza tu físico y tu potencial para personalizar aún más tu plan.")
                 .font(.apSubhead).foregroundStyle(Palette.muted)
                 .fixedSize(horizontal: false, vertical: true)
         }
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Fotos
 
     private var photos: some View {
         HStack(spacing: 12) {
-            photoTile(title: "Delante", hint: "Cuerpo completo", badge: "Obligatoria",
+            photoTile(title: "Foto de delante", hint: "Cuerpo completo", badge: "Obligatoria",
                       image: front, item: $frontItem, isFront: true, silhouette: "figure.stand")
-            photoTile(title: "Atrás", hint: "Opcional", badge: "Opcional",
+            photoTile(title: "Foto de atrás", hint: "Cuerpo completo", badge: "Opcional",
                       image: back, item: $backItem, isFront: false, silhouette: "figure.stand")
         }
     }
@@ -129,40 +130,41 @@ struct ScanView: View {
 
     private var tipsCard: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Cómo tomar las fotos").font(.apTitle3).padding(.bottom, 8)
-            tipRow("ruler", "Distancia", "Cámara a 2-3 m, a la altura del ombligo, cuerpo entero y móvil en vertical.")
-            tipRow("sun.max", "Luz y fondo", "Luz natural frontal y uniforme, sin contraluz ni flash, con fondo liso y claro.")
-            tipRow("figure.arms.open", "Postura y ropa", "Ropa ajustada, pies a la anchura de los hombros y brazos relajados. Para la de atrás, date la vuelta sin moverte.")
+            Text("Cómo tomar las fotos").font(.apHeadline).padding(.bottom, 6)
+            // Una línea por consejo (diseño ChatGPT).
+            tipRow("figure.stand", "Cuerpo entero, de pie y con el móvil en vertical")
+            tipRow("ruler", "Cámara a 2-3 m, a la altura del ombligo")
+            tipRow("sun.max", "Luz natural frontal, sin contraluz ni flash")
+            tipRow("tshirt", "Ropa ajustada y fondo liso y claro")
+            tipRow("arrow.uturn.backward", "Para la de atrás, date la vuelta sin moverte")
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
     }
 
-    private func tipRow(_ symbol: String, _ title: String, _ text: String) -> some View {
-        HStack(alignment: .top, spacing: 12) {
+    private func tipRow(_ symbol: String, _ text: String) -> some View {
+        HStack(spacing: 12) {
             Image(systemName: symbol)
-                .font(.inter(size: 14, weight: .semibold))
+                .font(.inter(size: 16))
                 .foregroundStyle(Palette.gold)
-                .frame(width: 26, height: 26)
-                .background(Palette.gold.opacity(0.14), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .frame(width: 22)
                 .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(title).font(.apSubhead.weight(.semibold))
-                Text(text).font(.apFootnote).foregroundStyle(Palette.muted)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+            Text(text).font(.apFootnote)
+                .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
         }
-        .padding(.vertical, 7)
-        .accessibilityElement(children: .combine)
+        .padding(.vertical, 6)
     }
 
     // MARK: - Acción
 
     private var analyzeButton: some View {
         Button { Haptics.tap(); Task { await analyze() } } label: {
-            Text("Analizar mi físico")
+            HStack(spacing: 8) {
+                Text("Analizar mi físico")
+                Image(systemName: "arrow.right").accessibilityHidden(true)
+            }
         }
         .buttonStyle(PillButtonStyle(kind: .primary, height: 56))
         .disabled(front == nil && back == nil)

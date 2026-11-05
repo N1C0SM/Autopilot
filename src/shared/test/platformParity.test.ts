@@ -128,11 +128,11 @@ describe("paridad web ↔ apps nativas", () => {
     const app = read("native/Autopilot/Features/Scan/ScanView.swift");
     expect(read("src/app/pages/Dashboard.tsx")).toMatch(/<ProgressScan /);
     for (const text of [
-      "AI SCAN", "Tu análisis corporal", "Delante", "Atrás", "Obligatoria", "Opcional", "Cambiar foto",
+      "AI SCAN", "Análisis físico con IA", "Foto de delante", "Foto de atrás", "Obligatoria", "Opcional", "Cambiar foto",
       "Tu objetivo", "Sin definir", "Se usa para personalizar el análisis.", "Cómo tomar las fotos",
-      "Cámara a 2-3 m, a la altura del ombligo, cuerpo entero y móvil en vertical.",
-      "Luz natural frontal y uniforme, sin contraluz ni flash, con fondo liso y claro.",
-      "Ropa ajustada, pies a la anchura de los hombros y brazos relajados. Para la de atrás, date la vuelta sin moverte.",
+      "Cuerpo entero, de pie y con el móvil en vertical", "Cámara a 2-3 m, a la altura del ombligo",
+      "Luz natural frontal, sin contraluz ni flash", "Ropa ajustada y fondo liso y claro",
+      "Para la de atrás, date la vuelta sin moverte",
       "Analizar mi físico",
       "Con una sola foto ya podemos analizarte: valoraremos solo lo que se vea en esa vista. Con las dos fotos el análisis es más completo.",
       "Privado: solo para tu análisis · Sin registro · Menos de 1 minuto",
