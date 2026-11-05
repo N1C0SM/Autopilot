@@ -12,8 +12,8 @@ import { socialLinkList } from "@/shared/lib/socialLinks";
 import AppStoreBadges from "@/web/components/AppStoreBadges";
 
 const navigation = [
-  ["/como-funciona", "Cómo funciona"], ["/planes", "Planes"], ["/equipo", "Equipo"],
-  ["/recursos", "Recursos"], ["/preguntas-frecuentes", "Dudas"],
+  ["/como-funciona", "Producto"], ["/recursos", "Academia"], ["/planes", "Planes"],
+  ["/preguntas-frecuentes", "Soporte"],
 ] as const;
 
 export default function PublicLayout({ title, description, children }: { title: string; description: string; children: ReactNode }) {
@@ -84,10 +84,10 @@ export default function PublicLayout({ title, description, children }: { title: 
           de 14 px en gris y un único acento dorado (la acción), con un filete que separa
           el acceso de la navegación. Antes los siete elementos pesaban lo mismo. */}
       <div className="container mx-auto flex h-14 min-w-0 items-center justify-between gap-2 px-4 lg:h-16 lg:px-6">
-        <Link to="/" aria-label="Autopilot, inicio" className="inline-flex min-h-11 items-center font-rounded text-[20px] font-bold tracking-tight text-primary transition-opacity active:opacity-60 lg:text-[22px]">Autopilot</Link>
-        <nav aria-label="Navegación principal" className="hidden items-center lg:flex">
+        <Link to="/" aria-label="Autopilot, inicio" className="inline-flex min-h-11 items-center gap-2 text-[20px] font-bold tracking-[0.01em] text-foreground transition-opacity active:opacity-60 lg:text-[21px]"><svg aria-hidden="true" viewBox="0 0 32 28" className="h-7 w-8 text-primary"><path d="M16 1 31 27h-6L16 11 7 27H1Z" fill="currentColor"/><path d="M17.5 12 13 20h3.5l-2 6 5.5-8.5h-3.5Z" fill="hsl(var(--background))"/></svg>AUTOPILOT</Link>
+        <nav aria-label="Navegación principal" className="hidden flex-1 items-center lg:flex"><span className="flex-1" />
           {navigation.map(([to, label]) => (
-            <NavLink key={to} to={to} className={({ isActive }) => `relative inline-flex min-h-11 items-center px-3 text-[14px] font-medium transition-colors active:opacity-60 ${isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+            <NavLink key={to} to={to} className={({ isActive }) => `relative inline-flex min-h-11 items-center px-5 text-[14px] font-medium transition-colors active:opacity-60 ${isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
               {({ isActive }) => (
                 <>
                   {label}
@@ -99,17 +99,16 @@ export default function PublicLayout({ title, description, children }: { title: 
               )}
             </NavLink>
           ))}
-          {showApp && <NavLink to="/app" className="inline-flex min-h-11 items-center px-3 text-[14px] font-medium text-muted-foreground transition-colors hover:text-foreground active:opacity-60">App móvil</NavLink>}
-          <span aria-hidden="true" className="mx-2 h-4 w-px bg-border" />
-          <Button variant="plain" size="sm" asChild className="h-11"><Link to="/login">Iniciar sesión</Link></Button>
-          <Button variant="tinted" size="sm" asChild className="ml-1 h-11 px-4"><Link to="/onboarding" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source: "header" }); }}>Crear mi rutina</Link></Button>
+          <span className="flex-1" />
+          <Link to="/login" className="ml-auto inline-flex h-10 items-center rounded-full border border-foreground/30 px-5 text-[14px] font-medium transition-colors hover:bg-foreground/5">Iniciar sesión</Link>
+          <Link to="/onboarding" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source: "header" }); }} className="ml-4 inline-flex h-10 items-center rounded-full bg-primary px-5 text-[14px] font-semibold text-primary-foreground transition-opacity hover:opacity-90">Empezar gratis</Link>
         </nav>
         <div className="flex items-center gap-1 lg:hidden">
-          <Button variant="tinted" size="sm" asChild className="h-11 px-4"><Link to="/onboarding" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source: "header" }); }}>Crear mi rutina</Link></Button>
+          <Link to="/onboarding" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source: "header" }); }} className="inline-flex h-10 items-center rounded-full bg-primary px-4 text-[14px] font-semibold text-primary-foreground">Empezar gratis</Link>
           <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
             <SheetTrigger asChild><Button variant="ghost" size="icon" aria-label="Abrir menú" onClick={() => void hapticTap()}><Menu className="h-6 w-6" strokeWidth={2} /></Button></SheetTrigger>
             <SheetContent className="w-[min(90vw,360px)] overflow-y-auto px-4" onOpenAutoFocus={(e) => e.preventDefault()}>
-              <SheetTitle className="text-primary">Autopilot</SheetTitle>
+              <SheetTitle>AUTOPILOT</SheetTitle>
               <SheetDescription>Elige qué quieres consultar.</SheetDescription>
               <nav aria-label="Menú móvil" className="mt-6 space-y-6">
                 <ListGroup inset>

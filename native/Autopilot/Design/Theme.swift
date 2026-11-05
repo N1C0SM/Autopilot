@@ -8,23 +8,23 @@ import AppKit
 /// Lenguaje de diseño de Autopilot (.claude/design): negro, dorado contenido,
 /// tarjetas sin borde de 22/28 pt, botones y campos en píldora, cifras grandes redondeadas.
 enum Palette {
-    static let background = Color.black
-    static let foreground = Color.white
-    static let card = Color(red: 0.078, green: 0.078, blue: 0.086)
-    static let secondary = Color(red: 0.161, green: 0.161, blue: 0.173)
+    static let background = Color(red: 0.042, green: 0.040, blue: 0.038)
+    static let foreground = Color(red: 0.968, green: 0.963, blue: 0.952)
+    static let card = Color(red: 0.083, green: 0.080, blue: 0.077)
+    static let secondary = Color(red: 0.146, green: 0.140, blue: 0.134)
     /// Texto secundario. Contraste medido (WCAG): 7,5:1 sobre `card`, 9,2:1 sobre negro y
     /// 6,0:1 sobre `secondary`, así que ya cumple AA/AAA para texto normal; no hace falta
     /// subir la luminosidad. Los grises con opacidad solo se usan en adornos (chevrones, iconos).
-    static let muted = Color(red: 0.659, green: 0.659, blue: 0.682)
-    static let gold = Color(red: 0.847, green: 0.698, blue: 0.369)
+    static let muted = Color(red: 0.696, green: 0.683, blue: 0.664)
+    static let gold = Color(red: 0.910, green: 0.734, blue: 0.450)
     static let destructive = Color(red: 1.0, green: 0.271, blue: 0.227)
     /// --success 135 64% 50%
     static let success = Color(red: 0.18, green: 0.82, blue: 0.34)
-    static let separator = Color(red: 0.149, green: 0.149, blue: 0.161)
+    static let separator = Color(red: 0.156, green: 0.150, blue: 0.144)
     /// --accent 240 2% 21% (segmentado activo, pulsado)
-    static let accent = Color(red: 0.2, green: 0.2, blue: 0.22)
+    static let accent = Color(red: 0.198, green: 0.190, blue: 0.182)
     /// --border 240 4% 15%
-    static let border = Color(red: 0.149, green: 0.149, blue: 0.161)
+    static let border = Color(red: 0.156, green: 0.150, blue: 0.144)
 }
 
 enum Radius {

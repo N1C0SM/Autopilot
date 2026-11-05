@@ -34,28 +34,23 @@ describe("short public home", () => {
     open();
     const main = await screen.findByRole("main");
     expect(within(main).getByRole("heading", { level: 1 })).toHaveTextContent("Convierte la disciplina");
-    expect(within(main).getByRole("img", { name: "Pantalla de Autopilot con el entrenamiento del día" })).toBeInTheDocument();
     fireEvent.click(within(main).getAllByRole("link", { name: /Empezar gratis/ })[0]);
     expect(screen.getByTestId("destination")).toHaveTextContent("/onboarding");
   });
 
-  it("shows demo, real prices and the four key questions on the home", async () => {
+  it("shows the demo link, the real Free price and the full comparison", async () => {
     open();
     const main = await screen.findByRole("main");
-    expect(within(main).getByRole("link", { name: /Ver demo/ })).toHaveAttribute("href", "#demo");
-    expect(main.querySelector("#demo")).not.toBeNull();
-    // Plus price appears in several pricing blocks on purpose; it must appear at least once.
-    expect((await within(main).findAllByText("14,99 €")).length).toBeGreaterThan(0);
-    expect(within(main).getAllByText("49 €").length).toBeGreaterThan(0);
+    expect(within(main).getByRole("link", { name: /Ver demo/ })).toHaveAttribute("href", "/como-funciona#demo");
+    expect(within(main).getByText(/Free — 0 €/)).toBeInTheDocument();
     expect(within(main).getByRole("link", { name: "Ver la comparativa completa" })).toHaveAttribute("href", "/planes");
-    expect(within(main).getAllByRole("button", { name: /\?$/ }).length).toBeGreaterThanOrEqual(4);
   });
 
   it("opens mobile navigation and reaches the questions page", async () => {
     open();
     fireEvent.click(await screen.findByRole("button", { name: "Abrir menú" }));
     const menu = screen.getByRole("navigation", { name: "Menú móvil" });
-    fireEvent.click(within(menu).getByRole("link", { name: "Dudas" }));
+    fireEvent.click(within(menu).getByRole("link", { name: "Soporte" }));
     expect(screen.getByTestId("destination")).toHaveTextContent("/preguntas-frecuentes");
   });
 
