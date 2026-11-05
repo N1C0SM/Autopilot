@@ -61,11 +61,10 @@ export const AuthHero = ({
   children?: ReactNode;
 }) => (
   <div className="relative text-center">
-    {/* Halo dorado, como «¿Quién entrena?» y la landing: el mismo ecosistema. */}
-    <span aria-hidden="true" className="pointer-events-none absolute left-1/2 top-10 -z-10 h-[26rem] w-[26rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(closest-side,hsl(var(--primary)/0.14),transparent)]" />
-    <p className="mb-5 type-headline text-primary">Autopilot</p>
+    {/* Misma marca que el menú de la landing: palabra en dorado, sin halos. */}
+    <p className="mb-6 text-[13px] font-semibold tracking-[0.18em] text-primary">AUTOPILOT</p>
     {mark}
-    <h1 className="mt-6 font-rounded text-[32px] font-bold leading-tight tracking-tight">{title}</h1>
+    <h1 className="mt-6 text-[30px] font-semibold leading-tight tracking-tight">{title}</h1>
     {description ? (
       <p className="mx-auto mt-2 max-w-[34ch] type-subhead text-muted-foreground">{description}</p>
     ) : null}
@@ -102,7 +101,7 @@ export const AuthFieldRow = ({
   trailing?: ReactNode;
   children: ReactNode;
 }) => (
-  <div className="group/field rounded-full bg-secondary pl-5 ring-2 ring-transparent transition-shadow duration-150 focus-within:ring-primary">
+  <div className="group/field rounded-full border border-border bg-background/40 pl-5 transition-colors duration-150 focus-within:border-primary">
     <label htmlFor={htmlFor} className="sr-only">
       {label}
     </label>
