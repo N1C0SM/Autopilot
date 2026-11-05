@@ -1855,7 +1855,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                                 animate={prefersReducedMotion ? { opacity: 1 } : { scale: 1, opacity: 1 }}
                                 transition={prefersReducedMotion ? { duration: 0.2 } : { type: "spring", stiffness: 420, damping: 14 }}
                                 className="mt-2 flex w-fit origin-left items-center gap-1.5 rounded-full border border-primary/40 bg-transparent px-2.5 py-0.5 type-footnote font-semibold text-primary">
-                                <Trophy className="h-3.5 w-3.5 shrink-0 text-amber-400" aria-hidden="true" />
+                                <Trophy className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
                                 <span>Récord personal · {livePR}</span>
                               </motion.div>
                             )}

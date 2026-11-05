@@ -157,8 +157,8 @@ export function WorkoutSummary({
               className="mt-6 rounded-media border border-primary/30 bg-card p-4"
             >
               <div className="flex items-center gap-2 mb-3">
-                <Trophy className="h-6 w-6 text-amber-400" strokeWidth={2} />
-                <span className="type-title3 text-amber-400">
+                <Trophy className="h-6 w-6 text-primary" strokeWidth={2} />
+                <span className="type-title3 text-primary">
                   {records.length} Récord{records.length > 1 ? 's' : ''} Personal{records.length > 1 ? 'es' : ''}
                 </span>
               </div>
@@ -179,13 +179,13 @@ export function WorkoutSummary({
                       transition={{ delay: 0.4 + idx * 0.1, duration: 0.3 }}
                       className="flex items-center justify-between rounded-chip bg-black/10 px-3 py-2"
                     >
-                      <span className="type-body font-medium text-amber-50">{exerciseName}</span>
+                      <span className="type-body font-medium text-foreground">{exerciseName}</span>
                       <div className="text-right">
-                        <div className="type-body font-bold tabular-nums text-amber-400">
+                        <div className="type-body font-bold tabular-nums text-primary">
                           {currentWeight ? `${currentWeight}kg` : '—'}
                         </div>
                         {weightDiff > 0 && (
-                          <div className="type-caption1 tabular-nums text-amber-400/70">
+                          <div className="type-caption1 tabular-nums text-muted-foreground">
                             +{weightDiff}kg
                           </div>
                         )}
