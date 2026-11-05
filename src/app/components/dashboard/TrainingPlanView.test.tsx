@@ -18,7 +18,7 @@ vi.mock("@/app/components/ExerciseFocus", () => ({
 vi.mock("@/shared/components/AIDisclaimer", () => ({ default: () => null }));
 vi.mock("@/app/components/dashboard/CalendarExportDialog", () => ({ default: ({ trigger }: { trigger: ReactNode }) => <>{trigger}</> }));
 // La portada IA es red: aquí se prueba el respaldo de marca y el resto de la pantalla.
-vi.mock("@/shared/hooks/useSessionCover", () => ({ useSessionCover: () => null }));
+vi.mock("@/shared/hooks/useSessionCover", () => ({ useSessionCover: () => null, cachedSessionCover: () => null }));
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
@@ -62,7 +62,7 @@ describe("weekly plan access", () => {
     );
     expect(screen.getByRole("button", { name: "Jueves, Empuje" })).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("heading", { name: "Empuje" })).toBeVisible();
-    expect(screen.queryByText(/descanso/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/día de descanso/i)).not.toBeInTheDocument();
   });
 
   it("never opens a day without a session and falls back to the next one", () => {

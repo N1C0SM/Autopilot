@@ -586,7 +586,7 @@ const Dashboard = () => {
   // Títulos de la barra en el móvil: cortos, los mismos que en la barra de pestañas.
   const MOBILE_TITLES: Record<MobileTab, string> = {
     home: "Hoy",
-    training: "Plan",
+    training: "Plan semanal",
     nutrition: "Nutrición",
     chat: "Chat",
     progress: "Progreso",
@@ -728,10 +728,10 @@ const Dashboard = () => {
         // Entrenar es la rutina semanal; el tracker solo se abre al empezar una sesión.
         <div className="w-full min-w-0">
           <Suspense fallback={<SectionFallback />}>
-              {/* Entrenar queda limpio: las herramientas de la rutina viven solo en «Rutina semanal». */}
-              {trainingView === "plan" && !workoutMode && !autoStartWorkout && (
-                // Herramientas de la rutina en su tarjeta: modo del plan a la izquierda, acciones en píldoras.
-                <div className="mb-3 flex w-full items-center gap-2 rounded-[22px] border border-foreground/[0.08] bg-card py-2 pl-5 pr-2">
+              {trainingView === "plan" && !workoutMode && !autoStartWorkout ? (
+                <TrainingPlanView dayPlans={dayPlans} initialDay={planFocusDay} tools={(
+                // Herramientas de la rutina bajo la semana (como «Tu plan personalizado» de la maqueta).
+                <div className="flex w-full items-center gap-2 rounded-[22px] border border-foreground/[0.08] bg-card py-2 pl-5 pr-2">
                   <span className="min-w-0 flex-1 truncate type-subhead font-medium">
                     {isManualPlan(dayPlans) ? "Rutina personalizada" : "Piloto automático"}
                   </span>
@@ -755,9 +755,7 @@ const Dashboard = () => {
                     ))}
                   </div>
                 </div>
-              )}
-              {trainingView === "plan" && !workoutMode && !autoStartWorkout ? (
-                <TrainingPlanView dayPlans={dayPlans} initialDay={planFocusDay} onOpenWorkout={(day) => {
+                )} onOpenWorkout={(day) => {
                   setTrainingDay(day);
                   setTrainingView("tracker");
                 }} />
@@ -894,6 +892,8 @@ const Dashboard = () => {
           }}
           className="w-full min-w-0 space-y-4"
         >
+          {/* Subtítulo de la maqueta bajo el título grande; en escritorio la barra ya lleva su pista. */}
+          <p className="-mt-1 type-subhead text-muted-foreground md:hidden">Evolución de tu fuerza, tu físico y tus récords.</p>
           {/* Control segmentado del rediseño: 44 px, fondo de tarjeta y la sección activa en dorado (igual que `SegmentedPill(gold:)` en nativo). */}
           <TabsList aria-label="Tu progreso" className="mx-auto mb-4 flex h-11 w-full max-w-md border-0 bg-card lg:max-w-lg">
             {([["evolution", "Fuerza"], ["photos", "Físico"], ["records", "Récords"], ["scan", "Scan"]] as const).map(([value, label]) => (

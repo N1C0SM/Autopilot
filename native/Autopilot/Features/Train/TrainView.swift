@@ -50,11 +50,15 @@ struct TrainView: View {
                     // Sin rutina: la misma invitación que Inicio y la web, con su botón.
                     StarterRoutineCard { await load() }
                 } else {
-                    routineBar
+                    // Bajo el título grande «Plan semanal»; en Mac la barra ya lleva su pista.
+                    if !wideLayout {
+                        Text("Tu rutina de entrenamiento, día a día.").font(.apSubhead).foregroundStyle(Palette.muted)
+                    }
                     WeeklyRoutineView(days: model.days,
                                       initialDay: DayNames.today,
                                       doneToday: model.completedToday(DayNames.today),
-                                      resumableDay: resumableDay) { day in
+                                      resumableDay: resumableDay,
+                                      routineBar: AnyView(routineBar)) { day in
                         Task { await open(day) }
                     }
                 }
@@ -325,6 +329,8 @@ struct WeeklyRoutineView: View {
     var doneToday = false
     /// Día con un entreno a medias: su acción pasa a ser «Continuar entreno».
     var resumableDay: String? = nil
+    /// Tarjeta de la rutina (modo, Ejercicios, Editar): va bajo la lista de días, como en la web.
+    var routineBar: AnyView? = nil
     var onOpen: (String) -> Void
     @State private var expanded: String?
     @State private var detail: GymExercise?
@@ -345,18 +351,31 @@ struct WeeklyRoutineView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
+        VStack(alignment: .leading, spacing: 20) {
             dayStrip
-            if let day = expanded, let plan = workPlan(day) { session(day, plan) }
-            else if let day = expanded { rest(day) }
-            else { emptyCard(icon: "lu-calendar", title: "Elige un día", message: "Toca un día de la semana para ver su sesión.") }
+            if DayNames.all.contains(where: { workPlan($0) != nil }) {
+                // La semana entera en filas, como la maqueta: el día elegido se abre bajo su fila.
+                VStack(spacing: 12) {
+                    ForEach(DayNames.all, id: \.self) { day in
+                        dayRow(day)
+                        if expanded == day {
+                            if let plan = workPlan(day) { session(day, plan) } else { rest(day) }
+                        }
+                    }
+                }
+            } else {
+                emptyCard(icon: "lu-calendar", title: "Tu plan aún no tiene sesiones",
+                          message: "Edita tu rutina para añadir los días de la semana que quieras entrenar.")
+            }
+            if let routineBar { routineBar }
             tools
             (Text("Análisis asistido por IA · tu plan se adapta a ti · ") + Text("[no sustituye consejo médico](https://autopilotplan.app/legal/disclaimer-medico)"))
                 .tint(Palette.gold)
                 .font(.apFootnote).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity).padding(.horizontal, 16)
         }
-        .onAppear { if expanded == nil { expanded = workPlan(initialDay) != nil ? initialDay : DayNames.today } }
+        // Nunca se abre sola un día sin sesión: el pedido, si no la siguiente sesión (igual que la web).
+        .onAppear { if expanded == nil { expanded = workPlan(initialDay) != nil ? initialDay : nextSession(after: initialDay) ?? initialDay } }
         .sheet(item: $detail) { TechniqueSheet(exercise: $0).presentationBackground(Palette.card) }
     }
 
@@ -368,17 +387,85 @@ struct WeeklyRoutineView: View {
         dayStrip(circle: wideLayout ? 48 : 44)
     }
 
-    private func legendDot(color: Color, label: String) -> some View {
-        HStack(spacing: 4) {
-            Circle().fill(color).frame(width: 8, height: 8)
-            Text(label).font(.apCaption).foregroundStyle(Palette.muted)
-        }
+    /// Inicial del día en el selector (X es miércoles, como en la web).
+    static func initial(_ day: String) -> String {
+        ["L", "M", "X", "J", "V", "S", "D"][DayNames.all.firstIndex(of: day) ?? 0]
     }
 
-    private func legendCheck(label: String) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: "checkmark").font(.apCaption.weight(.bold)).foregroundStyle(Palette.gold)
-            Text(label).font(.apCaption).foregroundStyle(Palette.muted)
+    /// Siguiente día con sesión después de `day`, dando la vuelta a la semana.
+    private func nextSession(after day: String) -> String? {
+        let i = DayNames.all.firstIndex(of: day) ?? 0
+        return (1...7).map { DayNames.all[(i + $0) % 7] }.first { workPlan($0) != nil }
+    }
+
+    /// Fila del plan semanal (maqueta de ChatGPT): foto, día, sesión y detalle, con chevron.
+    private func dayRow(_ day: String) -> some View {
+        let plan = workPlan(day)
+        let isToday = day == DayNames.today
+        let isExpanded = expanded == day
+        let shape = RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+        return Button {
+            Haptics.selection()
+            withAnimation(reduceMotion ? nil : .snappy) { expanded = day }
+        } label: {
+            HStack(spacing: 14) {
+                rowThumb(plan)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(isToday ? "\(day) · Hoy" : day).font(.apFootnote.weight(.medium))
+                        .foregroundStyle(isToday ? Palette.gold : Palette.muted)
+                    Text(plan?.title ?? "Descanso").font(.apHeadline).foregroundStyle(Palette.foreground)
+                        .lineLimit(2).fixedSize(horizontal: false, vertical: true)
+                    Text(meta(plan)).font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted).lineLimit(1)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                Image(systemName: "chevron.right").font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(isExpanded ? Palette.gold : Palette.muted)
+                    .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                    .accessibilityHidden(true)
+            }
+            .padding(.leading, 12).padding(.trailing, 16).padding(.vertical, 12)
+            .frame(maxWidth: .infinity, minHeight: 88, alignment: .leading)
+            .background(Palette.card, in: shape)
+            .overlay(shape.strokeBorder(isExpanded ? Palette.gold.opacity(0.6) : Color.white.opacity(0.08), lineWidth: 1))
+            .contentShape(shape)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(day.lowercased()): \(plan?.title ?? "Descanso")")
+        .accessibilityAddTraits(isExpanded ? .isSelected : [])
+    }
+
+    /// Detalle corto de la fila: ejercicios y series del gimnasio, intensidad y duración de la actividad.
+    private func meta(_ plan: DayPlan?) -> String {
+        guard let plan else { return "Recuperación" }
+        if plan.isGym {
+            let exercises = plan.exercises ?? []
+            let sets = exercises.reduce(0) { $0 + $1.series }
+            guard !exercises.isEmpty else { return "Sin ejercicios todavía" }
+            return ["\(exercises.count) \(exercises.count == 1 ? "ejercicio" : "ejercicios")", sets > 0 ? "\(sets) \(sets == 1 ? "serie" : "series")" : nil].compactMap { $0 }.joined(separator: " · ")
+        }
+        let parts = [plan.intensity.map { "Intensidad \($0.lowercased())" }, plan.duration].compactMap { $0 }.filter { !$0.isEmpty }
+        return parts.isEmpty ? "Actividad" : parts.joined(separator: " · ")
+    }
+
+    /// Foto de la fila: la del primer ejercicio o la de marca; actividad y descanso, su icono.
+    @ViewBuilder private func rowThumb(_ plan: DayPlan?) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
+        if let plan, plan.isGym {
+            let source = (plan.exercises ?? []).compactMap(\.image_url).first { !$0.isEmpty } ?? Self.brandGymPhoto
+            CachedAsyncImage(url: URL(string: source), maxSide: 300) {
+                $0.resizable().scaledToFill()
+            } placeholder: {
+                Palette.secondary
+            }
+            .frame(width: 64, height: 64)
+            .clipShape(shape)
+            .accessibilityHidden(true)
+        } else {
+            Image(systemName: plan == nil ? "moon" : "flame").font(.system(size: 22, weight: .medium))
+                .foregroundStyle(plan == nil ? Palette.muted : Palette.gold)
+                .frame(width: 64, height: 64)
+                .background(Palette.secondary, in: shape)
+                .accessibilityHidden(true)
         }
     }
 
@@ -398,17 +485,12 @@ struct WeeklyRoutineView: View {
                         if isToday && doneToday {
                             Image(systemName: "checkmark").font(.apSubhead.weight(.bold))
                         } else {
-                            Text(String(day.prefix(3))).font(.apSubhead.weight(isExpanded ? .semibold : .medium))
+                            Text(Self.initial(day)).font(.apSubhead.weight(.semibold))
                                 .lineLimit(1).minimumScaleFactor(0.6)
                         }
-                        // El punto ocupa su hueco siempre: las iniciales de los 7 días comparten
-                        // línea base, haya punto o no.
-                        Circle()
-                            .fill(isToday ? (isExpanded ? Color.black : Palette.gold) : Color.clear)
-                            .frame(width: 4, height: 4)
                     }
                     .foregroundStyle(isExpanded ? Color.black
-                                     : (isToday || plan != nil) ? Palette.foreground : Palette.muted)
+                                     : isToday ? Palette.gold : plan != nil ? Palette.foreground : Palette.muted.opacity(0.6))
                     .frame(width: circle, height: circle)
                     .background {
                         if isExpanded { Circle().fill(Palette.gold) }
@@ -425,15 +507,6 @@ struct WeeklyRoutineView: View {
                 .accessibilityValue(isToday ? "hoy" : "")
             }
         }
-        .padding(6)
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        HStack(spacing: 14) {
-            legendDot(color: Palette.gold, label: "Hoy")
-            legendDot(color: Palette.secondary, label: "Programado")
-            legendDot(color: Palette.muted.opacity(0.4), label: "Descanso")
-            legendCheck(label: "Hecho")
-        }
-        .padding(.horizontal, 6).padding(.bottom, 4)
         }
         // Control compacto de 7 columnas fijas: se limita el crecimiento del texto para que las
         // iniciales nunca se trunquen con Dynamic Type. El nombre completo del día lo lee VoiceOver.
@@ -444,18 +517,8 @@ struct WeeklyRoutineView: View {
 
     @ViewBuilder private func session(_ day: String, _ plan: DayPlan) -> some View {
         let exercises = plan.exercises ?? []
-        let sets = exercises.reduce(0) { $0 + $1.series }
-        let summary = exercises.isEmpty ? nil : ["\(exercises.count) \(exercises.count == 1 ? "ejercicio" : "ejercicios")", sets > 0 ? "\(sets) \(sets == 1 ? "serie" : "series")" : nil].compactMap { $0 }.joined(separator: " · ")
-        VStack(alignment: .leading, spacing: 24) {
-            // Portada de la sesión (`h-44` ≈ 176 pt) a todo el ancho, en iPhone y Mac como en la web.
-            if plan.isGym {
-                sessionCover(plan)
-            }
-            VStack(alignment: .leading, spacing: 4) {
-                Text(day == DayNames.today ? "\(day) · hoy" : day).font(.apSubhead).foregroundStyle(Palette.muted)
-                Text(plan.title).font(.apTitle1)
-                if plan.isGym, let summary { Text(summary).font(.apSubhead).foregroundStyle(Palette.muted).padding(.top, 2) }
-            }
+        VStack(alignment: .leading, spacing: 12) {
+            // La foto, el día y el nombre ya están en la fila: aquí solo la acción y los ejercicios.
             action(day, plan)
             if plan.isGym {
                 if !exercises.isEmpty {
@@ -579,57 +642,22 @@ struct WeeklyRoutineView: View {
         .accessibilityElement(children: .combine)
     }
 
-    /// Descanso del día elegido: luna, eyebrow, título, subtexto y acción en el mismo eje, con el
-    /// radio hero y la misma altura reservada que la tarjeta de descanso de Inicio.
-    /// Día de descanso con la misma tarjeta de la luna que Inicio (`RestCard`).
+    /// Descanso del día elegido, bajo su fila: qué toca y el atajo a la siguiente sesión (como la web).
     @ViewBuilder private func rest(_ day: String) -> some View {
-        let i = DayNames.all.firstIndex(of: day) ?? 0
-        let nextDay = (1...7).map { DayNames.all[(i + $0) % 7] }.first { workPlan($0) != nil }
-        let message = nextDay.flatMap { d in workPlan(d).map { "Tu próxima sesión es el \(d.lowercased()): \($0.title)." } }
-            ?? "Recupera; toca otro día para ver su sesión."
-        RestCard(title: day == DayNames.today ? "Hoy es día de descanso" : "El \(day.lowercased()) es día de descanso", message: message) {
+        let nextDay = nextSession(after: day)
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(day == DayNames.today ? "Hoy es día de descanso" : "El \(day.lowercased()) es día de descanso").font(.apHeadline)
+                Text(nextDay.map { "Tu próxima sesión es el \($0.lowercased())." } ?? "Recupera y vuelve con más fuerza.")
+                    .font(.apSubhead).foregroundStyle(Palette.muted)
+            }
             if let nextDay {
                 Button("Ver el \(nextDay.lowercased())") { Haptics.selection(); expanded = nextDay }
                     .buttonStyle(.pillSecondary)
             }
         }
-    }
-
-    /// Fondo elegante cuando la sesión aún no tiene foto: degradado de tarjeta y halo dorado.
-    /// Se usa de respaldo en la portada del descanso y en la de la sesión.
-    private var coverBackdrop: some View {
-        LinearGradient(colors: [Palette.secondary, Palette.card], startPoint: .topLeading, endPoint: .bottomTrailing)
-            .overlay(alignment: .topTrailing) {
-                Circle()
-                    .fill(RadialGradient(colors: [Palette.gold.opacity(0.20), .clear], center: .center, startRadius: 0, endRadius: 150))
-                    .frame(width: 300, height: 300)
-                    .offset(x: 90, y: -120)
-            }
-    }
-
-    /// Portada de la sesión a todo el ancho, como `TrainingPlanView.tsx` (`h-44` + radio 28):
-    /// la primera foto de sus ejercicios o, si no tiene, la foto de marca del gimnasio.
-    private func sessionCover(_ plan: DayPlan) -> some View {
-        let exercises = plan.exercises ?? []
-        let source = exercises.compactMap(\.image_url).first { !$0.isEmpty } ?? Self.brandGymPhoto
-        return CachedAsyncImage(url: URL(string: source), maxSide: 1200) {
-            $0.resizable().scaledToFill()
-        } placeholder: {
-            coverBackdrop
-        }
-        .frame(maxWidth: .infinity)
-        .frame(height: 176)
-        .clipped()
-        .overlay {
-            // Degradado inferior (`from-black/60` en la web): la foto nunca compite con el texto.
-            LinearGradient(stops: [
-                .init(color: .clear, location: 0.35),
-                .init(color: .black.opacity(0.30), location: 0.72),
-                .init(color: .black.opacity(0.60), location: 1),
-            ], startPoint: .top, endPoint: .bottom)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
-        .accessibilityHidden(true)
+        .padding(.horizontal, 4)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     /// Foto de marca de la web (`BRAND_PHOTOS.gym`): respaldo de la portada cuando la sesión no

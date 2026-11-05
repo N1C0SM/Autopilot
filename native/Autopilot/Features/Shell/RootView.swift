@@ -514,7 +514,7 @@ extension AppSection {
     var navTitle: String {
         switch self {
         case .home: "Hoy"
-        case .train: "Entrenar"
+        case .train: "Plan semanal"
         case .progress: "Progreso"
         default: title
         }

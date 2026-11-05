@@ -296,6 +296,30 @@ describe("paridad web ↔ apps nativas", () => {
     for (const text of ['Text("Hoy")', "Entrenamiento de hoy", "Tu progreso", "Tu plan", "Revisa y ajusta tu plan de entrenamiento.", "Ver detalle"]) {
       expect(homeApp, text).toContain(text);
     }
+    // Plan semanal de ChatGPT: título, subtítulo, iniciales en el selector y la semana en filas con foto.
+    const planWeb = read("src/app/components/dashboard/TrainingPlanView.tsx");
+    const planApp = read("native/Autopilot/Features/Train/TrainView.swift");
+    expect(read("src/app/pages/Dashboard.tsx")).toContain('training: "Plan semanal"');
+    expect(read("native/Autopilot/Features/Shell/RootView.swift")).toContain('case .train: "Plan semanal"');
+    for (const src of [planWeb, read("native/Autopilot/Features/Train/TrainView.swift")]) {
+      for (const text of ["Tu rutina de entrenamiento, día a día.", '"L", "M", "X", "J", "V", "S", "D"', "Recuperación", "Tu plan aún no tiene sesiones", "es día de descanso"]) {
+        expect(src, text).toContain(text);
+      }
+    }
+    expect(planWeb).toContain("<DayRow");
+    expect(planApp).toContain("dayRow(day)");
+    // La tarjeta de la rutina va bajo la semana en las dos.
+    expect(planWeb).toContain("{tools}");
+    expect(planApp).toContain("if let routineBar { routineBar }");
+    // Progreso de ChatGPT: «Tu fuerza» con el último récord, la subida en kg y «Tu constancia» debajo.
+    const progressWeb = read("src/app/components/dashboard/WorkoutProgress.tsx") + read("src/app/pages/Dashboard.tsx");
+    const progressApp = read("native/Autopilot/Features/Progress/ProgressScreen.swift");
+    for (const text of ["Tu fuerza", "Evolución de tus principales ejercicios.", "Último récord", "Ver todos mis ejercicios", "Ver menos ejercicios", "Tu constancia", "Evolución de tu fuerza, tu físico y tus récords."]) {
+      expect(progressWeb, text).toContain(text);
+      expect(progressApp, text).toContain(text);
+    }
+    expect(progressWeb).toContain("exerciseRecord(history)");
+    expect(progressApp).toContain("static func record(_ entries: [ExerciseEntry])");
   });
 
   it("Nutrición sin peso: Gratis ve «Calcula tus macros» en la web y en la app, no solo la tarjeta de Plus", () => {
@@ -383,7 +407,8 @@ describe("paridad web ↔ apps nativas", () => {
 
   it("Plan y progreso: portada de la sesión también en iPhone y, sin entrenos, una invitación en vez de «0 kg»", () => {
     const train = read("native/Autopilot/Features/Train/TrainView.swift");
-    expect(train).toContain("            if plan.isGym {\n                sessionCover(plan)");
+    // Rediseño: la foto de cada sesión va en su fila del plan semanal.
+    expect(train).toContain("CachedAsyncImage(url: URL(string: source), maxSide: 300)");
     const title = "Tu progreso empieza con tu primer entreno";
     const message = "Marca tus series al entrenar y aquí verás tus kilos, tu racha y tus récords.";
     for (const src of [read("src/app/components/dashboard/WorkoutProgress.tsx"), read("native/Autopilot/Features/Progress/ProgressScreen.swift")]) {

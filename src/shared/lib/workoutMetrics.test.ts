@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildExerciseHistory } from "@/shared/lib/workoutMetrics";
+import { buildExerciseHistory, exerciseRecord } from "@/shared/lib/workoutMetrics";
 
 describe("buildExerciseHistory", () => {
   it("summarizes only completed sets and estimates strength from the best set", () => {
@@ -70,5 +70,21 @@ describe("buildExerciseHistory", () => {
       bestEstimated1RmKg: 76.6,
       bestSetLabel: "60.5 kg × 8",
     });
+  });
+});
+
+describe("exerciseRecord", () => {
+  const entry = (date: string, kg: number | null, reps = 8) => ({
+    date, sessionLabel: date, volumeKg: kg ? kg * reps : 0, completedSets: 1, loadedSets: kg ? 1 : 0, reps,
+    bestEstimated1RmKg: kg ? Math.round(kg * (1 + reps / 30) * 10) / 10 : null,
+    bestSetLabel: kg ? `${kg} kg × ${reps}` : null,
+  });
+  it("devuelve la mejor serie y lo que ha subido desde la primera sesión con peso", () => {
+    expect(exerciseRecord([entry("2026-10-01", null), entry("2026-10-08", 65), entry("2026-10-15", 72.5), entry("2026-10-22", 70)]))
+      .toEqual({ label: "72.5 kg × 8", gainKg: 7.5 });
+  });
+  it("no inventa subida con una sola sesión ni sin peso", () => {
+    expect(exerciseRecord([entry("2026-10-08", 65)])).toEqual({ label: "65 kg × 8", gainKg: null });
+    expect(exerciseRecord([entry("2026-10-08", null)])).toEqual({ label: null, gainKg: null });
   });
 });

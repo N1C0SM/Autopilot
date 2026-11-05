@@ -57,6 +57,10 @@ struct ProgressScreen: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
+                // Subtítulo de la maqueta bajo el título grande; en Mac la barra ya lleva su pista.
+                if !isWide {
+                    Text("Evolución de tu fuerza, tu físico y tus récords.").font(.apSubhead).foregroundStyle(Palette.muted)
+                }
                 SegmentedPill(options: ["Fuerza", "Físico", "Récords", "Scan"], selection: $tab, gold: true)
                 switch tab {
                 case 0: strength
@@ -121,9 +125,19 @@ struct ProgressScreen: View {
     private var strength: some View {
         // Como la web (`WorkoutProgress`): una sola columna a todo el ancho, hero arriba y
         // «Por ejercicio» debajo (también en escritorio; antes iban en dos columnas de 320).
+        // Rediseño (maqueta de ChatGPT): «Tu fuerza» con el ejercicio principal arriba y «Tu constancia» debajo.
         VStack(alignment: .leading, spacing: 16) {
-            strengthHero
+            if !(model.detailsLoaded && model.history.isEmpty) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Tu fuerza").font(.apTitle2)
+                    Text("Evolución de tus principales ejercicios.").font(.apSubhead).foregroundStyle(Palette.muted)
+                }
+            }
             strengthExercises
+            if model.strengthLoaded && !(model.detailsLoaded && model.history.isEmpty) {
+                Text("Tu constancia").font(.apTitle2).padding(.top, 8)
+            }
+            strengthHero
         }
     }
 
@@ -148,10 +162,7 @@ struct ProgressScreen: View {
     @ViewBuilder private var strengthExercises: some View {
         if model.detailsLoaded {
             if !model.history.isEmpty {
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Por ejercicio").font(.apTitle3).padding(.top, 8)
-                    ExerciseProgressSection(history: model.history, images: model.exerciseImages, names: model.exerciseNames)
-                }
+                ExerciseProgressSection(history: model.history, images: model.exerciseImages, names: model.exerciseNames)
             } else {
                 // Cuenta recién creada: sin esto la pestaña parecía rota (solo la tarjeta a 0 kg).
                 EmptyStateView(symbol: "dumbbell", title: "Tu progreso empieza con tu primer entreno",
@@ -1511,13 +1522,18 @@ private enum ProgressCompute {
                 guard let kg = Double(set.weight.replacingOccurrences(of: ",", with: ".")), kg.isFinite, kg > 0 else { return nil }
                 return (kg, set.reps)
             }
-            let e1rm = weighted.map { $0.0 * (1 + Double($0.1) / 30) }.max().map { ($0 * 10).rounded() / 10 }
+            let bestSet = weighted.max { $0.0 * (1 + Double($0.1) / 30) < $1.0 * (1 + Double($1.1) / 30) }
+            let e1rm = bestSet.map { (($0.0 * (1 + Double($0.1) / 30)) * 10).rounded() / 10 }
             var entry = byDay[log.exercise_name]?[dayKey]
                 ?? ExerciseEntry(date: date, label: dayLabel(date), volumeKg: 0, reps: 0, loadedSets: 0, best1Rm: nil)
             entry.volumeKg += weighted.reduce(0) { $0 + $1.0 * Double($1.1) }
             entry.reps += sets.reduce(0) { $0 + $1.reps }
             entry.loadedSets += weighted.count
-            if let value = e1rm, value > (entry.best1Rm ?? 0) { entry.best1Rm = value }
+            if let value = e1rm, let bestSet, value > (entry.best1Rm ?? 0) {
+                entry.best1Rm = value
+                entry.bestKg = bestSet.0
+                entry.bestReps = bestSet.1
+            }
             byDay[log.exercise_name, default: [:]][dayKey] = entry
         }
         result.history = byDay.mapValues { $0.values.sorted { $0.date < $1.date } }
@@ -1608,7 +1624,12 @@ private enum ProgressCompute {
 
 // MARK: - Gráfica «Por ejercicio»
 
-struct ExerciseEntry: Hashable { let date: Date; let label: String; var volumeKg: Double; var reps: Int; var loadedSets: Int; var best1Rm: Double? }
+struct ExerciseEntry: Hashable {
+    let date: Date; let label: String; var volumeKg: Double; var reps: Int; var loadedSets: Int; var best1Rm: Double?
+    /// Mejor serie del día (por 1RM estimado), como `bestSetLabel` de la web: kg y reps.
+    var bestKg: Double? = nil
+    var bestReps: Int? = nil
+}
 
 /// «Por ejercicio» de `WorkoutProgress.tsx` + `ExerciseProgressChart.tsx`: portada con la foto del ejercicio
 /// (tocable para cambiar) y la gráfica con 1RM / Volumen / Reps.
@@ -1620,6 +1641,7 @@ struct ExerciseProgressSection: View {
     let names: [String]
     @State private var selected = ""
     @State private var metric = 0
+    @State private var showAll = false
 
     private func value(_ e: ExerciseEntry) -> Double? {
         switch metric { case 1: e.loadedSets > 0 ? e.volumeKg.rounded() : nil; case 2: Double(e.reps); default: e.best1Rm }
@@ -1631,41 +1653,134 @@ struct ExerciseProgressSection: View {
         // seleccionado uno que ya no existe: se cae al primero de la lista.
         let name = names.contains(selected) ? selected : (names.first ?? "")
         let entries = history[name] ?? []
+        let others = names.filter { $0 != name }
+        let shownOthers = showAll ? others : Array(others.prefix(3))
+        let card = RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
         VStack(alignment: .leading, spacing: 12) {
-            Menu {
-                Picker("Ejercicio", selection: Binding(get: { name }, set: { Haptics.selection(); selected = $0 })) {
-                    ForEach(names, id: \.self) { n in Text("\(n) · \(history[n]?.count ?? 0) \(history[n]?.count == 1 ? "sesión" : "sesiones")").tag(n) }
+            // Ejercicio principal: foto, último récord y su subida, con la gráfica en la misma tarjeta.
+            VStack(alignment: .leading, spacing: 16) {
+                Menu {
+                    Picker("Ejercicio", selection: Binding(get: { name }, set: { Haptics.selection(); selected = $0 })) {
+                        ForEach(names, id: \.self) { n in Text("\(n) · \(history[n]?.count ?? 0) \(history[n]?.count == 1 ? "sesión" : "sesiones")").tag(n) }
+                    }
+                } label: { header(name, entries) }
+                .menuStyle(.button).buttonStyle(.plain)
+                chart(name, entries)
+            }
+            .padding(16)
+            .background(Palette.card, in: card)
+            .overlay(card.strokeBorder(Color.white.opacity(0.08), lineWidth: 1))
+            ForEach(shownOthers, id: \.self) { other in otherRow(other) }
+            if others.count > 3 {
+                Button {
+                    Haptics.tap()
+                    withAnimation(reduceMotion ? nil : .snappy) { showAll.toggle() }
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "chart.bar").font(.system(size: 18, weight: .medium))
+                        Text(showAll ? "Ver menos ejercicios" : "Ver todos mis ejercicios").font(.apSubhead.weight(.semibold))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        Image(systemName: "chevron.right").font(.system(size: 14, weight: .semibold))
+                            .rotationEffect(.degrees(showAll ? -90 : 0))
+                    }
+                    .foregroundStyle(Palette.gold)
+                    .padding(.horizontal, 16).frame(minHeight: 52)
+                    .overlay(card.strokeBorder(Palette.gold.opacity(0.5), lineWidth: 1))
+                    .contentShape(card)
                 }
-            } label: { cover(name, count: entries.count) }
-            .menuStyle(.button).buttonStyle(.plain)
-            chart(name, entries).padding(16)
-                .background(Palette.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .buttonStyle(.plain)
+            }
         }
     }
 
-    private func cover(_ name: String, count: Int) -> some View {
-        let img = images[name].flatMap(URL.init(string:))
-        return HStack(alignment: .bottom, spacing: 8) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("\(count) \(count == 1 ? "sesión" : "sesiones")").font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.gold)
-                Text(name).font(.inter(size: 26, weight: .bold)).foregroundStyle(.white).multilineTextAlignment(.leading)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            Image(systemName: "chevron.up.chevron.down").font(.inter(size: 16, weight: .semibold)).foregroundStyle(.white.opacity(0.7)).padding(.bottom, 4)
+    /// Récord del ejercicio y su subida en kg desde la primera sesión con peso (`exerciseRecord` de la web).
+    static func record(_ entries: [ExerciseEntry]) -> (label: String?, gain: Double?) {
+        let weighted = entries.filter { $0.best1Rm != nil && $0.bestKg != nil }
+        guard let first = weighted.first,
+              let best = weighted.max(by: { ($0.best1Rm ?? 0) < ($1.best1Rm ?? 0) }) else { return (nil, nil) }
+        // Mismo empate que la web: ante igual 1RM gana el primero.
+        let top = weighted.first { $0.best1Rm == best.best1Rm } ?? best
+        let kg = top.bestKg ?? 0
+        let label = "\(kg.rounded() == kg ? String(Int(kg)) : String(kg)) kg × \(top.bestReps ?? 0)"
+        let gain = ((kg - (first.bestKg ?? 0)) * 10).rounded() / 10
+        return (label, top != first && gain > 0 ? gain : nil)
+    }
+
+    /// Subida en kg en verde (chip de la maqueta); nada si no ha subido.
+    @ViewBuilder private func gainChip(_ gain: Double?) -> some View {
+        if let gain {
+            Label("+\(r(gain)) kg", systemImage: "chart.line.uptrend.xyaxis")
+                .font(.inter(size: 12, weight: .semibold).monospacedDigit())
+                .foregroundStyle(Palette.success)
+                .padding(.horizontal, 8).padding(.vertical, 4)
+                .background(Palette.success.opacity(0.15), in: Capsule())
+                .fixedSize()
         }
-        .padding(20)
-        .frame(maxWidth: .infinity, minHeight: img == nil ? 0 : 176, alignment: .bottomLeading)
-        .background {
-            if let img {
-                Color.clear.overlay {
-                    RemoteThumb(url: img, maxSide: 360) { Palette.card }
+    }
+
+    private func photo(_ name: String, size: CGFloat) -> some View {
+        let shape = RoundedRectangle(cornerRadius: size > 56 ? 16 : 12, style: .continuous)
+        return Palette.secondary
+            .overlay {
+                if let url = images[name].flatMap(URL.init(string:)) {
+                    RemoteThumb(url: url, maxSide: 200) { Image(systemName: "dumbbell").foregroundStyle(Palette.muted) }
+                } else {
+                    Image(systemName: "dumbbell").foregroundStyle(Palette.muted)
                 }
-                .overlay { LinearGradient(colors: [.black.opacity(0.85), .black.opacity(0.3), .clear], startPoint: .bottom, endPoint: .top) }
-                .clipped()
-            } else { Palette.card }
+            }
+            .frame(width: size, height: size)
+            .clipShape(shape)
+            .accessibilityHidden(true)
+    }
+
+    private func header(_ name: String, _ entries: [ExerciseEntry]) -> some View {
+        let best = Self.record(entries)
+        return HStack(alignment: .top, spacing: 14) {
+            photo(name, size: 64)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(alignment: .top, spacing: 8) {
+                    Text(name).font(.apHeadline).foregroundStyle(Palette.foreground).lineLimit(2)
+                        .multilineTextAlignment(.leading).frame(maxWidth: .infinity, alignment: .leading)
+                    Image(systemName: "chevron.up.chevron.down").font(.inter(size: 14, weight: .semibold)).foregroundStyle(Palette.muted)
+                }
+                Text("Último récord").font(.apFootnote).foregroundStyle(Palette.muted).padding(.top, 2)
+                HStack(spacing: 10) {
+                    Text(best.label ?? "—").font(.inter(size: 26, weight: .bold).monospacedDigit()).foregroundStyle(Palette.foreground)
+                        .lineLimit(1).minimumScaleFactor(0.7)
+                    gainChip(best.gain)
+                }
+            }
         }
-        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
         .contentShape(Rectangle())
+    }
+
+    private func otherRow(_ name: String) -> some View {
+        let entries = history[name] ?? []
+        let best = Self.record(entries)
+        let card = RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+        return Button {
+            Haptics.selection()
+            withAnimation(reduceMotion ? nil : .snappy) { selected = name }
+        } label: {
+            HStack(spacing: 14) {
+                photo(name, size: 48)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(name).font(.apHeadline).foregroundStyle(Palette.foreground).lineLimit(1)
+                    Text(best.label.map { "Último récord: \($0)" } ?? "\(entries.count) \(entries.count == 1 ? "sesión" : "sesiones")")
+                        .font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted).lineLimit(2)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                gainChip(best.gain)
+                Image(systemName: "chevron.right").font(.system(size: 14, weight: .semibold)).foregroundStyle(Palette.muted)
+                    .accessibilityHidden(true)
+            }
+            .padding(.leading, 12).padding(.trailing, 16).padding(.vertical, 12)
+            .frame(maxWidth: .infinity, minHeight: 72)
+            .background(Palette.card, in: card)
+            .overlay(card.strokeBorder(Color.white.opacity(0.08), lineWidth: 1))
+            .contentShape(card)
+        }
+        .buttonStyle(.plain)
     }
 
     @ViewBuilder private func chart(_ name: String, _ history: [ExerciseEntry]) -> some View {
