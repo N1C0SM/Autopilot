@@ -128,7 +128,8 @@ struct MainShell: View {
     @EnvironmentObject private var session: SessionModel
     @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var selection: AppSection?
-    @State private var showSettings = false
+    /// Pestañas con Ajustes abierto (desde el avatar): cada pestaña tiene su propia pila.
+    @State private var settingsTabs: Set<AppSection> = []
     @EnvironmentObject private var accounts: AccountStore
     /// Sección visible del panel de Admin en iPhone y estado del cajón lateral.
     @State private var adminSection: AppSection = .adminDashboard
@@ -174,42 +175,7 @@ struct MainShell: View {
             if sizeClass == .compact && session.role == .admin {
                 adminShell
             } else if sizeClass == .compact && session.role == .user {
-                // Como la web en el móvil: cabecera con campana y avatar, y barra flotante abajo.
-                // La barra reserva su espacio: el final de cada pantalla queda siempre por encima de ella.
-                NavigationStack {
-                    SectionView(section: selection ?? .home, onNavigate: { selection = $0 })
-                        .toolbar(.hidden, for: .navigationBar)
-                        // Cabecera de la web (MobileHeader): campana y avatar en círculos, «Hoy» centrado
-                        // y en el resto de pestañas el título grande a la izquierda.
-                        .safeAreaInset(edge: .top, spacing: 0) {
-                            let current = selection ?? .home
-                            VStack(alignment: .leading, spacing: 4) {
-                                ZStack {
-                                    // El saludo con la fecha ya dice que es hoy: sin título duplicado.
-                                    HStack { Spacer(); HeaderButtons(initial: initial, avatar: accounts.accounts.first { $0.id == session.userIdString }?.avatar) { showSettings = true } }
-                                }
-                                .frame(height: 44)
-                                if current != .home {
-                                    Text(current.navTitle).font(.inter(.largeTitle).weight(.bold))
-                                        .accessibilityAddTraits(.isHeader)
-                                }
-                            }
-                            .padding(.horizontal, 16).padding(.bottom, 6)
-                            .background(Palette.background)
-                        }
-                        .navigationDestination(isPresented: $showSettings) { AccountView().navigationTitle("Ajustes") }
-                        .safeAreaInset(edge: .bottom, spacing: 0) {
-                            FloatingTabBar(tabs: AppSection.userTabs, selection: Binding(get: { selection ?? .home }, set: { selection = $0 }))
-                                .padding(.bottom, 4).padding(.top, 8)
-                                .shadow(color: .black.opacity(0.5), radius: 12, y: 8)
-                                // Tapa lo que hay entre la barra y el borde: nada asoma por debajo.
-                                .background(
-                                    LinearGradient(colors: [.black.opacity(0), .black.opacity(0.95), .black], startPoint: .top, endPoint: .center)
-                                        .padding(.top, -24)
-                                        .ignoresSafeArea(edges: .bottom)
-                                )
-                        }
-                }
+                userTabs
             } else {
                 split
             }
@@ -281,6 +247,52 @@ struct MainShell: View {
     }
 
     #if os(iOS)
+    /// iPhone: una pila por pestaña, como `UITabBarController` y la web (`MobileAppShell`). Cada pestaña
+    /// recuerda su scroll y su pantalla, el título grande se encoge al hacer scroll y volver a tocar la
+    /// pestaña activa cierra Ajustes o vuelve al principio.
+    private var userTabs: some View {
+        let current = Binding(get: { AppSection.userTabs.contains(selection ?? .home) ? selection ?? .home : .home },
+                              set: { selection = $0 })
+        return TabView(selection: current) {
+            ForEach(AppSection.userTabs) { tab in
+                NavigationStack {
+                    SectionView(section: tab, onNavigate: { target in
+                        if AppSection.userTabs.contains(target) { selection = target } else if target == .settings { settingsTabs.insert(tab) }
+                    })
+                        .toolbar {
+                            ToolbarItem(placement: .topBarTrailing) {
+                                HeaderButtons(initial: initial, avatar: accounts.accounts.first { $0.id == session.userIdString }?.avatar) {
+                                    settingsTabs.insert(tab)
+                                }
+                            }
+                        }
+                        .navigationDestination(isPresented: Binding(get: { settingsTabs.contains(tab) }, set: { if !$0 { settingsTabs.remove(tab) } })) {
+                            AccountView().navigationTitle("Ajustes").toolbar(.hidden, for: .tabBar)
+                        }
+                        .toolbar(.hidden, for: .tabBar)
+                }
+                // La barra reserva su espacio: el final de cada pantalla queda siempre por encima de ella.
+                .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: 80) }
+                .tag(tab)
+            }
+        }
+        .overlay(alignment: .bottom) {
+            FloatingTabBar(tabs: AppSection.userTabs, selection: current) { tab in
+                if settingsTabs.contains(tab) { settingsTabs.remove(tab) }
+                else { NotificationCenter.default.post(name: .tabReselected, object: tab) }
+            }
+            .padding(.bottom, 4).padding(.top, 8)
+            .shadow(color: .black.opacity(0.5), radius: 12, y: 8)
+            // Tapa lo que hay entre la barra y el borde: nada asoma por debajo.
+            .background(
+                LinearGradient(colors: [.black.opacity(0), .black.opacity(0.95), .black], startPoint: .top, endPoint: .center)
+                    .padding(.top, -24)
+                    .ignoresSafeArea(edges: .bottom)
+            )
+            .ignoresSafeArea(.keyboard)
+        }
+    }
+
     /// Admin en iPhone: contenido a pantalla completa y la barra lateral como cajón
     /// (hamburguesa). Al elegir una sección el cajón se cierra y cambia el contenido.
     private var adminShell: some View {
@@ -408,6 +420,7 @@ struct MainShell: View {
 /// Contenido de cada sección.
 struct SectionView: View {
     @EnvironmentObject private var session: SessionModel
+    @Environment(\.horizontalSizeClass) private var sizeClass
     let section: AppSection
     var onNavigate: (AppSection) -> Void = { _ in }
 
@@ -470,7 +483,8 @@ struct SectionView: View {
         .navigationTitle(section.deskTitle)
         .navigationSubtitle(section.deskHint ?? "")
         #else
-        .navigationTitle(section.navTitle)
+        // En el iPhone, Inicio no repite «Hoy»: el saludo con la fecha ya lo dice (como la web).
+        .navigationTitle(section == .home && sizeClass == .compact ? "" : section.navTitle)
         #endif
         #if os(iOS)
         .navigationBarTitleDisplayMode(section == .home ? .inline : .large)

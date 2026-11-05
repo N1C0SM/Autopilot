@@ -114,11 +114,145 @@ struct HeaderButtons: View {
     }
 }
 
+/// Teclado y campo activo.
+enum Keyboard {
+    /// Termina la edición en curso (el campo activo guarda lo escrito). Devuelve si había un campo activo.
+    @discardableResult static func endEditing() -> Bool {
+        #if os(iOS)
+        return UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        #else
+        guard let window = NSApp.keyWindow, window.firstResponder is NSText else { return false }
+        return window.makeFirstResponder(nil)
+        #endif
+    }
+}
+
+extension Notification.Name {
+    /// Se ha vuelto a tocar la pestaña activa (`object` = `AppSection`).
+    static let tabReselected = Notification.Name("tabReselected")
+}
+
+extension View {
+    /// En el contenido de la raíz de cada pestaña (dentro del `ScrollView`): tocar la pestaña activa
+    /// vuelve al principio como la barra de estado de iOS, con el título grande otra vez desplegado.
+    @ViewBuilder func scrollsToTopOnReselect(_ section: AppSection) -> some View {
+        #if os(iOS)
+        background(ScrollTopAnchor(section: section).frame(width: 0, height: 0).accessibilityHidden(true))
+        #else
+        self
+        #endif
+    }
+}
+
+#if os(iOS)
+/// Vista invisible dentro del `ScrollView`: busca el `UIScrollView` que la contiene y lo lleva a su
+/// principio real (`adjustedContentInset`), que es lo que hace volver el título grande. `scrollTo`
+/// de SwiftUI solo alinea el contenido y deja el título encogido.
+private struct ScrollTopAnchor: UIViewRepresentable {
+    let section: AppSection
+
+    func makeUIView(context: Context) -> AnchorView { AnchorView(section: section) }
+    func updateUIView(_ view: AnchorView, context: Context) {}
+
+    final class AnchorView: UIView {
+        private var token: NSObjectProtocol?
+
+        init(section: AppSection) {
+            super.init(frame: .zero)
+            isUserInteractionEnabled = false
+            token = NotificationCenter.default.addObserver(forName: .tabReselected, object: nil, queue: .main) { [weak self] note in
+                guard (note.object as? AppSection) == section else { return }
+                self?.scrollToTop()
+            }
+        }
+
+        required init?(coder: NSCoder) { nil }
+
+        deinit { if let token { NotificationCenter.default.removeObserver(token) } }
+
+        private func scrollToTop() {
+            var view = superview
+            while let current = view, !(current is UIScrollView) { view = current.superview }
+            guard let scroll = view as? UIScrollView else { return }
+            scroll.setContentOffset(CGPoint(x: scroll.contentOffset.x, y: -scroll.adjustedContentInset.top),
+                                    animated: !UIAccessibility.isReduceMotionEnabled)
+        }
+    }
+}
+#endif
+
+extension View {
+    /// Deslizar a la izquierda descubre «Quitar», y deslizar del todo quita la fila, como Hevy y las
+    /// listas de iOS (en la web, `SwipeToRemove`). Solo cuenta el gesto horizontal: el scroll sigue igual.
+    func swipeToRemove(_ label: String, enabled: Bool = true, onRemove: @escaping () -> Void) -> some View {
+        modifier(SwipeToRemove(label: label, enabled: enabled, onRemove: onRemove))
+    }
+}
+
+private struct SwipeToRemove: ViewModifier {
+    let label: String
+    let enabled: Bool
+    let onRemove: () -> Void
+    @State private var offset: CGFloat = 0
+    @State private var isOpen = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    private let reveal: CGFloat = 88
+    private let fullSwipe: CGFloat = 180
+
+    func body(content: Content) -> some View {
+        content
+            .offset(x: offset)
+            .background(alignment: .trailing) {
+                if offset < 0 {
+                    Button(action: remove) {
+                        Image(systemName: "trash.fill").font(.inter(size: 17, weight: .semibold))
+                            .foregroundStyle(Palette.foreground)
+                            .frame(width: max(-offset, 44)).frame(maxHeight: .infinity)
+                    }
+                    .buttonStyle(.plain)
+                    .background(Palette.destructive, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .accessibilityLabel(label)
+                }
+            }
+            .simultaneousGesture(drag, including: enabled ? .all : .subviews)
+            // Si la fila deja de poder quitarse (queda una sola serie), se cierra: si no, quedaría abierta.
+            .onChange(of: enabled) { _, on in
+                guard !on else { return }
+                isOpen = false
+                offset = 0
+            }
+    }
+
+    private var drag: some Gesture {
+        DragGesture(minimumDistance: 20)
+            .onChanged { v in
+                guard abs(v.translation.width) > abs(v.translation.height) * 1.5 else { return }
+                offset = min(0, (isOpen ? -reveal : 0) + v.translation.width)
+            }
+            .onEnded { v in
+                let horizontal = abs(v.translation.width) > abs(v.translation.height) * 1.5
+                let end = (isOpen ? -reveal : 0) + v.translation.width
+                if horizontal && end < -fullSwipe { remove(); return }
+                if horizontal { isOpen = end < -reveal / 2 }
+                withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.85)) { offset = isOpen ? -reveal : 0 }
+            }
+    }
+
+    private func remove() {
+        Haptics.warning()
+        isOpen = false
+        offset = 0
+        onRemove()
+    }
+}
+
 /// Barra flotante de la web (FloatingMobileNav + MobileTabBar): iconos Phosphor (normal / relleno),
 /// 68 pt de alto, píldora activa dorada al 90 % y texto negro, inactivas en gris.
 struct FloatingTabBar: View {
     let tabs: [AppSection]
     @Binding var selection: AppSection
+    /// Tocar la pestaña ya activa: vuelve atrás o al principio, como en iOS y en la web (`MobileAppShell`).
+    var onReselect: (AppSection) -> Void = { _ in }
     @Namespace private var pill
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -127,7 +261,8 @@ struct FloatingTabBar: View {
             ForEach(tabs) { tab in
                 let active = tab == selection
                 Button {
-                    if active { Haptics.tap() } else { Haptics.selection() }
+                    if active { Haptics.tap(); onReselect(tab); return }
+                    Haptics.selection()
                     // Con «Reducir movimiento» la píldora cambia de sitio al instante (sin spring).
                     withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.85)) { selection = tab }
                 } label: {

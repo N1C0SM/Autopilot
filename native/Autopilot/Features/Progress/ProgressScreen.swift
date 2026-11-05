@@ -88,6 +88,7 @@ struct ProgressScreen: View {
                 }
             }
             .frame(maxWidth: .infinity)
+            .scrollsToTopOnReselect(.progress)
         }
         .onPreferenceChange(ProgressContentWidthKey.self) { contentWidth = $0 }
         .screenBackground()

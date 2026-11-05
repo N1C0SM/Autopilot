@@ -9,6 +9,7 @@ struct TrainView: View {
     @StateObject private var model = PlanModel()
     @State private var active: ActiveWorkout?
     @State private var starting = false
+    @State private var openingToday = false
     /// Día con un entreno a medias guardado (su acción pasa a ser «Continuar entreno»).
     @State private var resumableDay: String?
     @State private var editing = false
@@ -64,6 +65,7 @@ struct TrainView: View {
             .padding(.top, wideLayout ? 32 : 8)
             .padding(.bottom, wideLayout ? 32 : 96)
             .frame(maxWidth: .infinity, alignment: .leading)
+            .scrollsToTopOnReselect(.train)
         }
         .screenBackground()
         .refreshable { await load() }
@@ -179,7 +181,10 @@ struct TrainView: View {
 
     /// Aviso «Empezar entreno de hoy» (menú del Mac): abre la sesión de hoy si toca.
     private func openToday() async {
-        guard active == nil else { return }
+        // Con las pestañas vivas, el aviso puede llegar dos veces (desde Inicio y desde la barra).
+        guard active == nil, !openingToday else { return }
+        openingToday = true
+        defer { openingToday = false }
         // Si hay un borrador de hoy, se reanuda aunque el plan aún no haya cargado.
         if let idString = session.userIdString,
            let draft = ActiveWorkout.restore(userId: idString), draft.day.day == DayNames.today {

@@ -28,6 +28,7 @@ import { parsePositiveWeight } from "@/shared/lib/weight";
 import { WorkoutSummary } from "@/app/components/dashboard/WorkoutSummary";
 import { ExerciseSwap } from "@/app/components/dashboard/ExerciseSwap";
 import { formatTrainingTitle } from "@/shared/lib/trainingDisplay";
+import SwipeToRemove from "@/app/components/workout-parts/SwipeToRemove";
 import { hapticImpact, hapticNotify, hapticSelection, hapticSignature, hapticTap } from "@/shared/lib/native";
 import SwipeSetEntry from "@/app/components/dashboard/SwipeSetEntry";
 import LogAllSetsButton from "@/app/components/dashboard/LogAllSetsButton";
@@ -635,6 +636,15 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
 
   const updateDrop = (exerciseName: string, setIndex: number, dropIndex: number, patch: Partial<WorkoutSetDrop>) => {
     mutateSet(exerciseName, setIndex, (set) => updateWorkoutSetDrop(set, dropIndex, patch));
+  };
+
+  // Quitar una serie (deslizando la fila, como Hevy y el iPhone); siempre queda al menos una.
+  const removeSet = (exerciseName: string, setIndex: number) => {
+    setExerciseLogs((logs) => {
+      const sets = logs[exerciseName] || [];
+      if (sets.length <= 1) return logs;
+      return { ...logs, [exerciseName]: sets.filter((_, index) => index !== setIndex) };
+    });
   };
 
   const removeDrop = (exerciseName: string, setIndex: number, dropIndex: number) => {
@@ -1765,7 +1775,8 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                               ? "border-destructive text-destructive"
                               : "border-muted-foreground/40 text-muted-foreground/40";
                           return (
-                          <div key={si} aria-current={si === firstPendingIndex ? "step" : undefined} className={`pl-3 transition-colors duration-300 ${si === firstPendingIndex ? "rounded-chip ring-1 ring-inset ring-primary/50 bg-primary/5" : set.done && !isWarmup ? "rounded-chip bg-primary/10" : ""}`}>
+                          <SwipeToRemove key={si} label={`Quitar la serie ${si + 1} de ${ex.name}`} enabled={sets.length > 1} onRemove={() => removeSet(ex.name, si)}>
+                          <div aria-current={si === firstPendingIndex ? "step" : undefined} className={`pl-3 transition-colors duration-300 ${si === firstPendingIndex ? "rounded-chip ring-1 ring-inset ring-primary/50 bg-primary/5" : set.done && !isWarmup ? "rounded-chip bg-primary/10" : ""}`}>
                             <div className={`py-2 pr-2 ${si > 0 ? "sep-t" : ""}`}>
                             {/* Segmento principal de la serie */}
                             <div className={SET_GRID}>
@@ -1951,6 +1962,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                             {inputError && <p className="mt-2 type-footnote text-destructive">{inputError}</p>}
                             </div>
                           </div>
+                          </SwipeToRemove>
                           );
                         })}
                         </div>

@@ -86,6 +86,7 @@ struct NutritionView: View {
             // Una columna en todas partes, como la web: en iPad/Mac no se estira de lado a lado.
             .frame(maxWidth: 720)
             .frame(maxWidth: .infinity)
+            .scrollsToTopOnReselect(.nutrition)
         }
         .screenBackground()
         .task { await load() }
@@ -425,8 +426,11 @@ struct NutritionView: View {
             if let row { Snapshots.save(row, Self.cacheKey(id)) }
             // Sin Plus la RLS no deja leer el plan: los macros se calculan con el onboarding
             // (misma fórmula que `resolveNutritionPreview` de la web). Los macros son siempre gratis.
-            macros = row?.macros_json
-            if macros?.protein == nil && macros?.calories == nil { macros = await estimatedMacros(id) }
+            // Se asigna una sola vez: sin el paso intermedio a nil no parpadea «Calcula tus macros»
+            // al volver a la pestaña, y si la estimación falla se quedan los que ya había.
+            var resolved = row?.macros_json
+            if resolved?.protein == nil && resolved?.calories == nil { resolved = await estimatedMacros(id) ?? macros }
+            macros = resolved
             meals = row?.meals_json ?? []
             // Las fotos ya guardadas se pintan en el primer frame: sin parpadeo ni salto.
             photos = Self.cachedPhotos(meals)

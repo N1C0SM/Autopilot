@@ -118,6 +118,7 @@ struct WhoIsTrainingView: View {
         .padding(28)
         .frame(minWidth: 320)
         .presentationDetents([.medium])
+        .presentationDragIndicator(.visible)
         .presentationBackground(Palette.card)
         .onAppear { if !A11y.voiceOver { passwordFocused = true } }
     }

@@ -194,6 +194,7 @@ struct ForgotPasswordSheet: View {
         .frame(maxWidth: .infinity)
         .screenBackground()
         .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
         .onChange(of: error) { _, text in
             if let text { A11y.announce("Error: \(text)") }
         }
