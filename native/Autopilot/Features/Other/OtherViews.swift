@@ -525,8 +525,10 @@ struct NutritionView: View {
             let row = try await fetchPlan(id)
             // Sin Plus la RLS no deja leer el plan: los macros se calculan con el onboarding
             // (misma fórmula que `resolveNutritionPreview` de la web). Los macros son siempre gratis.
-            macros = row?.macros_json
-            if macros?.protein == nil && macros?.calories == nil { macros = await estimatedMacros(id) }
+            // Se calcula aparte y se publica una vez: sin un instante de «Calcula tus macros».
+            var fresh = row?.macros_json
+            if fresh?.protein == nil && fresh?.calories == nil { fresh = await estimatedMacros(id) }
+            macros = fresh
             meals = row?.meals_json ?? []
             // La copia en disco es lo que se ve ahora, también sin fila: así no reaparecen al
             // abrir comidas viejas (de cuando había Plus) que el servidor ya no devuelve.

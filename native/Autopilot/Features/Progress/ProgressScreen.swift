@@ -1141,7 +1141,8 @@ final class ProgressModel: ObservableObject {
         }
 
         // Datos recién traídos: volver a la pestaña no vuelve a pedir red.
-        if let at = snapshot.strengthAt, Date().timeIntervalSince(at) < 20 { return }
+        // Solo si también llegaron «Por ejercicio» y Récords: si no, se quedarían en esqueleto.
+        if let at = snapshot.strengthAt, snapshot.detailsAt != nil, Date().timeIntervalSince(at) < 20 { return }
         // Con datos en pantalla el refresco no bloquea la vista ni muestra esqueletos.
         startBackgroundRefresh(userId: userId, gen: gen)
         // «Físico» se prepara en segundo plano (filas, firmas y primeras miniaturas): cambiar a esa
@@ -1855,7 +1856,9 @@ struct ExerciseProgressSection: View {
         return Palette.secondary
             .overlay {
                 if let url = images[name].flatMap(URL.init(string:)) {
+                    // Con su URL como identidad: nunca se queda la foto del ejercicio anterior.
                     RemoteThumb(url: url, maxSide: 200) { Image(systemName: "dumbbell").foregroundStyle(Palette.muted) }
+                        .id(url)
                 } else {
                     Image(systemName: "dumbbell").foregroundStyle(Palette.muted)
                 }

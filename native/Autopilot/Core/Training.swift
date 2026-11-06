@@ -283,6 +283,18 @@ private final class TrainingCache: @unchecked Sendable {
     private var completionsInflight: [UUID: (since: String, task: Task<CompletionRows?, Never>)] = [:]
     private var previousSetsCache: [PreviousKey: (value: [String: [SetLog]], at: Date)] = [:]
     private var previousRpeCache: [PreviousKey: (value: Int?, at: Date)] = [:]
+    /// Sube con cada cambio local (sesión hecha, rutina guardada): las cachés de pantalla se rehacen.
+    private var revisions: [UUID: Int] = [:]
+
+    func bump(userId: UUID) {
+        lock.lock(); defer { lock.unlock() }
+        revisions[userId, default: 0] += 1
+    }
+
+    func revision(userId: UUID) -> Int {
+        lock.lock(); defer { lock.unlock() }
+        return revisions[userId] ?? 0
+    }
 
     /// Topes para que la caché no crezca sin límite al cambiar de cuenta.
     private let maxUsers = 10
@@ -448,8 +460,7 @@ enum TrainingRepo {
             .update(Update(workouts_json: .array(list), updated_at: ISO8601DateFormatter().string(from: Date())))
             .eq("user_id", value: userId).execute()
         let next = SessionIdentity.applying(plans, day: day, name: name, icon: icon)
-        TrainingCache.shared.storePlan(next, userId: userId)
-        Snapshots.save(next, planKey(userId))
+        storePlanLocally(userId: userId, next)
         return next
     }
 
@@ -595,6 +606,21 @@ enum TrainingRepo {
         // Inicio, Entrenar, Progreso y la racha leen esto: se invalida para que la siguiente
         // carga sea fresca (y para que la caché nunca oculte el entreno recién terminado).
         TrainingCache.shared.invalidateCompletions(userId: userId)
+        // La copia en disco ya la incluye: Inicio y Entrenar la pintan hecha sin esperar a la red.
+        var rows = (Snapshots.load([[String]].self, completionsKey(userId)) ?? []).filter { $0 != [day, date] }
+        rows.append([day, date])
+        Snapshots.save(rows, completionsKey(userId))
+        TrainingCache.shared.bump(userId: userId)
+    }
+
+    /// Versión de lo guardado en este dispositivo para el usuario (cambia al terminar o editar).
+    static func revision(userId: UUID) -> Int { TrainingCache.shared.revision(userId: userId) }
+
+    /// Rutina recién guardada desde la app: memoria y disco al día, sin esperar a la red.
+    static func storePlanLocally(userId: UUID, _ plans: [DayPlan]) {
+        TrainingCache.shared.storePlan(plans, userId: userId)
+        Snapshots.save(plans, planKey(userId))
+        TrainingCache.shared.bump(userId: userId)
     }
 
     static func completions(userId: UUID, since: String, force: Bool = false) async -> [(day: String, date: String)] {

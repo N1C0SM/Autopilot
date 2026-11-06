@@ -478,6 +478,22 @@ describe("paridad web ↔ apps nativas", () => {
     expect(read("native/Autopilot/Assets.xcassets/LaunchBackground.colorset/Contents.json")).toContain('"red":"0.042"');
   });
 
+  it("App fluida: pestañas sin fundido, «Empezar» sin esperas fijas y Hoy pintado desde la caché en frío", () => {
+    const components = read("native/Autopilot/Design/Components.swift");
+    expect(components).not.toMatch(/withAnimation\([^)]*\)\s*\{\s*selection = tab/);
+    const home = read("native/Autopilot/Features/Home/HomeView.swift");
+    const root = read("native/Autopilot/Features/Shell/RootView.swift");
+    expect(home).not.toContain("Task.sleep(for: .milliseconds(450))");
+    expect(root).not.toContain("asyncAfter(deadline: .now() + 0.6)");
+    expect(root).toContain("TrainView.pendingStart = true");
+    // Primer fotograma: TodayCache cae al disco y se rehace tras terminar o editar (revisión local).
+    expect(home).toContain("TrainingRepo.revision(userId: userId)");
+    expect(home).toContain("HomeView.latestKey(userId)");
+    const training = read("native/Autopilot/Core/Training.swift");
+    expect(training).toContain("rows.append([day, date])");
+    expect(read("native/Autopilot/Features/Train/PlanEditorView.swift")).toContain("TrainingRepo.storePlanLocally(userId: userId, clean)");
+  });
+
   it("Al abrir se entra directo con la última cuenta: «¿Quién entrena?» solo si está protegida, en la web y en la app", () => {
     expect(read("native/Autopilot/Core/Session.swift")).toContain("showPicker = currentLocked\n");
     expect(read("src/shared/components/native/WhoIsTraining.tsx")).toContain("if (!shown && currentLocked) showPicker();");

@@ -4,6 +4,8 @@ import Supabase
 /// Entrenar: las sesiones de la rutina en orden, con las fotos de cada ejercicio. Sin días de la
 /// semana: cualquier sesión se hace el día que venga bien y se destaca la siguiente que falta.
 struct TrainView: View {
+    /// «Empezar» desde Hoy con otra pestaña delante: Entrenar abre el entreno al aparecer.
+    static var pendingStart = false
     @EnvironmentObject private var session: SessionModel
     @Environment(\.horizontalSizeClass) private var sizeClass
     @StateObject private var model: PlanModel
@@ -82,6 +84,11 @@ struct TrainView: View {
         .screenBackground()
         .refreshable { await load() }
         .task {
+            // Llegada desde «Empezar» en Hoy: el entreno se abre ya, antes de refrescar la rutina.
+            if Self.pendingStart {
+                Self.pendingStart = false
+                await openToday()
+            }
             await load()
             #if DEBUG
             // QA: `-resumeDraft` reanuda el entreno a medias al abrir Entrenar.

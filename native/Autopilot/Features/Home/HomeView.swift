@@ -10,6 +10,8 @@ struct HomeView: View {
     #endif
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @StateObject private var model = PlanModel()
+    /// «Empezar» en la hoja de hoy: el entreno se abre al terminar de cerrarse la hoja.
+    @State private var startAfterDismiss = false
     /// Todo lo de hoy en un único valor: se publica de golpe y se cachea por usuario y día.
     @State private var todayState: TodaySnapshot?
     @State private var sheetOpen = false
@@ -226,7 +228,11 @@ struct HomeView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .refreshSection)) { _ in Task { await load() } }
         .onChange(of: snapshot?.completedToday ?? false) { _, done in if done { celebrateIfNeeded() } }
-        .sheet(isPresented: $sheetOpen) { sheetView }
+        .sheet(isPresented: $sheetOpen, onDismiss: {
+            guard startAfterDismiss else { return }
+            startAfterDismiss = false
+            NotificationCenter.default.post(name: .startTodayWorkout, object: nil)
+        }) { sheetView }
         .overlay(alignment: .top) {
             if celebrating {
                 ConfettiView(start: confettiStart)
@@ -560,11 +566,9 @@ struct HomeView: View {
     /// El aviso lo recoge Entrenar: cambia de pestaña y abre (o reanuda) el entreno de hoy.
     private func startToday() {
         Haptics.tap()
+        // Se avisa al cerrarse la hoja (onDismiss), sin esperas fijas: el entreno se abre en cuanto se puede.
+        startAfterDismiss = true
         sheetOpen = false
-        Task {
-            try? await Task.sleep(for: .milliseconds(450))
-            NotificationCenter.default.post(name: .startTodayWorkout, object: nil)
-        }
     }
 
     /// Actividad del día: se marca como hecha y la propia hoja pasa a mostrar el estado hecho.
@@ -662,8 +666,7 @@ struct HomeView: View {
 
     private func load() async {
         guard let id = session.userId else { return }
-        // Lo de la última visita se pinta al instante y la red lo sustituye sin parpadeo.
-        if todayState == nil { todayState = Snapshots.load(TodaySnapshot.self, Self.cacheKey(id)) }
+        // Lo de la última visita ya se pinta desde `TodayCache` (memoria o disco); la red lo sustituye sin parpadeo.
         // Plan (sesiones y días hechos), perfil, nutrición y resultado de hoy, todo a la vez.
         async let planLoad: Void = model.load(userId: id)
         async let name = fetchFirstName(userId: id)
@@ -679,16 +682,24 @@ struct HomeView: View {
         todayState = snap
         TodayCache.shared.save(snap, userId: id)
         Snapshots.save(snap, Self.cacheKey(id))
+        Snapshots.save(snap, Self.latestKey(id))
     }
 
     private func makeSnapshot(firstName: String, calories: Int?) -> TodaySnapshot {
+        Self.buildSnapshot(days: model.days, completions: model.completions, planFailed: model.error != nil,
+                           draftDay: session.userIdString.flatMap { ActiveWorkout.restore(userId: $0)?.day.day },
+                           firstName: firstName, calories: calories)
+    }
+
+    /// Lo de hoy a partir de la rutina y lo hecho (de la red o de la caché de Entrenar).
+    fileprivate static func buildSnapshot(days: [DayPlan], completions: [(day: String, date: String)], planFailed: Bool,
+                                          draftDay: String?, firstName: String, calories: Int?) -> TodaySnapshot {
         // La rutina en orden (sin sesiones vacías) y la siguiente que falta esta semana, sea el día que sea.
-        let scheduled = RoutineOrder.sessions(model.days).filter { $0.type == "actividad" || !($0.exercises ?? []).isEmpty }
-        let done = RoutineOrder.doneThisWeek(model.completions)
+        let scheduled = RoutineOrder.sessions(days).filter { $0.type == "actividad" || !($0.exercises ?? []).isEmpty }
+        let done = RoutineOrder.doneThisWeek(completions)
         let plan = RoutineOrder.nextPending(scheduled, done: done)
-        let completed = model.completions.contains { $0.date == LocalDate.string() }
+        let completed = completions.contains { $0.date == LocalDate.string() }
         let doneDays = Array(done)
-        let draftDay = session.userIdString.flatMap { ActiveWorkout.restore(userId: $0)?.day.day }
         return TodaySnapshot(plan: plan,
                              scheduled: scheduled,
                              completedToday: completed,
@@ -696,13 +707,16 @@ struct HomeView: View {
                              resumable: plan != nil && draftDay == plan?.day,
                              firstName: firstName,
                              calories: calories,
-                             noPlan: model.error == nil && model.days.isEmpty)
+                             noPlan: !planFailed && days.isEmpty)
     }
 
     /// Clave de la copia en disco: por usuario y día (lo de hoy caduca al cambiar el día).
     static func cacheKey(_ id: UUID) -> String {
         "home|\(id.uuidString.lowercased())|\(LocalDate.string())"
     }
+
+    /// Última copia, sin fecha: la primera apertura de cada día pinta el nombre y la nutrición al instante.
+    static func latestKey(_ id: UUID) -> String { "home|\(id.uuidString.lowercased())|latest" }
 
     private func fetchFirstName(userId: UUID) async -> String {
         struct P: Decodable { let name: String? }
@@ -779,14 +793,41 @@ struct LastPR: Codable {
     var dateLabel: String { achievedAt.formatted(.dateTime.day().month(.abbreviated).locale(Locale(identifier: "es_ES"))) }
 }
 
-/// Cache en memoria (por usuario y día) de lo de hoy: Inicio pinta sin esperar a la red.
+/// Cache (por usuario y día) de lo de hoy: Inicio pinta sin esperar a la red, también en frío.
+/// Si falta en memoria, o hubo un cambio local (sesión hecha, rutina guardada), se rehace al momento
+/// con la rutina y lo hecho de la caché de Entrenar y el nombre y la nutrición de la última copia.
 @MainActor
 private final class TodayCache {
     static let shared = TodayCache()
-    private var items: [String: TodaySnapshot] = [:]
+    private var items: [String: (snapshot: TodaySnapshot?, revision: Int)] = [:]
 
-    func snapshot(userId: UUID) -> TodaySnapshot? { items[key(userId)] }
-    func save(_ snapshot: TodaySnapshot, userId: UUID) { items[key(userId)] = snapshot }
+    func snapshot(userId: UUID) -> TodaySnapshot? {
+        let k = key(userId)
+        let revision = TrainingRepo.revision(userId: userId)
+        if let hit = items[k], hit.revision == revision { return hit.snapshot }
+        let rebuilt = rebuild(userId: userId)
+        items[k] = (rebuilt, revision)
+        return rebuilt
+    }
+
+    func save(_ snapshot: TodaySnapshot, userId: UUID) {
+        items[key(userId)] = (snapshot, TrainingRepo.revision(userId: userId))
+    }
+
+    private func rebuild(userId: UUID) -> TodaySnapshot? {
+        let today = Snapshots.load(TodaySnapshot.self, HomeView.cacheKey(userId))
+        guard let base = today ?? Snapshots.load(TodaySnapshot.self, HomeView.latestKey(userId)),
+              let days = TrainingRepo.instantPlan(userId: userId),
+              let done = TrainingRepo.instantCompletions(userId: userId, since: LocalDate.daysAgo(6))
+        else { return today }
+        var snap = HomeView.buildSnapshot(days: days, completions: done, planFailed: false,
+                                          draftDay: ActiveWorkout.restore(userId: userId.uuidString.lowercased())?.day.day,
+                                          firstName: base.firstName, calories: base.calories)
+        snap.macros = base.macros
+        snap.mealCount = base.mealCount
+        snap.lastPr = base.lastPr
+        return snap
+    }
 
     private func key(_ userId: UUID) -> String {
         "\(userId.uuidString.lowercased())|\(LocalDate.string())"

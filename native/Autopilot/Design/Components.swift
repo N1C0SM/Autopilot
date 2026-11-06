@@ -113,7 +113,6 @@ struct HeaderButtons: View {
 struct FloatingTabBar: View {
     let tabs: [AppSection]
     @Binding var selection: AppSection
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack(spacing: 2) {
@@ -121,8 +120,9 @@ struct FloatingTabBar: View {
                 let active = tab == selection
                 Button {
                     if active { Haptics.tap() } else { Haptics.selection() }
-                    // Con «Reducir movimiento» la píldora cambia de sitio al instante (sin spring).
-                    withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.85)) { selection = tab }
+                    // Sin animación: la pantalla nueva aparece entera en el mismo fotograma (como la
+                    // barra de pestañas de iOS), sin fundido con la anterior.
+                    selection = tab
                 } label: {
                     VStack(spacing: 2) {
                         Image(tab.phosphor + (active ? "-fill" : "")).renderingMode(.template).resizable().frame(width: 24, height: 24)
@@ -168,7 +168,8 @@ struct SegmentedPill: View {
             ForEach(options.indices, id: \.self) { i in
                 Button {
                     Haptics.selection()
-                    withAnimation(reduceMotion ? nil : .snappy(duration: 0.25)) { selection = i }
+                    // Solo la cápsula se desliza (abajo); el contenido cambia sin fundidos.
+                    selection = i
                 } label: {
                     Text(options[i]).font(.inter(size: 13, weight: i == selection ? .semibold : .medium))
                         .lineLimit(1).minimumScaleFactor(0.7)
@@ -190,6 +191,7 @@ struct SegmentedPill: View {
                 .accessibilityAddTraits(i == selection ? .isSelected : [])
             }
         }
+        .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: selection)
         .padding(.horizontal, 4)
         .background { Capsule().fill(Palette.card).frame(height: pillHeight + 8) }
         .frame(maxWidth: 448)

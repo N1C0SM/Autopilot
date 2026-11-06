@@ -248,9 +248,9 @@ struct MainShell: View {
         .onChange(of: session.role) { _, _ in selection = nil; adminMenuOpen = false }
         .onReceive(NotificationCenter.default.publisher(for: .startTodayWorkout)) { _ in
             if session.role == .user && selection != .train {
+                // Entrenar abre el entreno nada más aparecer (con su rutina en caché), sin esperas fijas.
+                TrainView.pendingStart = true
                 selection = .train
-                // La pantalla Entrenar recoge el aviso cuando ya está en pantalla.
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { NotificationCenter.default.post(name: .startTodayWorkout, object: nil) }
             }
         }
     }
