@@ -731,6 +731,9 @@ struct CreateAccountView: View {
         if (text.contains("invalid") && text.contains("email")) || text.contains("email_address_invalid") {
             return "Ese correo no parece válido. Revisa que tenga el formato nombre@dominio.com."
         }
+        if text.contains("signup") && (text.contains("disabled") || text.contains("not allowed")) {
+            return "Ahora mismo no se pueden crear cuentas. Inténtalo en unos minutos."
+        }
         return "No hemos podido crear tu cuenta. Revisa el correo y la contraseña."
     }
 
