@@ -69,16 +69,12 @@ export const ACTIVITY_COLORS = {
   slate: "#64748b",
 } as const;
 
-/** Insignias oficiales de las tiendas (arte de marca, no se recolorea). */
+/** Colores oficiales del logo de Google Play (arte de marca, no se recolorea). */
 export const STORE_BADGE = {
-  appleTop: "#00d4ff",
-  appleBottom: "#0087ff",
-  playTop: "#ff5b3a",
-  playBottom: "#e60023",
-  googleTop: "#00e676",
-  googleBottom: "#00b34a",
-  podcastTop: "#ffd233",
-  podcastBottom: "#ffab00",
+  playBlue: "#4285f4",
+  playGreen: "#34a853",
+  playYellow: "#fbbc04",
+  playRed: "#ea4335",
 } as const;
 
 /** Confeti de celebración (canvas-confetti): dorados de marca, no interfaz. */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseBodyWeight, parseMacroTargets, resolveNutritionPreview } from "@/shared/lib/nutrition";
+import { estimateCarbsFats, parseBodyWeight, parseMacroTargets, resolveNutritionPreview } from "@/shared/lib/nutrition";
 
 describe("nutrition inputs", () => {
   it.each([null, undefined, "", 0, -1, Number.NaN, Number.POSITIVE_INFINITY])(
@@ -45,5 +45,12 @@ d2("saved plan macros", () => {
   i2("uses saved macros so Nutrición matches the plan", () => {
     e2(resolveNutritionPreview({ weight: 70, goal: "gain_muscle" }, { protein: 140, carbs: 200, fats: 60 }))
       .toEqual({ calories: 1900, protein: 140, hasWeight: true });
+  });
+});
+
+d2("estimated carbs and fats without a plan", () => {
+  i2("matches the iPhone estimate (fats 25 % of kcal, carbs the rest)", () => {
+    e2(estimateCarbsFats(2540, 140)).toEqual({ carbs: 335, fats: 71 });
+    e2(estimateCarbsFats(1200, 400).carbs).toBe(0);
   });
 });

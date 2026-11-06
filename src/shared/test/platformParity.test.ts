@@ -348,9 +348,16 @@ describe("paridad web ↔ apps nativas", () => {
     }
     expect(nutritionWeb).toContain("onUpgrade && !isIOSNative()");
     expect(nutritionApp).not.toContain("Descubre Autopilot Plus");
+    // Sin Plus, carbohidratos y grasas salen del mismo cálculo en las dos (grasas al 25 % de las kcal).
+    expect(nutritionWeb).toContain("estimateCarbsFats(preview.calories, preview.protein)");
+    expect(read("src/shared/lib/nutrition.ts")).toContain("Math.round((calories * 0.25) / 9)");
+    expect(read("native/Autopilot/Design/Components.swift")).toContain("f = (kcal * 0.25 / 9).rounded()");
     // Ajustes de ChatGPT: índice agrupado con iconos que lleva a cada sección, en las dos.
     const settingsWeb = read("src/app/components/SettingsPanel.tsx");
     const settingsApp = read("native/Autopilot/Features/Account/AccountView.swift");
+    // Sin banner de Plus arriba de Ajustes, en ninguna de las dos.
+    expect(settingsWeb).not.toContain("Más análisis, nutrición y funciones.");
+    expect(settingsApp).not.toContain("Más análisis, nutrición y funciones.");
     for (const text of ["Gestiona tu cuenta, plan y preferencias.", "Mi cuenta", "Nombre, foto y privacidad", "Tus datos y objetivo", "Edad, peso, objetivo y disponibilidad", "Mi plan",
       "Preferencias", "Vista del entreno y descanso entre series", "Cambia tu contraseña", "Privacidad y legal", "Exporta tus datos y política de privacidad", "Términos, cookies y avisos"]) {
       expect(settingsWeb, text).toContain(text);
@@ -788,5 +795,15 @@ describe("paridad web ↔ apps nativas", () => {
     expect(read("native/Autopilot/Features/Train/ExerciseLibraryView.swift")).toContain('(license ?? "").uppercased().hasPrefix("CC BY")');
     expect(read("src/app/components/admin/ExerciseLibrary.tsx")).toContain("<CatalogImport ");
     expect(read("native/Autopilot/Features/Admin/AdminExercises.swift")).toContain("AdminCatalogImportCard {");
+  });
+
+  it("Admin → Contenido web: el interruptor de las insignias de tiendas de la portada está en la web y en la app", () => {
+    const web = read("src/app/components/admin/SiteContentEditor.tsx");
+    const app = read("native/Autopilot/Features/Admin/AdminLanding.swift");
+    for (const text of ["Insignias de tiendas en la portada", "App Store, Google Play y Mac en «Todo tu progreso, en todos tus dispositivos».", "show_store_badges"]) {
+      expect(web).toContain(text);
+      expect(app).toContain(text);
+    }
+    expect(read("src/web/components/LandingSections.tsx")).toContain("row.show_store_badges !== false");
   });
 });

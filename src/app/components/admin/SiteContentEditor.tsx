@@ -106,6 +106,7 @@ const SiteContentEditor = () => {
   const [hero, setHero] = useState({ hero_video_url: "", hero_video_poster_url: "" });
   const [stores, setStores] = useState({ app_store_url: "", play_store_url: "" });
   const [showAppDownload, setShowAppDownload] = useState(true);
+  const [showStoreBadges, setShowStoreBadges] = useState(true);
   const [transformationSlots, setTransformationSlots] = useState(10);
   const [videoUploading, setVideoUploading] = useState(false);
   const [posterUploading, setPosterUploading] = useState(false);
@@ -173,10 +174,13 @@ const SiteContentEditor = () => {
 
   const load = async () => {
     setLoading(true);
-    const [{ data: s }, { data: t }] = await Promise.all([
+    const [{ data: s }, { data: t }, { data: badges }] = await Promise.all([
       supabase.from("settings").select("id, trainer_name, trainer_photo_url, trainer_bio, contact_phone, hero_video_url, hero_video_poster_url, app_store_url, play_store_url, show_app_download, transformation_slots, show_blog, show_ebooks, show_recommendations, ebooks, recommendations, guide_ebook_url, landing_ebooks_count, landing_recommendations_count").limit(1).maybeSingle(),
       supabase.from("site_testimonials").select("*").order("sort_order"),
+      // Aparte: si la columna aún no existe, el resto del editor carga igual.
+      supabase.from("settings").select("show_store_badges").limit(1).maybeSingle(),
     ]);
+    setShowStoreBadges(badges?.show_store_badges ?? true);
     if (s) {
       setSettingsId(s.id);
       setTrainer({
@@ -362,6 +366,13 @@ const SiteContentEditor = () => {
     const { error } = await supabase.from("settings").update({ show_app_download: v }).eq("id", settingsId);
     if (error) { setShowAppDownload(!v); toast.error("Error al guardar"); }
     else toast.success(v ? "Acceso a la app visible en la web" : "Acceso a la app oculto");
+  };
+
+  const toggleStoreBadges = async (v: boolean) => {
+    setShowStoreBadges(v);
+    const { error } = await supabase.from("settings").update({ show_store_badges: v }).eq("id", settingsId);
+    if (error) { setShowStoreBadges(!v); toast.error("Error al guardar"); }
+    else toast.success(v ? "Insignias visibles en la portada" : "Insignias ocultas en la portada");
   };
 
   const saveTransformationSlots = async () => {
@@ -853,6 +864,13 @@ const SiteContentEditor = () => {
               <p className="type-footnote text-muted-foreground">Enlace a la página de instalación (APK Android e iPhone desde Safari). Apágalo cuando estés en las tiendas.</p>
             </div>
             <Switch id="show-app-download" checked={showAppDownload} onCheckedChange={(v) => void toggleAppDownload(v)} />
+          </div>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <Label htmlFor="show-store-badges" className={FIELD_LABEL}>Insignias de tiendas en la portada</Label>
+              <p className="type-footnote text-muted-foreground">App Store, Google Play y Mac en «Todo tu progreso, en todos tus dispositivos».</p>
+            </div>
+            <Switch id="show-store-badges" checked={showStoreBadges} onCheckedChange={(v) => void toggleStoreBadges(v)} />
           </div>
           <div>
             <Label htmlFor="app-store-url" className={FIELD_LABEL}>URL App Store (iOS)</Label>

@@ -101,6 +101,7 @@ struct AdminLandingView: View {
                     section("Enlaces a la app (App Store / Google Play)", "Pega aquí las URLs cuando publiques la app. Si dejas un campo vacío, ese botón se ocultará en la web.") {
                         group {
                             settingToggle("Mostrar descarga de la app", nil, "show_app_download", first: true)
+                            settingToggle("Insignias de tiendas en la portada", "App Store, Google Play y Mac en «Todo tu progreso, en todos tus dispositivos».", "show_store_badges")
                             settingText("App Store", "https://apps.apple.com/app/id0000000000", "app_store_url")
                             settingText("Google Play", "https://play.google.com/store/apps/details?id=…", "play_store_url")
                         }
@@ -383,6 +384,9 @@ struct AdminLandingView: View {
             return
         }
         let sl: [[String: AnyJSON]] = (try? await Backend.client.from("settings").select("social_links").limit(1).execute().value) ?? []
+        // Aparte, como en la web: sin la columna, el resto carga igual y las insignias siguen visibles.
+        let sb: [[String: AnyJSON]] = (try? await Backend.client.from("settings").select("show_store_badges").limit(1).execute().value) ?? []
+        settings["show_store_badges"] = sb.first?["show_store_badges"] ?? .bool(true)
         if case .object(let o) = sl.first?["social_links"] { for (k, v) in o { if case .string(let s) = v { social[k] = s } } }
         if let data = try? JSONEncoder().encode(settings["recommendations"] ?? .array([])) { recs = (try? JSONDecoder().decode([Recommendation].self, from: data)) ?? [] }
         struct S: Decodable { let key: String; let value: String }

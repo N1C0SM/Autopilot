@@ -1818,6 +1818,7 @@ export type Database = {
           show_plan_free: boolean
           show_plan_plus: boolean
           show_recommendations: boolean
+          show_store_badges: boolean
           social_links: Json
           trainer_bio: string | null
           trainer_name: string | null
@@ -1872,6 +1873,7 @@ export type Database = {
           show_plan_free?: boolean
           show_plan_plus?: boolean
           show_recommendations?: boolean
+          show_store_badges?: boolean
           social_links?: Json
           trainer_bio?: string | null
           trainer_name?: string | null
@@ -1926,6 +1928,7 @@ export type Database = {
           show_plan_free?: boolean
           show_plan_plus?: boolean
           show_recommendations?: boolean
+          show_store_badges?: boolean
           social_links?: Json
           trainer_bio?: string | null
           trainer_name?: string | null
@@ -2610,6 +2613,7 @@ export type Database = {
           show_blog: boolean
           show_ebooks: boolean
           show_recommendations: boolean
+          show_store_badges: boolean
           trainer_bio: string
           trainer_name: string
           trainer_photo_url: string

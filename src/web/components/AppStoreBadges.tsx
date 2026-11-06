@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { isIOSNative } from "@/shared/lib/platform";
 import { hapticTap } from "@/shared/lib/native";
-import { STORE_BADGE } from "@/shared/lib/palette";
+import { AppleLogo, GooglePlayLogo } from "@/web/components/StoreLogos";
 
 interface Props {
   className?: string;
@@ -19,39 +19,6 @@ interface Props {
  * Si ninguna URL está configurada en src/config/appStores.ts se oculta
  * el bloque entero. Si sólo una está configurada, sólo se muestra esa.
  */
-const AppleGlyph = ({ className = "" }: { className?: string }) => (
-  <svg viewBox="0 0 384 512" aria-hidden className={className} fill="currentColor">
-    <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zM248.5 92.3c22.7-27 20.6-51.5 19.9-60.3-20 1.2-43.2 13.7-56.4 29.2-14.6 16.6-23.2 37.1-21.4 60 21.6 1.7 41.2-9.4 57.9-28.9z" />
-  </svg>
-);
-
-const PlayGlyph = ({ className = "" }: { className?: string }) => (
-  <svg viewBox="0 0 512 512" aria-hidden className={className}>
-    <defs>
-      <linearGradient id="pg-blue" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stopColor={STORE_BADGE.appleTop} />
-        <stop offset="100%" stopColor={STORE_BADGE.appleBottom} />
-      </linearGradient>
-      <linearGradient id="pg-red" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stopColor={STORE_BADGE.playTop} />
-        <stop offset="100%" stopColor={STORE_BADGE.playBottom} />
-      </linearGradient>
-      <linearGradient id="pg-green" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stopColor={STORE_BADGE.googleTop} />
-        <stop offset="100%" stopColor={STORE_BADGE.googleBottom} />
-      </linearGradient>
-      <linearGradient id="pg-yellow" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stopColor={STORE_BADGE.podcastTop} />
-        <stop offset="100%" stopColor={STORE_BADGE.podcastBottom} />
-      </linearGradient>
-    </defs>
-    <path fill="url(#pg-blue)" d="M60 40c-8 5-13 14-13 26v380c0 12 5 21 13 26l217-217L60 40z" />
-    <path fill="url(#pg-red)" d="M394 190L322 148 258 212l64 64 72-42c22-13 22-42 0-44z" />
-    <path fill="url(#pg-yellow)" d="M277 256L60 40c1 0 3 1 4 2l257 148-44 66z" />
-    <path fill="url(#pg-green)" d="M277 256l45 66-257 148c-1 1-3 1-5 2l217-216z" />
-  </svg>
-);
-
 const AppStoreBadges = (props: Props) => {
   // iOS v1: ya estás dentro de la app; no mostramos badges de descarga.
   if (isIOSNative()) return null;
@@ -111,7 +78,7 @@ const StoreBadges = ({
           onClick={() => void hapticTap()}
           className={badge}
         >
-          <AppleGlyph className={`${iconSize} shrink-0`} />
+          <AppleLogo className={`${iconSize} shrink-0`} />
           <span className="flex flex-col text-left">
             <span className="type-caption2 opacity-70">Descarga en</span>
             <span className={`${bigText} font-semibold`}>App Store</span>
@@ -127,7 +94,7 @@ const StoreBadges = ({
           onClick={() => void hapticTap()}
           className={badge}
         >
-          <PlayGlyph className={`${iconSize} shrink-0`} />
+          <GooglePlayLogo className={`${iconSize} shrink-0`} />
           <span className="flex flex-col text-left">
             <span className="type-caption2 opacity-70">Disponible en</span>
             <span className={`${bigText} font-semibold`}>Google Play</span>

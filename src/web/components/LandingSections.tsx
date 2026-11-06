@@ -1,6 +1,6 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Bell, Check, Play, Zap, Utensils, BarChart3, Layers, Target, TrendingUp, Infinity as InfinityIcon, ShieldCheck, Smartphone, Monitor, Gift, UserRound, House, Dumbbell, Apple, Flame, LogOut, PanelLeft, Settings } from "lucide-react";
+import { ArrowRight, Bell, Check, Play, Zap, Utensils, BarChart3, Layers, Target, TrendingUp, Infinity as InfinityIcon, ShieldCheck, Smartphone, Monitor, Gift, UserRound, House, Dumbbell, Flame, LogOut, PanelLeft, Settings } from "lucide-react";
 import { BrandMark } from "@/shared/components/ui/brand-mark";
 import { PhoneAppBar, PhoneFrame, PhoneHome, PhoneTabBar } from "@/web/components/PublicPhone";
 import { cn } from "@/shared/lib/utils";
@@ -8,6 +8,8 @@ import { usePlanAvailability } from "@/shared/lib/planCatalog";
 import type { PlanKey } from "@/shared/config/tiers";
 import { track } from "@/shared/lib/analytics";
 import { hapticTap } from "@/shared/lib/native";
+import { supabase } from "@/shared/integrations/supabase/client";
+import { AppleLogo, GooglePlayLogo } from "@/web/components/StoreLogos";
 import heroAthlete from "@/shared/assets/landing/hero-athlete.jpg";
 import problemSunset from "@/shared/assets/landing/problem-sunset.jpg";
 import finalHorizon from "@/shared/assets/landing/final-horizon.jpg";
@@ -128,18 +130,33 @@ function DevicesMockup() {
   </div>;
 }
 
+/** Interruptor de Admin → Contenido web («Insignias de tiendas en la portada»); sin dato, se ven como siempre. */
+function useShowStoreBadges() {
+  const [show, setShow] = useState(true);
+  useEffect(() => {
+    let alive = true;
+    void supabase.rpc("get_public_settings").then(({ data }) => {
+      const row = Array.isArray(data) ? data[0] : data;
+      if (alive && row) setShow(row.show_store_badges !== false);
+    }, () => undefined);
+    return () => { alive = false; };
+  }, []);
+  return show;
+}
+
 export function LandingExperience() {
+  const showStores = useShowStoreBadges();
   return <section aria-labelledby="exp-t" className="px-5 pb-0 pt-8 sm:px-8">
     <div className="mx-auto grid max-w-6xl items-end gap-10 lg:grid-cols-[1fr_1fr]">
       <div className="pb-6">
         <Kicker>La experiencia</Kicker>
         <h2 id="exp-t" className="mt-3 text-[30px] font-bold leading-[1.15] tracking-[-0.015em] sm:text-[36px]">Todo tu progreso,<br />en todos tus dispositivos.</h2>
         <p className="mt-4 max-w-[400px] text-[16px] leading-[22px] text-foreground/85">Entrena, planifica tu nutrición y sigue tu evolución donde quieras. Una experiencia fluida, sincronizada y pensada para ti.</p>
-        <div className="mt-6 flex flex-wrap gap-3">
-          <StoreButton to="/app" small="Descargar en" big="App Store"><Apple className="h-6 w-6 fill-current" /></StoreButton>
-          <StoreButton to="/app" small="DISPONIBLE EN" big="Google Play"><Play className="h-5 w-5 fill-primary text-primary" /></StoreButton>
-          <StoreButton to="/app" small="Disponible en" big="Mac"><Monitor className="h-6 w-6" /></StoreButton>
-        </div>
+        {showStores && <div className="mt-6 flex flex-wrap gap-3">
+          <StoreButton to="/app" small="Descargar en" big="App Store"><AppleLogo className="h-6 w-6 shrink-0" /></StoreButton>
+          <StoreButton to="/app" small="DISPONIBLE EN" big="Google Play"><GooglePlayLogo className="h-6 w-6 shrink-0" /></StoreButton>
+          <StoreButton to="/app" small="Disponible en" big="Mac"><Monitor className="h-6 w-6 shrink-0" /></StoreButton>
+        </div>}
         <p className="mt-5 flex flex-wrap items-center gap-2 text-[13px] text-foreground/85"><Smartphone className="h-4 w-4" />iPhone · <Smartphone className="h-4 w-4" />Android · <Monitor className="h-4 w-4" />Mac</p>
       </div>
       <DevicesMockup />

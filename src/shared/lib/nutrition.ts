@@ -10,6 +10,15 @@ export interface NutritionPreview {
   hasWeight: boolean;
 }
 
+/**
+ * Carbohidratos y grasas cuando no se puede leer el plan (sin Plus): grasas al 25 % de las kcal
+ * y el resto en carbohidratos. Misma fórmula que `MacroEstimate.estimate` del iPhone y el Mac.
+ */
+export function estimateCarbsFats(calories: number, protein: number): { carbs: number; fats: number } {
+  const fats = Math.round((calories * 0.25) / 9);
+  return { carbs: Math.max(0, Math.round((calories - protein * 4 - fats * 9) / 4)), fats };
+}
+
 export function resolveNutritionPreview({
   weight,
   sex,

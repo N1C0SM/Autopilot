@@ -1,7 +1,7 @@
 import NutritionPlusSection from "@/app/components/dashboard/NutritionPlusSection";
 import { useEffect, useState } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
-import { parseMacroTargets, resolveNutritionPreview, type MacroTargets, type NutritionPreview } from "@/shared/lib/nutrition";
+import { estimateCarbsFats, parseMacroTargets, resolveNutritionPreview, type NutritionPreview } from "@/shared/lib/nutrition";
 import { Spinner } from "@/shared/components/ui/spinner";
 import { EmptyState } from "@/shared/components/ui/empty-state";
 import { Button } from "@/shared/components/ui/button";
@@ -11,8 +11,8 @@ import { hapticNotify, hapticTap } from "@/shared/lib/native";
 
 export default function BasicNutrition({ userId, onEdit, onUpgrade }: { userId: string; onEdit: () => void; onUpgrade?: () => void }) {
   const [targets, setTargets] = useState<NutritionPreview | null>(null);
-  /** Macros guardados del plan (si los hay): carbohidratos y grasas en la tarjeta de calorías. */
-  const [saved, setSaved] = useState<MacroTargets | null>(null);
+  /** Carbohidratos y grasas de la tarjeta: los del plan o, sin él (sin Plus), estimados como en el iPhone. */
+  const [split, setSplit] = useState<{ carbs: number; fats: number } | null>(null);
   const [failed, setFailed] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -43,7 +43,9 @@ export default function BasicNutrition({ userId, onEdit, onUpgrade }: { userId: 
         const preview = resolveNutritionPreview({ ...(ob.data ?? {}), weight }, plan.data?.macros_json);
         
         setTargets(preview);
-        setSaved(parseMacroTargets(plan.data?.macros_json));
+        const saved = parseMacroTargets(plan.data?.macros_json);
+        setSplit(saved ? { carbs: Math.round(saved.carbs), fats: Math.round(saved.fats) }
+          : preview.calories && preview.protein ? estimateCarbsFats(preview.calories, preview.protein) : null);
         setFailed(false);
       } catch (error) {
         console.error("Error in BasicNutrition load:", error);
@@ -133,8 +135,8 @@ export default function BasicNutrition({ userId, onEdit, onUpgrade }: { userId: 
           <ul aria-label="Macros del día" className="shrink-0 space-y-1.5 border-l border-border pl-4">
             {[
               { label: "Proteína", value: targets.protein, dot: "bg-primary" },
-              { label: "Carbohidratos", value: saved ? Math.round(saved.carbs) : null, dot: "bg-primary/60" },
-              { label: "Grasas", value: saved ? Math.round(saved.fats) : null, dot: "bg-primary/30" },
+              { label: "Carbohidratos", value: split?.carbs ?? null, dot: "bg-primary/60" },
+              { label: "Grasas", value: split?.fats ?? null, dot: "bg-primary/30" },
             ].filter((m) => m.value !== null).map((m) => (
               <li key={m.label} className="flex items-center gap-2 type-footnote">
                 <span aria-hidden className={`h-2 w-2 shrink-0 rounded-full ${m.dot}`} />

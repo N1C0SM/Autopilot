@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import Index from "@/web/pages/Index";
+import { supabase } from "@/shared/integrations/supabase/client";
 
 vi.mock("@/shared/lib/analytics", () => ({ track: vi.fn() }));
 vi.mock("@/shared/lib/freeCampaign", () => ({ useFreeCampaign: () => false }));
@@ -44,6 +45,26 @@ describe("short public home", () => {
     expect(within(main).getByRole("link", { name: /Ver demo/ })).toHaveAttribute("href", "/como-funciona#demo");
     expect(within(main).getByText(/Free — 0 €/)).toBeInTheDocument();
     expect(within(main).getByRole("link", { name: "Ver la comparativa completa" })).toHaveAttribute("href", "/planes");
+  });
+
+  it("shows the store badges with real logos until the admin turns them off", async () => {
+    open();
+    const main = await screen.findByRole("main");
+    const play = within(main).getByRole("link", { name: /Google Play/ });
+    expect(play).toHaveAttribute("href", "/app");
+    expect(play.querySelectorAll("svg path")).toHaveLength(4);
+    cleanup();
+    const rpc = vi.mocked(supabase.rpc);
+    const original = rpc.getMockImplementation();
+    rpc.mockResolvedValue({ data: [{ show_app_download: false, show_store_badges: false }], error: null } as never);
+    try {
+      open();
+      const hidden = await screen.findByRole("main");
+      await waitFor(() => expect(within(hidden).queryByRole("link", { name: /Google Play/ })).not.toBeInTheDocument());
+      expect(within(hidden).queryByRole("link", { name: /App Store/ })).not.toBeInTheDocument();
+    } finally {
+      rpc.mockImplementation(original!);
+    }
   });
 
   it("opens mobile navigation and reaches the questions page", async () => {

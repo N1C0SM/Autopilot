@@ -20,7 +20,7 @@ const ENABLE_CALENDAR = false;
 
 import {
   User, Crown, ExternalLink, Calendar, CalendarClock, Check, Unplug, Link2, RefreshCw,
-  Download, FileText, ChevronLeft, ChevronRight, Dumbbell, KeyRound, LogOut, ShieldCheck, Target, Users,
+  Download, FileText, ChevronLeft, Dumbbell, KeyRound, LogOut, ShieldCheck, Target, Users,
 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -712,26 +712,10 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
         </button>
       )}
 
-      {/* Ajustes de ChatGPT: subtítulo y banner de Plus arriba, el perfil y el índice agrupado; cada fila abre su sección. */}
+      {/* Ajustes de ChatGPT: subtítulo arriba (sin banner de Plus, como la app), el perfil y el índice agrupado; cada fila abre su sección. */}
       {hubOpen && (
         <div className="order-first flex flex-col gap-6">
           <p className="-mt-2 type-subhead text-muted-foreground md:hidden">Gestiona tu cuenta, plan y preferencias.</p>
-          {!campaign && plans.plus && !iosNoPurchases && !hasPaidAccess && onUpgrade && (
-            <button
-              type="button"
-              onClick={() => { void hapticTap(); onUpgrade("training"); }}
-              className="flex min-h-[76px] w-full items-center gap-3.5 rounded-[22px] border border-primary/60 bg-primary/[0.08] px-4 py-3 text-left transition-transform duration-150 active:scale-[0.985] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <Crown aria-hidden className="h-7 w-7 shrink-0 text-primary" strokeWidth={1.75} />
-              <span className="min-w-0 flex-1">
-                <span className="block type-headline">{plans.plusName}</span>
-                <span className="mt-0.5 block type-footnote text-muted-foreground">Más análisis, nutrición y funciones.</span>
-              </span>
-              <span className="flex h-9 shrink-0 items-center gap-1 rounded-full border border-primary/60 px-3.5 text-[13px] font-semibold text-primary">
-                Ver plan<ChevronRight aria-hidden className="h-3.5 w-3.5" strokeWidth={2.5} />
-              </span>
-            </button>
-          )}
         </div>
       )}
       {hubOpen && (
