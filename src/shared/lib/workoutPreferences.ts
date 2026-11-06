@@ -46,3 +46,35 @@ export const setWorkoutRestSeconds = (userId: string, seconds: number) => {
   localStorage.setItem(restKey(userId), String(safeSeconds));
   return safeSeconds;
 };
+
+/** 45 → «45 s», 60 → «1 min», 90 → «1:30» (como `RestFormat` en la app). */
+export function formatRestLabel(seconds: number): string {
+  const total = Math.max(0, Math.round(seconds));
+  if (total < 60) return `${total} s`;
+  const m = Math.floor(total / 60), s = total % 60;
+  return s === 0 ? `${m} min` : `${m}:${String(s).padStart(2, "0")}`;
+}
+
+const exerciseRestKey = (userId: string) => `autopilot:workout-rest-exercise:${userId}`;
+
+/** Descanso elegido para cada ejercicio desde su tarjeta (por usuario, como en la app). */
+export function getExerciseRestChoices(userId: string): Record<string, number> {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(exerciseRestKey(userId)) ?? "{}");
+    if (!parsed || typeof parsed !== "object") return {};
+    return Object.fromEntries(Object.entries(parsed as Record<string, unknown>)
+      .filter((entry): entry is [string, number] => typeof entry[1] === "number" && entry[1] >= 15 && entry[1] <= 600)
+      .map(([name, seconds]) => [name, Math.round(seconds)]));
+  } catch {
+    return {};
+  }
+}
+
+/** `null` vuelve al descanso de siempre. Devuelve las elecciones actualizadas. */
+export function setExerciseRestChoice(userId: string, exerciseName: string, seconds: number | null): Record<string, number> {
+  const next = { ...getExerciseRestChoices(userId) };
+  if (seconds === null) delete next[exerciseName];
+  else next[exerciseName] = Math.min(600, Math.max(15, Math.round(seconds)));
+  try { localStorage.setItem(exerciseRestKey(userId), JSON.stringify(next)); } catch { /* storage unavailable */ }
+  return next;
+}

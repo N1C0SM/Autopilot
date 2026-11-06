@@ -23,6 +23,10 @@ export interface WorkoutSetLog extends WorkoutSetInput {
    * sin migración. Solo se escribe cuando la serie es de calentamiento.
    */
   isWarmup?: boolean;
+  /** RPE de la serie (1–10), como en la app. Opcional: solo se escribe si se elige. */
+  rpe?: number;
+  /** Serie llevada al fallo. Opcional: solo se escribe cuando vale `true`. */
+  failure?: boolean;
 }
 
 export function getWorkoutSetDrops(set: { drops?: WorkoutSetDrop[] }): WorkoutSetDrop[] {
@@ -42,6 +46,57 @@ export function setWorkoutSetWarmup(set: WorkoutSetLog, warmup: boolean): Workou
   const next: WorkoutSetLog = { ...set };
   if (warmup) next.isWarmup = true;
   else delete next.isWarmup;
+  return next;
+}
+
+/** RPE válido de la serie (entero 1–10) o null si no tiene. */
+export function getWorkoutSetRpe(set: { rpe?: unknown }): number | null {
+  return typeof set.rpe === "number" && Number.isInteger(set.rpe) && set.rpe >= 1 && set.rpe <= 10 ? set.rpe : null;
+}
+
+/** Pone o quita el RPE. Sin RPE el campo desaparece del JSON guardado. */
+export function setWorkoutSetRpe(set: WorkoutSetLog, rpe: number | null): WorkoutSetLog {
+  const next: WorkoutSetLog = { ...set };
+  if (rpe !== null && getWorkoutSetRpe({ rpe }) !== null) next.rpe = rpe;
+  else delete next.rpe;
+  return next;
+}
+
+export function isWorkoutSetFailure(set: { failure?: unknown }): boolean {
+  return set.failure === true;
+}
+
+/** Marca o desmarca la serie como llevada al fallo. Al desmarcarla el campo desaparece. */
+export function setWorkoutSetFailure(set: WorkoutSetLog, failure: boolean): WorkoutSetLog {
+  const next: WorkoutSetLog = { ...set };
+  if (failure) next.failure = true;
+  else delete next.failure;
+  return next;
+}
+
+/** Tocar «Previa»: copia kg y reps de la sesión anterior. Una serie ya hecha no cambia. */
+export function copyPreviousIntoSet(set: WorkoutSetLog, previous: WorkoutSetInput & { done?: boolean }): WorkoutSetLog {
+  if (set.done || !previous.done) return set;
+  return {
+    ...set,
+    weight: typeof previous.weight === "string" ? previous.weight : set.weight,
+    reps: Number.isInteger(previous.reps) && previous.reps > 0 ? previous.reps : set.reps,
+  };
+}
+
+/**
+ * Récords en directo («Ejercicio#índice»): al quitar una serie, los de detrás suben
+ * una posición y el de la serie quitada desaparece.
+ */
+export function reindexLiveRecords(records: Record<string, string>, exerciseName: string, removedIndex: number): Record<string, string> {
+  const prefix = `${exerciseName}#`;
+  const next: Record<string, string> = {};
+  for (const [key, value] of Object.entries(records)) {
+    const index = key.startsWith(prefix) ? Number(key.slice(prefix.length)) : NaN;
+    if (!Number.isInteger(index)) next[key] = value;
+    else if (index < removedIndex) next[key] = value;
+    else if (index > removedIndex) next[`${prefix}${index - 1}`] = value;
+  }
   return next;
 }
 
