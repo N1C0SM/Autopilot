@@ -831,4 +831,27 @@ describe("paridad web ↔ apps nativas", () => {
     expect(read("src/app/components/dashboard/RPEDialog.tsx")).toContain("type-figure text-[64px] font-bold leading-none tabular-nums text-primary");
     expect(read("native/Autopilot/Features/Train/WorkoutView.swift")).toContain('Text("\\(rpe)").font(.figure(size: 64)).foregroundStyle(Palette.gold)');
   });
+
+  it("Registro de entrenos: mismas funciones de Hevy en la web y en la app", () => {
+    const web = read("src/app/components/dashboard/WorkoutTracker.tsx");
+    const app = read("native/Autopilot/Features/Train/WorkoutView.swift");
+    for (const text of [
+      "Añadir ejercicio a esta sesión", "Récord personal · ", "Copiar la previa: ", "Descanso de este ejercicio",
+      "Volver al de siempre", "Quitar RPE", "Fallo", "Bajada", "Calent.", "Borrar",
+    ]) {
+      expect(web + read("src/app/components/dashboard/SwipeToDelete.tsx"), text).toContain(text);
+      expect(app, text).toContain(text);
+    }
+    // RPE y fallo por serie viajan en `sets_completed` en los dos lados (antes la app los perdía).
+    expect(read("native/Autopilot/Core/Training.swift")).toMatch(/enum CodingKeys: String, CodingKey \{ case reps, weight, done, isWarmup, drops, rpe, failure \}/);
+    expect(read("src/shared/lib/workoutSet.ts")).toMatch(/rpe\?: number;[\s\S]*failure\?: boolean;/);
+    // Deslizar para borrar en los dos lados; el descanso del ejercicio manda sobre el global.
+    expect(web).toMatch(/<SwipeToDelete key=\{si\} enabled=\{sets\.length > 1\}/);
+    expect(app).toMatch(/\.simultaneousGesture\(swipeGesture\)/);
+    expect(web).toContain("exerciseRest[exerciseName] ?? getWorkoutRestPreference(userId)");
+    expect(read("native/Autopilot/Features/Train/ActiveWorkout.swift")).toMatch(/if let chosen = restChoice\(for: exercise\.name\) \{ return chosen \}/);
+    // Los mismos descansos para elegir.
+    const presets = read("native/Autopilot/Features/Train/ActiveWorkout.swift").match(/static let presets = \[([^\]]+)\]/)?.[1];
+    expect(read("src/shared/lib/workoutPreferences.ts")).toContain(`REST_PRESETS = [${presets}]`);
+  });
 });

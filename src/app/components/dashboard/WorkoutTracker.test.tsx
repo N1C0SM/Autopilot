@@ -97,6 +97,19 @@ describe("routine navigation and saved session dates", () => {
     act(() => { setWorkoutView("user", "list"); });
     expect(readActiveWorkout("user")?.logs.Remo).toHaveLength(2);
   });
+  it("quita una serie con el botón de borrar (deslizar) y guarda el fallo dentro de la serie", async () => {
+    localStorage.setItem("autopilot:workout-advanced:user", "1");
+    render(<WorkoutTracker userId="user" dayPlans={[plan("Lunes", "Remo")]} initialDay="Lunes" />);
+    fireEvent.click(await screen.findByRole("button", { name: "Empezar entrenamiento" }));
+    // Con una sola serie no hay nada que borrar.
+    expect(screen.queryByRole("button", { name: "Quitar la serie 1 de Remo" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Añadir serie" }));
+    fireEvent.click(screen.getByRole("button", { name: "Marcar la serie 1 de Remo como llevada al fallo" }));
+    expect(readActiveWorkout("user")?.logs.Remo[0]).toMatchObject({ failure: true });
+    fireEvent.click(screen.getByRole("button", { name: "Quitar la serie 2 de Remo" }));
+    expect(readActiveWorkout("user")?.logs.Remo).toHaveLength(1);
+    expect(readActiveWorkout("user")?.logs.Remo[0]).toMatchObject({ failure: true });
+  });
   it("shows exactly one exercise viewer in focus mode", async () => {
     render(<WorkoutTracker userId="user" dayPlans={[{ ...plan("Lunes", "Remo"), exercises: [...(plan("Lunes", "Remo").exercises || []), ...(plan("Lunes", "Press").exercises || [])] }]} initialDay="Lunes" />);
     fireEvent.click(await screen.findByRole("button", { name: "Empezar entrenamiento" }));

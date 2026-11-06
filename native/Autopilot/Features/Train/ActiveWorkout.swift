@@ -37,6 +37,8 @@ final class ActiveWorkout: ObservableObject {
     @Published var swaps: [String: String] = [:]
     /// Récords batidos al terminar.
     @Published var records: [String] = []
+    /// Récord en directo al marcar una serie («Ejercicio#índice» → «+2,5 kg»), como `livePRs` en la web.
+    @Published var livePRs: [String: String] = [:]
 
     private nonisolated static func key(_ userId: String) -> String { "active-workout.\(userId)" }
 
@@ -195,12 +197,84 @@ final class ActiveWorkout: ObservableObject {
         update(exercise.name, set: index) { $0.done.toggle(); nowDone = $0.done }
         if nowDone {
             Haptics.signature()
-            // Descanso elegido en Ajustes → Tu forma de entrenar; si no hay, el del ejercicio.
-            let chosen = UserDefaults.standard.integer(forKey: "rest-seconds")
-            startRest(seconds: chosen > 0 ? chosen : exercise.restSeconds)
+            checkLiveRecord(exercise.name, set: index)
+            startRest(seconds: restSeconds(for: exercise))
         } else {
             Haptics.tap()
+            livePRs["\(exercise.name)#\(index)"] = nil
         }
+    }
+
+    /// Récord en directo (como la web): más peso que la mejor serie de trabajo de la sesión anterior.
+    /// Las de calentamiento no cuentan, ni la que se marca ni las previas.
+    private func checkLiveRecord(_ exercise: String, set index: Int) {
+        guard let set = draft.logs[exercise]?[safe: index], set.isWarmup != true,
+              let weight = Progression.weight(set.weight), weight > 0 else { return }
+        let best = (previous[exercise] ?? [])
+            .filter { $0.done && $0.isWarmup != true }
+            .compactMap { Progression.weight($0.weight) }
+            .max() ?? 0
+        guard best > 0, weight > best else { return }
+        let diff = ((weight - best) * 10).rounded() / 10
+        livePRs["\(exercise)#\(index)"] = "+\(NumberText.decimal(diff, digits: diff.rounded() == diff ? 0 : 1)) kg"
+        Haptics.success()
+    }
+
+    /// Copia «Previa» (kg y reps de la sesión anterior) en la serie, como al tocarla en Hevy.
+    func copyPrevious(_ exercise: String, set index: Int) {
+        guard let prev = previous[exercise]?[safe: index], prev.done,
+              draft.logs[exercise]?[safe: index]?.done == false else { return }
+        update(exercise, set: index) { $0.weight = prev.weight; if prev.reps > 0 { $0.reps = prev.reps } }
+        Haptics.tap()
+    }
+
+    // MARK: Descanso por ejercicio
+
+    /// Descanso elegido para un ejercicio desde su tarjeta (por usuario, como en la web).
+    private var restKey: String { "rest-by-exercise.\(draft.userId)" }
+
+    func restChoice(for exercise: String) -> Int? {
+        let value = (UserDefaults.standard.dictionary(forKey: restKey) as? [String: Int])?[exercise]
+        return value.flatMap { (15...600).contains($0) ? $0 : nil }
+    }
+
+    /// El del ejercicio manda; si no hay, el de Ajustes → Tu forma de entrenar; si no, el del plan.
+    func restSeconds(for exercise: GymExercise) -> Int {
+        if let chosen = restChoice(for: exercise.name) { return chosen }
+        let global = UserDefaults.standard.integer(forKey: "rest-seconds")
+        return global > 0 ? global : exercise.restSeconds
+    }
+
+    /// `nil` vuelve al descanso de siempre.
+    func setRestChoice(_ seconds: Int?, for exercise: String) {
+        var all = (UserDefaults.standard.dictionary(forKey: restKey) as? [String: Int]) ?? [:]
+        all[exercise] = seconds.map { min(600, max(15, $0)) }
+        UserDefaults.standard.set(all, forKey: restKey)
+        objectWillChange.send()
+        Haptics.selection()
+    }
+
+    // MARK: Ejercicios añadidos en la sesión
+
+    /// Añade ejercicios solo a esta sesión (como «Añadir ejercicio a esta sesión» en la web):
+    /// la rutina guardada no cambia. Trae antes su sesión anterior para «Previa» y la precarga.
+    func addExercises(_ picked: [GymExercise], userId: UUID) async {
+        let existing = Set(exercises.map(\.name))
+        var seen = Set<String>()
+        let fresh = picked.filter { !existing.contains($0.name) && seen.insert($0.name).inserted }
+        guard !fresh.isEmpty else { return }
+        let prev = await TrainingRepo.previousSets(userId: userId, exercises: fresh.map(\.name))
+        for (name, sets) in prev where previous[name] == nil { previous[name] = sets }
+        for ex in fresh {
+            let last = previous[ex.name]?.filter { $0.isWarmup != true && $0.done } ?? []
+            draft.logs[ex.name] = (0..<max(ex.series, 1)).map { i in
+                let p = i < last.count ? last[i] : last.last
+                return SetLog(reps: p?.reps ?? ex.repsTarget, weight: p?.weight ?? ex.weight, done: false, isWarmup: nil)
+            }
+        }
+        draft.day.exercises = exercises + fresh
+        persist()
+        Haptics.success()
     }
 
     func addSet(_ exercise: String) {
@@ -212,10 +286,19 @@ final class ActiveWorkout: ObservableObject {
         Haptics.tap()
     }
 
+    func canRemoveSet(_ exercise: String) -> Bool { (draft.logs[exercise]?.count ?? 0) > 1 }
+
     func removeSet(_ exercise: String, at index: Int) {
         guard var sets = draft.logs[exercise], sets.indices.contains(index), sets.count > 1 else { return }
         sets.remove(at: index)
         draft.logs[exercise] = sets
+        // Los récords en directo van por índice: los de detrás suben una posición.
+        var prs: [String: String] = [:]
+        for (key, value) in livePRs {
+            guard key.hasPrefix("\(exercise)#"), let i = Int(key.dropFirst(exercise.count + 1)) else { prs[key] = value; continue }
+            if i < index { prs[key] = value } else if i > index { prs["\(exercise)#\(i - 1)"] = value }
+        }
+        livePRs = prs
         persist()
     }
 
@@ -258,6 +341,8 @@ final class ActiveWorkout: ObservableObject {
 
     func toggleWarmup(_ exercise: String, set index: Int) {
         update(exercise, set: index) { $0.isWarmup = $0.isWarmup == true ? nil : true }
+        // El récord en directo de esa serie deja de valer al pasar a calentamiento.
+        livePRs["\(exercise)#\(index)"] = nil
         Haptics.selection()
     }
 
@@ -437,5 +522,24 @@ final class ActiveWorkout: ObservableObject {
             Haptics.error()
             return false
         }
+    }
+}
+
+/// Descansos que se eligen desde la tarjeta (como `REST_PRESETS` y `formatRestLabel` en la web).
+enum RestFormat {
+    static let presets = [45, 60, 90, 120, 180]
+
+    /// 45 → «45 s», 60 → «1 min», 90 → «1:30».
+    static func label(_ seconds: Int) -> String {
+        if seconds < 60 { return "\(seconds) s" }
+        let m = seconds / 60, s = seconds % 60
+        return s == 0 ? "\(m) min" : "\(m):\(String(format: "%02d", s))"
+    }
+
+    /// Para VoiceOver: «1 minuto 30 segundos».
+    static func spoken(_ seconds: Int) -> String {
+        let m = seconds / 60, s = seconds % 60
+        let parts = [m > 0 ? "\(m) \(m == 1 ? "minuto" : "minutos")" : nil, s > 0 ? "\(s) segundos" : nil].compactMap { $0 }
+        return parts.joined(separator: " ")
     }
 }
