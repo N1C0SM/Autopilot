@@ -789,4 +789,39 @@ describe("paridad web ↔ apps nativas", () => {
     expect(read("src/app/components/admin/ExerciseLibrary.tsx")).toContain("<CatalogImport ");
     expect(read("native/Autopilot/Features/Admin/AdminExercises.swift")).toContain("AdminCatalogImportCard {");
   });
+
+  it("Identidad visual: la paleta nativa (iPhone y Mac) tiene los mismos valores que los tokens de la web", () => {
+    // Tokens del :root de `@layer base` (antes están los de «Aumentar contraste»).
+    const css = read("src/index.css");
+    const base = css.slice(css.indexOf("@layer base"));
+    const token = (name: string) => {
+      const m = base.match(new RegExp(`--${name}:\\s*([\\d.]+)\\s+([\\d.]+)%\\s+([\\d.]+)%;`));
+      expect(m, `--${name}`).not.toBeNull();
+      const [h, s, l] = [Number(m![1]), Number(m![2]) / 100, Number(m![3]) / 100];
+      const k = (n: number) => (n + h / 30) % 12;
+      const a = s * Math.min(l, 1 - l);
+      return [0, 8, 4].map((n) => l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1)));
+    };
+    const swift = read("native/Autopilot/Design/Theme.swift");
+    const palette = (name: string) => {
+      if (new RegExp(`static let ${name} = Color\\.white\\b`).test(swift)) return [1, 1, 1];
+      const m = swift.match(new RegExp(`static let ${name} = Color\\(red: ([\\d.]+), green: ([\\d.]+), blue: ([\\d.]+)\\)`));
+      expect(m, `Palette.${name}`).not.toBeNull();
+      return [Number(m![1]), Number(m![2]), Number(m![3])];
+    };
+    const close = (label: string, a: number[], b: number[]) =>
+      a.forEach((v, i) => expect(Math.abs(v - b[i]), `${label} canal ${i}`).toBeLessThanOrEqual(0.004));
+    const pairs: Array<[string, string]> = [
+      ["background", "background"], ["foreground", "foreground"], ["card", "card"], ["secondary", "secondary"],
+      ["muted", "muted-foreground"], ["accent", "accent"], ["border", "border"], ["separator", "border"],
+      ["gold", "primary"], ["success", "success"],
+    ];
+    pairs.forEach(([p, t]) => close(`Palette.${p} ↔ --${t}`, palette(p), token(t)));
+    // El tinte del sistema (interruptores, cursor, enlaces) es el mismo dorado.
+    const accent = JSON.parse(read("native/Autopilot/Assets.xcassets/AccentColor.colorset/Contents.json")).colors[0].color.components;
+    close("AccentColor ↔ --primary", [accent.red, accent.green, accent.blue].map(Number), token("primary"));
+    // Cifra del esfuerzo con la firma de marca y en dorado en los dos lados.
+    expect(read("src/app/components/dashboard/RPEDialog.tsx")).toContain("type-figure text-[64px] font-bold leading-none tabular-nums text-primary");
+    expect(read("native/Autopilot/Features/Train/WorkoutView.swift")).toContain('Text("\\(rpe)").font(.figure(size: 64)).foregroundStyle(Palette.gold)');
+  });
 });

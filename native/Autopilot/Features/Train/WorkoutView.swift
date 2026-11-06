@@ -334,7 +334,7 @@ struct WorkoutView: View {
     private var rpeSheet: some View {
         VStack(spacing: 20) {
             Text("¿Cómo de duro ha sido?").font(.apTitle2).accessibilityAddTraits(.isHeader)
-            Text("\(rpe)").font(.apFigure).foregroundStyle(Palette.gold).accessibilityHidden(true)
+            Text("\(rpe)").font(.figure(size: 64)).foregroundStyle(Palette.gold).accessibilityHidden(true)
             Slider(value: Binding(get: { Double(rpe) }, set: { rpe = Int($0.rounded()) }), in: 1...10, step: 1)
                 .accessibilityLabel("Esfuerzo percibido").accessibilityValue("\(rpe) de 10")
             Button {

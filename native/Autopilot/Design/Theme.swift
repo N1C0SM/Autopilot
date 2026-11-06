@@ -8,24 +8,29 @@ import AppKit
 /// Lenguaje de diseño de Autopilot (.claude/design): negro, dorado contenido,
 /// tarjetas sin borde de 22/28 pt, botones y campos en píldora, cifras grandes redondeadas.
 enum Palette {
+    /// --background 30 6% 4%
     static let background = Color(red: 0.042, green: 0.040, blue: 0.038)
-    static let foreground = Color(red: 0.968, green: 0.963, blue: 0.952)
-    static let card = Color(red: 0.083, green: 0.080, blue: 0.077)
-    static let secondary = Color(red: 0.146, green: 0.140, blue: 0.134)
-    /// Texto secundario. Contraste medido (WCAG): 7,5:1 sobre `card`, 9,2:1 sobre negro y
-    /// 6,0:1 sobre `secondary`, así que ya cumple AA/AAA para texto normal; no hace falta
+    /// --foreground 0 0% 100%
+    static let foreground = Color.white
+    /// --card 240 5% 7% (#111113, gris frío como la web y la landing)
+    static let card = Color(red: 0.067, green: 0.067, blue: 0.074)
+    /// --secondary 240 5% 16%
+    static let secondary = Color(red: 0.152, green: 0.152, blue: 0.168)
+    /// Texto secundario. Contraste medido (WCAG): 7,9:1 sobre `card`, 8,3:1 sobre el fondo y
+    /// 6,2:1 sobre `secondary`, así que ya cumple AA/AAA para texto normal; no hace falta
     /// subir la luminosidad. Los grises con opacidad solo se usan en adornos (chevrones, iconos).
-    static let muted = Color(red: 0.696, green: 0.683, blue: 0.664)
+    /// --muted-foreground 240 4% 67%
+    static let muted = Color(red: 0.657, green: 0.657, blue: 0.683)
     /// Dorado de marca #D8B25E — idéntico a hsl(41 61% 61%) del token --primary de la web y la landing.
     static let gold = Color(red: 0.847, green: 0.698, blue: 0.369)
     static let destructive = Color(red: 1.0, green: 0.271, blue: 0.227)
     /// --success 135 64% 50%
     static let success = Color(red: 0.18, green: 0.82, blue: 0.34)
-    static let separator = Color(red: 0.156, green: 0.150, blue: 0.144)
-    /// --accent 240 2% 21% (segmentado activo, pulsado)
-    static let accent = Color(red: 0.198, green: 0.190, blue: 0.182)
+    static let separator = Color(red: 0.144, green: 0.144, blue: 0.156)
+    /// --accent 240 5% 21% (segmentado activo, pulsado)
+    static let accent = Color(red: 0.199, green: 0.199, blue: 0.221)
     /// --border 240 4% 15%
-    static let border = Color(red: 0.156, green: 0.150, blue: 0.144)
+    static let border = Color(red: 0.144, green: 0.144, blue: 0.156)
 }
 
 enum Radius {
