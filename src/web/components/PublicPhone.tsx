@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { BarChart3, Check, ChevronRight, Dumbbell, Flame as Apple, Layers, type LucideIcon } from "lucide-react";
+import { BarChart3, Bell, Check, ChevronRight, Dumbbell, Flame as Apple, Layers, type LucideIcon } from "lucide-react";
 import type { PlanAvailability } from "@/shared/lib/planCatalogCore";
 import { TABS as APP_TABS } from "@/app/components/mobile/MobileTabBar";
 import { previewExercises } from "@/web/components/previewData";
@@ -33,10 +33,11 @@ export function PhoneFrame({ children, className, screenClassName, chrome = true
   );
 }
 
-/** Avatar arriba a la derecha, como en la app (la campana y la guía ya no están). */
+/** Campana y avatar arriba a la derecha, como la cabecera de la app (`MobileHeader`). */
 export function PhoneAppBar({ avatar }: { avatar: ReactNode }) {
   return (
-    <div aria-hidden className="flex h-11 shrink-0 items-center justify-end gap-2 px-3">
+    <div aria-hidden className="flex h-11 shrink-0 items-center justify-end px-3">
+      <span className="flex h-11 w-11 items-center justify-center"><Bell className="h-[17px] w-[17px]" strokeWidth={1.5} /></span>
       <span className="flex h-11 w-11 items-center justify-center">
         <span className="flex h-[30px] w-[30px] items-center justify-center overflow-hidden rounded-full bg-secondary type-footnote font-semibold">{avatar}</span>
       </span>

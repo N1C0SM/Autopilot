@@ -89,7 +89,8 @@ struct HeaderButtons: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            // La campana era un botón sin acción (no hay notificaciones todavía): fuera hasta 1.1.
+            // Campana y avatar, como `MobileHeader` de la web.
+            NotificationsBell()
             Button(action: onProfile) {
                 ZStack {
                     Circle().fill(Palette.secondary)

@@ -494,6 +494,21 @@ describe("paridad web ↔ apps nativas", () => {
     expect(read("native/Autopilot/Features/Train/PlanEditorView.swift")).toContain("TrainingRepo.storePlanLocally(userId: userId, clean)");
   });
 
+  it("Campana de avisos: la web y las apps leen los mismos avisos, con contador y la misma hoja", () => {
+    const web = read("src/app/components/NotificationsBell.tsx");
+    const native = read("native/Autopilot/Features/Shell/NotificationsBell.swift");
+    for (const text of ["Notificaciones", "Sin notificaciones", "Aquí verás los cambios en tu plan y los recordatorios."]) {
+      expect(web).toContain(text);
+      expect(native).toContain(text);
+    }
+    expect(native).toContain('from("notifications")');
+    // En el móvil va junto al avatar (MobileHeader) y en escritorio, en la barra superior.
+    expect(read("src/app/components/mobile/MobileHeader.tsx")).toContain("<NotificationsBell");
+    expect(read("native/Autopilot/Design/Components.swift")).toContain("NotificationsBell()");
+    expect(read("src/app/pages/Dashboard.tsx")).toContain("<NotificationsBell");
+    expect(read("native/Autopilot/Features/Shell/RootView.swift")).toContain("ToolbarItem(placement: .primaryAction) { NotificationsBell() }");
+  });
+
   it("Al abrir se entra directo con la última cuenta: «¿Quién entrena?» solo si está protegida, en la web y en la app", () => {
     expect(read("native/Autopilot/Core/Session.swift")).toContain("showPicker = currentLocked\n");
     expect(read("src/shared/components/native/WhoIsTraining.tsx")).toContain("if (!shown && currentLocked) showPicker();");

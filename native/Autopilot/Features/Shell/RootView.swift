@@ -394,7 +394,15 @@ struct MainShell: View {
             .navigationSplitViewColumnWidth(min: 220, ideal: 250)
             #endif
         } detail: {
-            NavigationStack { SectionView(section: selection ?? defaultSection, onNavigate: { selection = $0 }) }
+            NavigationStack {
+                SectionView(section: selection ?? defaultSection, onNavigate: { selection = $0 })
+                    // La campana de la barra superior de la web (`Dashboard.tsx`), a la derecha.
+                    .toolbar {
+                        if session.role == .user {
+                            ToolbarItem(placement: .primaryAction) { NotificationsBell() }
+                        }
+                    }
+            }
                 // Negro de borde a borde, también bajo la barra de título de la ventana.
                 .background(Palette.background.ignoresSafeArea())
                 #if os(macOS)
