@@ -1,16 +1,14 @@
 import { useState, type ReactNode } from "react";
-import { Apple, Sparkles, type LucideIcon } from "lucide-react";
-import { ProgressRing } from "@/shared/components/ui/progress-ring";
-import { OverviewRow } from "@/app/components/dashboard/HomeOverview";
+import { BarChart3, Check, ChevronRight, Dumbbell, Flame as Apple, Layers, type LucideIcon } from "lucide-react";
 import type { PlanAvailability } from "@/shared/lib/planCatalogCore";
-import { Button } from "@/shared/components/ui/button";
+import { TABS as APP_TABS } from "@/app/components/mobile/MobileTabBar";
 import { previewExercises } from "@/web/components/previewData";
 import { cn } from "@/shared/lib/utils";
 
 /**
  * Piezas del móvil de la web pública. `PhoneShot` pinta capturas REALES de la app
  * (las de `public/app-shots/`); el resto (PhoneHome, PhoneTabBar…) son la demo interactiva
- * y el respaldo si una captura aún no está. Markup puro: sin datos ni movimiento.
+ * con el mismo diseño que la app (HomeOverview, FloatingMobileNav). Datos de ejemplo, sin red.
  */
 
 export function PhoneFrame({ children, className, screenClassName, chrome = true }: { children: ReactNode; className?: string; screenClassName?: string; chrome?: boolean }) {
@@ -48,124 +46,141 @@ export function PhoneAppBar({ avatar }: { avatar: ReactNode }) {
 
 export type PhoneTab = { key: string; label: string; icon: LucideIcon };
 
-/** Floating capsule tab bar of the interactive demo. */
+/** Barra flotante de la app (`FloatingMobileNav`): mismos iconos, la activa en dorado y rellena, sin píldora. */
 export function PhoneTabBar({ tabs, active, onSelect, label = "Secciones de la demo" }: { tabs: readonly PhoneTab[]; active: string; onSelect: (key: string) => void; label?: string }) {
-  const cols = tabs.length === 5 ? "grid-cols-5" : "grid-cols-4";
-  const item = (isActive: boolean) => cn(
-    "relative flex h-[68px] min-w-0 w-full flex-col px-0 py-0 [&_svg]:size-6 hover:bg-transparent items-center justify-center gap-0.5 rounded-full type-caption2 font-medium leading-tight transition-[background-color,transform] duration-150 ease-out active:scale-[0.94]",
-    isActive ? "bg-primary/90 text-primary-foreground" : "text-muted-foreground",
-  );
   return (
-    <nav className="absolute inset-x-3 bottom-5 z-10 rounded-full bg-card p-1" role="group" aria-label={label}>
-      <div className={cn("grid", cols)}>
-        {tabs.map(({ key, label: text, icon: Icon }) => (
-          <Button variant="ghost" key={key} type="button" aria-pressed={active === key} onClick={() => onSelect(key)} className={item(active === key)}>
-            <Icon className="h-6 w-6" strokeWidth={active === key ? 2.4 : 2} aria-hidden="true" />
-            <span className="max-w-full truncate px-0.5">{text}</span>
-          </Button>
-        ))}
-      </div>
+    <nav className="absolute inset-x-3 bottom-5 z-10" role="group" aria-label={label}>
+      <ul className="flex h-[60px] items-stretch gap-0.5 rounded-full border border-border bg-card/90 p-1 backdrop-blur-xl">
+        {tabs.map(({ key, label: text, icon }) => {
+          const isActive = active === key;
+          const app = APP_TABS.find((tab) => tab.key === key);
+          const Icon = app?.icon ?? icon;
+          const ActiveIcon = app?.activeIcon;
+          return (
+            <li key={key} className="min-w-0 flex-1">
+              <button type="button" aria-pressed={isActive} onClick={() => onSelect(key)}
+                className={cn("flex h-full w-full flex-col items-center justify-center gap-0.5 rounded-full px-0.5 transition-transform duration-150 ease-out active:scale-[0.94]", isActive ? "text-primary" : "text-muted-foreground")}>
+                <span className="flex h-7 items-center justify-center">
+                  {isActive && ActiveIcon ? <ActiveIcon className="h-[22px] w-[22px]" /> : <Icon className="h-[22px] w-[22px]" strokeWidth={1.5} aria-hidden="true" />}
+                </span>
+                <span className="max-w-full truncate px-0.5 text-[10.5px] font-medium tracking-[0.01em]">{text}</span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
     </nav>
   );
 }
 
-const DAYS = ["L", "M", "X", "J", "V", "S", "D"];
+/** Sesión de ejemplo de los móviles; la misma del tracker de la demo (3 ejercicios × 3 series, 90 s). */
+export const DEMO_SESSION = { title: "Cuerpo completo", focus: "Piernas, espalda y pecho", exercises: 3, series: 9, minutes: 20 };
 
-/**
- * Example week of the public phones, built around the visitor's real today so the
- * picture reads like the app opened right now: four planned days, today always one of them.
- */
-export function demoWeek(now = new Date()) {
-  const today = (now.getDay() + 6) % 7;
-  const base = [0, 2, 4];
-  const planned = base.includes(today) ? base : [...base, today].sort((a, b) => a - b);
-  const done = planned.filter((d) => d < today).length;
-  const label = new Intl.DateTimeFormat("es-ES", { weekday: "long", day: "numeric", month: "long" }).format(now);
-  return { today, planned, done, date: label.charAt(0).toLocaleUpperCase("es") + label.slice(1) };
-}
-
-/** Same week strip as the app's "Hoy": today tinted, a dot under each planned day. */
-export function PhoneWeek({ planned, today }: { planned: number[]; today: number }) {
-  return (
-    <ol aria-hidden className="grid grid-cols-7">
-      {DAYS.map((d, i) => {
-        const trains = planned.includes(i);
-        return (
-          <li key={d} className="flex flex-col items-center gap-1">
-            <span className={cn("flex h-9 w-9 items-center justify-center rounded-full type-subhead", i === today ? "bg-primary/15 font-semibold text-primary" : trains ? "text-foreground" : "text-muted-foreground")}>{d}</span>
-            <span className={cn("h-[5px] w-[5px] rounded-full", trains ? "bg-primary" : "bg-transparent")} />
-          </li>
-        );
-      })}
-    </ol>
-  );
-}
-
-/** Example session shown on the phones; mirrors the demo tracker (3 exercises × 3 series, 90 s rest). */
-export const DEMO_SESSION = { title: "Fuerza cuerpo completo", exercises: 3, series: 9, minutes: 20 };
+/** Rutina de ejemplo en orden (sin días de la semana): la 1 hecha y la 2 es la siguiente. */
+export const DEMO_ROUTINE = [
+  { name: "Pierna", done: true },
+  { name: DEMO_SESSION.title, done: false },
+  { name: "Torso", done: false },
+];
 
 interface PhoneHomeProps {
   plans: PlanAvailability;
-  /** Render the greeting as a heading (the interactive demo) instead of plain text (the hero picture). */
+  /** Render the title as a heading (the interactive demo) instead of plain text (the hero picture). */
   heading?: boolean;
   onSession?: () => void;
   onNutrition?: () => void;
   onProgress?: () => void;
   name?: string;
+  /** Hoy ancho, a dos columnas: lo que enseña la app de Mac (las clases `lg:` de HomeOverview, sin depender de la ventana). */
+  wide?: boolean;
+}
+
+/** Fila-tarjeta de «Hoy» (`HomeRow`): título, una línea gris, valor, icono dorado y chevron. */
+function PhoneRow({ icon, title, detail, value, onClick }: { icon: ReactNode; title: string; detail: string; value?: string; onClick?: () => void }) {
+  const body = (
+    <>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate type-headline text-foreground">{title}</span>
+        <span className="mt-0.5 line-clamp-2 type-footnote tabular-nums text-muted-foreground">{detail}</span>
+      </span>
+      {value && <span className="shrink-0 type-subhead font-semibold tabular-nums text-foreground">{value}</span>}
+      <span aria-hidden="true" className="flex shrink-0 text-primary">{icon}</span>
+      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={2.5} aria-hidden="true" />
+    </>
+  );
+  const className = "flex min-h-[72px] w-full items-center gap-3.5 rounded-[22px] border border-border bg-card px-[18px] py-4 text-left";
+  return onClick
+    ? <button type="button" onClick={onClick} className={cn(className, "transition-transform duration-150 active:scale-[0.985] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring")}>{body}</button>
+    : <div className={className}>{body}</div>;
 }
 
 /**
- * "Hoy" screen of the app, drawn with the same layout, copy and rows as the real
- * mobile HomeOverview (date, greeting, week, session + Empezar, Nutrición, Progreso).
+ * «Hoy» de la app con datos de ejemplo, con el mismo diseño que `HomeOverview` en el móvil:
+ * «Hoy» grande, la siguiente sesión de la rutina con su foto, Tu progreso, Tu plan, Esta semana
+ * (un círculo por sesión, sin días de la semana) y Nutrición.
  */
-export function PhoneHome({ heading, onSession, onNutrition, onProgress, name }: PhoneHomeProps) {
-  const Greeting = heading ? "h2" : "p";
-  const week = demoWeek();
+export function PhoneHome({ heading, onSession, onNutrition, onProgress, name, wide = false }: PhoneHomeProps) {
+  const Title = heading ? "h2" : "p";
+  const nextIndex = DEMO_ROUTINE.findIndex((session) => !session.done);
+  const card = (
+    <>
+      <span aria-hidden="true" className="absolute inset-y-0 right-0 w-[55%] overflow-hidden bg-secondary">
+        <img src={previewExercises[0].image} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover object-[50%_30%]" />
+        <span className="absolute inset-0 bg-gradient-to-r from-card via-card/55 to-transparent" />
+      </span>
+      <span className="relative flex min-w-0 flex-1 flex-col p-[18px] pr-32">
+        <span className="type-footnote text-muted-foreground">{`Siguiente sesión · ${nextIndex + 1} de ${DEMO_ROUTINE.length}`}</span>
+        <span className="mt-1.5 line-clamp-2 text-[22px] font-bold leading-7 tracking-[-0.02em]">{DEMO_SESSION.title}</span>
+        <span className="mt-0.5 line-clamp-2 type-subhead text-muted-foreground">{DEMO_SESSION.focus}</span>
+        <span className="mt-auto flex items-center gap-1.5 pt-3.5 type-footnote tabular-nums text-muted-foreground">
+          <Dumbbell aria-hidden="true" className="h-3.5 w-3.5 shrink-0" strokeWidth={2} />
+          {`${DEMO_SESSION.exercises} ejercicios · ${DEMO_SESSION.series} series · unos ${DEMO_SESSION.minutes} min`}
+        </span>
+      </span>
+      <span aria-hidden="true" className="absolute bottom-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-primary/20 text-primary">
+        <ChevronRight className="h-5 w-5" strokeWidth={2.5} />
+      </span>
+    </>
+  );
+  const cardClass = "relative flex min-h-[156px] w-full overflow-hidden rounded-[22px] border border-border bg-card text-left";
   return (
-    <div className="flex flex-col">
-      <p className="type-subhead font-semibold text-muted-foreground">{week.date}</p>
-      <Greeting className="mt-0.5 type-large-title">
-        {name ? `Hola, ${name}.` : "Hola."}
-        <span className="block text-muted-foreground">A entrenar.</span>
-      </Greeting>
+    <div className={wide ? "grid grid-cols-[minmax(0,1.55fr)_minmax(300px,1fr)] grid-rows-[auto_auto_1fr] items-start gap-x-10 pb-4" : "flex flex-col pb-4"}>
+      <header className={wide ? "col-span-2" : undefined}>
+        <Title className={cn("type-large-title leading-tight text-foreground", wide && "text-[44px] leading-[48px]")}>Hoy</Title>
+        <p className="mt-1 type-subhead text-muted-foreground">{name ? `Hola, ${name}.` : "Hola."} A entrenar.</p>
+      </header>
 
-
-      <div className="py-8">
-        <div className="relative mb-4 h-48 overflow-hidden rounded-[22px] bg-card"><img src={previewExercises[0].image} alt="Sentadilla goblet" loading="lazy" decoding="async" className="h-full w-full object-cover object-[50%_30%]" /></div>
-        {(() => {
-          const body = (
-            <>
-              <span className="line-clamp-3 type-title1">{DEMO_SESSION.title}</span>
-              <span className="mt-1 block type-subhead tabular-nums text-muted-foreground">
-                {DEMO_SESSION.exercises} ejercicios · {DEMO_SESSION.series} series · unos {DEMO_SESSION.minutes} min
-              </span>
-              <span className="mt-6 flex h-[50px] w-full items-center justify-center rounded-[14px] bg-primary px-5 type-headline text-primary-foreground transition-[opacity,transform] duration-150 ease-out group-active:scale-[0.98] group-active:opacity-80">
-                Empezar entreno
-              </span>
-            </>
-          );
-          return onSession
-            ? <button type="button" onClick={onSession} aria-label={`Empezar ${DEMO_SESSION.title}`} className="group block w-full rounded-media text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background">{body}</button>
-            : <div className="block w-full">{body}</div>;
-        })()}
+      <div className={wide ? "row-span-2 mt-8" : "mt-6"}>
+        {onSession
+          ? <button type="button" onClick={onSession} aria-label={`Empezar ${DEMO_SESSION.title}`} className={cn(cardClass, "transition-transform duration-150 active:scale-[0.985] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring")}>{card}</button>
+          : <div className={cardClass}>{card}</div>}
       </div>
 
-      <h3 className="mb-3 type-title3">Resumen</h3>
-      <div className="grid grid-cols-2 gap-3">
-        <OverviewRow
-          title="Nutrición"
-          value={<>2.300<span className="ml-1 type-subhead text-muted-foreground">kcal</span></>}
-          onClick={onNutrition}
-          icon={<ProgressRing value={67} size={32} stroke={3.5}><Apple className="h-[14px] w-[14px]" strokeWidth={2.25} /></ProgressRing>}
-          description="2 de 3 comidas"
-        />
-        <OverviewRow
-          title="Progreso"
-          value={<>{week.done}<span className="type-title3 text-muted-foreground">/{week.planned.length}</span></>}
-          onClick={onProgress}
-          icon={<ProgressRing value={(week.done / week.planned.length) * 100} size={32} stroke={3.5}><Sparkles className="h-[14px] w-[14px]" strokeWidth={2.25} /></ProgressRing>}
-          description={`${week.done} de ${week.planned.length} sesiones esta semana`}
-        />
+      <div className={cn("space-y-3", wide ? "mt-4" : "mt-3")}>
+        <PhoneRow icon={<BarChart3 className="h-[22px] w-[22px]" strokeWidth={1.75} />} title="Tu progreso" detail="Sentadilla goblet · 20 kg × 10" onClick={onProgress} />
+        <PhoneRow icon={<Layers className="h-[22px] w-[22px]" strokeWidth={1.75} />} title="Tu plan" detail="Revisa y ajusta tu plan de entrenamiento." onClick={onSession} />
+      </div>
+
+      <div className={cn("rounded-[22px] border border-border bg-card", wide ? "mt-4 p-5" : "mt-3 p-4")}>
+        <div className="flex min-h-11 items-center justify-between">
+          <p className="type-headline text-foreground">Esta semana</p>
+          <span className="inline-flex items-center gap-1 type-subhead font-semibold text-primary">Ver detalle<ChevronRight className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" /></span>
+        </div>
+        <div aria-hidden="true" className="mt-3 grid grid-cols-3 gap-1">
+          {DEMO_ROUTINE.map((session, index) => (
+            <span key={session.name} className="flex min-w-0 flex-col items-center gap-2">
+              <span className={cn("flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-semibold tabular-nums",
+                session.done ? "bg-primary text-primary-foreground" : index === nextIndex ? "border-2 border-primary text-primary" : "border border-foreground/25 text-muted-foreground")}>
+                {session.done ? <Check className="h-4 w-4" strokeWidth={3} /> : index + 1}
+              </span>
+              <span className={cn("max-w-full truncate text-[12px]", index === nextIndex ? "font-semibold text-foreground" : "text-muted-foreground")}>{session.name}</span>
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div className={wide ? "mt-4" : "mt-3"}>
+        <PhoneRow icon={<Apple className="h-[22px] w-[22px]" strokeWidth={1.75} />} title="Nutrición" detail="Proteína 150 g · carbohidratos y grasas" value="2.300 kcal" onClick={onNutrition} />
       </div>
     </div>
   );
