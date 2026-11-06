@@ -21,3 +21,31 @@ export const focusNextOnEnter = (nextId: string) => (e: KeyboardEvent<HTMLInputE
   e.preventDefault();
   document.getElementById(nextId)?.focus();
 };
+
+/**
+ * Los errores de Supabase Auth en el alta llegan en inglés («Password is known to be
+ * weak…», «Email rate limit exceeded»…); al usuario se le explican en español.
+ * Mismo criterio que el registro del iPhone (`CreateAccountView.signupMessage`).
+ */
+export const signupErrorMessage = (error: { message?: string; code?: string } | null | undefined): string => {
+  const text = `${error?.code ?? ""} ${error?.message ?? ""}`.toLowerCase();
+  if (text.includes("pwned") || text.includes("known to be weak") || text.includes("easy to guess")) {
+    return "Esa contraseña es demasiado común. Elige otra que no uses en otros sitios.";
+  }
+  if (text.includes("weak_password") || text.includes("password should") || text.includes("too weak") || text.includes("at least")) {
+    return "La contraseña es demasiado débil. Usa al menos 6 caracteres mezclando letras y números.";
+  }
+  if (text.includes("rate limit") || text.includes("too many") || text.includes("429")) {
+    return "Demasiados intentos seguidos. Espera un minuto y vuelve a intentarlo.";
+  }
+  if ((text.includes("invalid") && text.includes("email")) || text.includes("validate email") || text.includes("email_address_invalid")) {
+    return "Ese correo no parece válido. Revisa que tenga el formato nombre@dominio.com.";
+  }
+  if (text.includes("signup") && (text.includes("disabled") || text.includes("not allowed"))) {
+    return "Ahora mismo no se pueden crear cuentas. Inténtalo en unos minutos.";
+  }
+  if (text.includes("fetch") || text.includes("network")) {
+    return "No hemos podido crear tu cuenta. Comprueba tu conexión y vuelve a intentarlo.";
+  }
+  return "No hemos podido crear tu cuenta. Revisa el correo y la contraseña.";
+};
