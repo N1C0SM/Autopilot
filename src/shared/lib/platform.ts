@@ -69,5 +69,12 @@ export const isMacApp = (): boolean => {
   try { return typeof navigator !== "undefined" && navigator.userAgent.includes("AutopilotMac/"); } catch { return false; }
 };
 
+/**
+ * «Continuar con Google» solo en el navegador: Google rechaza su acceso dentro de
+ * WebViews (Capacitor y el envoltorio antiguo de Mac), y el iPhone nativo lo
+ * resuelve por su cuenta.
+ */
+export const googleSignInEnabled = (): boolean => !isNativeApp() && !isMacApp();
+
 /** Varias cuentas en el mismo dispositivo: solo en las apps nativas (iPhone, Android y Mac), no en la web. */
 export const supportsMultipleAccounts = (): boolean => isNativeApp() || isMacApp();

@@ -10,15 +10,17 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Camera, Eye, EyeOff, Gift, LockKeyhole, Mail, Sparkles, UserRound } from "lucide-react";
 import { AppleSignInButton } from "@/app/components/auth/AppleSignInButton";
+import { GoogleSignInButton } from "@/app/components/auth/GoogleSignInButton";
 import { AuthAppMark, AuthFieldGroup, AuthFieldNote, AuthFieldRow, AuthHero, AuthImage, AuthNotice } from "@/app/components/auth/AuthScreenParts";
 import { authFieldInputClass, authSecondaryActionClass, focusNextOnEnter, hideWithKeyboardClass, signupErrorMessage } from "@/app/components/auth/authFormHelpers";
 import { useAuth } from "@/shared/contexts/AuthContext";
 import { track } from "@/shared/lib/analytics";
-import { postVerificationPath, readSignupEmail, readVerifyContext, saveSignupEmail, saveVerifyContext } from "@/shared/lib/signupVerification";
+import { postVerificationPath, postVerifyDestination, readSignupEmail, readVerifyContext, saveSignupEmail, saveVerifyContext } from "@/shared/lib/signupVerification";
 import { signInWithApple } from "@/shared/lib/nativeAuth";
 import { usePlanAvailability } from "@/shared/lib/planCatalog";
 import { readAnonScanId } from "@/shared/lib/scanAttribution";
-import { appleSignInEnabled } from "@/shared/lib/platform";
+import { appleSignInEnabled, googleSignInEnabled } from "@/shared/lib/platform";
+import { readConfiguratorDraft } from "@/shared/lib/configuratorDraft";
 import { hapticNotify, hapticSelection, hapticTap } from "@/shared/lib/native";
 import { cn } from "@/shared/lib/utils";
 import { acquisitionMetadata } from "@/shared/lib/acquisition";
@@ -194,6 +196,16 @@ const Signup = () => {
           isFree || fromQuiz ? "Crear cuenta gratis" : "Crear cuenta"
         )}
       </Button>
+      {googleSignInEnabled() && (
+        // Google ya verifica el correo: vuelve directo a donde llevaría el código,
+        // y con el cuestionario hecho guarda el plan sin reenseñar el último paso.
+        <GoogleSignInButton
+          destination={() => postVerifyDestination(
+            postVerificationPath(nextParam ?? (fromQuiz ? "/onboarding" : null), fromScan),
+            Boolean(readConfiguratorDraft()),
+          )}
+        />
+      )}
       {appleSignInEnabled() && (
         <AppleSignInButton
           label="sign-up"

@@ -19,7 +19,11 @@ vi.mock("@/shared/integrations/supabase/client", () => ({
 }));
 vi.mock("@/shared/lib/planCatalog", () => ({ usePlanAvailability: () => ({ coach: false }) }));
 vi.mock("@/shared/lib/analytics", () => ({ track: vi.fn() }));
-vi.mock("@/shared/lib/nativeAuth", () => ({ signInWithApple: vi.fn() }));
+const signInWithGoogle = vi.fn();
+vi.mock("@/shared/lib/nativeAuth", () => ({
+  signInWithApple: vi.fn(),
+  signInWithGoogle: (...args: unknown[]) => signInWithGoogle(...args),
+}));
 vi.mock("@/shared/lib/scanAttribution", () => ({ readAnonScanId: () => null }));
 vi.mock("@/shared/lib/native", () => ({
   hapticTap: vi.fn(),
@@ -46,6 +50,8 @@ beforeEach(() => {
   signUp.mockReset();
   hapticNotify.mockReset();
   sessionStorage.clear();
+  localStorage.clear();
+  signInWithGoogle.mockReset().mockResolvedValue({ error: null });
 });
 
 afterEach(cleanup);
@@ -127,6 +133,29 @@ describe("signup", () => {
     saveVerifyContext({ email: "ana@example.test", next: "/onboarding-choice", fromScan: false });
     renderSignup();
     expect(await screen.findByTestId("verify-screen")).toBeInTheDocument();
+  });
+
+  it("«Continuar con Google» vuelve a donde llevaría el código y, con el cuestionario hecho, guarda el plan", () => {
+    renderSignup();
+    fireEvent.click(screen.getByRole("button", { name: "Continuar con Google" }));
+    expect(signInWithGoogle).toHaveBeenLastCalledWith("/onboarding-choice");
+
+    cleanup();
+    localStorage.setItem("autopilot_config", JSON.stringify({ data: { goal: "muscle" }, createdAt: Date.now() }));
+    renderSignup("/signup?from=quiz");
+    fireEvent.click(screen.getByRole("button", { name: "Continuar con Google" }));
+    expect(signInWithGoogle).toHaveBeenLastCalledWith("/onboarding?guardar=1");
+  });
+
+  it("no ofrece Google dentro de las apps empaquetadas", () => {
+    const original = window.location.href;
+    window.history.replaceState({}, "", "/signup?native=1");
+    try {
+      renderSignup();
+      expect(screen.queryByRole("button", { name: "Continuar con Google" })).not.toBeInTheDocument();
+    } finally {
+      window.history.replaceState({}, "", original);
+    }
   });
 
 });
