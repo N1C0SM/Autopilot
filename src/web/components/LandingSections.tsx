@@ -1,4 +1,6 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { supabase } from "@/shared/integrations/supabase/client";
+import { storeLinksComplete, type StoreLinks } from "@/shared/lib/storeLinks";
 import { Link } from "react-router-dom";
 import { ArrowRight, Bell, Check, Play, Zap, Utensils, BarChart3, Layers, Target, TrendingUp, Infinity as InfinityIcon, ShieldCheck, Smartphone, Monitor, Gift, UserRound, House, Dumbbell, Apple, Flame, LogOut, PanelLeft, Settings } from "lucide-react";
 import { BrandMark } from "@/shared/components/ui/brand-mark";
@@ -52,10 +54,10 @@ export function LandingHero({ ctaRef }: { ctaRef: React.Ref<HTMLDivElement> }) {
   </section>;
 }
 
-function StoreButton({ to, small, big, children }: { to: string; small: string; big: string; children: React.ReactNode }) {
-  return <Link to={to} className="inline-flex h-12 items-center gap-2.5 rounded-xl border border-foreground/40 px-3.5 transition-colors hover:bg-foreground/5">
+function StoreButton({ href, small, big, children }: { href: string; small: string; big: string; children: React.ReactNode }) {
+  return <a href={href} target="_blank" rel="noopener noreferrer" aria-label={`${small} ${big}`} className="inline-flex h-12 items-center gap-2.5 rounded-xl border border-foreground/40 px-3.5 transition-colors hover:bg-foreground/5">
     {children}<span className="text-left leading-none"><span className="block text-[9px]">{small}</span><span className="mt-0.5 block text-[17px] font-semibold">{big}</span></span>
-  </Link>;
+  </a>;
 }
 
 /** Lienzo a tamaño real reducido al ancho de su caja: el portátil y el móvil son la app tal cual, en pequeño. */
@@ -129,6 +131,18 @@ function DevicesMockup() {
 }
 
 export function LandingExperience() {
+  const [links, setLinks] = useState<StoreLinks | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void supabase.rpc("get_public_settings").then(({ data, error }) => {
+      if (!alive || error) return;
+      const row = Array.isArray(data) ? data[0] : data;
+      if (row) setLinks({ ios: row.app_store_url ?? "", android: row.play_store_url ?? "", mac: row.mac_app_store_url ?? "" });
+    });
+    return () => { alive = false; };
+  }, []);
+  // Sin los tres enlaces de tienda (iPhone, Android y Mac) la sección no se muestra.
+  if (!links || !storeLinksComplete(links)) return null;
   return <section aria-labelledby="exp-t" className="px-5 pb-0 pt-8 sm:px-8">
     <div className="mx-auto grid max-w-6xl items-end gap-10 lg:grid-cols-[1fr_1fr]">
       <div className="pb-6">
@@ -136,9 +150,9 @@ export function LandingExperience() {
         <h2 id="exp-t" className="mt-3 text-[30px] font-bold leading-[1.15] tracking-[-0.015em] sm:text-[36px]">Todo tu progreso,<br />en todos tus dispositivos.</h2>
         <p className="mt-4 max-w-[400px] text-[16px] leading-[22px] text-foreground/85">Entrena, planifica tu nutrición y sigue tu evolución donde quieras. Una experiencia fluida, sincronizada y pensada para ti.</p>
         <div className="mt-6 flex flex-wrap gap-3">
-          <StoreButton to="/app" small="Descargar en" big="App Store"><Apple className="h-6 w-6 fill-current" /></StoreButton>
-          <StoreButton to="/app" small="DISPONIBLE EN" big="Google Play"><Play className="h-5 w-5 fill-primary text-primary" /></StoreButton>
-          <StoreButton to="/app" small="Disponible en" big="Mac"><Monitor className="h-6 w-6" /></StoreButton>
+          <StoreButton href={links.ios.trim()} small="Descargar en" big="App Store"><Apple className="h-6 w-6 fill-current" /></StoreButton>
+          <StoreButton href={links.android.trim()} small="DISPONIBLE EN" big="Google Play"><Play className="h-5 w-5 fill-primary text-primary" /></StoreButton>
+          <StoreButton href={links.mac.trim()} small="Disponible en" big="Mac"><Monitor className="h-6 w-6" /></StoreButton>
         </div>
         <p className="mt-5 flex flex-wrap items-center gap-2 text-[13px] text-foreground/85"><Smartphone className="h-4 w-4" />iPhone · <Smartphone className="h-4 w-4" />Android · <Monitor className="h-4 w-4" />Mac</p>
       </div>

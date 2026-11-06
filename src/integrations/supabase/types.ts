@@ -1850,6 +1850,7 @@ export type Database = {
           id: string
           landing_ebooks_count: number
           landing_recommendations_count: number
+          mac_app_store_url: string
           payment_link_full_live: string | null
           payment_link_full_test: string | null
           payment_link_live: string | null
@@ -1904,6 +1905,7 @@ export type Database = {
           id?: string
           landing_ebooks_count?: number
           landing_recommendations_count?: number
+          mac_app_store_url?: string
           payment_link_full_live?: string | null
           payment_link_full_test?: string | null
           payment_link_live?: string | null
@@ -1958,6 +1960,7 @@ export type Database = {
           id?: string
           landing_ebooks_count?: number
           landing_recommendations_count?: number
+          mac_app_store_url?: string
           payment_link_full_live?: string | null
           payment_link_full_test?: string | null
           payment_link_live?: string | null
@@ -2759,6 +2762,7 @@ export type Database = {
           hero_video_url: string
           landing_ebooks_count: number
           landing_recommendations_count: number
+          mac_app_store_url: string
           play_store_url: string
           recommendations: Json
           show_app_download: boolean

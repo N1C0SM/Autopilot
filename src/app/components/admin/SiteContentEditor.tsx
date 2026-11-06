@@ -104,7 +104,7 @@ const SiteContentEditor = () => {
   const [saving, setSaving] = useState(false);
   const [trainer, setTrainer] = useState({ trainer_name: "", trainer_photo_url: "", trainer_bio: "", contact_phone: "" });
   const [hero, setHero] = useState({ hero_video_url: "", hero_video_poster_url: "" });
-  const [stores, setStores] = useState({ app_store_url: "", play_store_url: "" });
+  const [stores, setStores] = useState({ app_store_url: "", play_store_url: "", mac_app_store_url: "" });
   const [showAppDownload, setShowAppDownload] = useState(true);
   const [transformationSlots, setTransformationSlots] = useState(10);
   const [videoUploading, setVideoUploading] = useState(false);
@@ -174,7 +174,7 @@ const SiteContentEditor = () => {
   const load = async () => {
     setLoading(true);
     const [{ data: s }, { data: t }] = await Promise.all([
-      supabase.from("settings").select("id, trainer_name, trainer_photo_url, trainer_bio, contact_phone, hero_video_url, hero_video_poster_url, app_store_url, play_store_url, show_app_download, transformation_slots, show_blog, show_ebooks, show_recommendations, ebooks, recommendations, guide_ebook_url, landing_ebooks_count, landing_recommendations_count").limit(1).maybeSingle(),
+      supabase.from("settings").select("id, trainer_name, trainer_photo_url, trainer_bio, contact_phone, hero_video_url, hero_video_poster_url, app_store_url, play_store_url, mac_app_store_url, show_app_download, transformation_slots, show_blog, show_ebooks, show_recommendations, ebooks, recommendations, guide_ebook_url, landing_ebooks_count, landing_recommendations_count").limit(1).maybeSingle(),
       supabase.from("site_testimonials").select("*").order("sort_order"),
     ]);
     if (s) {
@@ -192,6 +192,7 @@ const SiteContentEditor = () => {
       setStores({
         app_store_url: s.app_store_url || "",
         play_store_url: s.play_store_url || "",
+        mac_app_store_url: s.mac_app_store_url || "",
       });
       setShowAppDownload(s.show_app_download ?? true);
       setTransformationSlots(Math.max(0, Number(s.transformation_slots ?? 10)));
@@ -341,9 +342,10 @@ const SiteContentEditor = () => {
     const clean = {
       app_store_url: stores.app_store_url.trim(),
       play_store_url: stores.play_store_url.trim(),
+      mac_app_store_url: stores.mac_app_store_url.trim(),
     };
     const isValid = (u: string) => !u || /^https?:\/\//i.test(u);
-    if (!isValid(clean.app_store_url) || !isValid(clean.play_store_url)) {
+    if (!isValid(clean.app_store_url) || !isValid(clean.play_store_url) || !isValid(clean.mac_app_store_url)) {
       toast.error("Las URLs deben empezar por http(s)://");
       setSaving(false);
       return;
@@ -877,6 +879,19 @@ const SiteContentEditor = () => {
               value={stores.play_store_url}
               onChange={(e) => setStores((s) => ({ ...s, play_store_url: e.target.value }))}
             />
+          </div>
+          <div>
+            <Label htmlFor="mac-app-store-url" className={FIELD_LABEL}>URL Mac App Store (macOS)</Label>
+            <Input
+              id="mac-app-store-url"
+              {...URL_INPUT}
+              enterKeyHint="done"
+              className={MONO_FIELD}
+              placeholder="https://apps.apple.com/app/id0000000000?platform=mac"
+              value={stores.mac_app_store_url}
+              onChange={(e) => setStores((s) => ({ ...s, mac_app_store_url: e.target.value }))}
+            />
+            <p className="type-footnote mt-1.5 text-muted-foreground">La sección «La experiencia» de la portada solo aparece cuando los tres enlaces (iPhone, Android y Mac) están puestos.</p>
           </div>
           <Button variant="tinted" className={saveButton} onClick={saveStores} disabled={saving}>
             {saving ? "Guardando…" : "Guardar enlaces"}

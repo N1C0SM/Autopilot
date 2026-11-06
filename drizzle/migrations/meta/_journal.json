@@ -134,6 +134,13 @@
       "when": 1793476344939,
       "tag": "0018_exercise_library",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1793986121752,
+      "tag": "0019_mac_app_store_url",
+      "breakpoints": true
     }
   ]
 }

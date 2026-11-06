@@ -1787,6 +1787,7 @@ export type Database = {
           id: string
           landing_ebooks_count: number
           landing_recommendations_count: number
+          mac_app_store_url: string
           payment_link_full_live: string | null
           payment_link_full_test: string | null
           payment_link_live: string | null
@@ -1841,6 +1842,7 @@ export type Database = {
           id?: string
           landing_ebooks_count?: number
           landing_recommendations_count?: number
+          mac_app_store_url?: string
           payment_link_full_live?: string | null
           payment_link_full_test?: string | null
           payment_link_live?: string | null
@@ -1895,6 +1897,7 @@ export type Database = {
           id?: string
           landing_ebooks_count?: number
           landing_recommendations_count?: number
+          mac_app_store_url?: string
           payment_link_full_live?: string | null
           payment_link_full_test?: string | null
           payment_link_live?: string | null
@@ -2607,6 +2610,7 @@ export type Database = {
           play_store_url: string
           recommendations: Json
           show_app_download: boolean
+          mac_app_store_url: string
           show_blog: boolean
           show_ebooks: boolean
           show_recommendations: boolean
