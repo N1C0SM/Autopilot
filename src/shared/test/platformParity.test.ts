@@ -361,6 +361,13 @@ describe("paridad web ↔ apps nativas", () => {
       expect(settingsWeb, id).toContain(`id="${id}"`);
     }
     expect(settingsApp).toContain("case perfil, datos, plan, entreno, contrasena, privacidad, legal, cuentas");
+    // Sin banner de Plus arriba del índice, en ninguna de las dos.
+    for (const src of [settingsWeb, settingsApp]) expect(src).not.toContain("Más análisis, nutrición y funciones.");
+    // Nutrición Gratis: misma cuenta, mismos macros. Sin plan legible, grasas al 25 % de las kcal y el resto en carbohidratos en las dos.
+    expect(read("src/shared/lib/nutrition.ts")).toContain("Math.round((kcal * 0.25) / 9)");
+    expect(read("native/Autopilot/Design/Components.swift")).toContain("(kcal * 0.25 / 9).rounded()");
+    expect(nutritionWeb).toContain("value: targets.carbs");
+    expect(nutritionWeb).toContain("value: targets.fats");
     expect(settingsApp).toContain(".navigationDestination(item: $openPage)");
     // Onboarding de ChatGPT: preguntas en negrita, opciones en tarjetas con icono y círculo de selección.
     const quizWeb = read("src/app/pages/Configurator.tsx");
