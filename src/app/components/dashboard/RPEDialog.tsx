@@ -65,7 +65,7 @@ const RPEDialog = ({ open, onConfirm }: Props) => {
         </DialogHeader>
 
         <div className="text-center" aria-live="polite">
-          <p className="type-figure text-[64px] font-bold leading-none tabular-nums">{rpe}</p>
+          <p className="type-figure text-[64px] font-bold leading-none tabular-nums text-primary">{rpe}</p>
           <p className="mt-2 type-headline text-primary">{RPE_LABELS[rpe]}</p>
         </div>
 

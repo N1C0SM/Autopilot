@@ -110,7 +110,7 @@ struct ScanShareCardView: View {
                 .font(.apFootnote)
                 .foregroundStyle(Palette.muted)
             Text(value)
-                .font(.apFigureSmall)
+                .font(.figure(size: 28))
                 .foregroundStyle(accent ? Palette.gold : Palette.foreground)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
