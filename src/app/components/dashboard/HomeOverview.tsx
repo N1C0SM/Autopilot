@@ -289,7 +289,7 @@ const HomeOverview = ({
   const sessionFocus = String(sessionTitle).includes(" · ") ? String(sessionTitle).split(" · ").slice(1).join(" · ") : "";
 
   return (
-    <div className="flex w-full flex-col pb-4 lg:grid lg:grid-cols-[minmax(0,1.55fr)_minmax(300px,1fr)] lg:grid-rows-[auto_auto_1fr] lg:items-start lg:gap-x-10 xl:gap-x-14">
+    <div className="flex w-full flex-col pb-4 lg:grid lg:grid-cols-[minmax(0,1.55fr)_minmax(300px,1fr)] lg:items-start lg:gap-x-10 xl:gap-x-14">
       {/* Cabecera del rediseño (ChatGPT): «Hoy» grande y el saludo en gris */}
       <header className="lg:col-span-2">
         <h2 data-nav-title className="type-large-title leading-tight text-foreground sm:text-[44px] sm:leading-[48px]">Hoy</h2>
@@ -308,7 +308,7 @@ const HomeOverview = ({
       </header>
 
       {/* Siguiente sesión de la rutina: la que toca hoy, sea el día que sea */}
-      <section className="mt-6 lg:row-span-2 lg:mt-8" aria-label="Tu siguiente sesión">
+      <section className="mt-6 lg:col-start-1 lg:row-start-2 lg:mt-8" aria-label="Tu siguiente sesión">
         {activeWorkout && activeWorkoutIsToday ? (
           <div className="rounded-2xl bg-card p-4">
             <p className="text-[13px] font-medium text-primary">En curso</p>
@@ -416,7 +416,7 @@ const HomeOverview = ({
       </section>
 
       {/* Rediseño (ChatGPT): «Tu progreso» y «Tu plan» en tarjetas con icono dorado y chevron */}
-      <ul data-home-rows className="mt-3 space-y-3 lg:mt-4">
+      <ul data-home-rows className="mt-3 space-y-3 lg:col-start-2 lg:row-start-2 lg:mt-8">
         <li>
           <HomeRow
             icon={<BarChart3 className="h-[22px] w-[22px]" strokeWidth={1.75} />}
@@ -438,7 +438,7 @@ const HomeOverview = ({
       </ul>
 
       {/* Semana compacta: una marca por sesión de la rutina, sin días de la semana */}
-      <section className="mt-3 rounded-[22px] border border-border bg-card p-4 lg:mt-4 lg:p-5" aria-label={`Esta semana: ${sessionCount} de ${sessions.length} sesiones`}>
+      <section className="mt-3 rounded-[22px] border border-border bg-card p-4 lg:col-start-2 lg:row-start-3 lg:mt-4 lg:p-5" aria-label={`Esta semana: ${sessionCount} de ${sessions.length} sesiones`}>
         <div className="flex items-center justify-between">
           <p className="type-headline text-foreground">Esta semana</p>
           <button
@@ -475,7 +475,7 @@ const HomeOverview = ({
       </section>
 
       {/* Nutrición en su tarjeta: kcal del día o, sin plan, la insignia Plus */}
-      <div className="mt-3 lg:mt-4">
+      <div className="mt-3 lg:col-start-1 lg:row-start-3 lg:mt-4">
         <HomeRow
           icon={nutrition ? <Apple className="h-[22px] w-[22px]" strokeWidth={1.75} /> : <LockKeyhole className="h-5 w-5" strokeWidth={1.75} />}
           locked={!nutrition}
