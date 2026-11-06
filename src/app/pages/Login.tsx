@@ -14,9 +14,10 @@ import { toast } from "sonner";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { signInWithApple } from "@/shared/lib/nativeAuth";
 import { AppleSignInButton } from "@/app/components/auth/AppleSignInButton";
+import { GoogleSignInButton } from "@/app/components/auth/GoogleSignInButton";
 import { AuthAppMark, AuthFieldGroup, AuthFieldNote, AuthFieldRow, AuthHero, AuthImage } from "@/app/components/auth/AuthScreenParts";
 import { authFieldInputClass, authSecondaryActionClass, focusNextOnEnter, hideWithKeyboardClass } from "@/app/components/auth/authFormHelpers";
-import { appleSignInEnabled, supportsMultipleAccounts } from "@/shared/lib/platform";
+import { appleSignInEnabled, googleSignInEnabled, supportsMultipleAccounts } from "@/shared/lib/platform";
 import { hapticNotify, hapticSelection, hapticTap } from "@/shared/lib/native";
 import { clearVerifyContext, saveSignupEmail, saveVerifyContext } from "@/shared/lib/signupVerification";
 import { cn } from "@/shared/lib/utils";
@@ -146,6 +147,7 @@ const Login = () => {
       >
         {loading ? <><Spinner size="sm" className="text-primary-foreground" aria-hidden="true" /> Iniciando sesión…</> : "Iniciar sesión"}
       </Button>
+      {googleSignInEnabled() && <GoogleSignInButton destination={() => nextPath || "/dashboard"} />}
       {appleSignInEnabled() && <AppleSignInButton label="sign-in" onClick={handleApple} />}
       <div className={hideWithKeyboardClass}>
         <p className="flex flex-wrap items-center justify-center gap-x-1.5 type-subhead text-muted-foreground">

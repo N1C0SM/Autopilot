@@ -39,3 +39,19 @@ export async function signInWithApple(next = "/dashboard"): Promise<{ error: Err
   }
   return { error: null };
 }
+
+/**
+ * "Continuar con Google" (solo web): mismo flujo gestionado por Lovable Cloud que
+ * Apple en la web. Google bloquea su acceso dentro de WebViews, por eso las apps
+ * empaquetadas no lo muestran (`googleSignInEnabled`).
+ */
+export async function signInWithGoogle(next = "/dashboard"): Promise<{ error: Error | null }> {
+  try {
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: `${window.location.origin}${next}`,
+    });
+    return { error: (result.error as Error) ?? null };
+  } catch (e) {
+    return { error: e instanceof Error ? e : new Error(String(e)) };
+  }
+}

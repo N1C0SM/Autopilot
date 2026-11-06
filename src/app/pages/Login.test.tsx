@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { HelmetProvider } from "react-helmet-async";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -21,7 +21,11 @@ vi.mock("@/shared/integrations/supabase/client", () => ({
   },
 }));
 
-vi.mock("@/shared/lib/nativeAuth", () => ({ signInWithApple: vi.fn() }));
+const signInWithGoogle = vi.fn();
+vi.mock("@/shared/lib/nativeAuth", () => ({
+  signInWithApple: vi.fn(),
+  signInWithGoogle: (...args: unknown[]) => signInWithGoogle(...args),
+}));
 
 vi.mock("@/shared/lib/native", () => ({
   hapticTap: vi.fn(),
@@ -44,6 +48,7 @@ beforeEach(() => {
   localStorage.clear();
   signIn.mockReset();
   hapticNotify.mockReset();
+  signInWithGoogle.mockReset().mockResolvedValue({ error: null });
 });
 
 afterEach(cleanup);
@@ -105,6 +110,30 @@ describe("login", () => {
       fromScan: false,
     });
     expect(readSignupEmail()).toBe("ana@example.test");
+  });
+
+  it("«Continuar con Google» vuelve al panel, o al destino pedido, y se libera si falla", async () => {
+    renderLogin();
+    const google = screen.getByRole("button", { name: "Continuar con Google" });
+    expect(google).toHaveAttribute("type", "button");
+    fireEvent.click(google);
+    expect(signInWithGoogle).toHaveBeenCalledWith("/dashboard");
+    expect(google).toBeDisabled();
+
+    cleanup();
+    signInWithGoogle.mockReset().mockResolvedValue({ error: new Error("popup") });
+    render(
+      <HelmetProvider>
+        <MemoryRouter initialEntries={["/login?next=/progreso"]}>
+          <Login />
+        </MemoryRouter>
+      </HelmetProvider>,
+    );
+    const retry = screen.getByRole("button", { name: "Continuar con Google" });
+    fireEvent.click(retry);
+    expect(signInWithGoogle).toHaveBeenCalledWith("/progreso");
+    await waitFor(() => expect(retry).toBeEnabled());
+    expect(hapticNotify).toHaveBeenCalledWith("error");
   });
 
 });
