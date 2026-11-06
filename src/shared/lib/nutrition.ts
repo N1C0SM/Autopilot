@@ -7,6 +7,9 @@ export {
 export interface NutritionPreview {
   calories: number | null;
   protein: number | null;
+  /** Del plan guardado o, sin él (Gratis: la RLS no deja leer el plan), grasas al 25 % de las kcal y el resto en carbohidratos, como `MacroEstimate` del nativo. */
+  carbs: number | null;
+  fats: number | null;
   hasWeight: boolean;
 }
 
@@ -23,7 +26,7 @@ export function resolveNutritionPreview({
   
   // Validación estricta del peso
   if (!Number.isFinite(parsedWeight) || parsedWeight <= 30 || parsedWeight > 300) {
-    return { calories: null, protein: null, hasWeight: false };
+    return { calories: null, protein: null, carbs: null, fats: null, hasWeight: false };
   }
 
   // Si el plan ya tiene macros guardados, se muestran esos: así Nutrición y el plan coinciden.
@@ -40,6 +43,8 @@ export function resolveNutritionPreview({
       return {
         calories: Math.round(calculatedKcal),
         protein: Math.round(p),
+        carbs: Math.round(c),
+        fats: Math.round(f),
         hasWeight: true,
       };
     }
@@ -53,9 +58,14 @@ export function resolveNutritionPreview({
       ? Math.round(base + 300)
       : Math.round(base);
 
+  const kcal = Math.max(1200, calories); // Mínimo saludable
+  const protein = Math.round(parsedWeight * 2);
+  const fats = Math.round((kcal * 0.25) / 9);
   return {
-    calories: Math.max(1200, calories), // Mínimo saludable
-    protein: Math.round(parsedWeight * 2),
+    calories: kcal,
+    protein,
+    carbs: Math.max(0, Math.round((kcal - protein * 4 - fats * 9) / 4)),
+    fats,
     hasWeight: true,
   };
 }
