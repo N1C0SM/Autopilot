@@ -36,7 +36,7 @@ vi.mock("@/app/components/dashboard/RPEDialog", () => ({
   ) : null,
 }));
 const plan = (day: string, name: string): DayPlan => ({ day, type: "gimnasio", routine_name: name, exercises: [{ exercise_id: name, name, series: 1, reps: 8, weight: "20", rest: "60 s" }] });
-const week = "Elige el día de la semana";
+const week = "Elige la sesión";
 beforeEach(() => {
   localStorage.clear();
   vi.clearAllMocks(); mocks.writes = []; mocks.completedDays = []; mocks.saveFails = false;
@@ -45,7 +45,7 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); });
 
-describe("routine week navigation and saved session dates", () => {
+describe("routine navigation and saved session dates", () => {
   it("recovers edited sets and the virtual free plan after unmounting", async () => {
     const freePlan = plan("Lunes", "Remo libre");
     const first = render(<WorkoutTracker userId="user" dayPlans={[freePlan]} initialDay="Lunes" />);
@@ -69,10 +69,28 @@ describe("routine week navigation and saved session dates", () => {
     fireEvent(document, new Event("visibilitychange"));
     await waitFor(() => expect(screen.queryByRole("timer")).not.toBeInTheDocument());
   });
+  it("pausa la sesión: congela tiempo y descanso, la guarda en el borrador y al reanudar sigue donde estaba", async () => {
+    render(<WorkoutTracker userId="user" dayPlans={[plan("Lunes", "Remo")]} initialDay="Lunes" />);
+    fireEvent.click(await screen.findByRole("button", { name: "Empezar entrenamiento" }));
+    fireEvent.click(screen.getByRole("button", { name: "Marcar serie 1 de Remo" }));
+    vi.setSystemTime(new Date("2026-10-04T12:00:10"));
+    fireEvent.click(screen.getByRole("button", { name: "Pausar" }));
+    expect(readActiveWorkout("user")?.pausedAt).toBe(new Date("2026-10-04T12:00:10").getTime());
+    const frozen = screen.getByRole("timer").textContent;
+    vi.setSystemTime(new Date("2026-10-04T12:05:00"));
+    fireEvent(document, new Event("visibilitychange"));
+    expect(screen.getByRole("timer").textContent).toBe(frozen);
+    expect(screen.getByText("En pausa")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Reanudar" }));
+    expect(readActiveWorkout("user")?.pausedAt).toBeNull();
+    expect(screen.getByRole("timer").textContent).toBe(frozen);
+    expect(screen.getByLabelText("Tiempo de sesión")).toHaveTextContent("00:10");
+  });
   it("keeps either view on the same set log and adds one working set", async () => {
     render(<WorkoutTracker userId="user" dayPlans={[{ ...plan("Lunes", "Remo"), exercises: [...(plan("Lunes", "Remo").exercises || []), ...(plan("Lunes", "Press").exercises || [])] }]} initialDay="Lunes" />);
     fireEvent.click(await screen.findByRole("button", { name: "Empezar entrenamiento" }));
-    fireEvent.click(screen.getByRole("button", { name: "Añadir serie" }));
+    // La lista abre todos los ejercicios: el primero «Añadir serie» es el de Remo.
+    fireEvent.click(screen.getAllByRole("button", { name: "Añadir serie" })[0]);
     expect(readActiveWorkout("user")?.logs.Remo).toHaveLength(2);
     act(() => { setWorkoutView("user", "focus"); });
     expect(readActiveWorkout("user")?.logs.Remo).toHaveLength(2);
@@ -87,23 +105,21 @@ describe("routine week navigation and saved session dates", () => {
     // las filas de series fuera de la pantalla.
     expect(screen.getAllByLabelText("Desliza para cambiar de ejercicio")).toHaveLength(1);
   });
-  it("opens the next routine when today has no session, without a rest screen", async () => {
-    render(<WorkoutTracker userId="user" dayPlans={[plan("Lunes", "Sentadilla")]} />);
-    // El domingo no entrena: se abre el lunes, la siguiente sesión, y ningún día sin sesión
-    // es seleccionable.
-    expect(screen.getByRole("tab", { name: "Domingo · sin sesión · hoy" })).toBeDisabled();
-    expect(screen.getByRole("tab", { name: "Lunes" })).toHaveAttribute("aria-selected", "true");
-    expect(screen.queryByText(/descanso/i)).not.toBeInTheDocument();
-    expect(screen.getAllByRole("tab")).toHaveLength(7);
+  it("opens the first session of the routine, without weekdays or a rest screen", async () => {
+    render(<WorkoutTracker userId="user" dayPlans={[plan("Lunes", "Sentadilla"), plan("Jueves", "Press banca")]} />);
+    // Domingo y sin sesión pedida: se abre la primera de la rutina. Solo hay sesiones, en orden.
+    expect(screen.getByRole("tab", { name: "Sesión 1: Sentadilla" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "Sesión 2: Press banca" })).toBeEnabled();
+    expect(screen.getAllByRole("tab")).toHaveLength(2);
+    expect(screen.queryByText(/descanso|domingo|lunes/i)).not.toBeInTheDocument();
     expect(await screen.findByRole("button", { name: "Empezar entrenamiento" })).toBeVisible();
-    expect(screen.getByText(/Se registra hoy/)).toHaveTextContent("4 de octubre");
+    expect(screen.queryByText(/Se registra hoy/)).not.toBeInTheDocument();
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 850)); });
     expect(mocks.writes).toHaveLength(0);
   });
-  it("saves a Friday routine on the actual Sunday and prevents switching during the session", async () => {
-    render(<WorkoutTracker userId="user" dayPlans={[plan("Viernes", "Press banca")]} />);
-    // El viernes es la siguiente sesión desde el domingo: se abre directamente.
-    expect(screen.getByRole("tab", { name: "Viernes" })).toHaveAttribute("aria-selected", "true");
+  it("saves any session on the actual date and prevents switching during the session", async () => {
+    render(<WorkoutTracker userId="user" dayPlans={[plan("Lunes", "Sentadilla"), plan("Viernes", "Press banca")]} initialDay="Viernes" />);
+    expect(screen.getByRole("tab", { name: "Sesión 2: Press banca" })).toHaveAttribute("aria-selected", "true");
     expect(screen.queryByText(/descanso/i)).not.toBeInTheDocument();
     fireEvent.click(await screen.findByRole("button", { name: "Empezar entrenamiento" }));
     expect(screen.queryByRole("tablist", { name: week })).not.toBeInTheDocument();
@@ -111,9 +127,7 @@ describe("routine week navigation and saved session dates", () => {
     fireEvent.click(screen.getByRole("button", { name: "Salir" }));
     await waitFor(() => expect(screen.getByRole("tablist", { name: week })).toBeVisible());
     expect(mocks.writes).toEqual([{ table: "workout_logs", rows: [expect.objectContaining({ day_label: "Viernes", logged_at: "2026-10-04", exercise_name: "Press banca", sets_completed: [expect.objectContaining({ weight: "35" })] })] }]);
-    // El domingo no tiene sesión y está desactivado: no se puede navegar a él.
-    expect(screen.getByRole("tab", { name: /Domingo/ })).toBeDisabled();
-    expect(screen.getByRole("tab", { name: "Viernes" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "Sesión 2: Press banca" })).toHaveAttribute("aria-selected", "true");
     expect(screen.queryByText(/descanso/i)).not.toBeInTheDocument();
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 850)); });
     expect(mocks.writes).toHaveLength(1);
@@ -127,13 +141,13 @@ describe("routine week navigation and saved session dates", () => {
     expect(screen.queryByRole("tablist", { name: week })).not.toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole("textbox", { name: "Peso de la serie 1 de Sentadilla" })).toBeVisible());
   });
-  it("completes an off-schedule routine on today's date and returns to the week", async () => {
+  it("completes a session on today's date whatever its place in the routine", async () => {
     const onSessionModeChange = vi.fn();
-    render(<WorkoutTracker userId="user" dayPlans={[plan("Viernes", "Press banca")]} initialDay="Viernes" onSessionModeChange={onSessionModeChange} />);
+    render(<WorkoutTracker userId="user" dayPlans={[plan("Lunes", "Sentadilla"), plan("Viernes", "Press banca")]} initialDay="Viernes" onSessionModeChange={onSessionModeChange} />);
     fireEvent.click(await screen.findByRole("button", { name: "Empezar entrenamiento" }));
     fireEvent.click(screen.getByRole("button", { name: "Marcar serie 1 de Press banca" }));
     expect(hapticImpact).toHaveBeenCalledWith("medium");
-    fireEvent.click(screen.getByRole("button", { name: "Terminar entrenamiento" }));
+    fireEvent.click(screen.getByRole("button", { name: "Finalizar" }));
     // El cierre pasa por el RPE: se puede omitir con este botón.
     fireEvent.click(await screen.findByRole("button", { name: "Completar sin valorar esfuerzo" }));
     fireEvent.click(await screen.findByRole("button", { name: "Cerrar resumen" }));
@@ -146,27 +160,25 @@ describe("routine week navigation and saved session dates", () => {
     mocks.completedDays = ["Lunes"];
     render(<WorkoutTracker userId="user" dayPlans={[plan("Lunes", "Sentadilla"), plan("Martes", "Dominadas")]} initialDay="Lunes" />);
     expect(await screen.findByText("Resumen guardado")).toBeVisible();
-    fireEvent.click(screen.getByRole("tab", { name: "Martes" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Sesión 2: Dominadas" }));
     expect(await screen.findByRole("button", { name: "Empezar entrenamiento" })).toBeVisible();
     expect(screen.getAllByText("Dominadas").length).toBeGreaterThan(0);
     expect(mocks.writes).toHaveLength(0);
   });
-  it("today's CTA starts today's routine rather than the previously viewed one", async () => {
-    vi.setSystemTime(new Date("2026-10-07T12:00:00"));
+  it("Hoy's CTA starts the next session it asks for rather than the previously viewed one", async () => {
     const onAutoStartConsumed = vi.fn(); const dayPlans = [plan("Miércoles", "Sentadilla"), plan("Viernes", "Press banca")];
     const { rerender } = render(<WorkoutTracker userId="user" dayPlans={dayPlans} initialDay="Viernes" onAutoStartConsumed={onAutoStartConsumed} />);
     await screen.findByRole("button", { name: "Empezar entrenamiento" });
-    rerender(<WorkoutTracker userId="user" dayPlans={dayPlans} initialDay="Viernes" autoStart onAutoStartConsumed={onAutoStartConsumed} />);
+    rerender(<WorkoutTracker userId="user" dayPlans={dayPlans} initialDay="Miércoles" autoStart onAutoStartConsumed={onAutoStartConsumed} />);
     await waitFor(() => expect(screen.getByRole("textbox", { name: "Peso de la serie 1 de Sentadilla" })).toBeVisible());
     expect(screen.queryByRole("textbox", { name: "Peso de la serie 1 de Press banca" })).not.toBeInTheDocument();
     expect(onAutoStartConsumed).toHaveBeenCalled();
   });
-  it("never auto-starts another routine when today has no session", async () => {
+  it("never auto-starts a session nobody asked for", async () => {
     const onAutoStartConsumed = vi.fn();
-    render(<WorkoutTracker userId="user" dayPlans={[plan("Lunes", "Sentadilla")]} initialDay="Lunes" autoStart onAutoStartConsumed={onAutoStartConsumed} />);
+    render(<WorkoutTracker userId="user" dayPlans={[plan("Lunes", "Sentadilla")]} autoStart onAutoStartConsumed={onAutoStartConsumed} />);
     await waitFor(() => expect(onAutoStartConsumed).toHaveBeenCalled());
-    // Sin sesión hoy, Inicio no auto-arranca otra rutina ni abre un día de descanso.
-    expect(screen.getByRole("tab", { name: "Lunes" })).toHaveAttribute("aria-selected", "true");
+    // Sin sesión pedida, Inicio no auto-arranca ninguna ni abre un día de descanso.
     expect(screen.queryByText(/descanso/i)).not.toBeInTheDocument();
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
     expect(mocks.writes).toHaveLength(0);
@@ -200,7 +212,7 @@ describe("routine week navigation and saved session dates", () => {
     render(<WorkoutTracker userId="user" dayPlans={[twoSets]} initialDay="Viernes" />);
     fireEvent.click(await screen.findByRole("button", { name: "Empezar entrenamiento" }));
     fireEvent.click(screen.getByRole("button", { name: "Marcar serie 1 de Press banca" }));
-    fireEvent.click(screen.getByRole("button", { name: "Terminar entrenamiento" }));
+    fireEvent.click(screen.getByRole("button", { name: "Finalizar" }));
 
     expect(await screen.findByText("¿Terminar con series pendientes?")).toBeVisible();
     expect(mocks.writes.some((write) => write.table === "day_completions")).toBe(false);

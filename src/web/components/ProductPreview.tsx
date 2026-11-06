@@ -12,7 +12,7 @@ import { Input } from "@/shared/components/ui/input";
 import { ListGroup, ListRow } from "@/shared/components/ui/list";
 import { ProgressRing } from "@/shared/components/ui/progress-ring";
 import { Skeleton } from "@/shared/components/ui/skeleton";
-import { PhoneAppBar, PhoneFrame, PhoneHome, PhoneTabBar, PhoneWeek, demoWeek } from "@/web/components/PublicPhone";
+import { PhoneAppBar, PhoneFrame, PhoneHome, PhoneTabBar } from "@/web/components/PublicPhone";
 import { euro, usePlanAvailability } from "@/shared/lib/planCatalog";
 import { track } from "@/shared/lib/analytics";
 import { buildExerciseHistory } from "@/shared/lib/workoutMetrics";
@@ -207,7 +207,6 @@ function ProductPreviewContent({ onPlans, onFree }: { onPlans: () => void; onFre
   const changeView = (key: View) => { void hapticSelection(); setView(key); track("plan_preview_view", { source: "public_demo", section: key }); };
 
   const lastEntry = demoHistory[progressExercise][demoHistory[progressExercise].length - 1];
-  const week = demoWeek();
 
   return (
     <section id="ver-app" aria-labelledby="preview-heading" className="scroll-mt-24 px-5 py-14 sm:px-8 sm:py-20">
@@ -245,7 +244,7 @@ function ProductPreviewContent({ onPlans, onFree }: { onPlans: () => void; onFre
               <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-24 pt-2">
                 {view === "home" && <PhoneHome plans={plans} heading name={ownerFirst} onSession={() => changeView("training")} onNutrition={() => changeView("nutrition")} onProgress={() => changeView("progress")} />}
                 {view === "training" && <PublicTrainingScreen active />}
-                {view === "nutrition" && <PublicBasicNutrition />}
+                {view === "nutrition" && <PublicBasicNutrition plus={plans.plus} plusName={plans.plusName} />}
                 {view === "progress" && <PublicProgressScreen />}
               </div>
               {view !== "training" && <PhoneTabBar tabs={shownViews} active={view} onSelect={(key) => changeView(key as View)} />}

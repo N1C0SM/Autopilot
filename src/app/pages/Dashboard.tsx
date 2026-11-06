@@ -1,5 +1,7 @@
-import { BookOpen, Play, PencilLine } from "lucide-react";
+import { BookOpen, Play } from "lucide-react";
 import { generatePlanGuarded, isManualPlan } from "@/shared/lib/planShield";
+import { withSessionIdentity } from "@/shared/lib/sessionIdentity";
+import type { Json } from "@/shared/integrations/supabase/types";
 import { DASHBOARD_CHAT_ENABLED } from "@/shared/lib/releaseScope";
 import { readActiveWorkout } from "@/shared/lib/activeWorkout";
 import { readScreen, writeScreen } from "@/shared/lib/screenCache";
@@ -106,6 +108,7 @@ interface DashboardSnapshot {
   macros: Macros | null;
   meals: Meal[];
   completedThisWeek: number;
+  completedDays?: string[];
   completedToday: boolean;
 }
 
@@ -177,6 +180,7 @@ const Dashboard = () => {
   // Tras un scan, «Físico» vuelve a pedir las fotos (como la app).
   const [photosVersion, setPhotosVersion] = useState(0);
   const [completedThisWeek, setCompletedThisWeek] = useState(cached?.completedThisWeek ?? 0);
+  const [completedDays, setCompletedDays] = useState<string[]>(cached?.completedDays ?? []);
   const [completedToday, setCompletedToday] = useState(cached?.completedToday ?? false);
   const [workoutMode, setWorkoutMode] = useState(false);
   const [autoStartWorkout, setAutoStartWorkout] = useState(false);
@@ -322,6 +326,7 @@ const Dashboard = () => {
               .filter((day): day is string => Boolean(day && scheduledDays.has(day))),
           );
           setCompletedThisWeek(days.size);
+          setCompletedDays([...days]);
         }
         if (np) {
           setMacros(parseMacroTargets(np.macros_json));
@@ -341,12 +346,12 @@ const Dashboard = () => {
     writeScreen<DashboardSnapshot>(user.id, "dashboard", {
       profileName, profileAvatar, planStatus, paymentStatus, coaching, consumerPlan,
       coachAssigned, nutrition, subscriptionTier, dayPlans, macros, meals,
-      completedThisWeek, completedToday,
+      completedThisWeek, completedDays, completedToday,
     });
   }, [
     user, loading, loadError, planStatus, paymentStatus, profileName, profileAvatar, coaching,
     consumerPlan, coachAssigned, nutrition, subscriptionTier, dayPlans, macros, meals,
-    completedThisWeek, completedToday,
+    completedThisWeek, completedDays, completedToday,
   ]);
 
   useEffect(() => {
@@ -572,7 +577,7 @@ const Dashboard = () => {
 
   const SECTION_HINTS: Record<MobileTab, string> = {
     home: "Tu entreno de hoy y lo que toca comer",
-    training: "Tu rutina de la semana. Marca las series al terminarlas",
+    training: "Tus sesiones en orden, el día que te venga bien",
     nutrition: "Tus macros y comidas del día",
     chat: "Habla con tu entrenador y envía fotos o vídeos",
     progress: "Fotos, peso y evolución semanal",
@@ -583,7 +588,7 @@ const Dashboard = () => {
   // Títulos de la barra en el móvil: cortos, los mismos que en la barra de pestañas.
   const MOBILE_TITLES: Record<MobileTab, string> = {
     home: "Hoy",
-    training: "Plan",
+    training: "Entrenar",
     nutrition: "Nutrición",
     chat: "Chat",
     progress: "Progreso",
@@ -680,9 +685,11 @@ const Dashboard = () => {
               }
               setSection(s as MobileTab);
             }}
-            onStartWorkout={() => {
+            onStartWorkout={(day) => {
               setResumeWorkout(false);
               setFreePlans(null);
+              // La siguiente sesión pendiente, no la del día de la semana.
+              setTrainingDay(day);
               setTrainingView("tracker");
               setAutoStartWorkout(true);
               setSection("training");
@@ -701,6 +708,7 @@ const Dashboard = () => {
             profileName={profileName}
             macros={nutrition ? macros : null}
             completedThisWeek={completedThisWeek}
+            completedDays={completedDays}
             completedToday={completedToday}
           />
           {!campaign && coaching && user && <RenewalFlow userId={user.id} subscriptionTier={subscriptionTier} />}
@@ -724,38 +732,57 @@ const Dashboard = () => {
         // Entrenar es la rutina semanal; el tracker solo se abre al empezar una sesión.
         <div className="w-full min-w-0">
           <Suspense fallback={<SectionFallback />}>
-              {/* Entrenar queda limpio: las herramientas de la rutina viven solo en «Rutina semanal». */}
-              {trainingView === "plan" && !workoutMode && !autoStartWorkout && (
-                // Herramientas de la rutina en su tarjeta: modo del plan a la izquierda, acciones en píldoras.
-                <div className="mb-3 flex w-full items-center gap-2 rounded-[22px] border border-foreground/[0.08] bg-card py-2 pl-5 pr-2">
-                  <span className="min-w-0 flex-1 truncate type-subhead font-medium">
-                    {isManualPlan(dayPlans) ? "Rutina personalizada" : "Piloto automático"}
-                  </span>
-                  <div className="flex shrink-0 items-center gap-1.5">
+              {trainingView === "plan" && !workoutMode && !autoStartWorkout ? (
+                <TrainingPlanView dayPlans={dayPlans} initialDay={planFocusDay} doneThisWeek={completedDays} tools={(
+                // Cabecera de la rutina, arriba: el modo en dorado, de dónde sale y sus acciones (sin cápsulas).
+                <div className="flex w-full items-center gap-3 rounded-[22px] bg-card py-3.5 pl-5 pr-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
+                      {isManualPlan(dayPlans) ? "Rutina personalizada" : "Piloto automático"}
+                    </p>
+                    <p className="mt-1 truncate type-subhead text-muted-foreground">
+                      {isManualPlan(dayPlans) ? "Creada por ti." : "Preparada por Autopilot."}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
                     {[
-                      { label: "Libre", aria: "Modo libre", Icon: Play, on: () => setFreeOpen(true) },
-                      { label: "Editar", aria: "Editar rutina", Icon: PencilLine, on: () => setEditorOpen(true) },
-                      // Biblioteca: en móvil solo el icono, para que el modo del plan no se corte.
-                      { label: "Ejercicios", aria: "Ejercicios", Icon: BookOpen, on: () => setLibraryOpen(true), compact: true },
-                    ].map(({ label, aria, Icon, on, compact }) => (
+                      { aria: "Modo libre", Icon: Play, on: () => setFreeOpen(true) },
+                      { aria: "Ejercicios", Icon: BookOpen, on: () => setLibraryOpen(true) },
+                    ].map(({ aria, Icon, on }) => (
                       <button
-                        key={label}
+                        key={aria}
                         type="button"
                         aria-label={aria}
                         onClick={() => { void hapticTap(); on(); }}
-                        className="flex h-9 items-center gap-1.5 rounded-full border border-foreground/20 bg-transparent px-3.5 text-[13px] font-medium text-foreground transition hover:bg-foreground/5 active:opacity-50"
+                        className="flex h-11 w-11 items-center justify-center rounded-full text-primary transition-opacity hover:bg-foreground/5 active:opacity-50"
                       >
-                        <Icon className="h-4 w-4 shrink-0" aria-hidden />
-                        <span className={compact ? "hidden sm:inline" : undefined}>{label}</span>
+                        <Icon className="h-5 w-5" strokeWidth={1.75} aria-hidden />
                       </button>
                     ))}
+                    <button
+                      type="button"
+                      aria-label="Editar rutina"
+                      onClick={() => { void hapticTap(); setEditorOpen(true); }}
+                      className="flex h-11 items-center rounded-full px-3 type-subhead font-semibold text-primary transition-opacity hover:bg-foreground/5 active:opacity-50"
+                    >
+                      Editar
+                    </button>
                   </div>
                 </div>
-              )}
-              {trainingView === "plan" && !workoutMode && !autoStartWorkout ? (
-                <TrainingPlanView dayPlans={dayPlans} initialDay={planFocusDay} onOpenWorkout={(day) => {
+                )} onOpenWorkout={(day) => {
                   setTrainingDay(day);
                   setTrainingView("tracker");
+                }} onPersonalize={async (day, identity) => {
+                  // Solo cambia el nombre y el icono de esa sesión; el modo del plan no cambia.
+                  const next = withSessionIdentity(dayPlans, day, identity);
+                  const { error } = await supabase.from("training_plan")
+                    .update({ workouts_json: next as unknown as Json, updated_at: new Date().toISOString() })
+                    .eq("user_id", user.id);
+                  if (error) { toast.error("No se pudo guardar. Inténtalo de nuevo."); return false; }
+                  void hapticTap();
+                  setDayPlans(next);
+                  try { localStorage.setItem(`autopilot_cached_routine_${user.id}`, JSON.stringify(next)); } catch { /* sin espacio */ }
+                  return true;
                 }} />
               ) : (
                 <WorkoutTracker
@@ -890,11 +917,13 @@ const Dashboard = () => {
           }}
           className="w-full min-w-0 space-y-4"
         >
-          <TabsList aria-label="Tu progreso" className="mx-auto mb-4 flex w-full max-w-md lg:max-w-lg">
-            <TabsTrigger value="evolution">Fuerza</TabsTrigger>
-            <TabsTrigger value="photos">Físico</TabsTrigger>
-            <TabsTrigger value="records">Récords</TabsTrigger>
-            <TabsTrigger value="scan">Scan</TabsTrigger>
+          {/* Subtítulo de la maqueta bajo el título grande; en escritorio la barra ya lleva su pista. */}
+          <p className="-mt-1 type-subhead text-muted-foreground md:hidden">Evolución de tu fuerza, tu físico y tus récords.</p>
+          {/* Control segmentado del rediseño: 44 px, fondo de tarjeta y la sección activa en dorado (igual que `SegmentedPill(gold:)` en nativo). */}
+          <TabsList aria-label="Tu progreso" className="mx-auto mb-4 flex h-11 w-full max-w-md border-0 bg-card lg:max-w-lg">
+            {([["evolution", "Fuerza"], ["photos", "Físico"], ["records", "Récords"], ["scan", "Scan"]] as const).map(([value, label]) => (
+              <TabsTrigger key={value} value={value} className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">{label}</TabsTrigger>
+            ))}
           </TabsList>
           {/* Deslizar a los lados cambia de sección, como las páginas nativas. */}
           <div
@@ -926,13 +955,13 @@ const Dashboard = () => {
               tabIndex={-1}
               className="mt-0 flex min-h-[420px] flex-col data-[state=inactive]:hidden lg:min-h-0 lg:h-[calc(100dvh-10rem)] md:h-[calc(100dvh-12rem)] md:overflow-hidden"
             >
-              <WorkoutProgress userId={user.id} compact />
+              <WorkoutProgress userId={user.id} compact onGoTrain={() => setSection("training")} />
             </TabsContent>
             <TabsContent value="photos" forceMount tabIndex={-1} className="mt-0 data-[state=inactive]:hidden">
               <ProgressPhotos key={photosVersion} userId={user.id} onGoScan={() => setProgressTab("scan")} />
             </TabsContent>
             <TabsContent value="records" forceMount tabIndex={-1} className="mt-0 data-[state=inactive]:hidden">
-              <PRsList userId={user.id} />
+              <PRsList userId={user.id} onGoTrain={() => setSection("training")} />
             </TabsContent>
             <TabsContent value="scan" tabIndex={-1} className="mt-0">
               {/* Igual que la app (iPhone/Mac): el scan público de la landing es otra pantalla. */}

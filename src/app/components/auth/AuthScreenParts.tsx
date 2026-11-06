@@ -1,4 +1,5 @@
 import { useState, type ComponentType, type ReactNode } from "react";
+import { BrandMark } from "@/shared/components/ui/brand-mark";
 import { cn } from "@/shared/lib/utils";
 
 /**
@@ -7,18 +8,11 @@ import { cn } from "@/shared/lib/utils";
  * arriba, campos en una lista agrupada y una sola acción dorada abajo.
  */
 
-/** El icono de la app: la misma silueta, tamaño y acabado que en la bienvenida. */
+/** Logo de la app: la «A» con rayo en dorado y la palabra AUTOPILOT debajo (igual en iPhone y Mac). */
 export const AuthAppMark = ({ className }: { className?: string }) => (
-  <div
-    className={cn(
-      "mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary",
-      className,
-    )}
-  >
-    <svg viewBox="0 0 100 100" aria-hidden="true" className="h-[52%] w-[52%] text-primary-foreground" fill="none">
-      <path d="M14 86 L50 14 L86 86" stroke="currentColor" strokeWidth="11" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M56 46 L36 66 L48 66 L44 86 L62 60 L50 60 L55 46 Z" fill="currentColor" />
-    </svg>
+  <div className={cn("mx-auto flex flex-col items-center", className)}>
+    <BrandMark size={44} />
+    <span className="mt-2.5 text-[20px] font-bold leading-none tracking-[0.06em] text-foreground">AUTOPILOT</span>
   </div>
 );
 
@@ -48,21 +42,23 @@ export const AuthImage = ({
   return <img src={src} alt={alt} className={className} loading="lazy" decoding="async" onError={() => setFailedSrc(src)} />;
 };
 
-/** Protagonista: símbolo, titular `type-title1` y una línea gris. */
+/** Protagonista: símbolo, titular `type-title1` y una línea gris. Sin `kicker` cuando el símbolo ya es el logo. */
 export const AuthHero = ({
   mark,
   title,
   description,
+  kicker = true,
   children,
 }: {
   mark: ReactNode;
   title: ReactNode;
   description?: ReactNode;
+  kicker?: boolean;
   children?: ReactNode;
 }) => (
   <div className="relative text-center">
     {/* Kicker — idéntico a la landing */}
-    <p className="kicker mb-6">AUTOPILOT</p>
+    {kicker ? <p className="kicker mb-6">AUTOPILOT</p> : null}
     {mark}
     {/* Titular — mismo tracking que la landing */}
     <h1 className="mt-6 text-[28px] font-bold leading-tight tracking-[-0.02em]">{title}</h1>
@@ -90,15 +86,17 @@ export const AuthFieldGroup = ({
   </div>
 );
 
-/** Una fila de la lista: etiqueta solo para lectores de pantalla, campo y control opcional. */
+/** Una fila de la lista: icono gris opcional, etiqueta solo para lectores de pantalla, campo y control opcional. */
 export const AuthFieldRow = ({
   label,
   htmlFor,
+  icon: Icon,
   trailing,
   children,
 }: {
   label: string;
   htmlFor: string;
+  icon?: IconComponent;
   trailing?: ReactNode;
   children: ReactNode;
 }) => (
@@ -106,7 +104,10 @@ export const AuthFieldRow = ({
     <label htmlFor={htmlFor} className="sr-only">
       {label}
     </label>
-    <div className="flex min-h-11 items-center">
+    <div className="flex min-h-14 items-center">
+      {Icon ? (
+        <Icon aria-hidden="true" strokeWidth={1.75} className="mr-3 h-5 w-5 shrink-0 text-muted-foreground transition-colors group-focus-within/field:text-primary" />
+      ) : null}
       {children}
       {trailing}
     </div>

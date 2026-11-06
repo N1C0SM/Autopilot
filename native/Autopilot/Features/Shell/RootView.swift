@@ -248,9 +248,9 @@ struct MainShell: View {
         .onChange(of: session.role) { _, _ in selection = nil; adminMenuOpen = false }
         .onReceive(NotificationCenter.default.publisher(for: .startTodayWorkout)) { _ in
             if session.role == .user && selection != .train {
+                // Entrenar abre el entreno nada más aparecer (con su rutina en caché), sin esperas fijas.
+                TrainView.pendingStart = true
                 selection = .train
-                // La pantalla Entrenar recoge el aviso cuando ya está en pantalla.
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { NotificationCenter.default.post(name: .startTodayWorkout, object: nil) }
             }
         }
     }
@@ -394,7 +394,15 @@ struct MainShell: View {
             .navigationSplitViewColumnWidth(min: 220, ideal: 250)
             #endif
         } detail: {
-            NavigationStack { SectionView(section: selection ?? defaultSection, onNavigate: { selection = $0 }) }
+            NavigationStack {
+                SectionView(section: selection ?? defaultSection, onNavigate: { selection = $0 })
+                    // La campana de la barra superior de la web (`Dashboard.tsx`), a la derecha.
+                    .toolbar {
+                        if session.role == .user {
+                            ToolbarItem(placement: .primaryAction) { NotificationsBell() }
+                        }
+                    }
+            }
                 // Negro de borde a borde, también bajo la barra de título de la ventana.
                 .background(Palette.background.ignoresSafeArea())
                 #if os(macOS)
@@ -438,8 +446,9 @@ struct SectionView: View {
         Group {
             switch section {
             case .home: HomeView(onNavigate: onNavigate)
-            case .train: TrainView()
-            case .progress: ProgressScreen()
+            // Con el usuario ya en el init: Entrenar pinta su rutina en caché en el primer fotograma.
+            case .train: TrainView(userId: session.userId)
+            case .progress: ProgressScreen(onNavigate: onNavigate)
             case .nutrition: NutritionView()
             case .scan: ScanView()
             case .settings, .account: AccountView()
@@ -503,7 +512,7 @@ extension AppSection {
     var deskHint: String? {
         switch self {
         case .home: "Tu entreno de hoy y lo que toca comer"
-        case .train: "Tu rutina de la semana. Marca las series al terminarlas"
+        case .train: "Tus sesiones en orden, el día que te venga bien"
         case .nutrition: "Tus macros y comidas del día"
         case .progress: "Fotos, peso y evolución semanal"
         case .settings: "Perfil, suscripción y notificaciones"

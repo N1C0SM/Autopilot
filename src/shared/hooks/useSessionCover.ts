@@ -61,6 +61,13 @@ function useAiCover(cacheKey: string, body: Record<string, unknown> | null, fall
   return shown ? fastImage(shown, 1000) : fallback;
 }
 
+/** Portada ya generada para esta sesión (solo caché, sin pedir una nueva); null si no la hay. */
+export function cachedSessionCover(exerciseIds: (string | undefined)[]): string | null {
+  const key = exerciseIds.filter((x): x is string => !!x).sort().join(",");
+  const url = key ? readStore()[`s:${key}`] : null;
+  return url ? fastImage(url, 1000) : null;
+}
+
 /** Portada de la sesión según sus músculos; mientras tanto, la foto del primer ejercicio. */
 export function useSessionCover(exerciseIds: (string | undefined)[], fallback: string | null) {
   const ids = exerciseIds.filter((x): x is string => !!x).sort();

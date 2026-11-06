@@ -55,6 +55,8 @@ struct DayPlan: Codable, Hashable, Identifiable {
     var muscle_focus: String?
     var exercises: [GymExercise]?
     var custom: Bool?
+    /// Emoji elegido para la sesión (si no hay, se ve su foto). `session_icon` en la web.
+    var session_icon: String?
     var id: String { day }
 
     var isGym: Bool { type == "gimnasio" }
@@ -133,6 +135,115 @@ enum DayNames {
     }
 }
 
+/// Orden de la rutina (como `routineOrder.ts` de la web). La clave `day` de cada sesión solo fija
+/// el ORDEN: cualquier sesión se hace cualquier día. `day_completions` guarda la sesión hecha
+/// (`day_label`) y el día real (`completed_at`), así que la siguiente sale de lo hecho esta semana.
+/// Nombre e icono de cada sesión: `sessionIdentity.ts` de la web. El nombre es `routine_name`
+/// y el icono `session_icon`; la sugerencia sale de los músculos de sus ejercicios (sin IA ni red).
+enum SessionIdentity {
+    static let emojis = ["💪", "🏋️", "🦵", "🔥", "⚡", "🎯", "🧱", "🦍", "🏃", "🚴", "🏊", "🧘", "🥊", "⛰️", "🏆", "⭐"]
+
+    private static let groups: [(String, String)] = [
+        ("full body", "full"), ("cuerpo completo", "full"), ("pecho", "chest"), ("espalda", "back"), ("dorsal", "back"), ("hombro", "shoulders"),
+        ("cuadriceps", "legs"), ("cuádriceps", "legs"), ("femoral", "legs"), ("isquio", "legs"), ("pierna", "legs"), ("gemelo", "legs"),
+        ("gluteo", "glutes"), ("glúteo", "glutes"), ("biceps", "arms"), ("bíceps", "arms"), ("triceps", "arms"), ("tríceps", "arms"),
+        ("brazo", "arms"), ("antebrazo", "arms"), ("core", "core"), ("abdom", "core"), ("lumbar", "core"),
+    ]
+    private static let order = ["chest", "back", "shoulders", "legs", "glutes", "arms", "core"]
+    private static let label = ["chest": "Pecho", "back": "Espalda", "shoulders": "Hombros", "legs": "Piernas", "glutes": "Glúteos", "arms": "Brazos", "core": "Core"]
+    private static let sports: [(String, String)] = [
+        ("corr", "🏃"), ("run", "🏃"), ("bici", "🚴"), ("cicl", "🚴"), ("spin", "🚴"), ("nata", "🏊"), ("swim", "🏊"),
+        ("yoga", "🧘"), ("pilates", "🧘"), ("movil", "🧘"), ("box", "🥊"), ("artes", "🥊"), ("hike", "⛰️"), ("sender", "⛰️"), ("montañ", "⛰️"),
+    ]
+
+    /// Grupos musculares en orden fijo; «full» si son cuatro o más (o lo dice el foco).
+    static func muscleGroups(_ plan: DayPlan) -> [String] {
+        var found = Set<String>()
+        let sources = [plan.muscle_focus] + (plan.exercises ?? []).map(\.muscle_group)
+        for source in sources {
+            let text = (source ?? "").lowercased()
+            for (key, group) in groups where text.contains(key) { found.insert(group) }
+        }
+        if found.contains("full") { return ["full"] }
+        let list = order.filter { found.contains($0) }
+        return list.count >= 4 ? ["full"] : list
+    }
+
+    /// Nombre sugerido: Empuje, Tirón, Pierna, Torso, Cuerpo completo o los dos grupos principales.
+    static func suggestedName(_ plan: DayPlan) -> String {
+        guard plan.isGym else { return plan.sport?.trimmingCharacters(in: .whitespaces).nilIfEmpty ?? "Actividad" }
+        let g = muscleGroups(plan)
+        let within = { (allowed: [String]) in g.allSatisfy { allowed.contains($0) } }
+        if g.isEmpty { return "Entreno" }
+        if g[0] == "full" { return "Cuerpo completo" }
+        if g.contains("chest") && within(["chest", "shoulders", "arms"]) { return g.count > 1 ? "Empuje" : "Pecho" }
+        if g.contains("back") && within(["back", "arms"]) { return g.count > 1 ? "Tirón" : "Espalda" }
+        if (g.contains("legs") || g.contains("glutes")) && within(["legs", "glutes", "core"]) { return "Pierna" }
+        if g.contains("chest") && g.contains("back") && within(["chest", "back", "shoulders", "arms"]) { return "Torso" }
+        let names = g.prefix(2).compactMap { label[$0] }
+        return names.count == 2 ? "\(names[0]) y \(names[1].lowercased())" : names[0]
+    }
+
+    /// Icono sugerido, a juego con el nombre sugerido.
+    static func suggestedIcon(_ plan: DayPlan) -> String {
+        guard plan.isGym else {
+            let sport = (plan.sport ?? "").lowercased()
+            return sports.first { sport.contains($0.0) }?.1 ?? "🔥"
+        }
+        switch suggestedName(plan) {
+        case "Cuerpo completo": return "⚡"
+        case "Pierna", "Piernas", "Glúteos": return "🦵"
+        case "Core": return "🎯"
+        case "Tirón", "Espalda": return "🦍"
+        case "Empuje", "Pecho", "Hombros": return "🏋️"
+        default: return "💪"
+        }
+    }
+
+    /// Solo un emoji corto; cualquier otro texto se ignora (igual que `cleanSessionIcon`).
+    static func clean(_ icon: String?) -> String? {
+        let value = icon?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !value.isEmpty, value.utf16.count <= 8,
+              !value.unicodeScalars.contains(where: { CharacterSet.letters.contains($0) || CharacterSet.decimalDigits.contains($0) })
+        else { return nil }
+        return value
+    }
+
+    /// Plan con el nombre y el icono de una sesión cambiados; el resto, intacto.
+    static func applying(_ plans: [DayPlan], day: String, name: String, icon: String?) -> [DayPlan] {
+        plans.map { plan in
+            guard plan.day == day else { return plan }
+            var next = plan
+            if plan.isGym { next.routine_name = name.trimmingCharacters(in: .whitespaces) }
+            next.session_icon = clean(icon)
+            return next
+        }
+    }
+}
+
+enum RoutineOrder {
+    /// Sesiones del plan (gimnasio o actividad) en el orden de la rutina, sin días vacíos.
+    static func sessions(_ days: [DayPlan]) -> [DayPlan] {
+        DayNames.all.compactMap { key in days.first { $0.day == key && ($0.type == "gimnasio" || $0.type == "actividad") } }
+    }
+
+    /// La siguiente: la primera de la rutina que aún no se ha hecho esta semana (nil si están todas).
+    static func nextPending(_ sessions: [DayPlan], done: Set<String>) -> DayPlan? {
+        sessions.first { !done.contains($0.day) }
+    }
+
+    /// Lunes de esta semana (yyyy-MM-dd): desde ahí cuenta lo hecho «esta semana».
+    static var weekStart: String {
+        LocalDate.daysAgo(DayNames.all.firstIndex(of: DayNames.today) ?? 0)
+    }
+
+    /// Sesiones hechas esta semana a partir de las filas de `day_completions`.
+    static func doneThisWeek(_ completions: [(day: String, date: String)]) -> Set<String> {
+        let start = weekStart
+        return Set(completions.filter { $0.date >= start }.map(\.day))
+    }
+}
+
 enum LocalDate {
     /// Formateador compartido: `LocalDate.string()` se llama desde cuerpos de vista (Inicio,
     /// Entrenar…) y crear un `DateFormatter` en cada llamada era una fuente de tirones.
@@ -172,6 +283,18 @@ private final class TrainingCache: @unchecked Sendable {
     private var completionsInflight: [UUID: (since: String, task: Task<CompletionRows?, Never>)] = [:]
     private var previousSetsCache: [PreviousKey: (value: [String: [SetLog]], at: Date)] = [:]
     private var previousRpeCache: [PreviousKey: (value: Int?, at: Date)] = [:]
+    /// Sube con cada cambio local (sesión hecha, rutina guardada): las cachés de pantalla se rehacen.
+    private var revisions: [UUID: Int] = [:]
+
+    func bump(userId: UUID) {
+        lock.lock(); defer { lock.unlock() }
+        revisions[userId, default: 0] += 1
+    }
+
+    func revision(userId: UUID) -> Int {
+        lock.lock(); defer { lock.unlock() }
+        return revisions[userId] ?? 0
+    }
 
     /// Topes para que la caché no crezca sin límite al cambiar de cuenta.
     private let maxUsers = 10
@@ -318,6 +441,29 @@ enum TrainingRepo {
         return days
     }
 
+    /// Guarda el nombre y el icono de una sesión tocando solo esos campos del JSON guardado
+    /// (no se pierde nada que la app no conozca) y actualiza la caché de memoria y disco.
+    static func saveSessionIdentity(userId: UUID, plans: [DayPlan], day: String, name: String, icon: String?) async throws -> [DayPlan] {
+        struct Row: Decodable { let workouts_json: AnyJSON }
+        let rows: [Row] = try await Backend.client.from("training_plan").select("workouts_json")
+            .eq("user_id", value: userId).limit(1).execute().value
+        guard case .array(var list)? = rows.first?.workouts_json else { throw URLError(.cannotParseResponse) }
+        let icon = SessionIdentity.clean(icon)
+        for index in list.indices {
+            guard case .object(var object) = list[index], case .string(let key)? = object["day"], key == day else { continue }
+            if case .string("gimnasio")? = object["type"] { object["routine_name"] = .string(name.trimmingCharacters(in: .whitespaces)) }
+            if let icon { object["session_icon"] = .string(icon) } else { object.removeValue(forKey: "session_icon") }
+            list[index] = .object(object)
+        }
+        struct Update: Encodable { let workouts_json: AnyJSON; let updated_at: String }
+        try await Backend.client.from("training_plan")
+            .update(Update(workouts_json: .array(list), updated_at: ISO8601DateFormatter().string(from: Date())))
+            .eq("user_id", value: userId).execute()
+        let next = SessionIdentity.applying(plans, day: day, name: name, icon: icon)
+        storePlanLocally(userId: userId, next)
+        return next
+    }
+
     private static func planKey(_ userId: UUID) -> String { "plan|\(userId.uuidString.lowercased())" }
 
     /// «Preparar mi rutina gratis» (web `Dashboard.tsx`): generate-plan sin `force`, así que una
@@ -357,6 +503,30 @@ enum TrainingRepo {
     static func cachedPlan(userId: UUID) -> [DayPlan]? {
         TrainingCache.shared.plan(userId: userId, maxAge: .infinity)
     }
+
+    /// Plan para el primer fotograma, sin red: el de memoria o, si no, la copia en disco.
+    static func instantPlan(userId: UUID) -> [DayPlan]? {
+        if let cached = TrainingCache.shared.plan(userId: userId, maxAge: .infinity) { return cached }
+        guard let disk = Snapshots.load([DayPlan].self, planKey(userId)) else { return nil }
+        TrainingCache.shared.storePlan(disk, userId: userId)
+        return disk
+    }
+
+    /// Completions para el primer fotograma, sin red: las de memoria o la copia en disco de Entrenar.
+    static func instantCompletions(userId: UUID, since: String) -> [(day: String, date: String)]? {
+        if let hit = cachedCompletions(userId: userId, since: since) { return hit }
+        guard let rows = Snapshots.load([[String]].self, completionsKey(userId)) else { return nil }
+        return rows.compactMap { row -> (day: String, date: String)? in
+            row.count == 2 ? (day: row[0], date: row[1]) : nil
+        }.filter { $0.date >= since }
+    }
+
+    /// Guarda en disco las completions recientes (Entrenar las pinta al instante la próxima vez).
+    static func saveCompletionsSnapshot(userId: UUID, _ rows: [(day: String, date: String)]) {
+        Snapshots.save(rows.map { [$0.day, $0.date] }, completionsKey(userId))
+    }
+
+    private static func completionsKey(_ userId: UUID) -> String { "completions|\(userId.uuidString.lowercased())" }
 
     private static func fetchPlan(userId: UUID) async throws -> [DayPlan] {
         struct Row: Decodable { let workouts_json: AnyJSON }
@@ -436,6 +606,21 @@ enum TrainingRepo {
         // Inicio, Entrenar, Progreso y la racha leen esto: se invalida para que la siguiente
         // carga sea fresca (y para que la caché nunca oculte el entreno recién terminado).
         TrainingCache.shared.invalidateCompletions(userId: userId)
+        // La copia en disco ya la incluye: Inicio y Entrenar la pintan hecha sin esperar a la red.
+        var rows = (Snapshots.load([[String]].self, completionsKey(userId)) ?? []).filter { $0 != [day, date] }
+        rows.append([day, date])
+        Snapshots.save(rows, completionsKey(userId))
+        TrainingCache.shared.bump(userId: userId)
+    }
+
+    /// Versión de lo guardado en este dispositivo para el usuario (cambia al terminar o editar).
+    static func revision(userId: UUID) -> Int { TrainingCache.shared.revision(userId: userId) }
+
+    /// Rutina recién guardada desde la app: memoria y disco al día, sin esperar a la red.
+    static func storePlanLocally(userId: UUID, _ plans: [DayPlan]) {
+        TrainingCache.shared.storePlan(plans, userId: userId)
+        Snapshots.save(plans, planKey(userId))
+        TrainingCache.shared.bump(userId: userId)
     }
 
     static func completions(userId: UUID, since: String, force: Bool = false) async -> [(day: String, date: String)] {

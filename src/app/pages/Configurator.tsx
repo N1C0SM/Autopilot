@@ -3,7 +3,7 @@ import { clearConfiguratorDraft, readConfiguratorDraft, saveConfiguratorDraft } 
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { toast } from "sonner";
-import { Check } from "lucide-react";
+import { ArrowRight, CalendarDays, Check, Dumbbell, Flame, HeartPulse, RefreshCw, Target, User, Users, type LucideIcon } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Checkbox } from "@/shared/components/ui/checkbox";
@@ -25,8 +25,8 @@ const DOW = [
   { v: 4, s: "J", l: "Jueves" }, { v: 5, s: "V", l: "Viernes" }, { v: 6, s: "S", l: "Sábado" }, { v: 0, s: "D", l: "Domingo" },
 ];
 const GOALS = [
-  { v: "lose_weight", l: "Perder grasa" }, { v: "gain_muscle", l: "Ganar músculo" },
-  { v: "recomp", l: "Recomposición" }, { v: "general_health", l: "Fuerza y salud" },
+  { v: "lose_weight", l: "Perder grasa", icon: Flame }, { v: "gain_muscle", l: "Ganar músculo", icon: Dumbbell },
+  { v: "recomp", l: "Recomposición", icon: RefreshCw }, { v: "general_health", l: "Fuerza y salud", icon: HeartPulse },
 ];
 const FOCUS = [
   { v: "gimnasio", l: "Gimnasio", photo: BRAND_PHOTOS.gym },
@@ -42,7 +42,7 @@ const STYLE = [
   { v: "direct", l: "Directo y exigente" }, { v: "flexible", l: "Flexible y realista" }, { v: "technical", l: "Técnico y analítico" },
 ];
 // Filas de una línea, iguales que «Perder grasa» / «Ganar músculo».
-const MODE = [{ v: "individual", l: "Individual" }, { v: "pareja", l: "En pareja" }];
+const MODE = [{ v: "individual", l: "Individual", icon: User }, { v: "pareja", l: "En pareja", icon: Users }];
 const TIMES = Array.from({ length: 32 }, (_, i) => {
   const m = 7 * 60 + i * 30;
   return `${String(Math.floor(m / 60)).padStart(2, "0")}:${m % 60 ? "30" : "00"}`;
@@ -58,6 +58,8 @@ const initial: Cfg = {
 };
 
 const label = (arr: { v: string | number; l: string }[], v: string | number) => arr.find((x) => x.v === v)?.l ?? "—";
+/** Lo que de verdad trae el plan gratuito: rutina, progresión, nutrición básica y progreso. */
+const PLAN_INCLUDES = ["Rutina de entrenamiento personalizada", "Progresión de cargas", "Recomendaciones de nutrición", "Seguimiento de tu progreso"];
 
 /** Paso al que reanudar un borrador sin saltarse datos obligatorios. */
 const draftResumeStep = (cfg: Cfg): number => {
@@ -66,49 +68,61 @@ const draftResumeStep = (cfg: Cfg): number => {
   return 2;
 };
 
-type Option = { v: string | number; l: string; d?: string };
+type Option = { v: string | number; l: string; d?: string; icon?: LucideIcon };
+
+/** Círculo de selección del rediseño: anillo vacío o dorado con check. */
+const SelectMark = ({ on }: { on: boolean }) => (
+  <span aria-hidden="true" className={cn("flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-colors", on ? "bg-primary text-primary-foreground" : "border-2 border-foreground/25")}>
+    {on ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : null}
+  </span>
+);
 
 /** Opciones con foto, como las fichas de material de la landing: misma identidad dentro y fuera. */
 const PhotoChoices = ({ header, options, value, onChange }: {
   header: string; options: { v: string; l: string; photo: string }[]; value: string; onChange: (v: string) => void;
 }) => (
   <section>
-    <h2 className="type-group-header px-4 pb-1.5">{header}</h2>
+    <h2 className="px-1 pb-2.5 type-headline">{header}</h2>
     <div className="grid grid-cols-3 gap-2.5">
       {options.map((o) => {
         const on = o.v === value;
         return <button key={o.v} type="button" aria-pressed={on} onClick={() => { void hapticSelection(); onChange(o.v); }}
-          className={cn("relative flex aspect-[4/5] items-end overflow-hidden rounded-media bg-card p-3 text-left ring-2 transition-[transform,box-shadow] duration-200 ease-out active:scale-[0.97]", on ? "ring-primary" : "ring-transparent")}>
+          className={cn("relative flex aspect-[4/5] items-end overflow-hidden rounded-media bg-card p-3 text-left ring-2 transition-[transform,box-shadow] duration-200 ease-out active:scale-[0.97]", on ? "ring-primary" : "ring-border")}>
           <img src={o.photo} alt="" decoding="async" className="absolute inset-0 h-full w-full object-cover object-[50%_35%]" />
           <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-transparent" />
           <span className="relative type-headline text-white">{o.l}</span>
-          <Check aria-hidden="true" strokeWidth={3} className={cn("absolute right-2 top-2 h-6 w-6 rounded-full bg-primary p-1 text-primary-foreground transition-opacity", on ? "opacity-100" : "opacity-0")} />
+          <span className="absolute right-2 top-2"><SelectMark on={on} /></span>
         </button>;
       })}
     </div>
   </section>
 );
 
-const Choices = ({ header, options, value, onChange }: {
+const Choices = ({ header, options, value, onChange, columns = false }: {
   header?: string; options: Option[]; value: string | number; onChange: (v: string | number) => void;
+  /** Dos opciones lado a lado (Individual / En pareja), como la maqueta. */
+  columns?: boolean;
 }) => (
   <section>
-    {header ? <h2 className="type-group-header px-4 pb-1.5">{header}</h2> : null}
-    <div className="overflow-hidden rounded-media bg-card">
+    {header ? <h2 className="px-1 pb-2.5 type-headline">{header}</h2> : null}
+    {/* Cada opción en su tarjeta: icono, texto y círculo de selección; la elegida con borde dorado. */}
+    <div className={columns ? "grid grid-cols-2 gap-2.5" : "space-y-2.5"}>
       {options.map((o) => {
         const on = o.v === value;
+        const Icon = o.icon;
         return (
           <button key={o.v} type="button" aria-pressed={on}
             onClick={() => { void hapticSelection(); onChange(o.v); }}
-            className="group/row flex min-h-[56px] sm:min-h-[60px] w-full items-center gap-3 pl-4 sm:pl-5 text-left transition-colors duration-150 active:bg-accent">
-            <span className="flex min-h-[56px] sm:min-h-[60px] min-w-0 flex-1 items-center gap-3 py-3 sm:py-3.5 pr-4 sm:pr-5 group-[:not(:last-child)]/row:sep-b">
-              <span className="min-w-0 flex-1">
-                <span className="block type-headline sm:text-[18px]">{o.l}</span>
-                {o.d ? <span className="mt-0.5 block type-subhead sm:text-[15px] text-muted-foreground">{o.d}</span> : null}
-              </span>
-              <Check aria-hidden="true" strokeWidth={2.75}
-                className={cn("h-5 w-5 shrink-0 text-primary", on ? "opacity-100" : "opacity-0")} />
+            className={cn(
+              "flex min-h-[56px] sm:min-h-[60px] w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition-[transform,background-color,border-color] duration-150 active:scale-[0.985]",
+              on ? "border-primary bg-primary/[0.08]" : "border-border bg-card",
+            )}>
+            {Icon ? <Icon aria-hidden="true" className={cn("h-5 w-5 shrink-0", on ? "text-primary" : "text-muted-foreground")} strokeWidth={1.9} /> : null}
+            <span className="min-w-0 flex-1">
+              <span className="block type-headline sm:text-[18px]">{o.l}</span>
+              {o.d ? <span className="mt-0.5 block type-subhead sm:text-[15px] text-muted-foreground">{o.d}</span> : null}
             </span>
+            <SelectMark on={on} />
           </button>
         );
       })}
@@ -321,6 +335,7 @@ const Configurator = () => {
         <Button variant="hero" size="lg" className="w-full" onClick={() => { void hapticImpact(); void save(); }} disabled={!accept || saving}>
           {saving && <Spinner size="sm" className="mr-2 text-primary-foreground" label="Guardando" />}
           {user ? "Guardar mi plan" : "Guardar mi plan gratis"}
+          {!saving && <ArrowRight className="ml-1 h-5 w-5" aria-hidden="true" />}
         </Button>
       )}
     </div>
@@ -346,14 +361,14 @@ const Configurator = () => {
       <div className="mt-8 space-y-8 pb-4">
         {step === 0 && (
           <>
-            <Choices options={MODE} value={c.mode} onChange={(v) => set("mode", String(v))} />
+            <Choices header="¿Cómo vas a entrenar?" columns options={MODE} value={c.mode} onChange={(v) => set("mode", String(v))} />
             {c.mode === "pareja" && (
               <Field header="Tu pareja de entreno">
                 <Input type="email" inputMode="email" autoComplete="off" autoCapitalize="none" autoCorrect="off" spellCheck={false} enterKeyHint="done" aria-label="Email de tu pareja de entreno" placeholder="Email de tu pareja de entreno" value={c.partner_email} onChange={(e) => set("partner_email", e.target.value)} />
               </Field>
             )}
-            <Choices header="Objetivo" options={GOALS} value={c.goal} onChange={(v) => set("goal", String(v))} />
-            <PhotoChoices header={t("¿Dónde entrenas?", "¿Dónde entrenáis?")} options={FOCUS} value={c.focus} onChange={(v) => set("focus", v)} />
+            <Choices header={t("¿Cuál es tu objetivo principal?", "¿Cuál es vuestro objetivo principal?")} options={GOALS} value={c.goal} onChange={(v) => set("goal", String(v))} />
+            <PhotoChoices header={t("¿Dónde entrenas habitualmente?", "¿Dónde entrenáis habitualmente?")} options={FOCUS} value={c.focus} onChange={(v) => set("focus", v)} />
           </>
         )}
 
@@ -371,40 +386,38 @@ const Configurator = () => {
 
         {step === 2 && (
           <>
-            <section className="relative overflow-hidden rounded-card bg-card p-5 sm:p-6 animate-fade-in">
-              <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full bg-primary/15 blur-3xl" />
-              <p className="type-footnote uppercase tracking-wider text-primary">{t("Tu objetivo", "Vuestro objetivo")}</p>
-              <p className="mt-1 type-title2">{label(GOALS, c.goal)} · {label(FOCUS, c.focus)}</p>
-              <div className="mt-5 grid grid-cols-7 gap-1.5" aria-label={`Días de entreno: ${dayNames}`}>
-                {DOW.map((d) => {
-                  const on = c.days.includes(d.v);
-                  return (
-                    <div key={d.v} className="flex flex-col items-center gap-1.5">
-                      <span className={cn("flex aspect-square w-full max-w-[44px] items-center justify-center rounded-full type-headline",
-                        on ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground")}>{d.s}</span>
-                      <span className={cn("h-1 w-1 rounded-full", on ? "bg-primary" : "bg-transparent")} />
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="mt-5 grid grid-cols-3 gap-2">
-                {[
-                  { k: "Días", v: String(c.days.length) },
-                  { k: "Sesión", v: label(DURATION, c.minutes) },
-                  { k: "Peso", v: c.weight ? `${c.weight} kg` : "—" },
-                ].map((s) => (
-                  <div key={s.k} className="rounded-media bg-secondary px-3 py-3 text-center">
-                    <p className="type-headline">{s.v}</p>
-                    <p className="mt-0.5 type-caption1 text-muted-foreground">{s.k}</p>
+            {/* Resumen en filas con icono y lo que incluye el plan (diseño ChatGPT). */}
+            <section className="overflow-hidden rounded-card bg-card animate-fade-in" aria-label={`Días de entreno: ${dayNames}`}>
+              {[
+                { icon: Target, k: "Objetivo", v: label(GOALS, c.goal) },
+                { icon: Dumbbell, k: "Tipo de entrenamiento", v: label(FOCUS, c.focus) },
+                { icon: duo ? Users : User, k: "Modalidad", v: label(MODE, c.mode) },
+                { icon: CalendarDays, k: t("Tu semana", "Vuestra semana"), v: `${c.days.length} días (${dayNames}) · ${label(DURATION, c.minutes)}` },
+              ].map((row, i) => (
+                <div key={row.k} className={cn("flex items-center gap-4 px-5 py-3.5", i > 0 && "border-t border-border")}>
+                  <row.icon className="h-6 w-6 shrink-0 text-primary" strokeWidth={1.5} aria-hidden="true" />
+                  <div className="min-w-0">
+                    <p className="type-footnote text-muted-foreground">{row.k}</p>
+                    <p className="type-headline">{row.v}</p>
                   </div>
+                </div>
+              ))}
+            </section>
+            <p className="-mt-4 px-1 type-footnote text-muted-foreground">
+              {c.structure === "coach"
+                ? `Distribución: Autopilot elige la mejor para ${c.days.length} días.`
+                : `Distribución: ${label(STRUCTURE, c.structure)}.`}
+              {duo ? " Mismo calendario, cargas adaptadas a cada uno." : ""}
+            </p>
+            <section>
+              <h2 className="px-1 type-headline">{t("Tu plan incluirá", "Vuestro plan incluirá")}</h2>
+              <ul className="mt-3 space-y-2.5 px-1">
+                {PLAN_INCLUDES.map((item) => (
+                  <li key={item} className="flex items-center gap-3 type-subhead">
+                    <Check className="h-5 w-5 shrink-0 text-primary" strokeWidth={2.25} aria-hidden="true" />{item}
+                  </li>
                 ))}
-              </div>
-              <p className="mt-4 type-subhead text-muted-foreground">
-                {c.structure === "coach"
-                  ? `Distribución: Autopilot elige la mejor para ${c.days.length} días.`
-                  : `Distribución: ${label(STRUCTURE, c.structure)}.`}
-                {duo ? " Mismo calendario, cargas adaptadas a cada uno." : ""}
-              </p>
+              </ul>
             </section>
             <PlanPreview focus={c.focus} goal={c.goal} weight={Number(c.weight) || undefined} days={c.days.length} registered={Boolean(user)} hideHeader />
             <label className="flex min-h-[44px] items-start gap-3 px-4 type-footnote text-muted-foreground">

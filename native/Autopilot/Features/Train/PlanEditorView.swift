@@ -143,6 +143,8 @@ struct PlanEditorView: View {
             try await Backend.client.from("training_plan")
                 .upsert(Row(user_id: userId, workouts_json: clean, updated_at: ISO8601DateFormatter().string(from: Date())), onConflict: "user_id")
                 .execute()
+            // Inicio y Entrenar leen la caché: se pone al día para que no vuelva la rutina vieja.
+            TrainingRepo.storePlanLocally(userId: userId, clean)
             Haptics.success()
             onSaved(clean)
             dismiss()

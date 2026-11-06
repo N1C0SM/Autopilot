@@ -1,5 +1,9 @@
+import { useLayoutEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Check, Play, Zap, Utensils, BarChart3, Layers, Target, TrendingUp, Infinity as InfinityIcon, ShieldCheck, Smartphone, Monitor, Gift, UserRound, Circle, House, Dumbbell, Apple, LineChart, BookOpen } from "lucide-react";
+import { ArrowRight, Bell, Check, Play, Zap, Utensils, BarChart3, Layers, Target, TrendingUp, Infinity as InfinityIcon, ShieldCheck, Smartphone, Monitor, Gift, UserRound, House, Dumbbell, Apple, Flame, LogOut, PanelLeft, Settings } from "lucide-react";
+import { BrandMark } from "@/shared/components/ui/brand-mark";
+import { PhoneAppBar, PhoneFrame, PhoneHome, PhoneTabBar } from "@/web/components/PublicPhone";
+import { cn } from "@/shared/lib/utils";
 import { usePlanAvailability } from "@/shared/lib/planCatalog";
 import type { PlanKey } from "@/shared/config/tiers";
 import { track } from "@/shared/lib/analytics";
@@ -54,28 +58,72 @@ function StoreButton({ to, small, big, children }: { to: string; small: string; 
   </Link>;
 }
 
-/** Portátil + iPhone con datos de ejemplo: ilustra la app, no lee ninguna cuenta. */
+/** Lienzo a tamaño real reducido al ancho de su caja: el portátil y el móvil son la app tal cual, en pequeño. */
+function Scaled({ width, height, className, children }: { width: number; height: number; className?: string; children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(0);
+  useLayoutEffect(() => {
+    const box = ref.current;
+    if (!box) return;
+    const fit = () => setScale(box.clientWidth / width);
+    fit();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(fit);
+    observer.observe(box);
+    return () => observer.disconnect();
+  }, [width]);
+  return <div ref={ref} className={cn("relative overflow-hidden", className)} style={{ aspectRatio: `${width} / ${height}` }}>
+    <div className="absolute left-0 top-0 origin-top-left" style={{ width, height, transform: `scale(${scale})`, visibility: scale ? undefined : "hidden" }}>{children}</div>
+  </div>;
+}
+
+const DEMO_NAME = "Alex";
+const PHONE_TABS = [{ key: "home", label: "Hoy", icon: House }, { key: "training", label: "Entrenar", icon: Dumbbell }, { key: "nutrition", label: "Nutrición", icon: Flame }, { key: "progress", label: "Progreso", icon: TrendingUp }] as const;
+// Menú de la app de Mac (`UserSidebar`, sin el chat, que aún no está publicado).
+const MAC_MENU = [[House, "Inicio"], [Dumbbell, "Entrenamiento"], [Flame, "Nutrición"], [TrendingUp, "Mi progreso"], [Settings, "Ajustes"]] as const;
+
+/** La app de Mac en «Inicio»: barra lateral, barra superior y el Hoy ancho, con datos de ejemplo. */
+function MacHome() {
+  const plans = usePlanAvailability();
+  return <div className="flex h-full bg-background text-foreground">
+    <aside className="flex w-[250px] shrink-0 flex-col border-r-[0.5px] border-border bg-sidebar px-2 pb-4 pt-4">
+      <p className="flex items-center gap-2 px-2"><BrandMark size={24} /><span className="text-[18px] font-bold tracking-[0.01em]">AUTOPILOT</span></p>
+      <ul className="mt-3 space-y-1">{MAC_MENU.map(([Icon, label], index) => <li key={label} className={cn("flex h-11 items-center gap-2 rounded-md px-2 text-[15px]", index === 0 && "font-semibold text-primary")}><Icon className="h-5 w-5" strokeWidth={1.5} />{label}</li>)}</ul>
+      <div className="mt-auto flex items-center gap-3 px-2">
+        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/15 type-subhead font-bold text-primary ring-1 ring-primary/25">{DEMO_NAME[0]}</span>
+        <span className="type-footnote text-muted-foreground">{DEMO_NAME}</span>
+      </div>
+      <p className="mt-3 flex h-9 items-center gap-2 px-2 text-[15px] text-destructive"><LogOut className="h-4 w-4" />Cerrar sesión</p>
+    </aside>
+    <div className="flex min-w-0 flex-1 flex-col">
+      <header className="flex h-16 shrink-0 items-center gap-3 border-b-[0.5px] border-border px-6">
+        <PanelLeft className="h-4 w-4" />
+        <span className="min-w-0 flex-1"><span className="block type-headline text-[18px]">Inicio</span><span className="block text-[13px] text-muted-foreground">Tu entreno de hoy y lo que toca comer</span></span>
+        <Bell className="h-[17px] w-[17px]" strokeWidth={1.5} />
+      </header>
+      <div className="min-h-0 flex-1 overflow-hidden p-10 pt-8"><PhoneHome plans={plans} name={DEMO_NAME} wide /></div>
+    </div>
+  </div>;
+}
+
+/** Portátil + iPhone con la app tal cual (Hoy de Mac y de iPhone) y datos de ejemplo: no lee ninguna cuenta. */
 function DevicesMockup() {
-  const rows = [["Press banca", "4 × 8–10"], ["Press militar", "3 × 8–10"], ["Fondos", "3 × 10–12"]];
-  const side = [[House, "Hoy"], [Dumbbell, "Entrenamiento"], [Apple, "Nutrición"], [LineChart, "Progreso"], [BookOpen, "Academia"]] as const;
-  return <div aria-hidden="true" className="relative mx-auto h-[300px] w-full max-w-[480px] sm:h-[330px]">
-    <div className="absolute bottom-6 left-0 w-[78%]">
-      <div className="rounded-t-[14px] border-[6px] border-b-0 border-secondary bg-card p-3 shadow-2xl">
-        <div className="flex h-[170px] gap-3 sm:h-[190px]">
-          <div className="w-[30%] space-y-2.5 text-[8px] text-muted-foreground"><p className="mb-3 flex items-center gap-1 text-[9px] font-bold text-foreground"><span className="text-primary">▲</span> AUTOPILOT</p>{side.map(([I, l]) => <p key={l} className="flex items-center gap-1.5"><I className="h-2.5 w-2.5" />{l}</p>)}</div>
-          <div className="flex-1"><p className="text-[13px] font-semibold">Progreso</p>
-            <svg viewBox="0 0 200 90" className="mt-3 h-[110px] w-full"><defs><linearGradient id="lg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="hsl(var(--primary))" stopOpacity=".35" /><stop offset="1" stopColor="hsl(var(--primary))" stopOpacity="0" /></linearGradient></defs>
-              {[20, 40, 60, 80].map((y) => <line key={y} x1="0" x2="200" y1={y} y2={y} stroke="hsl(var(--border))" strokeWidth=".5" />)}
-              <path d="M0 82 L25 76 L45 79 L70 66 L90 68 L115 52 L135 55 L160 36 L180 30 L200 12 L200 90 L0 90Z" fill="url(#lg)" />
-              <path d="M0 82 L25 76 L45 79 L70 66 L90 68 L115 52 L135 55 L160 36 L180 30 L200 12" fill="none" stroke="hsl(var(--primary))" strokeWidth="1.6" /></svg></div>
-        </div>
+  const plans = usePlanAvailability();
+  return <div aria-hidden="true" className="pointer-events-none relative mx-auto aspect-[16/9] w-full max-w-[480px] select-none">
+    <div className="absolute bottom-[6%] left-0 w-[74%]">
+      <div className="rounded-t-[14px] border-[6px] border-b-0 border-secondary bg-secondary shadow-2xl">
+        <Scaled width={1200} height={750} className="rounded-[4px]"><MacHome /></Scaled>
       </div>
       <div className="h-3 rounded-b-[10px] bg-gradient-to-b from-accent to-card" />
     </div>
-    <div className="absolute bottom-0 right-0 w-[40%] max-w-[190px] rounded-[30px] border-[5px] border-secondary bg-background p-3 shadow-2xl">
-      <div className="flex justify-between text-[8px] font-semibold"><span>9:41</span><span>●●●</span></div>
-      <div className="mt-3 flex items-start justify-between"><div><p className="text-[16px] font-bold italic">Hoy</p><p className="text-[10px] text-muted-foreground">Push A</p></div><span className="grid h-6 w-6 place-items-center rounded-full bg-primary text-primary-foreground"><Play className="h-3 w-3 fill-current" /></span></div>
-      <ul className="mt-3 space-y-3">{rows.map(([n, s]) => <li key={n} className="flex items-center gap-2"><span className="h-7 w-9 rounded-md bg-secondary" /><span className="flex-1 leading-tight"><span className="block text-[9px] font-semibold">{n}</span><span className="text-[8px] text-muted-foreground">{s}</span></span><Circle className="h-3 w-3 text-muted-foreground" /></li>)}</ul>
+    <div className="absolute bottom-0 right-0 w-[27%] drop-shadow-[0_20px_30px_rgba(0,0,0,0.6)]">
+      <Scaled width={352} height={710}>
+        <PhoneFrame screenClassName="h-[44rem]">
+          <PhoneAppBar avatar={DEMO_NAME[0]} />
+          <div className="flex-1 overflow-hidden px-4 pb-24 pt-3"><PhoneHome plans={plans} name={DEMO_NAME} /></div>
+          <PhoneTabBar tabs={PHONE_TABS} active="home" onSelect={() => undefined} />
+        </PhoneFrame>
+      </Scaled>
     </div>
   </div>;
 }

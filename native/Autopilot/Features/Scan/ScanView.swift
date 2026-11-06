@@ -86,23 +86,24 @@ struct ScanView: View {
     // MARK: - Cabecera
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("AI SCAN").font(.apCaption.weight(.bold)).tracking(1.6).foregroundStyle(Palette.gold)
-            Text("Tu análisis corporal").font(.apTitle1)
+        VStack(spacing: 4) {
+            Text("Análisis físico con IA").font(.apTitle1)
                 .accessibilityAddTraits(.isHeader)
-            Text("Sube una foto frontal (y otra de espalda si quieres) y la IA valora tu físico y tu potencial.")
+            Text("Sube tus fotos y la IA analiza tu físico y tu potencial para personalizar aún más tu plan.")
                 .font(.apSubhead).foregroundStyle(Palette.muted)
                 .fixedSize(horizontal: false, vertical: true)
         }
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Fotos
 
     private var photos: some View {
         HStack(spacing: 12) {
-            photoTile(title: "Delante", hint: "Cuerpo completo", badge: "Obligatoria",
+            photoTile(title: "Foto de delante", hint: "Cuerpo completo", badge: "Obligatoria",
                       image: front, item: $frontItem, isFront: true, silhouette: "figure.stand")
-            photoTile(title: "Atrás", hint: "Opcional", badge: "Opcional",
+            photoTile(title: "Foto de atrás", hint: "Cuerpo completo", badge: "Opcional",
                       image: back, item: $backItem, isFront: false, silhouette: "figure.stand")
         }
     }
@@ -129,40 +130,41 @@ struct ScanView: View {
 
     private var tipsCard: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Cómo tomar las fotos").font(.apTitle3).padding(.bottom, 8)
-            tipRow("ruler", "Distancia", "Cámara a 2-3 m, a la altura del ombligo, cuerpo entero y móvil en vertical.")
-            tipRow("sun.max", "Luz y fondo", "Luz natural frontal y uniforme, sin contraluz ni flash, con fondo liso y claro.")
-            tipRow("figure.arms.open", "Postura y ropa", "Ropa ajustada, pies a la anchura de los hombros y brazos relajados. Para la de atrás, date la vuelta sin moverte.")
+            Text("Cómo tomar las fotos").font(.apHeadline).padding(.bottom, 6)
+            // Una línea por consejo (diseño ChatGPT).
+            tipRow("figure.stand", "Cuerpo entero, de pie y con el móvil en vertical")
+            tipRow("ruler", "Cámara a 2-3 m, a la altura del ombligo")
+            tipRow("sun.max", "Luz natural frontal, sin contraluz ni flash")
+            tipRow("tshirt", "Ropa ajustada y fondo liso y claro")
+            tipRow("arrow.uturn.backward", "Para la de atrás, date la vuelta sin moverte")
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
     }
 
-    private func tipRow(_ symbol: String, _ title: String, _ text: String) -> some View {
-        HStack(alignment: .top, spacing: 12) {
+    private func tipRow(_ symbol: String, _ text: String) -> some View {
+        HStack(spacing: 12) {
             Image(systemName: symbol)
-                .font(.inter(size: 14, weight: .semibold))
+                .font(.inter(size: 16))
                 .foregroundStyle(Palette.gold)
-                .frame(width: 26, height: 26)
-                .background(Palette.gold.opacity(0.14), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .frame(width: 22)
                 .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(title).font(.apSubhead.weight(.semibold))
-                Text(text).font(.apFootnote).foregroundStyle(Palette.muted)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+            Text(text).font(.apFootnote)
+                .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
         }
-        .padding(.vertical, 7)
-        .accessibilityElement(children: .combine)
+        .padding(.vertical, 6)
     }
 
     // MARK: - Acción
 
     private var analyzeButton: some View {
         Button { Haptics.tap(); Task { await analyze() } } label: {
-            Text("Analizar mi físico")
+            HStack(spacing: 8) {
+                Text("Analizar mi físico")
+                Image(systemName: "arrow.right").accessibilityHidden(true)
+            }
         }
         .buttonStyle(PillButtonStyle(kind: .primary, height: 56))
         .disabled(front == nil && back == nil)
@@ -208,19 +210,15 @@ struct ScanView: View {
                 Image(platformImage: image).resizable().scaledToFill()
                     .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
             } else {
+                // Tarjeta lisa como el resto (sin borde discontinuo ni silueta dibujada, que parecían de juguete).
                 RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
-                    .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 6]))
-                    .foregroundStyle(Palette.gold.opacity(0.35))
-                Image(systemName: silhouette)
-                    .font(.inter(size: 150, weight: .ultraLight))
-                    .foregroundStyle(Color.white.opacity(0.06))
-                    .accessibilityHidden(true)
-                // Todo centrado: cruz, título y pista.
+                    .strokeBorder(Color.white.opacity(0.08), lineWidth: 1)
+                // Todo centrado: cámara, título y pista.
                 VStack(spacing: 8) {
-                    Image(systemName: "plus")
-                        .font(.inter(size: 20, weight: .bold)).foregroundStyle(Palette.gold)
+                    Image(systemName: "camera.fill")
+                        .font(.inter(size: 20, weight: .semibold)).foregroundStyle(Palette.gold)
                         .frame(width: 54, height: 54)
-                        .background(Palette.gold.opacity(0.14), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .background(Palette.gold.opacity(0.14), in: Circle())
                     Text(title).font(.apHeadline)
                     Text(hint).font(.apSubhead).foregroundStyle(Palette.muted)
                 }
@@ -776,25 +774,30 @@ struct ScanResultView: View {
     /// Scan básico: lo que se desbloquea con Plus (como `ScanPlusCard` de la web). Sin enlace
     /// de pago en iOS (normas de la App Store).
     private var plusCard: some View {
+        // Maqueta de ChatGPT: «Análisis completo (Plus)» con cada sección bloqueada en su tarjeta.
         VStack(alignment: .leading, spacing: 10) {
-            Image("lu-lock").renderingMode(.template).resizable().frame(width: 18, height: 18)
-                .foregroundStyle(Palette.gold)
-                .frame(width: 40, height: 40).background(Palette.gold.opacity(0.15), in: Circle())
-            Text("Tu scan completo, con Plus").font(.inter(size: 28, weight: .bold)).tracking(-0.7)
-            Text("Este es tu scan básico. Con Plus ves el análisis entero de tu físico:")
-                .font(.apSubhead).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Análisis completo (Plus)").font(.apTitle2)
+                Text("Este es tu scan básico. Desbloquea el análisis avanzado de tu físico con recomendaciones personalizadas:")
+                    .font(.apSubhead).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.bottom, 2)
             ForEach(result.locked_sections ?? [], id: \.self) { item in
-                HStack(alignment: .top, spacing: 10) {
-                    Image("lu-check").renderingMode(.template).resizable().frame(width: 14, height: 14)
-                        .foregroundStyle(Palette.gold).padding(.top, 3)
-                    Text(item).font(.apSubhead).fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 12) {
+                    Image("lu-lock").renderingMode(.template).resizable().frame(width: 18, height: 18)
+                        .foregroundStyle(Palette.muted).accessibilityHidden(true)
+                    Text(item).font(.apSubhead.weight(.medium)).fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                    PlusBadge()
                 }
+                .padding(.horizontal, 16).padding(.vertical, 12)
+                .frame(minHeight: 56)
+                .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).strokeBorder(Color.white.opacity(0.08), lineWidth: 1))
             }
             Text("Incluido en Plus").font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.gold).padding(.top, 6)
         }
-        .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
     }
 
     // MARK: - Lectura estimada por IA (Plus)

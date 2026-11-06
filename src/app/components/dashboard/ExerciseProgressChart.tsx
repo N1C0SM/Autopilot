@@ -58,9 +58,9 @@ const ExerciseProgressChart = ({ exerciseName, history, metric, onMetricChange, 
 
   return (
     <div className={compact ? "flex h-full min-h-0 flex-1 flex-col" : "flex flex-col"}>
-      {/* Info compacta arriba */}
-      <div className="flex items-baseline justify-between gap-3">
-        <div className="min-w-0 flex-1">
+      {/* Cifra arriba; sin series con peso no se pinta «— kg» (lo explica el aviso de abajo). */}
+      {values.length > 0 && (
+        <div className="min-w-0">
           <p className="text-[32px] font-semibold leading-none tabular-nums lg:text-[40px]">
             {latest !== null ? round(latest) : "—"}
             <span className="ml-1 type-subhead text-muted-foreground">{unit}</span>
@@ -77,22 +77,22 @@ const ExerciseProgressChart = ({ exerciseName, history, metric, onMetricChange, 
             {sessions}
           </p>
         </div>
-        
-        <Tabs
-          value={metric}
-          onValueChange={(next) => {
-            void hapticSelection();
-            onMetricChange(next as Metric);
-          }}
-          className="shrink-0"
-        >
-          <TabsList aria-label="Métrica" className="h-8">
-            {METRICS.map(([k, label]) => (
-              <TabsTrigger key={k} value={k} className="px-2.5 py-1 type-footnote">{label}</TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
-      </div>
+      )}
+      {/* Selector en su propia fila, como en la app: «Volumen» no se parte en dos líneas. */}
+      <Tabs
+        value={metric}
+        onValueChange={(next) => {
+          void hapticSelection();
+          onMetricChange(next as Metric);
+        }}
+        className={values.length > 0 ? "mt-3" : undefined}
+      >
+        <TabsList aria-label="Métrica" className="mx-auto flex w-full max-w-md">
+          {METRICS.map(([k, label]) => (
+            <TabsTrigger key={k} value={k} className="type-footnote">{label}</TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
 
       {hasLine ? (
         <div className={`mt-3 w-full ${plotClass}`} role="img" aria-label={`Gráfica de ${exerciseName}`}>

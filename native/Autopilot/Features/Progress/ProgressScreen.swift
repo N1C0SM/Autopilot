@@ -20,6 +20,8 @@ struct ProgressScreen: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.horizontalSizeClass) private var sizeClass
     @StateObject private var model = ProgressModel()
+    /// Para «Ir a entrenar» desde Récords vacío (como `onNavigate` de Inicio).
+    var onNavigate: (AppSection) -> Void = { _ in }
     @State private var tab = 0
     @State private var viewing: ProgressModel.Photo?
     /// «Scan» se monta la primera vez que se abre y se queda vivo: cambiar de pestaña no lo reinicia.
@@ -57,7 +59,11 @@ struct ProgressScreen: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                SegmentedPill(options: ["Fuerza", "Físico", "Récords", "Scan"], selection: $tab)
+                // Subtítulo de la maqueta bajo el título grande; en Mac la barra ya lleva su pista.
+                if !isWide {
+                    Text("Evolución de tu fuerza, tu físico y tus récords.").font(.apSubhead).foregroundStyle(Palette.muted)
+                }
+                SegmentedPill(options: ["Fuerza", "Físico", "Récords", "Scan"], selection: $tab, gold: true)
                 switch tab {
                 case 0: strength
                 case 1: physique
@@ -121,9 +127,19 @@ struct ProgressScreen: View {
     private var strength: some View {
         // Como la web (`WorkoutProgress`): una sola columna a todo el ancho, hero arriba y
         // «Por ejercicio» debajo (también en escritorio; antes iban en dos columnas de 320).
+        // Rediseño (maqueta de ChatGPT): «Tu fuerza» con el ejercicio principal arriba y «Tu constancia» debajo.
         VStack(alignment: .leading, spacing: 16) {
-            strengthHero
+            if !(model.detailsLoaded && model.history.isEmpty) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Tu fuerza").font(.apTitle2)
+                    Text("Evolución de tus principales ejercicios.").font(.apSubhead).foregroundStyle(Palette.muted)
+                }
+            }
             strengthExercises
+            if model.strengthLoaded && !(model.detailsLoaded && model.history.isEmpty) {
+                Text("Tu constancia").font(.apTitle2).padding(.top, 8)
+            }
+            strengthHero
         }
     }
 
@@ -148,15 +164,12 @@ struct ProgressScreen: View {
     @ViewBuilder private var strengthExercises: some View {
         if model.detailsLoaded {
             if !model.history.isEmpty {
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Por ejercicio").font(.apTitle3).padding(.top, 8)
-                    ExerciseProgressSection(history: model.history, images: model.exerciseImages, names: model.exerciseNames)
-                }
+                ExerciseProgressSection(history: model.history, images: model.exerciseImages, names: model.exerciseNames)
             } else {
-                // Cuenta recién creada: sin esto la pestaña parecía rota (solo la tarjeta a 0 kg).
-                EmptyStateView(symbol: "dumbbell", title: "Tu progreso empieza con tu primer entreno",
-                               message: "Marca tus series al entrenar y aquí verás tus kilos, tu racha y tus récords.")
-                    .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
+                // Cuenta recién creada: misma portada que Físico y Récords, con foto real y el camino a Entrenar.
+                progressHero(photo: Self.brandPullupPhoto, eyebrow: "TU FUERZA", title: "Tu progreso empieza con tu primer entreno",
+                             message: "Marca tus series al entrenar y aquí verás tus kilos, tu racha y tus récords.",
+                             perks: Self.strengthPerks, button: "Empezar a entrenar") { onNavigate(.train) }
             }
         } else if let error = model.detailsError {
             ProgressRetryCard(title: "No hemos podido cargar «Por ejercicio»", message: error) {
@@ -167,22 +180,28 @@ struct ProgressScreen: View {
         }
     }
 
+    /// Semanas con etiqueta: una sí y otra no, terminando en la actual (a 12 pt no se pisan, como la web).
+    private var shownWeekLabels: Set<String> {
+        Set(model.weekly.enumerated().filter { (model.weekly.count - 1 - $0.offset) % 2 == 0 }.map(\.element.label))
+    }
+
     private var strengthCard: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        let hasKg = model.kg4w > 0
+        return VStack(alignment: .leading, spacing: 0) {
             // Eyebrow dorado
             Text("ÚLTIMAS 4 SEMANAS")
-                .font(.inter(size: 11, weight: .bold))
-                .tracking(0.1)
+                .font(.apCaption.weight(.semibold))
+                .tracking(1.6)
                 .foregroundStyle(Palette.gold)
 
-            // Cifra protagonista
+            // Cifra protagonista. Sin series con peso, «0 kg» desanimaba: se cuentan los entrenos.
             HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(NumberText.integer(model.kg4w))
+                Text(hasKg ? NumberText.integer(model.kg4w) : "\(model.workouts4w)")
                     .font(.figure(size: 52))
                     .lineLimit(1).minimumScaleFactor(0.55)
                     .contentTransition(.numericText())
                     .animation(reduceMotion ? nil : .snappy, value: model.kg4w)
-                Text("kg levantados")
+                Text(hasKg ? "kg levantados" : (model.workouts4w == 1 ? "entreno" : "entrenos"))
                     .font(.apTitle3)
                     .foregroundStyle(Palette.muted)
             }
@@ -190,48 +209,52 @@ struct ProgressScreen: View {
 
             // 3 KPIs en fila
             HStack(alignment: .top, spacing: 12) {
-                stat("\(model.workouts4w)", model.workouts4w == 1 ? "entreno" : "entrenos")
+                if hasKg { stat("\(model.workouts4w)", model.workouts4w == 1 ? "entreno" : "entrenos") }
                 stat("\(model.streakWeeks)", model.streakWeeks == 1 ? "semana de racha" : "semanas de racha")
-                stat(NumberText.integer(model.kgThisWeek), "kg esta semana")
+                if hasKg { stat(NumberText.integer(model.kgThisWeek), "kg esta semana") }
             }
             .padding(.top, 14)
 
+            if !hasKg {
+                Text("Registra series con peso y aquí verás tus kilos de cada semana.")
+                    .font(.apSubhead).foregroundStyle(Palette.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 16)
+            } else {
+
             // Gráfica de barras
+            // Barras finas como la web: la semana actual en dorado y el resto en gris.
             Chart(model.weekly, id: \.label) { w in
                 BarMark(
                     x: .value("Semana", w.label),
-                    y: .value("kg", max(w.kg, model.maxWeekly * 0.02))
+                    y: .value("kg", max(w.kg, model.maxWeekly * 0.02)),
+                    width: .fixed(14)
                 )
-                .foregroundStyle(w.kg > 0 ? Palette.gold : Palette.gold.opacity(0.2))
-                .cornerRadius(8)
+                .foregroundStyle(w.label == model.weekly.last?.label ? Palette.gold : Color.white.opacity(0.14))
+                .cornerRadius(3)
             }
             .chartYAxis(.hidden)
             .chartXAxis {
-                AxisMarks { _ in
-                    AxisValueLabel()
-                        .font(.inter(.caption2))
-                        .foregroundStyle(Palette.muted)
+                // Una fecha sí y otra no, terminando en la semana actual: a 12 pt no se pisan (como la web).
+                AxisMarks { value in
+                    if let label = value.as(String.self), shownWeekLabels.contains(label) {
+                        AxisValueLabel { Text(label).font(.apCaption).foregroundStyle(Palette.muted) }
+                    }
                 }
             }
             .frame(height: 160)
             .padding(.top, 20)
             .accessibilityLabel("Kilos levantados por semana")
+            }
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(alignment: .topTrailing) {
-            // Halo dorado en esquina
-            RadialGradient(
-                colors: [Palette.gold.opacity(0.16), .clear],
-                center: .topTrailing,
-                startRadius: 0, endRadius: 240
-            )
-        }
+        // Sobria como la web: sin halo dorado y con el mismo filo blanco que el resto de tarjetas.
         .background(Palette.card)
         .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
-                .strokeBorder(Palette.gold.opacity(0.08), lineWidth: 1)
+                .strokeBorder(Color.white.opacity(0.08), lineWidth: 1)
         )
     }
 
@@ -321,45 +344,119 @@ struct ProgressScreen: View {
         }
     }
 
+    /// Sin fotos: portada con foto real y lo que tendrá aquí (como `ProgressPhotos` de la web).
     private var photosEmpty: some View {
-        HStack(alignment: .top, spacing: 14) {
-            IconTile(symbol: "sparkles")
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Empieza a documentar tu progreso").font(.apHeadline)
-                Text("Tus fotos se guardan solas cada vez que haces un análisis en Scan.").font(.apSubhead).foregroundStyle(Palette.muted)
-                Button("Hacer mi primer scan") { Haptics.tap(); tab = 3 }
-                    .font(.apHeadline).foregroundStyle(Palette.gold).buttonStyle(.plain).frame(minHeight: 44)
-            }
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        progressHero(photo: Self.brandGymPhoto, eyebrow: "TU FÍSICO", title: "Empieza a documentar tu progreso",
+                     message: "Tus fotos se guardan solas cada vez que haces un análisis físico en Scan.",
+                     perks: Self.physiquePerks, button: "Hacer mi primer scan") { tab = 3 }
     }
 
-    private var compareTeaser: some View {
-        HStack(alignment: .top, spacing: 14) {
-            IconTile(symbol: "rectangle.split.2x1")
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Compara tu evolución").font(.apHeadline)
-                Text("Con dos scans del mismo ángulo verás el antes y el después lado a lado.").font(.apSubhead).foregroundStyle(Palette.muted)
-                Button("Hacer un scan") { Haptics.tap(); tab = 3 }
-                    .font(.apHeadline).foregroundStyle(Palette.gold).buttonStyle(.plain).frame(minHeight: 44)
+    /// Sin récords: misma portada que Físico, con lo que guarda Récords y el camino a Entrenar (como `PRsList` de la web).
+    private var recordsEmpty: some View {
+        progressHero(photo: Self.brandDumbbellsPhoto, eyebrow: "TUS RÉCORDS", title: "Tu primer récord está a un entreno",
+                     message: "Cada vez que registras una serie con peso, guardamos tu mejor marca de ese ejercicio.",
+                     perks: Self.recordPerks, button: "Ir a entrenar") { onNavigate(.train) }
+    }
+
+    /// Portada de una sección vacía de Progreso: foto real, titular, lo que tendrá aquí (todo real) y una acción.
+    private func progressHero(photo: String, eyebrow: String, title: String, message: String, perks: [Perk], button: String, action: @escaping () -> Void) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Color.clear.frame(height: 208)
+                .overlay {
+                    CachedAsyncImage(url: URL(string: photo)) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
+                }
+                .clipped()
+                .overlay { LinearGradient(colors: [.black.opacity(0.1), .black.opacity(0.45), Palette.card], startPoint: .top, endPoint: .bottom) }
+                .overlay(alignment: .bottomLeading) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(eyebrow).font(.apCaption.weight(.semibold)).tracking(1.6).foregroundStyle(Palette.gold)
+                        Text(title).font(.inter(size: 26, weight: .bold)).foregroundStyle(.white)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .accessibilityAddTraits(.isHeader)
+                    }
+                    .padding(.horizontal, 20).padding(.bottom, 12)
+                }
+            VStack(alignment: .leading, spacing: 12) {
+                Text(message).font(.apSubhead).foregroundStyle(Palette.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+                ForEach(perks, id: \.self) { perk in
+                    Label {
+                        Text(perk.text).font(.apSubhead)
+                    } icon: {
+                        Image(systemName: perk.symbol).foregroundStyle(Palette.gold)
+                    }
+                }
+                Button(button) { Haptics.tap(); action() }
+                    .buttonStyle(.pill).padding(.top, 8)
             }
+            .padding(.horizontal, 20).padding(.top, 8).padding(.bottom, 20)
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .background(Palette.card)
+        .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous).strokeBorder(Palette.gold.opacity(0.15), lineWidth: 1))
+    }
+
+    private static let brandGymPhoto = "https://enebrcdrdnfkyduzyrzm.supabase.co/storage/v1/object/public/site-assets/exercise-images/a31c7206-d2a4-4b31-856a-f5dec09b890e-1791475829849.png"
+    private static let brandPullupPhoto = "https://enebrcdrdnfkyduzyrzm.supabase.co/storage/v1/object/public/site-assets/exercise-images/7ab0b27f-f296-4fa6-bf07-8f8b026b0832-1791475152675.png"
+    private static let brandDumbbellsPhoto = "https://enebrcdrdnfkyduzyrzm.supabase.co/storage/v1/object/public/site-assets/exercise-images/d5e30e05-0791-4886-84a0-7b2695728225-1791475865184.png"
+    /// Lo que guarda Físico: comparación del mismo ángulo, fotos por mes y fotos privadas.
+    private struct Perk: Hashable { let symbol: String; let text: String }
+    private static let physiquePerks = [
+        Perk(symbol: "rectangle.split.2x1", text: "El antes y el ahora, lado a lado"),
+        Perk(symbol: "calendar", text: "Tus fotos ordenadas por mes"),
+        Perk(symbol: "lock", text: "Privadas: solo las ves tú"),
+    ]
+    /// Lo que tendrá Fuerza: todo real (gráfica por ejercicio, racha semanal y récords).
+    private static let strengthPerks = [
+        Perk(symbol: "chart.line.uptrend.xyaxis", text: "Tu fuerza en cada ejercicio"),
+        Perk(symbol: "flame", text: "Tu racha de semanas entrenando"),
+        Perk(symbol: "trophy", text: "Tus récords personales"),
+    ]
+    /// Lo que guarda Récords: la mejor marca de cada ejercicio, los nuevos del mes y su fecha.
+    private static let recordPerks = [
+        Perk(symbol: "trophy", text: "Tu mejor marca de cada ejercicio"),
+        Perk(symbol: "sparkles", text: "Los récords nuevos de cada mes"),
+        Perk(symbol: "calendar", text: "El día en que rompiste cada uno"),
+    ]
+
+    /// Aún sin pareja del mismo ángulo: su último scan en grande (foto real) y cómo conseguir la comparación.
+    @ViewBuilder private var compareTeaser: some View {
+        if let latest = model.photos.first {
+            HStack(alignment: .top, spacing: 16) {
+                Button { viewing = latest } label: {
+                    Color.clear.frame(width: 112, height: 150)
+                        .overlay { RemoteThumb(url: latest.url) { Palette.secondary } }
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Ver tu último scan, del \(latest.shortDate)")
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("TU ÚLTIMO SCAN").font(.apCaption.weight(.semibold)).tracking(1.6).foregroundStyle(Palette.gold)
+                    Text(latest.longDate.isEmpty ? "Sin fecha" : latest.longDate).font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted).padding(.top, 4)
+                    Text("Compara tu evolución").font(.apHeadline).padding(.top, 12)
+                    Text("Con otro scan del mismo ángulo verás el antes y el ahora, lado a lado.").font(.apSubhead).foregroundStyle(Palette.muted)
+                        .fixedSize(horizontal: false, vertical: true).padding(.top, 4)
+                    Button("Hacer un scan") { Haptics.tap(); tab = 3 }
+                        .buttonStyle(.pillSecondary).padding(.top, 14)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).strokeBorder(Color.white.opacity(0.08), lineWidth: 1))
+        }
     }
 
     private func photoTile(_ p: ProgressModel.Photo, label: String) -> some View {
         Color.clear.aspectRatio(3/4, contentMode: .fit)
             .overlay { RemoteThumb(url: p.url) { Palette.secondary } }
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay(alignment: .bottomLeading) {
                 // Sin fecha legible no se pinta una píldora vacía.
                 if !label.isEmpty {
-                    Text(label).font(.inter(.caption2).weight(.medium).monospacedDigit()).foregroundStyle(.white)
-                        .padding(.horizontal, 6).padding(.vertical, 2).background(.black.opacity(0.55), in: Capsule()).padding(6)
+                    Text(label).font(.apCaption.weight(.medium).monospacedDigit()).foregroundStyle(.white)
+                        .padding(.horizontal, 8).padding(.vertical, 2).background(.black.opacity(0.55), in: Capsule()).padding(8)
                 }
             }
     }
@@ -375,8 +472,7 @@ struct ProgressScreen: View {
             } else if !model.recordsLoaded {
                 recordsSkeleton
             } else if model.records.isEmpty {
-                EmptyStateView(symbol: "trophy", title: "Sin récords aún", message: "Registra tus entrenos con peso y rompe tu primer récord personal.")
-                    .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
+                recordsEmpty
             } else if let best = model.bestRecord {
                 if isWide {
                     // Escritorio como la web (`lg:grid-cols-[280px_1fr]`): la mejor marca fija a
@@ -384,6 +480,7 @@ struct ProgressScreen: View {
                     // Escritorio: la mejor marca a todo el ancho arriba y la lista debajo.
                     VStack(alignment: .leading, spacing: 24) {
                         recordsHero(best).frame(maxWidth: .infinity)
+                        recordsStats
                         VStack(alignment: .leading, spacing: 16) {
                             recordsHeader
                             recordsTable
@@ -394,6 +491,7 @@ struct ProgressScreen: View {
                     // iPhone: una columna, exactamente como hasta ahora.
                     VStack(alignment: .leading, spacing: 16) {
                         recordsHero(best)
+                        recordsStats
                         recordsHeader
                         recordsTable
                     }
@@ -463,6 +561,31 @@ struct ProgressScreen: View {
         .accessibilityElement(children: .combine)
     }
 
+    /// Cifras de los propios récords (como `PRsList` de la web): cuántos, nuevos este mes y el último.
+    private var recordsStats: some View {
+        let month = String(LocalDate.string().prefix(7))
+        let thisMonth = model.records.filter { $0.day.hasPrefix(month) }.count
+        let latest = model.records.max { $0.day < $1.day }
+        return HStack(spacing: 8) {
+            recordStat(String(model.records.count), "Ejercicios con récord")
+            recordStat(String(thisMonth), "Nuevos este mes", accent: thisMonth > 0)
+            recordStat(latest?.shortDateText ?? "—", "Último récord")
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Resumen de tus récords")
+    }
+
+    private func recordStat(_ value: String, _ label: String, accent: Bool = false) -> some View {
+        VStack(spacing: 4) {
+            Text(value).font(.figure(size: 26)).foregroundStyle(accent ? Palette.gold : Palette.foreground)
+                .lineLimit(1).minimumScaleFactor(0.6)
+            Text(label).font(.apCaption).foregroundStyle(Palette.muted)
+                .multilineTextAlignment(.center).lineLimit(2)
+        }
+        .frame(maxWidth: .infinity).padding(.horizontal, 8).padding(.vertical, 16)
+        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+    }
+
     private var recordsHeader: some View {
         Text("TUS RÉCORDS PERSONALES")
             .font(.apFootnote).foregroundStyle(Palette.muted)
@@ -490,7 +613,16 @@ struct ProgressScreen: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(pr.name).font(.apBody)
                     // Sin fecha (dato raro en el servidor) no se deja una línea vacía.
-                    if !pr.dateText.isEmpty { Text(pr.dateText).font(.apFootnote).foregroundStyle(Palette.muted) }
+                    if !pr.dateText.isEmpty {
+                        HStack(spacing: 6) {
+                            Text(pr.dateText).font(.apFootnote).foregroundStyle(Palette.muted)
+                            if pr.day.hasPrefix(String(LocalDate.string().prefix(7))) {
+                                Text("Nuevo").font(.inter(size: 11, weight: .semibold)).foregroundStyle(Palette.gold)
+                                    .padding(.horizontal, 6).padding(.vertical, 1)
+                                    .background(Palette.gold.opacity(0.15), in: Capsule())
+                            }
+                        }
+                    }
                 }
                 Spacer(minLength: 8)
                 VStack(alignment: .trailing, spacing: 4) {
@@ -881,6 +1013,9 @@ final class ProgressModel: ObservableObject {
         let weightText: String
         let e1rmText: String
         let image: String?
+        /// Día del récord («yyyy-MM-dd») para «Nuevos este mes» y «Último récord».
+        var day: String = ""
+        var shortDateText: String = ""
     }
 
     struct Photo: Identifiable, Hashable {
@@ -1006,7 +1141,8 @@ final class ProgressModel: ObservableObject {
         }
 
         // Datos recién traídos: volver a la pestaña no vuelve a pedir red.
-        if let at = snapshot.strengthAt, Date().timeIntervalSince(at) < 20 { return }
+        // Solo si también llegaron «Por ejercicio» y Récords: si no, se quedarían en esqueleto.
+        if let at = snapshot.strengthAt, snapshot.detailsAt != nil, Date().timeIntervalSince(at) < 20 { return }
         // Con datos en pantalla el refresco no bloquea la vista ni muestra esqueletos.
         startBackgroundRefresh(userId: userId, gen: gen)
         // «Físico» se prepara en segundo plano (filas, firmas y primeras miniaturas): cambiar a esa
@@ -1436,6 +1572,12 @@ private enum ProgressCompute {
         dayMonthStyle.format(date).replacingOccurrences(of: ".", with: "")
     }
 
+    /// «28 oct», para la cifra «Último récord».
+    static func recordShortDate(_ raw: String) -> String {
+        guard !raw.isEmpty, let date = ymd.date(from: String(raw.prefix(10))) else { return "" }
+        return date.formatted(.dateTime.day().month(.abbreviated).locale(Locale(identifier: "es_ES")))
+    }
+
     static func recordDate(_ raw: String) -> String {
         guard !raw.isEmpty, let date = ymd.date(from: String(raw.prefix(10))) else { return "" }
         return recordDateStyle.format(date)
@@ -1511,13 +1653,18 @@ private enum ProgressCompute {
                 guard let kg = Double(set.weight.replacingOccurrences(of: ",", with: ".")), kg.isFinite, kg > 0 else { return nil }
                 return (kg, set.reps)
             }
-            let e1rm = weighted.map { $0.0 * (1 + Double($0.1) / 30) }.max().map { ($0 * 10).rounded() / 10 }
+            let bestSet = weighted.max { $0.0 * (1 + Double($0.1) / 30) < $1.0 * (1 + Double($1.1) / 30) }
+            let e1rm = bestSet.map { (($0.0 * (1 + Double($0.1) / 30)) * 10).rounded() / 10 }
             var entry = byDay[log.exercise_name]?[dayKey]
                 ?? ExerciseEntry(date: date, label: dayLabel(date), volumeKg: 0, reps: 0, loadedSets: 0, best1Rm: nil)
             entry.volumeKg += weighted.reduce(0) { $0 + $1.0 * Double($1.1) }
             entry.reps += sets.reduce(0) { $0 + $1.reps }
             entry.loadedSets += weighted.count
-            if let value = e1rm, value > (entry.best1Rm ?? 0) { entry.best1Rm = value }
+            if let value = e1rm, let bestSet, value > (entry.best1Rm ?? 0) {
+                entry.best1Rm = value
+                entry.bestKg = bestSet.0
+                entry.bestReps = bestSet.1
+            }
             byDay[log.exercise_name, default: [:]][dayKey] = entry
         }
         result.history = byDay.mapValues { $0.values.sorted { $0.date < $1.date } }
@@ -1555,7 +1702,9 @@ private enum ProgressCompute {
                 dateText: recordDate(row.achieved_at ?? ""),
                 weightText: Progression.kgText(weight),
                 e1rmText: Progression.kgText(e1rm),
-                image: images[row.exercise_name])
+                image: images[row.exercise_name],
+                day: String((row.achieved_at ?? "").prefix(10)),
+                shortDateText: recordShortDate(row.achieved_at ?? ""))
         }
     }
 
@@ -1608,7 +1757,12 @@ private enum ProgressCompute {
 
 // MARK: - Gráfica «Por ejercicio»
 
-struct ExerciseEntry: Hashable { let date: Date; let label: String; var volumeKg: Double; var reps: Int; var loadedSets: Int; var best1Rm: Double? }
+struct ExerciseEntry: Hashable {
+    let date: Date; let label: String; var volumeKg: Double; var reps: Int; var loadedSets: Int; var best1Rm: Double?
+    /// Mejor serie del día (por 1RM estimado), como `bestSetLabel` de la web: kg y reps.
+    var bestKg: Double? = nil
+    var bestReps: Int? = nil
+}
 
 /// «Por ejercicio» de `WorkoutProgress.tsx` + `ExerciseProgressChart.tsx`: portada con la foto del ejercicio
 /// (tocable para cambiar) y la gráfica con 1RM / Volumen / Reps.
@@ -1620,6 +1774,7 @@ struct ExerciseProgressSection: View {
     let names: [String]
     @State private var selected = ""
     @State private var metric = 0
+    @State private var showAll = false
 
     private func value(_ e: ExerciseEntry) -> Double? {
         switch metric { case 1: e.loadedSets > 0 ? e.volumeKg.rounded() : nil; case 2: Double(e.reps); default: e.best1Rm }
@@ -1631,41 +1786,142 @@ struct ExerciseProgressSection: View {
         // seleccionado uno que ya no existe: se cae al primero de la lista.
         let name = names.contains(selected) ? selected : (names.first ?? "")
         let entries = history[name] ?? []
+        let others = names.filter { $0 != name }
+        let shownOthers = showAll ? others : Array(others.prefix(3))
+        let card = RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
         VStack(alignment: .leading, spacing: 12) {
-            Menu {
-                Picker("Ejercicio", selection: Binding(get: { name }, set: { Haptics.selection(); selected = $0 })) {
-                    ForEach(names, id: \.self) { n in Text("\(n) · \(history[n]?.count ?? 0) \(history[n]?.count == 1 ? "sesión" : "sesiones")").tag(n) }
+            // Ejercicio principal: foto, mejor marca (la serie de más 1RM) y su subida, con la gráfica en la misma tarjeta.
+            VStack(alignment: .leading, spacing: 16) {
+                Menu {
+                    Picker("Ejercicio", selection: Binding(get: { name }, set: { Haptics.selection(); selected = $0 })) {
+                        ForEach(names, id: \.self) { n in Text("\(n) · \(history[n]?.count ?? 0) \(history[n]?.count == 1 ? "sesión" : "sesiones")").tag(n) }
+                    }
+                } label: { header(name, entries) }
+                .menuStyle(.button).buttonStyle(.plain)
+                chart(name, entries)
+            }
+            .padding(16)
+            .background(Palette.card, in: card)
+            .overlay(card.strokeBorder(Color.white.opacity(0.08), lineWidth: 1))
+            ForEach(shownOthers, id: \.self) { other in otherRow(other) }
+            if others.count > 3 {
+                Button {
+                    Haptics.tap()
+                    withAnimation(reduceMotion ? nil : .snappy) { showAll.toggle() }
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "chart.bar").font(.system(size: 18, weight: .medium))
+                        Text(showAll ? "Ver menos ejercicios" : "Ver todos mis ejercicios").font(.apSubhead.weight(.semibold))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        Image(systemName: "chevron.right").font(.system(size: 14, weight: .semibold))
+                            .rotationEffect(.degrees(showAll ? -90 : 0))
+                    }
+                    .foregroundStyle(Palette.gold)
+                    .padding(.horizontal, 16).frame(minHeight: 52)
+                    .overlay(card.strokeBorder(Palette.gold.opacity(0.5), lineWidth: 1))
+                    .contentShape(card)
                 }
-            } label: { cover(name, count: entries.count) }
-            .menuStyle(.button).buttonStyle(.plain)
-            chart(name, entries).padding(16)
-                .background(Palette.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .buttonStyle(.plain)
+            }
         }
     }
 
-    private func cover(_ name: String, count: Int) -> some View {
-        let img = images[name].flatMap(URL.init(string:))
-        return HStack(alignment: .bottom, spacing: 8) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("\(count) \(count == 1 ? "sesión" : "sesiones")").font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.gold)
-                Text(name).font(.inter(size: 26, weight: .bold)).foregroundStyle(.white).multilineTextAlignment(.leading)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            Image(systemName: "chevron.up.chevron.down").font(.inter(size: 16, weight: .semibold)).foregroundStyle(.white.opacity(0.7)).padding(.bottom, 4)
+    /// Récord del ejercicio y su subida en kg desde la primera sesión con peso (`exerciseRecord` de la web).
+    static func record(_ entries: [ExerciseEntry]) -> (label: String?, gain: Double?) {
+        let weighted = entries.filter { $0.best1Rm != nil && $0.bestKg != nil }
+        guard let first = weighted.first,
+              let best = weighted.max(by: { ($0.best1Rm ?? 0) < ($1.best1Rm ?? 0) }) else { return (nil, nil) }
+        // Mismo empate que la web: ante igual 1RM gana el primero.
+        let top = weighted.first { $0.best1Rm == best.best1Rm } ?? best
+        let kg = top.bestKg ?? 0
+        let label = "\(kg.rounded() == kg ? String(Int(kg)) : String(kg).replacingOccurrences(of: ".", with: ",")) kg × \(top.bestReps ?? 0)"
+        let gain = ((kg - (first.bestKg ?? 0)) * 10).rounded() / 10
+        return (label, top != first && gain > 0 ? gain : nil)
+    }
+
+    /// Subida en kg en verde (chip de la maqueta); nada si no ha subido.
+    @ViewBuilder private func gainChip(_ gain: Double?) -> some View {
+        if let gain {
+            Label("+\(r(gain)) kg", systemImage: "chart.line.uptrend.xyaxis")
+                .font(.inter(size: 12, weight: .semibold).monospacedDigit())
+                .foregroundStyle(Palette.success)
+                .padding(.horizontal, 8).padding(.vertical, 4)
+                .background(Palette.success.opacity(0.15), in: Capsule())
+                .fixedSize()
         }
-        .padding(20)
-        .frame(maxWidth: .infinity, minHeight: img == nil ? 0 : 176, alignment: .bottomLeading)
-        .background {
-            if let img {
-                Color.clear.overlay {
-                    RemoteThumb(url: img, maxSide: 360) { Palette.card }
+    }
+
+    private func photo(_ name: String, size: CGFloat) -> some View {
+        let shape = RoundedRectangle(cornerRadius: size > 56 ? 16 : 12, style: .continuous)
+        return Palette.secondary
+            .overlay {
+                if let url = images[name].flatMap(URL.init(string:)) {
+                    // Con su URL como identidad: nunca se queda la foto del ejercicio anterior.
+                    RemoteThumb(url: url, maxSide: 200) { Image(systemName: "dumbbell").foregroundStyle(Palette.muted) }
+                        .id(url)
+                } else {
+                    Image(systemName: "dumbbell").foregroundStyle(Palette.muted)
                 }
-                .overlay { LinearGradient(colors: [.black.opacity(0.85), .black.opacity(0.3), .clear], startPoint: .bottom, endPoint: .top) }
-                .clipped()
-            } else { Palette.card }
+            }
+            .frame(width: size, height: size)
+            .clipShape(shape)
+            .accessibilityHidden(true)
+    }
+
+    private func header(_ name: String, _ entries: [ExerciseEntry]) -> some View {
+        let best = Self.record(entries)
+        return HStack(alignment: .top, spacing: 14) {
+            photo(name, size: 64)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(alignment: .top, spacing: 8) {
+                    Text(name).font(.apHeadline).foregroundStyle(Palette.foreground).lineLimit(2)
+                        .multilineTextAlignment(.leading).frame(maxWidth: .infinity, alignment: .leading)
+                    Image(systemName: "chevron.up.chevron.down").font(.inter(size: 14, weight: .semibold)).foregroundStyle(Palette.muted)
+                }
+                if let label = best.label {
+                    Text("Mejor marca").font(.apFootnote).foregroundStyle(Palette.muted).padding(.top, 2)
+                    HStack(spacing: 10) {
+                        Text(label).font(.inter(size: 26, weight: .bold).monospacedDigit()).foregroundStyle(Palette.foreground)
+                            .lineLimit(1).minimumScaleFactor(0.7)
+                        gainChip(best.gain)
+                    }
+                } else {
+                    // Sin peso no hay marca que enseñar: se dice cuántas sesiones lleva, sin guiones.
+                    Text("\(entries.count) \(entries.count == 1 ? "sesión registrada" : "sesiones registradas")")
+                        .font(.apSubhead).foregroundStyle(Palette.muted).padding(.top, 2)
+                }
+            }
         }
-        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
         .contentShape(Rectangle())
+    }
+
+    private func otherRow(_ name: String) -> some View {
+        let entries = history[name] ?? []
+        let best = Self.record(entries)
+        let card = RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+        return Button {
+            Haptics.selection()
+            withAnimation(reduceMotion ? nil : .snappy) { selected = name }
+        } label: {
+            HStack(spacing: 14) {
+                photo(name, size: 48)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(name).font(.apHeadline).foregroundStyle(Palette.foreground).lineLimit(1)
+                    Text(best.label.map { "Mejor marca: \($0)" } ?? "\(entries.count) \(entries.count == 1 ? "sesión" : "sesiones")")
+                        .font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted).lineLimit(2)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                gainChip(best.gain)
+                Image(systemName: "chevron.right").font(.system(size: 14, weight: .semibold)).foregroundStyle(Palette.muted)
+                    .accessibilityHidden(true)
+            }
+            .padding(.leading, 12).padding(.trailing, 16).padding(.vertical, 12)
+            .frame(maxWidth: .infinity, minHeight: 72)
+            .background(Palette.card, in: card)
+            .overlay(card.strokeBorder(Color.white.opacity(0.08), lineWidth: 1))
+            .contentShape(card)
+        }
+        .buttonStyle(.plain)
     }
 
     @ViewBuilder private func chart(_ name: String, _ history: [ExerciseEntry]) -> some View {
@@ -1679,7 +1935,8 @@ struct ExerciseProgressSection: View {
         let hasLine = values.count > 1
         let sessions = "\(history.count) \(history.count == 1 ? "sesión" : "sesiones")"
         VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
+            // Sin series con peso no se pinta «— kg»: ya lo explica el aviso de abajo.
+            if !values.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
                     (Text(latest.map(r) ?? "—").font(.inter(size: 32, weight: .bold).monospacedDigit()) + Text(" \(unit)").font(.apSubhead).foregroundColor(Palette.muted))
                         .lineLimit(1).minimumScaleFactor(0.7)
@@ -1696,26 +1953,9 @@ struct ExerciseProgressSection: View {
                     .font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                HStack(spacing: 0) {
-                    ForEach(Array(["1RM", "Volumen", "Reps"].enumerated()), id: \.offset) { i, l in
-                        Button {
-                            Haptics.selection()
-                            withAnimation(reduceMotion ? nil : .snappy) { metric = i }
-                        } label: {
-                            Text(l).font(.apFootnote.weight(i == metric ? .semibold : .medium))
-                                .padding(.horizontal, 10)
-                                // 44 pt de alto mínimo: el selector se toca cómodo con el pulgar.
-                                .frame(minWidth: 44, minHeight: 44)
-                                .background { if i == metric { RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Palette.accent) } }
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Ver \(l)")
-                        .accessibilityAddTraits(i == metric ? .isSelected : [])
-                    }
-                }
-                .padding(3).background(Palette.secondary, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             }
+            // Selector en su propia fila, como la web: «Volumen» ya no se parte en dos líneas.
+            SegmentedPill(options: ["1RM", "Volumen", "Reps"], selection: $metric)
             if hasLine {
                 let lo = values.min() ?? 0, pad = max(1, ((best ?? 0) - lo) * 0.15)
                 Chart(Array(data.enumerated()), id: \.offset) { i, e in

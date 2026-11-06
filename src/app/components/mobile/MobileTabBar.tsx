@@ -66,7 +66,8 @@ const ProgressIcon = ({ className, strokeWidth }: { className?: string; strokeWi
   </svg>
 );
 
-const TABS: { key: MobileTab; label: string; icon: LucideIcon | typeof TrainingIcon; activeIcon?: typeof HomeFill }[] = [
+/** Pestañas de la app (también las usa el móvil de muestra de la web pública). */
+export const TABS: { key: MobileTab; label: string; icon: LucideIcon | typeof TrainingIcon; activeIcon?: typeof HomeFill }[] = [
   { key: "home", label: "Hoy", icon: Home, activeIcon: HomeFill },
   { key: "training", label: "Entrenar", icon: TrainingIcon, activeIcon: DumbbellFill },
   { key: "nutrition", label: "Nutrición", icon: NutritionIcon, activeIcon: NutritionFill },

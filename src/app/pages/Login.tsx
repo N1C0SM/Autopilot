@@ -17,9 +17,10 @@ import { AppleSignInButton } from "@/app/components/auth/AppleSignInButton";
 import { AuthAppMark, AuthFieldGroup, AuthFieldNote, AuthFieldRow, AuthHero, AuthImage } from "@/app/components/auth/AuthScreenParts";
 import { authFieldInputClass, authSecondaryActionClass, focusNextOnEnter, hideWithKeyboardClass } from "@/app/components/auth/authFormHelpers";
 import { appleSignInEnabled, supportsMultipleAccounts } from "@/shared/lib/platform";
-import { hapticNotify, hapticTap } from "@/shared/lib/native";
+import { hapticNotify, hapticSelection, hapticTap } from "@/shared/lib/native";
 import { clearVerifyContext, saveSignupEmail, saveVerifyContext } from "@/shared/lib/signupVerification";
 import { cn } from "@/shared/lib/utils";
+import { Eye, EyeOff, LockKeyhole, Mail } from "lucide-react";
 
 const swap = { type: "spring", stiffness: 380, damping: 36 } as const;
 
@@ -31,6 +32,7 @@ const Login = () => {
     try { return JSON.parse(localStorage.getItem("autopilot:last-login") || "null")?.id || ""; } catch { return ""; }
   });
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   // Con otra cuenta ya guardada en el dispositivo se puede proteger esta con contraseña.
   const [offerLock] = useState(() => supportsMultipleAccounts() && listAccounts().length > 0);
   const [lockAccount, setLockAccount] = useState(false);
@@ -146,9 +148,12 @@ const Login = () => {
       </Button>
       {appleSignInEnabled() && <AppleSignInButton label="sign-in" onClick={handleApple} />}
       <div className={hideWithKeyboardClass}>
-        <Button asChild variant="plain" size="sm" className={authSecondaryActionClass}>
-          <Link to="/onboarding" onClick={() => void hapticTap()}>Crear una cuenta gratis</Link>
-        </Button>
+        <p className="flex flex-wrap items-center justify-center gap-x-1.5 type-subhead text-muted-foreground">
+          ¿Aún no tienes cuenta?
+          <Link to="/onboarding" onClick={() => void hapticTap()} className={cn(authSecondaryActionClass, "inline-flex w-auto items-center text-primary transition-opacity active:opacity-60")}>
+            Crear una cuenta gratis
+          </Link>
+        </p>
         <p className="flex justify-center type-footnote text-muted-foreground">
           <Link to="/legal/terminos" className="inline-flex h-11 items-center px-2 transition-opacity active:opacity-60">Términos</Link>
           <span aria-hidden="true" className="inline-flex h-11 items-center">·</span>
@@ -189,6 +194,7 @@ const Login = () => {
             )}
           </AnimatePresence>
         }
+        kicker={!!known}
         title={known?.name ? `Hola, ${known.name.split(" ")[0]}` : "Hola de nuevo"}
         description={known?.name ? "Introduce tu contraseña para continuar." : "Inicia sesión para acceder a tu plan."}
       >
@@ -212,7 +218,7 @@ const Login = () => {
 
       <form id="login-form" onSubmit={handleSubmit} className="mt-8">
         <AuthFieldGroup footer={formError ? <AuthFieldNote id="login-error" tone="error">{formError}</AuthFieldNote> : null}>
-          <AuthFieldRow label="Usuario o correo" htmlFor="email">
+          <AuthFieldRow label="Usuario o correo" htmlFor="email" icon={Mail}>
             <Input
               id="email"
               type="text"
@@ -232,10 +238,25 @@ const Login = () => {
               placeholder="Usuario o correo"
             />
           </AuthFieldRow>
-          <AuthFieldRow label="Contraseña" htmlFor="password">
+          <AuthFieldRow
+            label="Contraseña"
+            htmlFor="password"
+            icon={LockKeyhole}
+            trailing={
+              <button
+                type="button"
+                aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                aria-pressed={showPassword}
+                className="flex h-11 w-11 shrink-0 items-center justify-center text-muted-foreground transition-opacity active:opacity-60"
+                onClick={() => { void hapticSelection(); setShowPassword((value) => !value); }}
+              >
+                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
+            }
+          >
             <Input
               id="password"
-              type="password"
+              type={showPassword ? "text" : "password"}
               autoComplete="current-password"
               enterKeyHint="go"
               autoFocus={!!remembered}
@@ -244,7 +265,7 @@ const Login = () => {
               required
               aria-invalid={formError ? true : undefined}
               aria-describedby={formError ? "login-error" : undefined}
-              className={authFieldInputClass()}
+              className={authFieldInputClass(true)}
               placeholder="Contraseña"
             />
           </AuthFieldRow>

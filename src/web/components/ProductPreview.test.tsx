@@ -37,15 +37,16 @@ afterEach(cleanup);
 describe("public product preview", () => {
   it("renders read-only screens from sample data and switches them from the visible tabs", () => {
     render(<ProductPreview onPlans={() => {}} />);
-    expect(screen.getByRole("heading", { name: /Hola, Nicolás/ })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Hoy" })).toBeVisible();
+    expect(screen.getByText(/Hola, Nicolás\./)).toBeVisible();
     expect(screen.getByText("Muestra interactiva · datos de ejemplo")).toBeVisible();
 
     fireEvent.click(screen.getByRole("tab", { name: "Nutrición" }));
-    expect(screen.getByRole("heading", { name: "Tus objetivos diarios" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Nutrición" })).toBeVisible();
     expect(screen.getByRole("tab", { name: "Nutrición" })).toHaveAttribute("aria-selected", "true");
 
     fireEvent.click(screen.getByRole("tab", { name: "Entrenar" }));
-    expect(screen.getByRole("heading", { name: "Entrenar" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Cuerpo completo" })).toBeVisible();
     expect(screen.queryByRole("group", { name: "Secciones de la demo" })).toBeNull();
 
     fireEvent.click(screen.getByRole("tab", { name: "Progreso" }));

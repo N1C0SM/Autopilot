@@ -38,47 +38,48 @@ describe("dashboard home overview", () => {
       />,
     );
 
-    expect(screen.getByText("Hola, Nicolás.")).toBeVisible();
-    expect(screen.getByText("A entrenar.")).toBeVisible();
-    const greeting = screen.getByRole("heading", { level: 2 });
-    expect(greeting).toHaveTextContent("Hola, Nicolás.");
-    expect(greeting).toHaveTextContent("A entrenar.");
+    // Rediseño: «Hoy» como título grande y el saludo debajo, en gris.
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("Hoy");
+    expect(screen.getByText("Hola, Nicolás. A entrenar.")).toBeVisible();
     // El saludo es corto: la sesión se nombra solo en su tarjeta.
     expect(screen.queryByText(/Hoy toca/)).not.toBeInTheDocument();
     const startButton = screen.getByRole("button", { name: "Empezar Pull B · Espalda y bíceps" });
     expect(within(startButton).getByText("Pull B")).toBeVisible();
     expect(within(startButton).getByText("1 ejercicio")).toBeVisible();
-    expect(within(startButton).getByText("Empezar entreno")).toBeVisible();
+    expect(within(startButton).getByText("Siguiente sesión · 1 de 1")).toBeVisible();
     fireEvent.click(startButton);
-    expect(onNavigate).toHaveBeenCalledWith("training");
+    expect(onNavigate).toHaveBeenCalledWith("training", today);
     expect(mocks.hapticTap).toHaveBeenCalledTimes(1);
   });
 
-  it("shows only today: there is no weekly strip and no day-by-day navigation", () => {
-    const tomorrow = DAYS[(DAYS.indexOf(today) + 1) % 7];
-    const dayAfter = DAYS[(DAYS.indexOf(today) + 2) % 7];
+  it("proposes the next pending session whatever the weekday, with one mark per session", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-04T12:00:00")); // domingo: no cambia nada
     const onNavigate = vi.fn();
+    const onStartWorkout = vi.fn();
     render(
       <HomeOverview
         dayPlans={[
-          { day: today, type: "gimnasio", exercises: [] },
-          { day: tomorrow, type: "gimnasio", routine_name: "Piernas", exercises: [{ exercise_id: "squat", name: "Sentadilla", series: 3, reps: 8, weight: "", rest: "90 s" }] },
-          { day: dayAfter, type: "actividad", sport: "Correr", duration: "30 min" },
+          { day: "Lunes", type: "gimnasio", routine_name: "Piernas", exercises: [] },
+          { day: "Jueves", type: "gimnasio", routine_name: "Empuje", exercises: [] },
+          { day: "Sábado", type: "actividad", sport: "Correr", duration: "30 min" },
         ]}
+        completedDays={["Lunes"]}
+        completedThisWeek={1}
         onNavigate={onNavigate}
+        onStartWorkout={onStartWorkout}
       />,
     );
 
-    // Ni «Tu semana» ni celdas de día: Hoy es solo hoy.
-    expect(screen.queryByText(/Tu semana/i)).not.toBeInTheDocument();
-    expect(screen.queryAllByLabelText(/con sesión — ver entrenamiento/)).toHaveLength(0);
-    expect(screen.queryByRole("button", { name: new RegExp(`^${tomorrow}:`) })).not.toBeInTheDocument();
-    // La acción principal sigue siendo la sesión de hoy…
-    expect(screen.getByRole("button", { name: /Empezar Entrenamiento de fuerza/ })).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: "Empezar Entrenamiento de fuerza" }));
-    // …y va a entrenar sin pedir ningún día de la semana.
-    expect(onNavigate).toHaveBeenCalledWith("training");
-    expect(onNavigate).not.toHaveBeenCalledWith("training", expect.anything());
+    // Ni días de la semana ni «descanso» por ser domingo: toca la siguiente que falta.
+    expect(screen.queryByText(/descans/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^[LMXJVSD]$/)).not.toBeInTheDocument();
+    const startButton = screen.getByRole("button", { name: "Empezar Empuje" });
+    expect(within(startButton).getByText("Siguiente sesión · 2 de 3")).toBeVisible();
+    expect(screen.getByRole("region", { name: "Esta semana: 1 de 3 sesiones" })).toBeVisible();
+    fireEvent.click(startButton);
+    expect(onStartWorkout).toHaveBeenCalledWith("Jueves");
+    expect(onNavigate).not.toHaveBeenCalled();
   });
 
   it("paints a real photo of today's session on a gym day, falling back to the brand photo", () => {
@@ -104,12 +105,15 @@ describe("dashboard home overview", () => {
     expect(container.querySelector("img")).toHaveAttribute("src", "https://cdn.example.com/cover.jpg");
   });
 
-  it("does not invent a session photo on a rest day", () => {
+  it("does not invent a session photo on a rest day: only the decorative brand photo", () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-10-04T12:00:00"));
-    const { container } = render(<HomeOverview dayPlans={[{ day: "Lunes", type: "gimnasio", exercises: [] }]} onNavigate={vi.fn()} />);
-    expect(screen.getByText("Hoy toca descansar")).toBeVisible();
-    expect(container.querySelector("img")).toBeNull();
+    const { container } = render(<HomeOverview dayPlans={[{ day: "Lunes", type: "gimnasio", exercises: [] }]} completedDays={["Lunes"]} onNavigate={vi.fn()} />);
+    expect(screen.getByText("Toca recuperar")).toBeVisible();
+    const images = Array.from(container.querySelectorAll("img"));
+    expect(images).toHaveLength(1);
+    expect(images[0]).toHaveAttribute("src", BRAND_PHOTOS.gym);
+    expect(images[0]).toHaveAttribute("aria-hidden", "true");
   });
 
   it("shows the weekly progress and nutrition cards while keeping paid nutrition reachable", () => {
@@ -117,23 +121,24 @@ describe("dashboard home overview", () => {
     render(
       <HomeOverview
         dayPlans={[
-          { day: today, type: "gimnasio", exercises: [] },
-          { day: DAYS[(DAYS.indexOf(today) + 1) % 7], type: "gimnasio", exercises: [] },
-          { day: DAYS[(DAYS.indexOf(today) + 2) % 7], type: "actividad", sport: "Correr", duration: "30 min" },
+          { day: "Lunes", type: "gimnasio", exercises: [] },
+          { day: "Martes", type: "gimnasio", exercises: [] },
+          { day: "Miércoles", type: "actividad", sport: "Correr", duration: "30 min" },
         ]}
         onNavigate={onNavigate}
-        completedThisWeek={2}
+        completedDays={["Lunes"]}
+        completedThisWeek={1}
         nutrition={false}
       />,
     );
 
         expect(screen.getByText("Plan de nutrición")).toBeVisible();
     const nutritionCard = screen.getByRole("button", { name: /Nutrición/ });
-    const progressCard = screen.getByRole("button", { name: /Récords/ });
+    const progressCard = screen.getByRole("button", { name: /Tu progreso/ });
     expect(nutritionCard).toBeVisible();
     expect(progressCard).toBeVisible();
-    // Los widgets van juntos en su rejilla, después de la acción principal.
-    expect(nutritionCard.closest("[data-home-rows]")).toBe(progressCard.closest("[data-home-rows]"));
+    // «Tu progreso» y «Tu plan» van juntos, después de la acción principal.
+    expect(progressCard.closest("[data-home-rows]")).toBe(screen.getByRole("button", { name: /Tu plan/ }).closest("[data-home-rows]"));
     const startButton = screen.getByRole("button", { name: /Empezar Entrenamiento de fuerza/ });
     expect(startButton).toBeVisible();
     const allButtons = screen.getAllByRole("button");
@@ -146,14 +151,14 @@ describe("dashboard home overview", () => {
     expect(mocks.hapticTap).toHaveBeenCalledTimes(2);
   });
 
-  it("opens training from a rest Sunday without asking for a weekday", () => {
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(new Date("2026-10-04T12:00:00"));
+  it("rests only when the whole week is done and still opens training", () => {
     const onNavigate = vi.fn();
     const onStartWorkout = vi.fn();
-    render(<HomeOverview dayPlans={[{ day: "Lunes", type: "gimnasio", exercises: [] }]} onNavigate={onNavigate} onStartWorkout={onStartWorkout} />);
+    render(<HomeOverview dayPlans={[{ day: "Lunes", type: "gimnasio", exercises: [] }]} completedDays={["Lunes"]} onNavigate={onNavigate} onStartWorkout={onStartWorkout} />);
+    expect(screen.getByText("Semana completa")).toBeVisible();
+    expect(screen.getByText("Has hecho tu sesión de esta semana. El lunes empieza otra vuelta.")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Entrenar igualmente" }));
-    // Sin tira de semana: se abre Entrenar, sin día concreto.
+    // Se abre Entrenar, sin sesión concreta.
     expect(onNavigate).toHaveBeenCalledWith("training");
     expect(onStartWorkout).not.toHaveBeenCalled();
   });
@@ -165,12 +170,12 @@ describe("dashboard home overview", () => {
     expect(onNavigate).toHaveBeenCalledWith("training");
   });
 
-  it("uses the direct start action only for today's planned session", () => {
+  it("starts the next session directly", () => {
     const onNavigate = vi.fn();
     const onStartWorkout = vi.fn();
     render(<HomeOverview dayPlans={[{ day: today, type: "gimnasio", exercises: [] }]} onNavigate={onNavigate} onStartWorkout={onStartWorkout} />);
     fireEvent.click(screen.getByRole("button", { name: /Empezar Entrenamiento/ }));
-    expect(onStartWorkout).toHaveBeenCalledOnce();
+    expect(onStartWorkout).toHaveBeenCalledWith(today);
     expect(onNavigate).not.toHaveBeenCalled();
   });
 
@@ -193,14 +198,14 @@ describe("dashboard home overview", () => {
     expect(screen.getByRole("button", { name: "Empezar Pull B" })).toHaveTextContent("2 ejercicios · 7 series · unos 20 min");
   });
 
-  it("tells the next session on a rest day", () => {
+  it("never rests just because of the weekday", () => {
     vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(new Date("2026-10-07T12:00:00"));
+    vi.setSystemTime(new Date("2026-10-07T12:00:00")); // miércoles
     render(<HomeOverview dayPlans={[{ day: "Viernes", type: "gimnasio", routine_name: "Pull B", exercises: [] }]} onNavigate={vi.fn()} />);
 
-    expect(screen.getByText("Hoy toca descansar")).toBeVisible();
-    expect(screen.getByText("Tu próxima sesión es el viernes: Pull B.")).toBeVisible();
-    expect(screen.queryByRole("button", { name: /^Empezar/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Empezar Pull B" })).toBeVisible();
+    expect(screen.queryByText(/descans/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/viernes/i)).not.toBeInTheDocument();
   });
 
   it("marks today as done and opens the session summary once it is logged", () => {

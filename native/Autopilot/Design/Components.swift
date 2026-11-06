@@ -3,45 +3,39 @@ import ImageIO
 
 /// Tarjeta de descanso de la web (`EmptyState rest`): luna dorada con halo, estrellas, título y acción.
 struct RestCard<Action: View>: View {
+    /// Antetítulo dorado («SEMANA COMPLETA», «TU PLAN»…).
+    var eyebrow = "DÍA DE DESCANSO"
     let title: String
     let message: String
+    /// Foto real de marca, fundida a la derecha como en «Entrenamiento de hoy» (`BRAND_PHOTOS.gym` de la web).
+    var photo = "https://enebrcdrdnfkyduzyrzm.supabase.co/storage/v1/object/public/site-assets/exercise-images/a31c7206-d2a4-4b31-856a-f5dec09b890e-1791475829849.png"
     @ViewBuilder var action: Action
 
-    /// EmptyState `rest` de la web: halo, luna creciente de 96 pt con resplandor y cinco estrellas.
+    /// Semana completa (o descanso): la misma tarjeta que la sesión, con foto real y sin dibujos (la luna y
+    /// las estrellas parecían infantiles). Igual que la tarjeta de `HomeOverview` en la web.
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Spacer(minLength: 144)
-            Text(title).font(.apTitle1).tracking(-0.7).padding(.top, 8).accessibilityAddTraits(.isHeader)
-            Text(message).font(.apSubhead).foregroundStyle(Palette.muted).padding(.top, 4).fixedSize(horizontal: false, vertical: true)
+            Text(eyebrow).font(.apCaption.weight(.semibold)).tracking(1.6).foregroundStyle(Palette.gold)
+            Text(title).font(.inter(size: 22, weight: .bold)).tracking(-0.4)
+                .padding(.top, 6).padding(.trailing, 96)
+                .accessibilityAddTraits(.isHeader)
+            Text(message).font(.apSubhead).foregroundStyle(Palette.muted)
+                .padding(.top, 4).padding(.trailing, 96)
+                .fixedSize(horizontal: false, vertical: true)
             action.padding(.top, 20)
         }
-        .padding(20)
-        .frame(maxWidth: .infinity, minHeight: 288, alignment: .bottomLeading)
-        .background {
-            GeometryReader { geo in
-                ZStack(alignment: .topLeading) {
-                    Circle().fill(RadialGradient(colors: [Palette.gold.opacity(0.22), .clear], center: .center, startRadius: 0, endRadius: 144))
-                        .frame(width: 288, height: 288).offset(x: geo.size.width - 288 + 64, y: -80)
-                    Circle().fill(Palette.gold.opacity(0.9))
-                        .frame(width: 96, height: 96)
-                        .mask {
-                            Rectangle().overlay {
-                                Circle().frame(width: 77, height: 77).position(x: 28.8, y: 33.6).blendMode(.destinationOut)
-                            }
-                            .compositingGroup()
-                        }
-                        .shadow(color: Palette.gold.opacity(0.45), radius: 30)
-                        .offset(x: geo.size.width - 96 - 32, y: 32)
-                    ForEach([(0.18, 0.22), (0.34, 0.58), (0.12, 0.72), (0.46, 0.30), (0.26, 0.44)], id: \.0) { t, l in
-                        Circle().fill(Color.white.opacity(0.5)).frame(width: 4, height: 4)
-                            .offset(x: l * geo.size.width, y: t * geo.size.height)
-                    }
-                }
-            }
-            .accessibilityHidden(true)
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(alignment: .trailing) {
+            CachedAsyncImage(url: URL(string: photo)) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
+                .frame(width: 210).frame(maxHeight: .infinity).clipped()
+                .opacity(0.8)
+                .overlay { LinearGradient(colors: [Palette.card, Palette.card.opacity(0.8), Palette.card.opacity(0.1)], startPoint: .leading, endPoint: .trailing) }
+                .accessibilityHidden(true)
         }
         .background(Palette.card)
-        .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).strokeBorder(Color.white.opacity(0.08), lineWidth: 1))
     }
 }
 
@@ -95,7 +89,8 @@ struct HeaderButtons: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            // La campana era un botón sin acción (no hay notificaciones todavía): fuera hasta 1.1.
+            // Campana y avatar, como `MobileHeader` de la web.
+            NotificationsBell()
             Button(action: onProfile) {
                 ZStack {
                     Circle().fill(Palette.secondary)
@@ -115,12 +110,10 @@ struct HeaderButtons: View {
 }
 
 /// Barra flotante de la web (FloatingMobileNav + MobileTabBar): iconos Phosphor (normal / relleno),
-/// 68 pt de alto, píldora activa dorada al 90 % y texto negro, inactivas en gris.
+/// 68 pt de alto, la pestaña activa con icono y texto en dorado (sin píldora) e inactivas en gris.
 struct FloatingTabBar: View {
     let tabs: [AppSection]
     @Binding var selection: AppSection
-    @Namespace private var pill
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack(spacing: 2) {
@@ -128,22 +121,17 @@ struct FloatingTabBar: View {
                 let active = tab == selection
                 Button {
                     if active { Haptics.tap() } else { Haptics.selection() }
-                    // Con «Reducir movimiento» la píldora cambia de sitio al instante (sin spring).
-                    withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.85)) { selection = tab }
+                    // Sin animación: la pantalla nueva aparece entera en el mismo fotograma (como la
+                    // barra de pestañas de iOS), sin fundido con la anterior.
+                    selection = tab
                 } label: {
                     VStack(spacing: 2) {
                         Image(tab.phosphor + (active ? "-fill" : "")).renderingMode(.template).resizable().frame(width: 24, height: 24)
                             .frame(height: 28)
                         Text(tab.tabTitle).font(.inter(size: 11, weight: .medium)).lineLimit(1)
                     }
-                    .foregroundStyle(active ? Color.black : Palette.muted)
+                    .foregroundStyle(active ? Palette.gold : Palette.muted)
                     .padding(.horizontal, 14).padding(.vertical, 6)
-                    .background {
-                        if active {
-                            Capsule().fill(Palette.gold.opacity(0.9))
-                                .matchedGeometryEffect(id: "pill", in: pill)
-                        }
-                    }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .contentShape(Rectangle())
                 }
@@ -155,7 +143,8 @@ struct FloatingTabBar: View {
         .padding(4)
         .frame(height: 68)
         .frame(maxWidth: 480)
-        .background(Palette.card, in: Capsule())
+        .background(Palette.card.opacity(0.9), in: Capsule())
+        .overlay(Capsule().strokeBorder(Palette.border, lineWidth: 1))
         .shadow(color: .black.opacity(0.5), radius: 12, y: 8)
         .padding(.horizontal, 12)
         // La barra se lee como un grupo de pestañas (VoiceOver anuncia «pestaña, seleccionada»).
@@ -164,31 +153,36 @@ struct FloatingTabBar: View {
     }
 }
 
-/// Control segmentado de la web (`TabsList`): fondo oscuro y la opción activa en gris claro.
-/// La píldora visible mide 32 pt, pero cada opción tiene 44 pt de área táctil (mínimo de Apple).
+/// Control segmentado de la web (`TabsList`): pista en cápsula y la opción activa en una cápsula que se desliza.
+/// La cápsula visible mide 32 pt (36 en dorado, como `h-11` en Progreso), pero cada opción tiene 44 pt de área táctil (mínimo de Apple).
 struct SegmentedPill: View {
     let options: [String]
     @Binding var selection: Int
+    /// Sección activa en dorado (Progreso, como en la web); por defecto, gris.
+    var gold = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Namespace private var pill
 
     var body: some View {
+        let pillHeight: CGFloat = gold ? 36 : 32
         HStack(spacing: 0) {
             ForEach(options.indices, id: \.self) { i in
                 Button {
                     Haptics.selection()
-                    withAnimation(reduceMotion ? nil : .snappy(duration: 0.2)) { selection = i }
+                    // Solo la cápsula se desliza (abajo); el contenido cambia sin fundidos.
+                    selection = i
                 } label: {
                     Text(options[i]).font(.inter(size: 13, weight: i == selection ? .semibold : .medium))
                         .lineLimit(1).minimumScaleFactor(0.7)
-                        .foregroundStyle(i == selection ? Palette.foreground : Palette.muted)
+                        .foregroundStyle(i == selection ? (gold ? Palette.background : Palette.foreground) : Palette.muted)
                         .frame(maxWidth: .infinity)
                         .frame(minHeight: 44)
                         .background {
-                            // La píldora activa conserva sus 32 pt visuales dentro del área de 44.
+                            // La cápsula activa se desliza a la opción tocada, sin sombra, como `rounded-full` en la web.
                             if i == selection {
-                                RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Palette.accent)
-                                    .frame(height: 32)
-                                    .shadow(color: .black.opacity(0.25), radius: 2, y: 1)
+                                Capsule().fill(gold ? Palette.gold : Palette.accent)
+                                    .frame(height: pillHeight)
+                                    .matchedGeometryEffect(id: "pill", in: pill)
                             }
                         }
                         .contentShape(Rectangle())
@@ -198,8 +192,9 @@ struct SegmentedPill: View {
                 .accessibilityAddTraits(i == selection ? .isSelected : [])
             }
         }
-        .padding(4)
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: selection)
+        .padding(.horizontal, 4)
+        .background { Capsule().fill(Palette.card).frame(height: pillHeight + 8) }
         .frame(maxWidth: 448)
         .frame(maxWidth: .infinity)
         // Control de geometría fija: se limita el crecimiento del texto para que no se trunque.
@@ -473,6 +468,21 @@ extension View {
         #else
         sheet(item: item) { content($0).frame(minWidth: 600, minHeight: 700) }
         #endif
+    }
+}
+
+/// Insignia «Plus» con candado: marca una función bloqueada del plan gratis (como `PlusBadge` en la web).
+struct PlusBadge: View {
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "lock.fill").font(.system(size: 10, weight: .semibold))
+            Text("Plus").font(.inter(size: 11, weight: .semibold))
+        }
+        .foregroundStyle(Palette.gold)
+        .padding(.horizontal, 8).padding(.vertical, 5)
+        .background(Palette.gold.opacity(0.15), in: Capsule())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Incluido en Plus")
     }
 }
 

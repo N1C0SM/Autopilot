@@ -5,7 +5,7 @@ import { supabase } from "@/shared/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Check, ChevronLeft, CloudOff, Dumbbell, Flame, Clock, CalendarDays,
-  TrendingDown, Plus, X, Info, Play, MoreHorizontal,
+  TrendingDown, Plus, X, Info, Play, Pause, MoreHorizontal, ChevronDown,
 } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Spinner } from "@/shared/components/ui/spinner";
@@ -28,6 +28,7 @@ import { parsePositiveWeight } from "@/shared/lib/weight";
 import { WorkoutSummary } from "@/app/components/dashboard/WorkoutSummary";
 import { ExerciseSwap } from "@/app/components/dashboard/ExerciseSwap";
 import { formatTrainingTitle } from "@/shared/lib/trainingDisplay";
+import { routineSessions } from "@/shared/lib/routineOrder";
 import { hapticImpact, hapticNotify, hapticSelection, hapticSignature, hapticTap } from "@/shared/lib/native";
 import SwipeSetEntry from "@/app/components/dashboard/SwipeSetEntry";
 import LogAllSetsButton from "@/app/components/dashboard/LogAllSetsButton";
@@ -79,20 +80,8 @@ const DAYS_ORDER = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sába
 const hasSessionIn = (plans: DayPlan[], day?: string | null) =>
   Boolean(day) && plans.some((p) => p.day === day && (p.type === "gimnasio" || p.type === "actividad"));
 
-/** Siguiente día con sesión después de `from`, dando la vuelta a la semana. */
-const nextSessionIn = (plans: DayPlan[], from: string): string | null => {
-  const start = DAYS_ORDER.indexOf(from);
-  if (start < 0) return null;
-  for (let i = 1; i <= DAYS_ORDER.length; i += 1) {
-    const day = DAYS_ORDER[(start + i) % DAYS_ORDER.length];
-    if (hasSessionIn(plans, day)) return day;
-  }
-  return null;
-};
-
-/** Hoy si entrena; si no, la siguiente sesión de la semana. */
-const firstSessionIn = (plans: DayPlan[], today: string): string | null =>
-  hasSessionIn(plans, today) ? today : nextSessionIn(plans, today);
+/** Primera sesión de la rutina: sin días de la semana, el orden es el de la rutina. */
+const firstSessionIn = (plans: DayPlan[]): string | null => routineSessions(plans)[0]?.day ?? null;
 
 // `--accent` es ahora el gris de fila pulsada: el nivel alto se deriva del tinte.
 const MUSCLE_INTENSITY = {
@@ -132,7 +121,8 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
   const [resumeDraft] = useState(() => resume ? readActiveWorkout(userId) : null);
   const [workoutView, setWorkoutViewState] = useState(() => getWorkoutView(userId));
   const [advanced, setAdvancedState] = useState(() => getWorkoutAdvanced(userId));
-  const [openExercises, setOpenExercises] = useState<number[]>([]);
+  // En la lista todos los ejercicios nacen abiertos; se guardan solo los que el usuario pliega.
+  const [closedExercises, setClosedExercises] = useState<number[]>([]);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(() => 
     window.matchMedia("(prefers-reduced-motion: reduce)").matches
   );
@@ -149,11 +139,11 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
   }, []);
   const todayIndex = (new Date().getDay() + 6) % 7;
   const today = DAYS_ORDER[todayIndex];
-  // El día abierto siempre tiene sesión: el borrador activo, el día pedido si entrena,
-  // si no hoy, si no el siguiente que entrene. Nunca un día sin sesión.
+  // La sesión abierta siempre existe: el borrador activo, la pedida (la siguiente pendiente
+  // desde «Hoy») o la primera de la rutina. Nunca un día sin sesión.
   const [selectedDay, setSelectedDay] = useState<string>(() =>
     resumeDraft?.plan.day
-    ?? (hasSessionIn(dayPlans, initialDay) ? initialDay! : firstSessionIn(dayPlans, today) ?? today));
+    ?? (hasSessionIn(dayPlans, initialDay) ? initialDay! : firstSessionIn(dayPlans) ?? today));
   const [expandedExercise, setExpandedExercise] = useState<number | null>(null);
   const [exerciseLogs, setExerciseLogs] = useState<Record<string, WorkoutSetLog[]>>({});
   const [previousLogs, setPreviousLogs] = useState<Record<string, WorkoutSetLog[]>>({});
@@ -162,6 +152,8 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
   const [restTimer, setRestTimerState] = useState<number | null>(null);
   const [restEndsAt, setRestEndsAt] = useState<number | null>(null);
   const [sessionStartedAt, setSessionStartedAt] = useState<number | null>(null);
+  // Pausa: marca absoluta; al reanudar, inicio y descanso se desplazan lo que duró.
+  const [pausedAt, setPausedAt] = useState<number | null>(null);
   const [nowTick, setNowTick] = useState(() => Date.now());
   const setRestTimer = (seconds: number | null) => {
     setRestEndsAt(seconds === null ? null : Date.now() + seconds * 1000);
@@ -262,12 +254,12 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
   useEffect(() => {
     if (started || resumeDraft) return;
     if (hasSessionIn(dayPlans, selectedDay)) return;
-    const next = firstSessionIn(dayPlans, today) ?? today;
+    const next = (hasSessionIn(dayPlans, initialDay) ? initialDay! : firstSessionIn(dayPlans)) ?? today;
     if (next === selectedDay) return;
     setLogsReady(false);
     setCompletionReady(false);
     setSelectedDay(next);
-  }, [dayPlans, resumeDraft, selectedDay, started, today]);
+  }, [dayPlans, initialDay, resumeDraft, selectedDay, started, today]);
   const addSessionExercises = (entries: GymExerciseEntry[]) => {
     const existing = new Set((activePlan?.exercises ?? []).map((e) => e.name));
     const fresh = entries.filter((e) => !existing.has(e.name));
@@ -288,7 +280,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
     }
     setStarted(true);
     setExpandedExercise(exerciseIndex);
-    setOpenExercises([exerciseIndex]);
+    setClosedExercises([]);
     onSessionModeChange?.(true);
   };
 
@@ -303,7 +295,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
   useEffect(() => {
     setStarted(false);
     setExpandedExercise(null);
-    setOpenExercises([]);
+    setClosedExercises([]);
     setRestTimer(null);
     setTechnique(null);
     setSwaps({});
@@ -325,9 +317,10 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
       setSupersetLinks(resumeDraft.supersetLinks ?? {});
       setStarted(true);
       setExpandedExercise(resumeDraft.expandedExercise ?? 0);
-      setOpenExercises([resumeDraft.expandedExercise ?? 0]);
+      setClosedExercises([]);
       setRestEndsAt(resumeDraft.restEndsAt);
-      setRestTimerState(remainingRestSeconds(resumeDraft.restEndsAt));
+      setPausedAt(resumeDraft.pausedAt ?? null);
+      setRestTimerState(remainingRestSeconds(resumeDraft.restEndsAt, resumeDraft.pausedAt ?? undefined));
       setRestTarget(resumeDraft.restTarget);
       setLogsReady(true);
       setCompletionReady(true);
@@ -425,9 +418,10 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
         // (también al recargar en la pestaña Entrenamiento, no solo desde Hoy).
         setStarted(true);
         setExpandedExercise(draft.expandedExercise ?? 0);
-        setOpenExercises([draft.expandedExercise ?? 0]);
+        setClosedExercises([]);
         setRestEndsAt(draft.restEndsAt);
-        setRestTimerState(remainingRestSeconds(draft.restEndsAt));
+        setPausedAt(draft.pausedAt ?? null);
+        setRestTimerState(remainingRestSeconds(draft.restEndsAt, draft.pausedAt ?? undefined));
         setRestTarget(draft.restTarget);
         onSessionModeChange?.(true);
       } else if (completionResult.data && draft?.date === selectedDate && draft.plan.day === selectedDay) {
@@ -450,19 +444,19 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
 
   useEffect(() => {
     if (!autoStart) return;
-    // Inicio siempre abre la rutina de hoy, aunque antes se consultara otro día.
-    // Si hoy no tiene sesión no se auto-arranca otra rutina ni se abre un día de descanso.
+    // Inicio abre la sesión pedida (la siguiente pendiente), aunque antes se consultara otra.
+    // Sin sesión pedida no se auto-arranca ninguna.
     if (started) {
       onAutoStartConsumed?.();
       return;
     }
-    if (selectedDay !== today) {
-      if (!hasSessionIn(dayPlans, today)) {
-        onAutoStartConsumed?.();
-        return;
-      }
+    if (!hasSessionIn(dayPlans, initialDay)) {
+      onAutoStartConsumed?.();
+      return;
+    }
+    if (selectedDay !== initialDay) {
       setLogsReady(false);
-      setSelectedDay(today);
+      setSelectedDay(initialDay!);
       return;
     }
     if (selectedDate !== currentDate) {
@@ -477,15 +471,17 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
     if (currentPlan?.type === "gimnasio" && !workoutCompleted && !loadError) {
       setStarted(true);
       setExpandedExercise(0);
-      setOpenExercises([0]);
+      setClosedExercises([]);
       onSessionModeChange?.(true);
     }
     onAutoStartConsumed?.();
-  }, [autoStart, currentDate, currentPlan?.type, dayPlans, loadError, logsReady, onAutoStartConsumed, onSessionModeChange, selectedDate, selectedDay, started, today, workoutCompleted]);
+  }, [autoStart, currentDate, currentPlan?.type, dayPlans, initialDay, loadError, logsReady, onAutoStartConsumed, onSessionModeChange, selectedDate, selectedDay, started, workoutCompleted]);
 
   // Absolute deadline: suspended timers cannot extend the athlete's rest.
   useEffect(() => {
     if (restEndsAt === null) return;
+    // En pausa el descanso se congela: no corre ni suena.
+    if (pausedAt !== null) { setRestTimerState(remainingRestSeconds(restEndsAt, pausedAt)); return; }
     const sync = () => {
       const remaining = remainingRestSeconds(restEndsAt);
       setRestTimerState(remaining);
@@ -505,7 +501,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
       document.removeEventListener("visibilitychange", sync);
       window.removeEventListener("pageshow", sync);
     };
-  }, [restEndsAt]);
+  }, [restEndsAt, pausedAt]);
 
   // Session clock: absolute start mark, restored from the draft so reloads don't reset it.
   useEffect(() => {
@@ -518,18 +514,26 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
     setNowTick(Date.now());
     return () => window.clearInterval(id);
   }, [started, workoutCompleted, sessionStartedAt, userId, selectedDate]);
-  useEffect(() => { if (!started) setSessionStartedAt(null); }, [started]);
+  useEffect(() => { if (!started) { setSessionStartedAt(null); setPausedAt(null); } }, [started]);
+  const togglePause = () => {
+    void hapticTap();
+    if (pausedAt === null) { setPausedAt(Date.now()); return; }
+    const shift = Date.now() - pausedAt;
+    setSessionStartedAt((start) => start === null ? start : start + shift);
+    setRestEndsAt((end) => end === null ? end : end + shift);
+    setPausedAt(null);
+  };
 
   useEffect(() => {
     if (!started || !logsReady || workoutCompleted || activePlan?.type !== "gimnasio") return;
     const saved = saveActiveWorkout({ version: 1, userId, date: selectedDate, plan: activePlan,
-      logs: exerciseLogs, swaps, supersetLinks, expandedExercise, restEndsAt, restTarget, startedAt: sessionStartedAt ?? undefined });
+      logs: exerciseLogs, swaps, supersetLinks, expandedExercise, restEndsAt, restTarget, startedAt: sessionStartedAt ?? undefined, pausedAt });
     if (!saved) setSaveError(true);
-  }, [started, logsReady, workoutCompleted, userId, selectedDate, currentPlanSignature, sessionExtras, exerciseLogs, swaps, supersetLinks, expandedExercise, restEndsAt, restTarget, sessionStartedAt]);
+  }, [started, logsReady, workoutCompleted, userId, selectedDate, currentPlanSignature, sessionExtras, exerciseLogs, swaps, supersetLinks, expandedExercise, restEndsAt, restTarget, sessionStartedAt, pausedAt]);
 
   useEffect(() => {
     if (started && expandedExercise !== null) {
-      setOpenExercises((open) => open.includes(expandedExercise) ? open : [...open, expandedExercise]);
+      setClosedExercises((closed) => closed.filter((index) => index !== expandedExercise));
     }
   }, [started, expandedExercise]);
 
@@ -1043,7 +1047,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
       if (activePlan?.type === "gimnasio") {
         setStarted(true);
         setExpandedExercise(0);
-        setOpenExercises([0]);
+        setClosedExercises([]);
         saveActiveWorkout({
           version: 1,
           userId,
@@ -1118,7 +1122,6 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
   const workingLogEntries = allLogEntries.filter(({ set }) => !isWorkoutSetWarmup(set));
   const completedSets = workingLogEntries.filter(({ set }) => set.done).length;
   const totalSets = workingLogEntries.length;
-  const allSetsDone = totalSets > 0 && completedSets >= totalSets;
   const totalVolume = workingLogEntries.reduce((total, { set }) => {
     if (!set.done) return total;
     const weight = parsePositiveWeight(set.weight);
@@ -1169,6 +1172,14 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
   );
 
   const focusMode = started && workoutView === "focus" && expandedExercise !== null;
+  // Lista de toda la sesión: título grande en el contenido y el pequeño de la barra, oculto.
+  const listMode = started && !focusMode;
+  const paused = started && pausedAt !== null;
+  const elapsedLabel = sessionStartedAt !== null ? formatElapsed((pausedAt ?? nowTick) - sessionStartedAt) : "00:00";
+  const currentExerciseIndex = (activePlan?.exercises || []).findIndex((exercise) => {
+    const sets = exerciseLogs[exercise.name] || [];
+    return !(sets.length > 0 && sets.every((set) => set.done));
+  });
   // Si el usuario eligió «Ejercicio a ejercicio», nunca caemos a la lista vertical en plena sesión.
   useEffect(() => {
     if (started && workoutView === "focus" && expandedExercise === null && planExercises?.length) setExpandedExercise(0);
@@ -1195,7 +1206,9 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
         <div className="sticky top-0 z-30 -mt-2">
           <NavBar
             title={activePlan?.routine_name?.trim() || trainingTitle || "Entrenamiento"}
-            subtitle={<span className="tabular-nums">{sessionStartedAt !== null && <><span aria-label="Tiempo de sesión">{formatElapsed(nowTick - sessionStartedAt)}</span> · </>}{completedSets} de {totalSets} series</span>}
+            subtitle={<span className="tabular-nums">{completedSets} de {totalSets} series</span>}
+            titleVisible={!listMode}
+            titleAsHeading={!listMode}
             leading={
               <button
                 type="button"
@@ -1274,48 +1287,40 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
         </div>
       )}
 
-      {/* Selector de día: la semana entera siempre a un toque. Se oculta durante la
-          sesión para no cambiar de día con series a medias. */}
-      {!started && dayPlans.length > 0 && (
+      {/* Selector de sesión: la rutina en orden, sin días de la semana. Se oculta durante la
+          sesión para no cambiar de sesión con series a medias. */}
+      {!started && routineSessions(dayPlans).length > 1 && (
         <div
           role="tablist"
-          aria-label="Elige el día de la semana"
+          aria-label="Elige la sesión"
           className="no-scrollbar mb-4 flex gap-1 overflow-x-auto rounded-media bg-card p-1.5"
         >
-          {DAYS_ORDER.map((day) => {
-            const active = day === selectedDay;
-            const isToday = day === DAYS_ORDER[todayIndex];
-            const hasWork = hasSessionIn(dayPlans, day);
+          {routineSessions(dayPlans).map((session, index) => {
+            const active = session.day === selectedDay;
+            const name = (session.type === "gimnasio"
+              ? formatTrainingTitle(session.routine_name, session.muscle_focus) || "Entrenamiento"
+              : session.sport || "Actividad").split(" · ")[0];
             return (
               <button
-                key={day}
+                key={session.day}
                 type="button"
                 role="tab"
                 aria-selected={active}
-                aria-label={`${day}${hasWork ? "" : " · sin sesión"}${isToday ? " · hoy" : ""}`}
-                disabled={saving || !hasWork}
+                aria-label={`Sesión ${index + 1}: ${name}`}
+                disabled={saving}
                 onClick={() => {
-                  if (day === selectedDay) return;
+                  if (active) return;
                   void hapticSelection();
                   setLogsReady(false);
                   setCompletionReady(false);
-                  setSelectedDay(day);
+                  setSelectedDay(session.day);
                 }}
-                className={`flex h-[50px] min-w-10 flex-1 shrink-0 flex-col items-center justify-center gap-1 rounded-media type-footnote transition-colors duration-150 disabled:opacity-40 ${
-                  active
-                    ? "bg-primary font-semibold text-primary-foreground"
-                    : !hasWork
-                      ? "cursor-default text-muted-foreground/40"
-                      : isToday
-                        ? "font-semibold text-primary active:bg-accent"
-                        : "text-muted-foreground active:bg-accent"
+                className={`flex h-[50px] min-w-12 flex-1 shrink-0 flex-col items-center justify-center gap-0.5 rounded-media px-1 transition-colors duration-150 disabled:opacity-40 ${
+                  active ? "bg-primary text-primary-foreground" : "text-muted-foreground active:bg-accent"
                 }`}
               >
-                <span>{day.slice(0, 3)}</span>
-                <span
-                  aria-hidden="true"
-                  className={`h-[5px] w-[5px] rounded-full ${hasWork ? (active ? "bg-primary-foreground" : "bg-primary") : "bg-transparent"}`}
-                />
+                <span className="type-subhead font-semibold tabular-nums">{index + 1}</span>
+                <span className="max-w-full truncate text-[11px] leading-none">{name}</span>
               </button>
             );
           })}
@@ -1380,7 +1385,6 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                 {currentPlan.exercises.length} ejercicios · {totalSets} series
               </p>
             )}
-            {selectedDay !== today && <p className="mt-1 type-footnote text-muted-foreground">Se registra hoy · {completedDateLabel}</p>}
 
             {/* Antes de empezar, la única protagonista es la acción principal. */}
             <div className={completedSets > 0 ? "mt-4 flex items-center gap-3" : "sr-only"}>
@@ -1536,12 +1540,31 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
           {/* Exercise list: lista agrupada en el resumen; en sesión, solo el ejercicio en foco */}
           {!workoutCompleted && completionReady && !loadError && (
           <section className={started ? "" : "pb-28 md:pb-0"}>
-          {!focusMode && (currentPlan.exercises?.length ?? 0) > 0 && (
+          {listMode && (
+            // Cabecera de la sesión (diseño ChatGPT): estado, título grande y avance por ejercicios.
+            <header className="px-1 pb-4">
+              <p className={`flex items-center gap-1.5 type-footnote font-medium ${paused ? "text-muted-foreground" : "text-primary"}`}>
+                {paused ? <Pause className="h-4 w-4" aria-hidden="true" /> : <Dumbbell className="h-4 w-4" aria-hidden="true" />}
+                {paused ? "Entrenamiento en pausa" : "Entrenamiento en curso"}
+              </p>
+              <h1 className="mt-1 line-clamp-2 text-[30px] font-bold leading-tight tracking-tight">
+                {activePlan?.routine_name?.trim() || trainingTitle || "Entrenamiento"}
+              </h1>
+              <p className="mt-1 type-subhead tabular-nums text-muted-foreground">
+                {(currentPlan.exercises?.length ?? 0)} ejercicios · {completedSets} de {totalSets} series
+              </p>
+              <div className="mt-3 flex items-center gap-3">
+                <Progress value={progressPercent} aria-valuenow={Math.round(progressPercent)} aria-label="Avance de la sesión" className="h-1.5 flex-1 [&>div]:bg-primary" />
+                <span className="shrink-0 type-footnote tabular-nums text-muted-foreground">{completedExercises}/{currentPlan.exercises?.length ?? 0} ejercicios</span>
+              </div>
+            </header>
+          )}
+          {!focusMode && !started && (currentPlan.exercises?.length ?? 0) > 0 && (
             <h3 className="px-4 pb-1.5 type-group-header">Ejercicios</h3>
           )}
-          <div className={started && !focusMode ? "space-y-3" : focusMode ? "" : "overflow-hidden rounded-media bg-card"}>
+          <div className={`${started && !focusMode ? "space-y-3" : focusMode ? "" : "overflow-hidden rounded-media bg-card"} ${paused ? "pointer-events-none opacity-40 transition-opacity" : ""}`} aria-disabled={paused || undefined}>
           {(currentPlan.exercises || []).map((ex, i) => {
-            const isExpanded = workoutView === "list" ? openExercises.includes(i) : expandedExercise === i;
+            const isExpanded = workoutView === "list" ? !closedExercises.includes(i) : expandedExercise === i;
             if (focusMode && expandedExercise !== i) return null;
             const focused = focusMode && isExpanded;
             const sets = exerciseLogs[ex.name] || [];
@@ -1600,7 +1623,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                       void hapticTap();
                       startWorkout(i);
                     } else if (workoutView === "list") {
-                      setOpenExercises((open) => open.includes(i) ? open.filter((index) => index !== i) : [...open, i]);
+                      setClosedExercises((closed) => closed.includes(i) ? closed.filter((index) => index !== i) : [...closed, i]);
                     } else {
                       setExpandedExercise(i);
                     }
@@ -1610,7 +1633,17 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                     : "flex h-auto w-full items-center gap-3 whitespace-normal p-0 pl-3 text-left transition-colors duration-150 active:bg-accent has-[[role=button]:active]:bg-transparent"}
                 >
                   {/* Miniatura única de ejercicio (misma que en el resto de la app); en foco ya está el visor */}
-                  {!focused && <ExerciseThumb image={metadata?.image_url || ex.image_url} video={exerciseVideo} name={ex.name} pattern={exercisePattern} stimulus={exerciseStimulus} load={exerciseLoad} completed={allDone} />}
+                  {!focused && (
+                    <span className="relative shrink-0">
+                      <ExerciseThumb image={metadata?.image_url || ex.image_url} video={exerciseVideo} name={ex.name} pattern={exercisePattern} stimulus={exerciseStimulus} load={exerciseLoad} completed={allDone} />
+                      {/* Número de orden en la esquina: dorado el que toca ahora y los hechos. */}
+                      {listMode && (
+                        <span aria-hidden="true" className={`absolute -left-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full font-rounded text-[13px] font-bold tabular-nums ring-2 ring-card ${allDone || i === currentExerciseIndex ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"}`}>
+                          {i + 1}
+                        </span>
+                      )}
+                    </span>
+                  )}
                   <div className={focused ? "flex min-w-0 flex-1 items-start" : `flex min-h-[68px] min-w-0 flex-1 items-center py-2 pr-1 ${i > 0 ? "sep-t" : ""}`}>
                   <div className="min-w-0 flex-1 text-left">
                     <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
@@ -1711,6 +1744,9 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                     >
                       <Info className="h-5 w-5" aria-hidden="true" />
                     </span>
+                    {listMode && (
+                      <ChevronDown aria-hidden="true" className={`mr-2 h-5 w-5 text-muted-foreground transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`} />
+                    )}
                   </div>
                   </div>
                 </Button>
@@ -1985,7 +2021,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                   transition={prefersReducedMotion ? { duration: 0.2 } : { type: "spring", stiffness: 380, damping: 36 }}
                   className="overflow-hidden"
                 >
-                  <div role="timer" aria-label="Descanso entre series" className="pb-3">
+                  <div role="timer" aria-label="Descanso entre series" aria-disabled={paused || undefined} className={`pb-3 transition-opacity ${paused ? "pointer-events-none opacity-40" : ""}`}>
                     <div className="flex items-center gap-3">
                       {/* Anillo circular animado — radio 22, circunferencia ≈ 138 */}
                       <div aria-hidden="true" className="relative h-14 w-14 shrink-0">
@@ -2034,17 +2070,32 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                       ? "Guardado automáticamente"
                       : "Se guarda automáticamente"}
             </p>
-            {/* Psicología del color: mientras quedan series, la acción dorada es marcar la serie;
-                «Terminar» se vuelve dorado solo con la sesión completa (la recompensa). */}
-            <Button
-              onClick={() => { void hapticTap(); void finishWorkout(); }}
-              disabled={saving || completedSets === 0}
-              variant={allSetsDone ? "default" : "secondary"}
-              className="w-full rounded-full h-14 text-[17px] font-semibold [.keyboard-open_&]:hidden"
-              size="lg"
-            >
-              {saving ? <><Spinner size="sm" className={`${allSetsDone ? "text-primary-foreground" : "text-foreground"} [&>svg]:!size-full`} label="Guardando" /> Guardando…</> : "Terminar entrenamiento"}
-            </Button>
+            {/* Barra inferior (diseño ChatGPT): pausar, tiempo de sesión y finalizar. */}
+            <div className="flex items-center gap-2 [.keyboard-open_&]:hidden">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={togglePause}
+                disabled={saving}
+                aria-pressed={paused}
+                className="h-[52px] shrink-0 gap-1.5 rounded-full border-foreground/20 bg-transparent px-4 text-[16px] font-semibold"
+              >
+                {paused ? <Play className="h-4 w-4 fill-current" aria-hidden="true" /> : <Pause className="h-4 w-4 fill-current" aria-hidden="true" />}
+                {paused ? "Reanudar" : "Pausar"}
+              </Button>
+              <div className="min-w-0 flex-1 text-center">
+                <p className="font-rounded text-[22px] font-bold leading-7 tabular-nums" aria-label="Tiempo de sesión">{elapsedLabel}</p>
+                <p className="whitespace-nowrap text-[11px] leading-4 text-muted-foreground">{paused ? "En pausa" : "Tiempo transcurrido"}</p>
+              </div>
+              <Button
+                onClick={() => { void hapticTap(); void finishWorkout(); }}
+                disabled={saving || completedSets === 0}
+                className="h-[52px] shrink-0 gap-1.5 rounded-full px-5 text-[16px] font-semibold"
+                size="lg"
+              >
+                {saving ? <><Spinner size="sm" className="text-primary-foreground [&>svg]:!size-full" label="Guardando" /> Guardando…</> : <><Check className="h-5 w-5" strokeWidth={2.25} aria-hidden="true" />Finalizar</>}
+              </Button>
+            </div>
             </>}
           </div>}
         </div>

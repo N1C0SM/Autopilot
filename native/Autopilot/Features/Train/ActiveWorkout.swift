@@ -14,6 +14,8 @@ struct WorkoutDraft: Codable {
     var currentExercise: Int
     /// Grupos de superset (nombres de ejercicio). Opcional por compatibilidad.
     var supersets: [[String]]? = nil
+    /// Marca de pausa (como `pausedAt` en la web). Al reanudar, inicio y descanso se desplazan.
+    var pausedAt: Date? = nil
 }
 
 @MainActor
@@ -23,6 +25,8 @@ final class ActiveWorkout: ObservableObject {
     @Published var saveError: String?
     /// Ejercicios abiertos en la vista de lista (como `openExercises` en la web).
     @Published var openExercises: Set<Int> = [0]
+    /// En la lista todos nacen abiertos; se guardan los que el usuario pliega (como `closedExercises`).
+    @Published var closedExercises: Set<Int> = []
     /// Series de la sesión anterior (columna «Previa»).
     var previous: [String: [SetLog]] = [:]
     /// Duración objetivo del descanso actual, para la barra de progreso.
@@ -308,6 +312,32 @@ final class ActiveWorkout: ObservableObject {
             _ = try? await Backend.client.from("personal_records").upsert(inserts, onConflict: "user_id,exercise_name,weight,reps").execute()
         }
         return inserts.map(\.exercise_name)
+    }
+
+    func toggleCollapsed(_ index: Int) {
+        if closedExercises.contains(index) { closedExercises.remove(index) } else { closedExercises.insert(index) }
+    }
+
+    // MARK: Pausa
+
+    var isPaused: Bool { draft.pausedAt != nil }
+
+    /// Pausar congela el tiempo y el descanso; reanudar los desplaza lo que duró la pausa.
+    func togglePause() {
+        if let paused = draft.pausedAt {
+            let shift = Date().timeIntervalSince(paused)
+            draft.startedAt = draft.startedAt.addingTimeInterval(shift)
+            if let end = draft.restEndsAt {
+                let newEnd = end.addingTimeInterval(shift)
+                draft.restEndsAt = newEnd
+                scheduleRestNotification(at: newEnd)
+            }
+            draft.pausedAt = nil
+        } else {
+            draft.pausedAt = Date()
+            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["rest"])
+        }
+        persist()
     }
 
     // MARK: Descanso

@@ -3,10 +3,10 @@ export const REST_PRESETS = [45, 60, 90, 120, 180] as const;
 export type WorkoutView = "list" | "focus";
 export const WORKOUT_VIEW_EVENT = "autopilot:workout-view-changed";
 const viewKey = (userId: string) => `autopilot:workout-view:${userId}`;
-/** Ejercicio a ejercicio por defecto (como la app); la lista entera, solo si se elige. */
+/** La sesión entera en lista por defecto (como la app); ejercicio a ejercicio, solo si se elige. */
 export function getWorkoutView(userId: string): WorkoutView {
-  try { return localStorage.getItem(viewKey(userId)) === "list" ? "list" : "focus"; }
-  catch { return "focus"; }
+  try { return localStorage.getItem(viewKey(userId)) === "focus" ? "focus" : "list"; }
+  catch { return "list"; }
 }
 export function setWorkoutView(userId: string, view: WorkoutView) {
   try { localStorage.setItem(viewKey(userId), view); } catch { /* storage unavailable */ }

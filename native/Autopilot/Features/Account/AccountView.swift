@@ -38,7 +38,7 @@ struct AccountView: View {
     @State private var sports = ""
     @State private var nutritionPrefs = ""
     @State private var allergies = ""
-    @State private var workoutView = UserDefaults.standard.string(forKey: "workout-view") ?? "focus"
+    @State private var workoutView = UserDefaults.standard.string(forKey: "workout-view") ?? "list"
     @State private var photo: PhotosPickerItem?
     @State private var exportDoc: JSONDoc?
     @State private var confirmDelete = false
@@ -55,6 +55,8 @@ struct AccountView: View {
     /// y «Guardar» podía sobrescribir con vacíos lo que ya había (pérdida de datos).
     @State private var profileLoaded = false
     @State private var onboardingLoaded = false
+    /// Sección abierta desde el índice (su propia pantalla).
+    @State private var openPage: SettingsPage?
     /// Igual que la web: «training» = Plus; «full», «transform», «personal» = Coach.
     private var planName: String { ["full", "transform", "personal"].contains(subTier ?? "") ? "Coach" : subTier == "training" ? "Plus" : "Free" }
     private var paid: Bool { planName != "Free" }
@@ -93,10 +95,69 @@ struct AccountView: View {
     private static let goals = [("lose_weight", "Perder peso"), ("gain_muscle", "Ganar músculo"), ("improve_endurance", "Mejorar resistencia")]
     private static let rests = [(45, "45 s"), (60, "1 min"), (90, "1.5 min"), (120, "2 min"), (180, "3 min")]
 
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 28) {
-                header
+    #if os(iOS)
+    @Environment(\.horizontalSizeClass) private var sizeClass
+    /// iPhone: el subtítulo va bajo el título grande; en iPad/Mac la barra ya lleva su pista.
+    private var sizeClassCompact: Bool { sizeClass == .compact }
+    #endif
+
+    /// Fila del índice de Ajustes (maqueta de ChatGPT): icono, título, detalle y chevron; abre su pantalla.
+    private func hubRow(_ symbol: String, _ title: String, _ detail: String, to target: SettingsPage) -> some View {
+        Button {
+            Haptics.tap()
+            openPage = target
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: symbol).font(.system(size: 18)).foregroundStyle(Palette.muted)
+                    .frame(width: 28).accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title).font(.apBody).foregroundStyle(Palette.foreground)
+                    Text(detail).font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(2)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Palette.muted.opacity(0.6)).accessibilityHidden(true)
+            }
+            .frame(minHeight: 56)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// Índice agrupado de Ajustes, como `SettingsPanel.tsx`: cada fila abre su sección en su pantalla.
+    /// Subtítulo bajo el título grande (en iPad/Mac la barra ya lleva su pista).
+    @ViewBuilder private var hubSubtitle: some View {
+        #if os(iOS)
+        if sizeClassCompact {
+            Text("Gestiona tu cuenta, plan y preferencias.").font(.apSubhead).foregroundStyle(Palette.muted)
+        }
+        #endif
+    }
+
+    @ViewBuilder private var hub: some View {
+        group("Mi cuenta") {
+            hubRow("person", "Perfil", "Nombre, foto y privacidad", to: .perfil)
+            hubRow("target", "Tus datos y objetivo", "Edad, peso, objetivo y disponibilidad", to: .datos)
+            if profileLoaded {
+                hubRow("crown", "Mi plan", planName, to: .plan)
+            }
+            hubRow("person.2", "Cuentas en este dispositivo", "Cambia de cuenta sin cerrar sesión", to: .cuentas)
+        }
+        group("Preferencias") {
+            hubRow("dumbbell", "Tu forma de entrenar", "Vista del entreno y descanso entre series", to: .entreno)
+            hubRow("key", "Contraseña", "Cambia tu contraseña", to: .contrasena)
+        }
+        group("Privacidad y legal") {
+            hubRow("checkmark.shield", "Privacidad y mis datos", "Exporta tus datos y política de privacidad", to: .privacidad)
+            hubRow("doc.text", "Legal", "Términos, cookies y avisos", to: .legal)
+        }
+    }
+
+    // MARK: Secciones (cada fila del índice abre la suya en su propia pantalla)
+
+    @ViewBuilder private var profileSection: some View {
+                // La foto y el nombre grandes ya encabezan el índice: aquí solo para el admin, que no lo tiene.
+                if isAdmin { header }
 
                 group("Perfil") {
                     fieldRow("Nombre") { TextField("Nombre", text: $name).multilineTextAlignment(.trailing).textFieldStyle(.plain) }
@@ -108,6 +169,10 @@ struct AccountView: View {
                     toggleRow("Nombre público", "Si está apagado, se muestran solo tus iniciales.", namePublicBinding)
                     toggleRow("Foto de perfil pública", "Si está apagado, se muestra un icono genérico.", avatarPublicBinding)
                 }
+
+    }
+
+    @ViewBuilder private var dataSection: some View {
 
                 group("Tus datos") {
                     fieldRow("Edad") { numberField($age) }
@@ -158,6 +223,10 @@ struct AccountView: View {
                 }
                 }
 
+    }
+
+    @ViewBuilder private var trainingSection: some View {
+
                 group("Tu forma de entrenar", footer: "Elige cuánto quieres descansar al marcar una serie. El temporizador se inicia solo durante tu entreno.") {
                     VStack(alignment: .leading, spacing: 10) {
                         Text("Vista del entrenamiento").font(.apBody)
@@ -190,12 +259,19 @@ struct AccountView: View {
                     }
                 }
 
+    }
+
+    @ViewBuilder private var passwordSection: some View {
+
                 group("Cambiar contraseña") {
                     fieldRow("Nueva") { SecureField("Mínimo 6 caracteres", text: $newPassword).multilineTextAlignment(.trailing).textFieldStyle(.plain) }
                     fieldRow("Confirmar") { SecureField("Repite la contraseña", text: $confirmPassword).multilineTextAlignment(.trailing).textFieldStyle(.plain) }
                     actionRow("Cambiar contraseña", disabled: newPassword.count < 6 || newPassword != confirmPassword) { await changePassword() }
                 }
 
+    }
+
+    @ViewBuilder private var planSection: some View {
                 if !isAdmin, profileLoaded {
                     // Hasta tener la ficha no se enseña el plan: «Free» por defecto mentiría a quien paga.
                     group("Suscripción") {
@@ -216,6 +292,10 @@ struct AccountView: View {
                         }
                     }
                 }
+
+    }
+
+    @ViewBuilder private var privacySection: some View {
 
                 group("Privacidad y mis datos", footer: "Conforme al RGPD tienes derecho a acceder, portar y eliminar tus datos en cualquier momento.") {
                     Button { Task { await exportData() } } label: {
@@ -241,6 +321,10 @@ struct AccountView: View {
                     }
                 }
 
+    }
+
+    @ViewBuilder private var legalSection: some View {
+
                 group("Legal") {
                     linkRow("Términos", "https://autopilotplan.app/legal/terminos")
                     linkRow("Cookies", "https://autopilotplan.app/legal/cookies")
@@ -248,6 +332,9 @@ struct AccountView: View {
                     linkRow("Aviso legal", "https://autopilotplan.app/legal/aviso-legal")
                 }
 
+    }
+
+    @ViewBuilder private var accountsSection: some View {
                 group("Cuentas en este dispositivo", footer: "Cambia de cuenta sin cerrar sesión, como los usuarios de un Mac. «Abrir siempre con» decide qué cuenta se abre al entrar en la app.") {
                     fieldRow("Abrir siempre con") {
                         Menu {
@@ -354,9 +441,13 @@ struct AccountView: View {
                     .accessibilityHint("Inicia sesión con otra cuenta sin cerrar la actual")
                 }
 
+    }
+
+    /// Cerrar sesión y eliminar cuenta: al final del índice, como en Ajustes de iOS.
+    @ViewBuilder private var sessionSection: some View {
                 group("Sesión", footer: "Cierra tu sesión en este dispositivo.") {
                     Button { Task { await session.signOut() } } label: {
-                        Text("Cerrar sesión").font(.apBody).foregroundStyle(Palette.destructive).frame(maxWidth: .infinity, alignment: .leading)
+                        Label("Cerrar sesión", systemImage: "rectangle.portrait.and.arrow.right").font(.apBody).foregroundStyle(Palette.destructive).frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .buttonStyle(.plain)
                 }
@@ -369,11 +460,79 @@ struct AccountView: View {
                     .accessibilityHint("Pide confirmación y borra tu cuenta y tus datos")
                 }
                 .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+    }
+
+    /// Contenido de una pantalla de Ajustes.
+    @ViewBuilder private func sections(_ page: SettingsPage) -> some View {
+        switch page {
+        case .perfil: profileSection
+        case .datos: dataSection
+        case .plan: planSection
+        case .entreno: trainingSection
+        case .contrasena: passwordSection
+        case .privacidad: privacySection
+        case .legal: legalSection
+        case .cuentas: accountsSection
+        }
+    }
+
+    /// Pantalla de una sección: su contenido con el mismo lienzo, aviso y teclado que el índice.
+    private func page(_ page: SettingsPage) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 28) { sections(page) }
+                .padding(.horizontal, pagePadding).padding(.top, 8).padding(.bottom, 16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .screenBackground()
+        .navigationTitle(page.title)
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Listo") { commitRest(); restFocused = false; dismissKeyboard() }
+            }
+        }
+        #endif
+        .overlay(alignment: .top) { toastView }
+    }
+
+    @ViewBuilder private var toastView: some View {
+        if let toast {
+            Text(toast).font(.apSubhead.weight(.semibold)).padding(.horizontal, 16).padding(.vertical, 10)
+                .background(.ultraThinMaterial, in: Capsule()).padding(.top, 8)
+                // Con «Reducir movimiento» el aviso entra con un fundido, sin deslizarse.
+                .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
+                .accessibilityAddTraits(.isStaticText)
+        }
+    }
+
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 28) {
+                if isAdmin {
+                    // El admin no tiene índice: todo seguido, como hasta ahora.
+                    profileSection
+                    trainingSection
+                    passwordSection
+                    privacySection
+                    legalSection
+                    accountsSection
+                } else {
+                    // Solo el índice (perfil arriba y una fila por sección): cada fila abre su
+                    // pantalla. Antes debajo del índice seguían todas las secciones de antes.
+                    hubSubtitle
+                    header
+                    hub
+                }
+                sessionSection
             }
             .padding(.horizontal, pagePadding).padding(.top, 8).padding(.bottom, 16)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .screenBackground()
+        .navigationDestination(item: $openPage) { page($0) }
         // Gesto nativo: tirar hacia abajo vuelve a pedir la ficha y los datos sin vaciar la pantalla.
         .refreshable { await load(clear: false) }
         #if os(iOS)
@@ -386,15 +545,7 @@ struct AccountView: View {
             }
         }
         #endif
-        .overlay(alignment: .top) {
-            if let toast {
-                Text(toast).font(.apSubhead.weight(.semibold)).padding(.horizontal, 16).padding(.vertical, 10)
-                    .background(.ultraThinMaterial, in: Capsule()).padding(.top, 8)
-                    // Con «Reducir movimiento» el aviso entra con un fundido, sin deslizarse.
-                    .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
-                    .accessibilityAddTraits(.isStaticText)
-            }
-        }
+        .overlay(alignment: .top) { toastView }
         .apAnimation(.easeOut(duration: 0.2), value: toast, reduceMotion: reduceMotion)
         // Con `id` se recarga al cambiar de cuenta: la pantalla puede quedar montada al entrar
         // con otra cuenta y antes seguía enseñando (y guardando) los datos de la anterior.
@@ -926,5 +1077,23 @@ struct FoodChips: View {
             }
         }
         .padding(.vertical, 10)
+    }
+}
+
+/// Pantallas de Ajustes que abre el índice (como `SettingsPanel.tsx`).
+enum SettingsPage: String, Identifiable, Hashable {
+    case perfil, datos, plan, entreno, contrasena, privacidad, legal, cuentas
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .perfil: "Perfil"
+        case .datos: "Tus datos y objetivo"
+        case .plan: "Mi plan"
+        case .entreno: "Tu forma de entrenar"
+        case .contrasena: "Contraseña"
+        case .privacidad: "Privacidad y mis datos"
+        case .legal: "Legal"
+        case .cuentas: "Cuentas en este dispositivo"
+        }
     }
 }

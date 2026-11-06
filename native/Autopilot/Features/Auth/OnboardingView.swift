@@ -225,14 +225,14 @@ struct OnboardingDraft: Codable, Equatable {
 
 /// Opciones del configurador de la web, con los mismos valores que se guardan.
 private enum Quiz {
-    struct Option: Identifiable { let v: String; let l: String; var d: String? = nil; var id: String { v } }
+    struct Option: Identifiable { let v: String; let l: String; var d: String? = nil; var icon: String? = nil; var id: String { v } }
     struct Day: Identifiable { let v: Int; let s: String; let l: String; var id: Int { v } }
 
-    static let goals = [Option(v: "lose_weight", l: "Perder grasa"), Option(v: "gain_muscle", l: "Ganar músculo"),
-                        Option(v: "recomp", l: "Recomposición"), Option(v: "general_health", l: "Fuerza y salud")]
+    static let goals = [Option(v: "lose_weight", l: "Perder grasa", icon: "flame"), Option(v: "gain_muscle", l: "Ganar músculo", icon: "dumbbell"),
+                        Option(v: "recomp", l: "Recomposición", icon: "arrow.triangle.2.circlepath"), Option(v: "general_health", l: "Fuerza y salud", icon: "heart.text.square")]
     static let focuses = [Option(v: "gimnasio", l: "Gimnasio"), Option(v: "calistenia", l: "Calistenia"), Option(v: "mixto", l: "Mixto")]
     // Filas de una línea, iguales que «Perder grasa» / «Ganar músculo».
-    static let modes = [Option(v: "individual", l: "Individual"), Option(v: "pareja", l: "En pareja")]
+    static let modes = [Option(v: "individual", l: "Individual", icon: "person"), Option(v: "pareja", l: "En pareja", icon: "person.2")]
     static let durations = [Option(v: "40", l: "30–45 min"), Option(v: "55", l: "45–60 min"), Option(v: "75", l: "60–90 min")]
     static let structures = [Option(v: "full_body", l: "Full Body"), Option(v: "torso_pierna", l: "Torso / Pierna"),
                              Option(v: "ppl", l: "Empuje / Tirón / Pierna"), Option(v: "coach", l: "No lo sé, que Autopilot elija")]
@@ -304,8 +304,10 @@ struct OnboardingQuizView: View {
                 if step < titles.count - 1 {
                     Button("Continuar") { Haptics.tap(); c.save(); step += 1 }.buttonStyle(.pill).disabled(!valid[step])
                 } else {
-                    Button("Guardar mi plan gratis") { Haptics.signature(); c.save(); withAnimation { creatingAccount = true } }
-                        .buttonStyle(.pill).disabled(!accept)
+                    Button { Haptics.signature(); c.save(); withAnimation { creatingAccount = true } } label: {
+                        HStack(spacing: 8) { Text("Guardar mi plan gratis"); Image(systemName: "arrow.right").accessibilityHidden(true) }
+                    }
+                    .buttonStyle(.pill).disabled(!accept)
                 }
             }
             .frame(maxWidth: 560).padding(.horizontal, 16).padding(.vertical, 12)
@@ -317,12 +319,12 @@ struct OnboardingQuizView: View {
     @ViewBuilder private var content: some View {
         switch step {
         case 0:
-            choices(nil, Quiz.modes, c.mode) { c.mode = $0 }
+            choices("¿Cómo vas a entrenar?", Quiz.modes, c.mode, columns: true) { c.mode = $0 }
             if c.duo {
                 group("Tu pareja de entreno") { PillField(label: "Email de tu pareja de entreno", text: $c.partnerEmail, contentType: .email) }
             }
-            choices("Objetivo", Quiz.goals, c.goal) { c.goal = $0 }
-            group(t("¿Dónde entrenas?", "¿Dónde entrenáis?")) {
+            choices(t("¿Cuál es tu objetivo principal?", "¿Cuál es vuestro objetivo principal?"), Quiz.goals, c.goal) { c.goal = $0 }
+            question(t("¿Dónde entrenas habitualmente?", "¿Dónde entrenáis habitualmente?")) {
                 HStack(spacing: 10) { ForEach(Quiz.focuses) { photoChoice($0) } }
             }
         case 1:
@@ -361,43 +363,49 @@ struct OnboardingQuizView: View {
         }
     }
 
+    /// Resumen en filas con icono y lo que incluye el plan (diseño ChatGPT).
     private var summary: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text(t("TU OBJETIVO", "VUESTRO OBJETIVO")).font(.apFootnote).tracking(0.6).foregroundStyle(Palette.gold)
-            Text("\(Quiz.label(Quiz.goals, c.goal)) · \(Quiz.label(Quiz.focuses, c.focus))").font(.apTitle2).padding(.top, 4)
-            HStack(spacing: 6) {
-                ForEach(Quiz.week) { d in
-                    let on = c.days.contains(d.v)
-                    Text(d.s).font(.apHeadline).foregroundStyle(on ? Color.black : Palette.muted)
-                        .frame(width: 36, height: 36)
-                        .background(on ? Palette.gold : Palette.secondary, in: Circle()).frame(maxWidth: .infinity)
-                }
+        let dayNames = Quiz.week.filter { c.days.contains($0.v) }.map(\.s).joined(separator: ", ")
+        return VStack(alignment: .leading, spacing: 16) {
+            VStack(spacing: 0) {
+                summaryRow("target", "Objetivo", Quiz.label(Quiz.goals, c.goal), first: true)
+                summaryRow("dumbbell", "Tipo de entrenamiento", Quiz.label(Quiz.focuses, c.focus))
+                summaryRow(c.duo ? "person.2" : "person", "Modalidad", Quiz.label(Quiz.modes, c.mode))
+                summaryRow("calendar", t("Tu semana", "Vuestra semana"), "\(c.days.count) días (\(dayNames)) · \(Quiz.label(Quiz.durations, String(c.minutes)))")
             }
-            .padding(.top, 20)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel("Días de entreno: \(Quiz.week.filter { c.days.contains($0.v) }.map(\.l).joined(separator: ", "))")
-            HStack(spacing: 8) {
-                stat("Días", String(c.days.count))
-                stat("Sesión", Quiz.label(Quiz.durations, String(c.minutes)))
-                stat("Peso", c.weight.isEmpty ? "—" : "\(c.weight) kg")
-            }
-            .padding(.top, 20)
+            .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
             Text((c.structure == "coach" ? "Distribución: Autopilot elige la mejor para \(c.days.count) días." : "Distribución: \(Quiz.label(Quiz.structures, c.structure)).")
                  + (c.duo ? " Mismo calendario, cargas adaptadas a cada uno." : ""))
-                .font(.apSubhead).foregroundStyle(Palette.muted).padding(.top, 16)
+                .font(.apFootnote).foregroundStyle(Palette.muted).padding(.horizontal, 4)
+            VStack(alignment: .leading, spacing: 10) {
+                Text(t("Tu plan incluirá", "Vuestro plan incluirá")).font(.apHeadline).accessibilityAddTraits(.isHeader)
+                ForEach(Self.planIncludes, id: \.self) { item in
+                    Label {
+                        Text(item).font(.apSubhead)
+                    } icon: {
+                        Image(systemName: "checkmark").font(.inter(size: 15, weight: .bold)).foregroundStyle(Palette.gold)
+                    }
+                }
+            }
+            .padding(.horizontal, 4).padding(.top, 8)
         }
-        .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
     }
 
-    private func stat(_ k: String, _ v: String) -> some View {
-        VStack(spacing: 2) {
-            Text(v).font(.apHeadline).lineLimit(1).minimumScaleFactor(0.7)
-            Text(k).font(.apFootnote).foregroundStyle(Palette.muted)
+    /// Lo que de verdad trae el plan gratuito: rutina, progresión, nutrición básica y progreso.
+    private static let planIncludes = ["Rutina de entrenamiento personalizada", "Progresión de cargas", "Recomendaciones de nutrición", "Seguimiento de tu progreso"]
+
+    private func summaryRow(_ symbol: String, _ k: String, _ v: String, first: Bool = false) -> some View {
+        HStack(spacing: 16) {
+            Image(systemName: symbol).font(.inter(size: 20)).foregroundStyle(Palette.gold).frame(width: 28).accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(k).font(.apFootnote).foregroundStyle(Palette.muted)
+                Text(v).font(.apHeadline).fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
         }
-        .frame(maxWidth: .infinity).padding(.vertical, 12)
-        .background(Palette.secondary, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .padding(.horizontal, 20).padding(.vertical, 14)
+        .overlay(alignment: .top) { if !first { Rectangle().fill(Palette.separator).frame(height: 0.5).padding(.leading, 20) } }
         .accessibilityElement(children: .combine)
     }
 
@@ -409,28 +417,58 @@ struct OnboardingQuizView: View {
         }
     }
 
-    private func choices(_ header: String?, _ options: [Quiz.Option], _ value: String, _ set: @escaping (String) -> Void) -> some View {
-        let list = VStack(spacing: 0) {
-            ForEach(Array(options.enumerated()), id: \.element.id) { i, o in
-                Button { Haptics.selection(); set(o.v) } label: {
-                    HStack(spacing: 12) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(o.l).font(.apHeadline)
-                            if let d = o.d { Text(d).font(.apSubhead).foregroundStyle(Palette.muted) }
-                        }
-                        Spacer(minLength: 0)
-                        Image(systemName: "checkmark").font(.system(size: 17, weight: .bold)).foregroundStyle(Palette.gold)
-                            .opacity(o.v == value ? 1 : 0)
-                    }
-                    .padding(.horizontal, 16).frame(minHeight: 56).contentShape(Rectangle())
-                    .overlay(alignment: .bottom) { if i < options.count - 1 { Palette.separator.frame(height: 0.5).padding(.leading, 16) } }
-                }
-                .buttonStyle(.plain)
-                .accessibilityAddTraits(o.v == value ? .isSelected : [])
+    /// Pregunta del rediseño (como `type-headline` de la web) sobre sus opciones.
+    private func question<Content: View>(_ header: String, @ViewBuilder _ content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(header).font(.apHeadline).padding(.horizontal, 4).accessibilityAddTraits(.isHeader)
+            content()
+        }
+    }
+
+    /// Círculo de selección del rediseño: anillo vacío o dorado con check (`SelectMark` de la web).
+    private func selectMark(_ on: Bool) -> some View {
+        ZStack {
+            if on {
+                Circle().fill(Palette.gold)
+                Image(systemName: "checkmark").font(.system(size: 11, weight: .heavy)).foregroundStyle(Color.black)
+            } else {
+                Circle().strokeBorder(Palette.foreground.opacity(0.25), lineWidth: 2)
             }
         }
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-        return Group { if let header { group(header) { list } } else { list } }
+        .frame(width: 24, height: 24)
+        .accessibilityHidden(true)
+    }
+
+    /// Cada opción en su tarjeta (maqueta de ChatGPT): icono, texto y círculo; la elegida con borde dorado.
+    private func choices(_ header: String?, _ options: [Quiz.Option], _ value: String, columns: Bool = false, _ set: @escaping (String) -> Void) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
+        let cards = ForEach(options) { o in
+            let on = o.v == value
+            Button { Haptics.selection(); set(o.v) } label: {
+                HStack(spacing: 12) {
+                    if let icon = o.icon {
+                        Image(systemName: icon).font(.system(size: 18)).foregroundStyle(on ? Palette.gold : Palette.muted)
+                            .frame(width: 22).accessibilityHidden(true)
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(o.l).font(.apHeadline).lineLimit(2).minimumScaleFactor(0.85)
+                        if let d = o.d { Text(d).font(.apSubhead).foregroundStyle(Palette.muted) }
+                    }
+                    Spacer(minLength: 0)
+                    selectMark(on)
+                }
+                .padding(.horizontal, 16).padding(.vertical, 12).frame(minHeight: 56)
+                .background(on ? Palette.gold.opacity(0.08) : Palette.card, in: shape)
+                .overlay(shape.strokeBorder(on ? Palette.gold : Color.white.opacity(0.08), lineWidth: 1))
+                .contentShape(shape)
+            }
+            .buttonStyle(.plain)
+            .accessibilityAddTraits(on ? .isSelected : [])
+        }
+        let list = Group {
+            if columns { HStack(spacing: 10) { cards } } else { VStack(spacing: 10) { cards } }
+        }
+        return Group { if let header { question(header) { list } } else { list } }
     }
 
     private func photoChoice(_ o: Quiz.Option) -> some View {
@@ -446,12 +484,9 @@ struct OnboardingQuizView: View {
                 .overlay(alignment: .bottomLeading) {
                     Text(o.l).font(.apHeadline).foregroundStyle(.white).lineLimit(1).minimumScaleFactor(0.8).padding(12)
                 }
-            .overlay(alignment: .topTrailing) {
-                Image(systemName: "checkmark.circle.fill").font(.system(size: 24)).foregroundStyle(Color.black, Palette.gold)
-                    .padding(8).opacity(on ? 1 : 0)
-            }
+            .overlay(alignment: .topTrailing) { selectMark(on).padding(8) }
             .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).stroke(on ? Palette.gold : .clear, lineWidth: 2))
+            .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).stroke(on ? Palette.gold : Color.white.opacity(0.12), lineWidth: 2))
         }
         .buttonStyle(.pressableCard)
         .accessibilityLabel(o.l).accessibilityAddTraits(on ? .isSelected : [])
@@ -560,8 +595,19 @@ struct CreateAccountView: View {
             ScrollView {
                 VStack(spacing: 28) {
                     VStack(spacing: 12) {
-                        Image(systemName: codeSent ? "envelope.badge" : "sparkles").font(.system(size: 36, weight: .semibold))
-                            .foregroundStyle(Palette.gold).accessibilityHidden(true)
+                        if codeSent {
+                            Image(systemName: "envelope.badge").font(.system(size: 36, weight: .semibold))
+                                .foregroundStyle(Palette.gold).accessibilityHidden(true)
+                        } else {
+                            // Logo con AUTOPILOT, como en el registro web (`AuthAppMark`)
+                            VStack(spacing: 10) {
+                                BrandMark(size: 44)
+                                Text("AUTOPILOT").font(.inter(size: 20, weight: .bold)).tracking(1.3)
+                            }
+                            .padding(.bottom, 10)
+                            .accessibilityElement(children: .ignore)
+                            .accessibilityLabel("Autopilot")
+                        }
                         Text(codeSent ? "Introduce el código" : "Crea tu cuenta").font(.apLargeTitle).accessibilityAddTraits(.isHeader)
                         Text(codeSent ? "Te hemos enviado un código de 8 dígitos a \(email). Escríbelo aquí para activar tu cuenta."
                                       : "Último paso para desbloquear tu plan.")
@@ -575,9 +621,9 @@ struct CreateAccountView: View {
                                     if digits != v { code = digits }
                                 }
                         } else {
-                            PillField(label: "Nombre", text: $name)
-                            PillField(label: "Correo electrónico", text: $email, contentType: .email)
-                            PillField(label: "Contraseña, mínimo 6 caracteres", text: $password, secure: true, contentType: .password)
+                            PillField(label: "Nombre", text: $name, icon: "person")
+                            PillField(label: "Correo electrónico", text: $email, contentType: .email, icon: "envelope")
+                            PillField(label: "Contraseña, mínimo 6 caracteres", text: $password, secure: true, contentType: .password, icon: "lock")
                         }
                         if let error {
                             Text(error).font(.apFootnote).foregroundStyle(Palette.destructive)

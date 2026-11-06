@@ -29,7 +29,12 @@ struct NutritionView: View {
     /// Foto propia de cada plato (clave: el plato). Sin foto propia, la fila va sin foto.
     @State private var photos: [String: URL] = [:]
     /// Sin comidas: nil = comprobando, true = tiene Plus (se generan), false = aviso de Plus.
+    /// Se recuerda por usuario: al volver a abrir no aparece el estado de «preparando» de Plus.
     @State private var hasAccess: Bool?
+    /// El acceso guardado se vuelve a confirmar una vez por apertura (por si cambió el plan).
+    @State private var accessChecked = false
+    /// Mientras el servidor confirma el acceso no se enseña ninguna tarjeta (ni «Preparando…» ni «Sin comidas»).
+    @State private var preparing = false
     @State private var generating = false
     @State private var generateFailed = false
     /// Confirmación de «Regenerar comidas» (como en la web).
@@ -76,6 +81,12 @@ struct NutritionView: View {
                 if failed {
                     retryCard
                 } else if loaded {
+                    // Subtítulo de la maqueta para Gratis, bajo el título grande (en Mac la barra lleva su pista).
+                    #if os(iOS)
+                    if hasAccess == false && singleColumn {
+                        Text("Plan de alimentación básico.").font(.apSubhead).foregroundStyle(Palette.muted).padding(.bottom, -16)
+                    }
+                    #endif
                     content
                 } else {
                     // Skeleton en vez de una pantalla vacía mientras llega la red.
@@ -91,6 +102,90 @@ struct NutritionView: View {
         .task { await load() }
     }
 
+    /// Lo que Plus añade a Nutrición (`NUTRITION_PLUS_ROWS` de la web): solo funciones reales.
+    struct PlusRow: Hashable { let symbol: String; let title: String; let detail: String }
+    static let plusRows = [
+        PlusRow(symbol: "fork.knife", title: "Comidas de cada día", detail: "Ajustadas a tus macros y a lo que te gusta."),
+        PlusRow(symbol: "chart.bar", title: "Seguimiento de macros", detail: "Marca cada comida y se suman sus macros."),
+        PlusRow(symbol: "arrow.triangle.2.circlepath", title: "Menú a tu gusto", detail: "Regenera tus comidas cuando quieras."),
+    ]
+
+    /// «Más en Plus» (maqueta de ChatGPT): filas con candado; sin enlace a pagos externos en la app.
+    private var plusSection: some View {
+        let card = RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+        return VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Más en Plus").font(.apTitle2)
+                Text("Desbloquea tu plan de comidas completo y personalizado.").font(.apSubhead).foregroundStyle(Palette.muted)
+            }
+            ForEach(Self.plusRows, id: \.self) { row in
+                HStack(spacing: 14) {
+                    Image(systemName: row.symbol).font(.system(size: 19)).foregroundStyle(Palette.muted)
+                        .frame(width: 24).accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(row.title).font(.apHeadline)
+                        Text(row.detail).font(.apFootnote).foregroundStyle(Palette.muted)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    Image(systemName: "lock.fill").font(.system(size: 13, weight: .semibold)).foregroundStyle(Palette.gold)
+                        .accessibilityLabel("Incluido en Plus")
+                }
+                .padding(.horizontal, 16).padding(.vertical, 12)
+                .frame(maxWidth: .infinity, minHeight: 72, alignment: .leading)
+                .background(Palette.card, in: card)
+                .overlay(card.strokeBorder(Color.white.opacity(0.08), lineWidth: 1))
+            }
+            Text("Incluido en Plus").font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.gold)
+        }
+    }
+
+    /// Calorías del día con los macros a la derecha (maqueta de ChatGPT), igual que `BasicNutrition` de la web.
+    private func caloriesCard(kcal: Double, p: Double, c: Double, f: Double) -> some View {
+        let card = RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+        let rows: [(String, Double, Color)] = [("Proteína", p, Palette.gold), ("Carbohidratos", c, Palette.gold.opacity(0.6)), ("Grasas", f, Palette.gold.opacity(0.3))]
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 16) {
+                // Llama pequeña junto a la etiqueta: con la llama grande al lado, «Calorías» se partía en dos líneas en el iPhone.
+                VStack(alignment: .leading, spacing: 2) {
+                    Label {
+                        Text("Calorías diarias").lineLimit(1).minimumScaleFactor(0.85)
+                    } icon: {
+                        Image(systemName: "flame.fill").foregroundStyle(Palette.gold).accessibilityHidden(true)
+                    }
+                    .font(.apFootnote).foregroundStyle(Palette.muted)
+                    (Text(NumberText.integer(Int(kcal))).font(.inter(size: 28, weight: .bold).monospacedDigit())
+                        + Text(" kcal").font(.inter(size: 17, weight: .semibold)))
+                        .lineLimit(1).minimumScaleFactor(0.7)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityElement(children: .combine)
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(rows.filter { $0.1 > 0 }, id: \.0) { row in
+                        HStack(spacing: 8) {
+                            Circle().fill(row.2).frame(width: 8, height: 8)
+                            Text(row.0).font(.apFootnote).foregroundStyle(Palette.muted)
+                            Spacer(minLength: 12)
+                            Text("\(Int(row.1.rounded())) g").font(.apFootnote.weight(.semibold).monospacedDigit())
+                        }
+                        .accessibilityElement(children: .combine)
+                    }
+                }
+                .fixedSize()
+                .padding(.leading, 16)
+                .overlay(alignment: .leading) { Rectangle().fill(Color.white.opacity(0.08)).frame(width: 1) }
+            }
+            Text("Estimación inicial según tus datos y objetivo. No sustituye una valoración nutricional individual.")
+                .font(.apCaption).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 12)
+                .overlay(alignment: .top) { Rectangle().fill(Color.white.opacity(0.08)).frame(height: 1) }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Palette.card, in: card)
+        .overlay(card.strokeBorder(Color.white.opacity(0.08), lineWidth: 1))
+    }
+
     @ViewBuilder private var content: some View {
         let p = macros?.protein ?? 0, c = macros?.carbs ?? 0, f = macros?.fats ?? 0
         let energy = p * 4 + c * 4 + f * 9
@@ -102,16 +197,17 @@ struct NutritionView: View {
             VStack(alignment: .leading, spacing: 32) {
                 if let id = session.userId { MacrosWeightCard(userId: id) { await load() } }
                 if hasAccess == false {
-                    // Sin Plus (la RLS no deja leer el plan): el aviso de Plus debajo.
-                    EmptyCard(photo: Self.defaultDish, title: "Tus comidas, hechas para ti",
-                              message: "Con Plus, Autopilot te prepara las comidas de cada día con tus gustos, alergias y objetivo del onboarding, ajustadas a tus macros. Incluido en Plus.")
+                    // Sin Plus (la RLS no deja leer el plan): «Más en Plus» debajo, como la web.
+                    plusSection
                 }
             }
         } else {
             // Una sola columna, como la web (también en Mac): el resumen arriba y las comidas debajo.
             VStack(alignment: .leading, spacing: 32) {
                 VStack(alignment: .leading, spacing: 32) {
-                    if hasMeals || showTargets { summary(kcal: kcal, p: p, c: c, f: f, energy: energy, hasMeals: hasMeals, showTargets: showTargets) }
+                    // Sin comidas, la tarjeta de calorías de la maqueta; con comidas, el resumen con su anillo.
+                    if hasMeals { summary(kcal: kcal, p: p, c: c, f: f, energy: energy, hasMeals: hasMeals, showTargets: showTargets) }
+                    else if showTargets { caloriesCard(kcal: kcal, p: p, c: c, f: f) }
                     if hasMeals && macros == nil { macroNotice }
                 }
                 if hasMeals {
@@ -123,12 +219,14 @@ struct NutritionView: View {
                             Task { await generateMeals() }
                         }
                     } else if hasAccess == false {
-                        // Como `MealsPlusCard` de la web; en iOS sin enlace a pagos externos.
-                        EmptyCard(photo: Self.defaultDish, title: "Tus comidas, hechas para ti",
-                                  message: "Con Plus te preguntamos qué te gusta y qué no comes, y Autopilot te prepara las comidas de cada día ajustadas a tus macros. Incluido en Plus.")
-                    } else if generating || hasAccess == nil {
+                        // Como `NutritionPlusSection` de la web; en iOS sin enlace a pagos externos.
+                        plusSection
+                    } else if generating {
                         EmptyCard(photo: Self.defaultDish, title: "Preparando tus comidas…",
                                   message: "Autopilot está creando tus comidas con tus gustos y lo que no comes.")
+                    } else if hasAccess == nil || preparing {
+                        // Aún no se sabe si hay Plus: nada de «preparando» ni foto de plato (eso es de Plus).
+                        EmptyView()
                     } else {
                         VStack(alignment: .leading, spacing: 12) {
                             EmptyCard(photo: Self.defaultDish, title: "Sin comidas todavía",
@@ -411,23 +509,30 @@ struct NutritionView: View {
         // Lo marcado del día es local: se pinta de inmediato y no depende de la red.
         if let data = UserDefaults.standard.data(forKey: doneKey), let arr = try? JSONDecoder().decode([String].self, from: data) { done = Set(arr) }
         guard let id = session.userId else { loaded = true; failed = false; return }
+        if hasAccess == nil { hasAccess = UserDefaults.standard.object(forKey: Self.accessKey(id)) as? Bool }
 
         // La última copia del plan se pinta al instante; la red la sustituye después.
         if !loaded, let cached = Snapshots.load(Row.self, Self.cacheKey(id)) {
             macros = cached.macros_json
-            meals = cached.meals_json ?? []
+            // Comidas guardadas solo si lo último que dijo el servidor fue Plus: sin saberlo
+            // (primera apertura tras actualizar) o sin Plus, nunca asoman comidas de otra época.
+            meals = hasAccess == true ? (cached.meals_json ?? []) : []
             photos = Self.cachedPhotos(meals)
             loaded = true
         }
 
         do {
             let row = try await fetchPlan(id)
-            if let row { Snapshots.save(row, Self.cacheKey(id)) }
             // Sin Plus la RLS no deja leer el plan: los macros se calculan con el onboarding
             // (misma fórmula que `resolveNutritionPreview` de la web). Los macros son siempre gratis.
-            macros = row?.macros_json
-            if macros?.protein == nil && macros?.calories == nil { macros = await estimatedMacros(id) }
+            // Se calcula aparte y se publica una vez: sin un instante de «Calcula tus macros».
+            var fresh = row?.macros_json
+            if fresh?.protein == nil && fresh?.calories == nil { fresh = await estimatedMacros(id) }
+            macros = fresh
             meals = row?.meals_json ?? []
+            // La copia en disco es lo que se ve ahora, también sin fila: así no reaparecen al
+            // abrir comidas viejas (de cuando había Plus) que el servidor ya no devuelve.
+            Snapshots.save(Row(macros_json: macros, meals_json: meals), Self.cacheKey(id))
             // Las fotos ya guardadas se pintan en el primer frame: sin parpadeo ni salto.
             photos = Self.cachedPhotos(meals)
             loaded = true
@@ -435,10 +540,15 @@ struct NutritionView: View {
             if !meals.isEmpty {
                 // Fotos de todas las comidas en paralelo; la lista ya está pintada.
                 await prefetchPhotos()
-            } else if hasAccess == nil {
+            } else if !accessChecked {
                 // Sin comidas: con Plus se generan solas (el servidor vuelve a comprobar el acceso).
                 // Lo decide el servidor: si responde «no_access», toca el aviso de Plus.
+                accessChecked = true
+                preparing = true
                 await prepareMeals(id)
+                preparing = false
+                // Si se cerró a mitad (p. ej. al abrir Ajustes), se vuelve a comprobar al volver.
+                if Task.isCancelled { accessChecked = false }
             }
         } catch {
             // Si la vista se cerró a mitad de la carga no hay error que enseñar.
@@ -450,22 +560,29 @@ struct NutritionView: View {
 
     /// Copia en disco del plan por usuario (macros y comidas).
     static func cacheKey(_ id: UUID) -> String { "nutrition|\(id.uuidString.lowercased())" }
+    private static func accessKey(_ id: UUID) -> String { "nutrition-access.\(id.uuidString.lowercased())" }
 
-    /// Si nunca dijo qué le gusta comer, primero se comprueba el acceso (sin generar nada) y,
-    /// con Plus, se le pregunta; si ya lo dijo, se preparan las comidas directamente.
+    /// Guarda la última respuesta del servidor sobre Plus (solo respuestas reales, nunca un fallo de red).
+    private func setAccess(_ value: Bool) {
+        hasAccess = value
+        if let id = session.userId { UserDefaults.standard.set(value, forKey: Self.accessKey(id)) }
+    }
+
+    /// Primero el servidor confirma el acceso (sin generar nada): con Plus, si nunca dijo qué le
+    /// gusta comer se le pregunta y, si ya lo dijo, se preparan las comidas.
     private func prepareMeals(_ id: UUID) async {
         struct Prefs: Decodable { let nutrition_preferences: String? }
         let prefs: Prefs? = try? await Backend.client.from("onboarding").select("nutrition_preferences")
             .eq("user_id", value: id).single().execute().value
-        if let p = prefs?.nutrition_preferences, !p.trimmingCharacters(in: .whitespaces).isEmpty {
-            await generateMeals()
-            return
-        }
+        let hasPrefs = !(prefs?.nutrition_preferences ?? "").trimmingCharacters(in: .whitespaces).isEmpty
+        // Siempre se confirma antes de generar: quien tuvo Plus y ya no lo tiene no ve «Preparando…».
         struct Result: Decodable { let reason: String? }
         let result: Result? = try? await Backend.client.functions.invoke("sync-nutrition-macros", options: FunctionInvokeOptions(body: [String: String]()))
-        if result?.reason == "no_access" { hasAccess = false; return }
-        hasAccess = true
-        needsSetup = true
+        // Sin respuesta (red) no se decide nada: nunca se enseña lo de Plus a quien no lo tiene.
+        guard let result else { return }
+        if result.reason == "no_access" { setAccess(false); return }
+        setAccess(true)
+        if hasPrefs { await generateMeals() } else { needsSetup = true }
     }
 
     /// Comidas del día con las preferencias del onboarding (`sync-nutrition-macros`, igual que la web).
@@ -475,8 +592,8 @@ struct NutritionView: View {
         generating = true; generateFailed = false
         let result: Result? = try? await Backend.client.functions.invoke("sync-nutrition-macros", options: FunctionInvokeOptions(body: Body()))
         generating = false
-        if result?.reason == "no_access" { hasAccess = false; return }
-        hasAccess = true
+        if result?.reason == "no_access" { setAccess(false); return }
+        if result != nil { setAccess(true) }
         guard result?.meals_updated == true, let id = session.userId, let row = (try? await fetchPlan(id)) ?? nil else { generateFailed = true; return }
         // Copia en disco al día, como `load()`: sin red se abren las comidas nuevas, no las viejas.
         Snapshots.save(row, Self.cacheKey(id))

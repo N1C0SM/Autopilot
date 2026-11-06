@@ -1,4 +1,5 @@
-import { Check, LockKeyhole } from "lucide-react";
+import { LockKeyhole } from "lucide-react";
+import { PlusBadge } from "@/shared/components/ui/plus-badge";
 import { Button } from "@/shared/components/ui/button";
 import { hapticTap } from "@/shared/lib/native";
 import { isIOSNative } from "@/shared/lib/platform";
@@ -10,25 +11,22 @@ import { isIOSNative } from "@/shared/lib/platform";
 export default function ScanPlusCard({ sections, onUpgrade }: { sections?: string[]; onUpgrade?: () => void }) {
   const items = sections?.length ? sections : ["Composición corporal", "Puntuación por músculo", "Postura y proporciones", "Protocolo personalizado", "Tu yo futuro"];
   return (
-    <section className="relative overflow-hidden rounded-[22px] border border-border bg-card p-5">
-      <div className="relative">
-        <span className="flex h-10 w-10 items-center justify-center rounded-full border border-primary/30 text-primary">
-          <LockKeyhole className="h-5 w-5" strokeWidth={2.25} aria-hidden="true" />
-        </span>
-        <p className="mt-4 text-[28px] font-bold leading-tight tracking-tight">Tu scan completo, con Plus</p>
-        <p className="mt-1 type-subhead text-muted-foreground">Este es tu scan básico. Con Plus ves el análisis entero de tu físico:</p>
-        <ul className="mt-4 space-y-2.5">
-          {items.map((item) => (
-            <li key={item} className="flex items-start gap-2.5 type-subhead">
-              <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" strokeWidth={1.75} aria-hidden="true" />
-              {item}
-            </li>
-          ))}
-        </ul>
-        {onUpgrade && !isIOSNative()
-          ? <Button size="lg" className="mt-5 w-full" onClick={() => { void hapticTap(); onUpgrade(); }}>Ver mi scan completo con Plus</Button>
-          : <p className="mt-5 type-footnote font-semibold text-primary">Incluido en Plus</p>}
-      </div>
+    // Maqueta de ChatGPT: «Análisis completo (Plus)» con cada sección bloqueada en su tarjeta.
+    <section aria-labelledby="scan-plus-title">
+      <h3 id="scan-plus-title" className="type-title2">Análisis completo (Plus)</h3>
+      <p className="mt-0.5 type-subhead text-muted-foreground">Este es tu scan básico. Desbloquea el análisis avanzado de tu físico con recomendaciones personalizadas:</p>
+      <ul className="mt-3 space-y-2.5">
+        {items.map((item) => (
+          <li key={item} className="flex min-h-14 items-center gap-3 rounded-[22px] border border-border bg-card px-4 py-3">
+            <LockKeyhole className="h-[18px] w-[18px] shrink-0 text-muted-foreground" strokeWidth={2} aria-hidden="true" />
+            <span className="min-w-0 flex-1 type-subhead font-medium">{item}</span>
+            <PlusBadge />
+          </li>
+        ))}
+      </ul>
+      {onUpgrade && !isIOSNative()
+        ? <Button size="lg" className="mt-4 w-full" onClick={() => { void hapticTap(); onUpgrade(); }}>Ver mi scan completo con Plus</Button>
+        : <p className="mt-4 type-footnote font-semibold text-primary">Incluido en Plus</p>}
     </section>
   );
 }

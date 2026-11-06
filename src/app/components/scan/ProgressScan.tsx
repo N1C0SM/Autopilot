@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Lock, PersonStanding, Plus, Quote, Ruler, Sparkles, Sun, Target, X } from "lucide-react";
+import { ArrowRight, Camera, Lock, PersonStanding, Plus, Quote, RotateCcw, Ruler, Shirt, Sparkles, Sun, Target, X } from "lucide-react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { useAuth } from "@/shared/contexts/AuthContext";
 import { Button } from "@/shared/components/ui/button";
@@ -227,17 +227,16 @@ export default function ProgressScan({ onScanned }: { onScanned?: () => void }) 
       ) : (
         <motion.div key="upload" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }} className="flex flex-col gap-[18px]">
-          <header className="flex flex-col gap-1">
-            <p className="type-caption2 font-bold tracking-[0.15em] text-primary">AI SCAN</p>
-            <h2 className="type-title1">Tu análisis corporal</h2>
+          <header className="flex flex-col gap-1 text-center">
+            <h2 className="type-title1">Análisis físico con IA</h2>
             <p className="type-subhead text-muted-foreground">
-              Sube una foto frontal (y otra de espalda si quieres) y la IA valora tu físico y tu potencial.
+              Sube tus fotos y la IA analiza tu físico y tu potencial para personalizar aún más tu plan.
             </p>
           </header>
 
           <div className="grid grid-cols-2 gap-3">
-            <PhotoTile title="Delante" hint="Cuerpo completo" badge="Obligatoria" image={front} onFile={(f) => pick(f, true)} />
-            <PhotoTile title="Atrás" hint="Opcional" badge="Opcional" image={back} onFile={(f) => pick(f, false)} />
+            <PhotoTile title="Foto de delante" hint="Cuerpo completo" badge="Obligatoria" image={front} onFile={(f) => pick(f, true)} />
+            <PhotoTile title="Foto de atrás" hint="Cuerpo completo" badge="Opcional" image={back} onFile={(f) => pick(f, false)} />
           </div>
 
           <div className="flex items-start gap-3.5 rounded-media bg-card p-[18px]">
@@ -279,14 +278,18 @@ export default function ProgressScan({ onScanned }: { onScanned?: () => void }) 
           </div>
 
           <div className="rounded-media bg-card p-[18px]">
-            <h3 className="type-title3 mb-2">Cómo tomar las fotos</h3>
-            <TipRow icon={Ruler} title="Distancia" text="Cámara a 2-3 m, a la altura del ombligo, cuerpo entero y móvil en vertical." />
-            <TipRow icon={Sun} title="Luz y fondo" text="Luz natural frontal y uniforme, sin contraluz ni flash, con fondo liso y claro." />
-            <TipRow icon={PersonStanding} title="Postura y ropa" text="Ropa ajustada, pies a la anchura de los hombros y brazos relajados. Para la de atrás, date la vuelta sin moverte." />
+            <h3 className="type-headline mb-1.5">Cómo tomar las fotos</h3>
+            {/* Una línea por consejo (diseño ChatGPT). */}
+            <TipRow icon={PersonStanding} text="Cuerpo entero, de pie y con el móvil en vertical" />
+            <TipRow icon={Ruler} text="Cámara a 2-3 m, a la altura del ombligo" />
+            <TipRow icon={Sun} text="Luz natural frontal, sin contraluz ni flash" />
+            <TipRow icon={Shirt} text="Ropa ajustada y fondo liso y claro" />
+            <TipRow icon={RotateCcw} text="Para la de atrás, date la vuelta sin moverte" />
           </div>
 
           <Button size="lg" className="h-14 w-full" disabled={!front && !back} onClick={() => void analyze()}>
             Analizar mi físico
+            <ArrowRight className="h-5 w-5" aria-hidden="true" />
           </Button>
           {error && <p className="type-footnote text-destructive">{error}</p>}
           <p className="type-footnote text-muted-foreground">
@@ -322,13 +325,10 @@ function PhotoTile({ title, hint, badge, image, onFile }: {
         <img src={image} alt="" className="absolute inset-0 h-full w-full object-cover" />
       ) : (
         <>
-          <span aria-hidden="true" className="absolute inset-0 rounded-[22px] border-[1.5px] border-dashed border-primary/35" />
-          <PersonStanding aria-hidden="true" strokeWidth={0.75}
-            className="absolute left-1/2 top-1/2 h-[150px] w-[150px] -translate-x-1/2 -translate-y-1/2 text-foreground/[0.06]" />
-          {/* Todo centrado: cruz, título y pista. */}
+          {/* Tarjeta lisa como el resto (sin borde discontinuo ni silueta dibujada). Todo centrado: cámara, título y pista. */}
           <span className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center">
-            <span className="flex h-[54px] w-[54px] items-center justify-center rounded-[16px] bg-primary/15 text-primary">
-              <Plus className="h-5 w-5" strokeWidth={3} aria-hidden="true" />
+            <span className="flex h-[54px] w-[54px] items-center justify-center rounded-full bg-primary/15 text-primary">
+              <Camera className="h-5 w-5" strokeWidth={2.25} aria-hidden="true" />
             </span>
             <span className="type-headline">{title}</span>
             <span className="type-subhead text-muted-foreground">{hint}</span>
@@ -346,16 +346,11 @@ function PhotoTile({ title, hint, badge, image, onFile }: {
   );
 }
 
-function TipRow({ icon: Icon, title, text }: { icon: typeof Ruler; title: string; text: string }) {
+function TipRow({ icon: Icon, text }: { icon: typeof Ruler; text: string }) {
   return (
-    <div className="flex items-start gap-3 py-[7px]">
-      <span aria-hidden="true" className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-chip bg-primary/15 text-primary">
-        <Icon className="h-3.5 w-3.5" strokeWidth={1.75} />
-      </span>
-      <div className="flex flex-col gap-px">
-        <p className="type-subhead font-semibold">{title}</p>
-        <p className="type-footnote text-muted-foreground">{text}</p>
-      </div>
+    <div className="flex items-center gap-3 py-[6px]">
+      <Icon aria-hidden="true" className="h-[18px] w-[18px] shrink-0 text-primary" strokeWidth={1.75} />
+      <p className="type-footnote">{text}</p>
     </div>
   );
 }

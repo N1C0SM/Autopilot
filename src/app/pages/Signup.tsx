@@ -8,7 +8,7 @@ import Screen from "@/shared/components/native/Screen";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { Eye, EyeOff, Gift, Sparkles, Camera } from "lucide-react";
+import { Camera, Eye, EyeOff, Gift, LockKeyhole, Mail, Sparkles, UserRound } from "lucide-react";
 import { AppleSignInButton } from "@/app/components/auth/AppleSignInButton";
 import { AuthAppMark, AuthFieldGroup, AuthFieldNote, AuthFieldRow, AuthHero, AuthImage, AuthNotice } from "@/app/components/auth/AuthScreenParts";
 import { authFieldInputClass, authSecondaryActionClass, focusNextOnEnter, hideWithKeyboardClass } from "@/app/components/auth/authFormHelpers";
@@ -204,9 +204,12 @@ const Signup = () => {
           }}
         />
       )}
-      <Button asChild variant="plain" size="sm" className={cn(authSecondaryActionClass, hideWithKeyboardClass)}>
-        <Link to="/login" onClick={() => void hapticTap()}>Ya tengo cuenta</Link>
-      </Button>
+      <p className={cn("flex flex-wrap items-center justify-center gap-x-1.5 type-subhead text-muted-foreground", hideWithKeyboardClass)}>
+        ¿Ya tienes cuenta?
+        <Link to="/login" onClick={() => void hapticTap()} className={cn(authSecondaryActionClass, "inline-flex w-auto items-center text-primary transition-opacity active:opacity-60")}>
+          Iniciar sesión
+        </Link>
+      </p>
       <p className="text-center type-footnote text-muted-foreground">
         Al crear una cuenta aceptas nuestros{" "}
         <Link to="/legal/terminos" className="underline underline-offset-2 active:opacity-60">términos</Link>
@@ -230,6 +233,7 @@ const Signup = () => {
       </Helmet>
 
       <AuthHero
+        kicker={false}
         mark={<AuthAppMark />}
         title="Crea tu cuenta"
         description={
@@ -274,7 +278,7 @@ const Signup = () => {
         </div>
       )}
 
-      <form id="signup-form" onSubmit={handleSubmit} className={hasNotices ? "mt-8" : "mt-10"}>
+      <form id="signup-form" onSubmit={handleSubmit} className="mt-8">
         <AuthFieldGroup
           footer={
             <>
@@ -285,7 +289,7 @@ const Signup = () => {
             </>
           }
         >
-          <AuthFieldRow label="Tu nombre" htmlFor="name">
+          <AuthFieldRow label="Tu nombre" htmlFor="name" icon={UserRound}>
             <Input
               id="name"
               type="text"
@@ -303,6 +307,7 @@ const Signup = () => {
           <AuthFieldRow
             label="Correo electrónico"
             htmlFor="email"
+            icon={Mail}
             trailing={checkingEmail ? <Spinner size="sm" label="Verificando correo" className="mr-4" /> : null}
           >
             <Input
@@ -328,6 +333,7 @@ const Signup = () => {
           <AuthFieldRow
             label="Contraseña"
             htmlFor="password"
+            icon={LockKeyhole}
             trailing={
               <button
                 type="button"

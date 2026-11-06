@@ -128,11 +128,11 @@ describe("paridad web ↔ apps nativas", () => {
     const app = read("native/Autopilot/Features/Scan/ScanView.swift");
     expect(read("src/app/pages/Dashboard.tsx")).toMatch(/<ProgressScan /);
     for (const text of [
-      "AI SCAN", "Tu análisis corporal", "Delante", "Atrás", "Obligatoria", "Opcional", "Cambiar foto",
+      "AI SCAN", "Análisis físico con IA", "Foto de delante", "Foto de atrás", "Obligatoria", "Opcional", "Cambiar foto",
       "Tu objetivo", "Sin definir", "Se usa para personalizar el análisis.", "Cómo tomar las fotos",
-      "Cámara a 2-3 m, a la altura del ombligo, cuerpo entero y móvil en vertical.",
-      "Luz natural frontal y uniforme, sin contraluz ni flash, con fondo liso y claro.",
-      "Ropa ajustada, pies a la anchura de los hombros y brazos relajados. Para la de atrás, date la vuelta sin moverte.",
+      "Cuerpo entero, de pie y con el móvil en vertical", "Cámara a 2-3 m, a la altura del ombligo",
+      "Luz natural frontal, sin contraluz ni flash", "Ropa ajustada y fondo liso y claro",
+      "Para la de atrás, date la vuelta sin moverte",
       "Analizar mi físico",
       "Con una sola foto ya podemos analizarte: valoraremos solo lo que se vea en esa vista. Con las dos fotos el análisis es más completo.",
       "Privado: solo para tu análisis · Sin registro · Menos de 1 minuto",
@@ -150,8 +150,11 @@ describe("paridad web ↔ apps nativas", () => {
       expect(web, text).toContain(text);
       expect(app, text).toContain(text);
     }
-    expect(plusCard).toContain("Tu scan completo, con Plus");
-    expect(app).toContain("Tu scan completo, con Plus");
+    // Rediseño de ChatGPT: «Análisis completo (Plus)» con cada sección en su tarjeta.
+    for (const text of ["Análisis completo (Plus)", "Este es tu scan básico. Desbloquea el análisis avanzado de tu físico con recomendaciones personalizadas:"]) {
+      expect(plusCard, text).toContain(text);
+      expect(app, text).toContain(text);
+    }
     // La app guarda el resultado entero (con el detalle de Plus), no solo lo que pinta.
     expect(app).toMatch(/let fullResult = try JSONDecoder\(\)\.decode\(AnyJSON\.self, from: raw\)/);
     // La foto se sube como archivo en la web y en el Mac (allí la fototeca puede no existir),
@@ -204,6 +207,8 @@ describe("paridad web ↔ apps nativas", () => {
       "Individual", "En pareja", "30–45 min", "45–60 min", "60–90 min",
       "Empuje / Tirón / Pierna", "No lo sé, que Autopilot elija", "Tiempo por sesión", "Tu peso en kg (opcional)",
       "Mismo calendario, cargas adaptadas a cada uno.", "Guardar mi plan gratis",
+      "Tipo de entrenamiento", "Modalidad", "Tu plan incluirá", "Rutina de entrenamiento personalizada",
+      "Progresión de cargas", "Recomendaciones de nutrición", "Seguimiento de tu progreso",
       "y el tratamiento de mis datos de salud para preparar mi plan.",
     ]) {
       expect(quiz, text).toContain(text);
@@ -240,14 +245,132 @@ describe("paridad web ↔ apps nativas", () => {
     const app = read("native/Autopilot/Features/Auth/LoginView.swift");
     expect(web).toContain("¿Olvidaste la contraseña?");
     expect(app).toContain("¿Olvidaste la contraseña?");
-    expect(web).toContain(`<Link to="/onboarding" onClick={() => void hapticTap()}>Crear una cuenta gratis</Link>`);
-    expect(app).toContain("Crear una cuenta gratis");
+    expect(web).toContain(`<Link to="/onboarding" onClick={() => void hapticTap()}`);
+    for (const text of ["¿Aún no tienes cuenta?", "Crear una cuenta gratis"]) {
+      expect(web, text).toContain(text);
+      expect(app, text).toContain(text);
+    }
     for (const text of ["Recuperar contraseña", "Te enviaremos un enlace a tu correo.", "Enviar enlace", "Revisa tu correo", "Volver al inicio de sesión"]) {
       expect(read("src/app/pages/ForgotPassword.tsx"), text).toContain(text);
       expect(app, text).toContain(text);
     }
     // Nada apunta al dominio antiguo desde el acceso.
     expect(app).not.toContain("autopilotplan.app");
+  });
+
+  it("Rediseño compartido: logo con AUTOPILOT, campos con icono, insignia Plus, semana en círculos y Progreso en dorado, igual en la web y en la app", () => {
+    // Acceso: la «A» con rayo y la palabra AUTOPILOT; campos con icono y ojo en la contraseña.
+    const authWeb = read("src/app/components/auth/AuthScreenParts.tsx");
+    const loginApp = read("native/Autopilot/Features/Auth/LoginView.swift");
+    const signupApp = read("native/Autopilot/Features/Auth/OnboardingView.swift");
+    expect(authWeb).toContain("<BrandMark size={44} />");
+    expect(authWeb).toContain("AUTOPILOT</span>");
+    for (const app of [loginApp, signupApp]) {
+      expect(app).toContain("BrandMark(size: 44)");
+      expect(app).toContain('Text("AUTOPILOT")');
+    }
+    expect(read("src/app/pages/Login.tsx")).toContain("icon={LockKeyhole}");
+    expect(loginApp).toContain('icon: "lock")');
+    expect(read("native/Autopilot/Design/Theme.swift")).toContain('reveal ? "Ocultar contraseña" : "Mostrar contraseña"');
+    // Insignia Plus con candado en las secciones bloqueadas del scan.
+    expect(read("src/app/components/scan/ScanPlusCard.tsx")).toContain("<PlusBadge />");
+    expect(read("native/Autopilot/Features/Scan/ScanView.swift")).toContain("PlusBadge()");
+    // Hoy: un círculo por sesión de la rutina (no por día) con check dorado si está hecha.
+    const homeWeb = read("src/app/components/dashboard/HomeOverview.tsx");
+    const homeApp = read("native/Autopilot/Features/Home/HomeView.swift");
+    expect(homeWeb).toContain('"flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-semibold tabular-nums"');
+    expect(homeApp).toContain(".frame(width: 32, height: 32)");
+    expect(homeWeb).toContain("completedDays.includes(plan.day)");
+    expect(homeApp).toContain("snapshot?.doneDays");
+    // Entrenar: lo hecho esta semana en tramos dorados, uno por sesión.
+    expect(read("src/app/components/dashboard/TrainingPlanView.tsx")).toContain('doneThisWeek.includes(session.day) ? "bg-primary" : "bg-secondary"');
+    expect(read("native/Autopilot/Features/Train/TrainView.swift")).toContain("Capsule().fill(doneThisWeek.contains(plan.day) ? Palette.gold : Palette.secondary)");
+    // Progreso: control segmentado con la sección activa en dorado.
+    expect(read("src/app/pages/Dashboard.tsx")).toContain("data-[state=active]:bg-primary data-[state=active]:text-primary-foreground");
+    expect(read("native/Autopilot/Features/Progress/ProgressScreen.swift")).toContain("selection: $tab, gold: true)");
+    // Barra de pestañas con la activa en dorado, sin píldora.
+    expect(read("src/app/components/mobile/FloatingMobileNav.tsx")).toContain('isActive ? "text-primary" : "text-muted-foreground"');
+    expect(read("native/Autopilot/Design/Components.swift")).toContain(".foregroundStyle(active ? Palette.gold : Palette.muted)");
+    // La semana de Hoy va en tarjeta en las dos.
+    expect(homeWeb).toContain('rounded-[22px] border border-border bg-card p-4');
+    expect(homeApp).toContain("return Card(padding: 16) {");
+    // Hoy de ChatGPT: «Hoy» grande, sesión con foto a la derecha, «Tu progreso», «Tu plan», «Ver detalle» y Nutrición en tarjetas.
+    for (const text of ['>Hoy<', "Siguiente sesión", "Tu progreso", "Tu plan", "Revisa y ajusta tu plan de entrenamiento.", "Ver detalle"]) {
+      expect(homeWeb, text).toContain(text);
+    }
+    for (const text of ['Text("Hoy")', "Siguiente sesión", "Tu progreso", "Tu plan", "Revisa y ajusta tu plan de entrenamiento.", "Ver detalle"]) {
+      expect(homeApp, text).toContain(text);
+    }
+    // Entrenar sin semana: cualquier sesión se hace cualquier día. Título «Entrenar», las sesiones
+    // en orden con foto («Sesión N», la siguiente destacada) y lo hecho esta semana; sin L–D ni descansos.
+    const planWeb = read("src/app/components/dashboard/TrainingPlanView.tsx");
+    const planApp = read("native/Autopilot/Features/Train/TrainView.swift");
+    expect(read("src/app/pages/Dashboard.tsx")).toContain('training: "Entrenar"');
+    expect(read("native/Autopilot/Features/Shell/RootView.swift")).toContain('case .train: "Entrenar"');
+    for (const src of [planWeb, planApp]) {
+      for (const text of ["Tus sesiones en orden. Hazlas el día que te venga bien.", "Sesión ", "Siguiente", "Hecha", "esta semana", "Tu plan aún no tiene sesiones", "Edita tu rutina para añadir tus sesiones."]) {
+        expect(src, text).toContain(text);
+      }
+      for (const text of ['"L", "M", "X", "J", "V", "S", "D"', "es día de descanso", "Recuperación"]) {
+        expect(src, text).not.toContain(text);
+      }
+    }
+    expect(planWeb).toContain("<SessionRow");
+    expect(planApp).toContain("sessionRow(index + 1, plan)");
+    // La siguiente sesión sale de la misma regla en las dos: la primera de la rutina que falta esta semana.
+    expect(read("src/shared/lib/routineOrder.ts")).toContain("sessions.find((session) => !doneThisWeek.includes(session.day))");
+    expect(read("native/Autopilot/Core/Training.swift")).toContain("sessions.first { !done.contains($0.day) }");
+    for (const src of [read("src/app/components/dashboard/HomeOverview.tsx"), read("native/Autopilot/Features/Home/HomeView.swift")]) {
+      expect(src).toContain("Semana completa");
+      expect(src).toContain("El lunes empieza otra vuelta.");
+      expect(src).not.toContain("Hoy toca descansar");
+    }
+    // La tarjeta de la rutina va bajo las sesiones en las dos.
+    expect(planWeb).toContain("{tools}");
+    expect(planApp).toContain("if let routineBar { routineBar }");
+    // Progreso de ChatGPT: «Tu fuerza» con la mejor marca (no la última: es la serie de más 1RM), la subida en kg y «Tu constancia» debajo.
+    const progressWeb = read("src/app/components/dashboard/WorkoutProgress.tsx") + read("src/app/pages/Dashboard.tsx");
+    const progressApp = read("native/Autopilot/Features/Progress/ProgressScreen.swift");
+    for (const text of ["Tu fuerza", "Evolución de tus principales ejercicios.", "Mejor marca", "Ver todos mis ejercicios", "Ver menos ejercicios", "Tu constancia", "Evolución de tu fuerza, tu físico y tus récords."]) {
+      expect(progressWeb, text).toContain(text);
+      expect(progressApp, text).toContain(text);
+    }
+    expect(progressWeb).toContain("exerciseRecord(history)");
+    expect(progressApp).toContain("static func record(_ entries: [ExerciseEntry])");
+    // Nutrición de ChatGPT (Gratis): tarjeta de calorías con macros y «Más en Plus» con candados, sin pagos externos en la app.
+    const nutritionWeb = read("src/app/components/dashboard/BasicNutrition.tsx") + read("src/app/components/dashboard/NutritionPlusSection.tsx");
+    const nutritionApp = read("native/Autopilot/Features/Other/OtherViews.swift");
+    for (const text of ["Plan de alimentación básico.", "Calorías diarias", "Carbohidratos", "Grasas", "Más en Plus", "Desbloquea tu plan de comidas completo y personalizado.",
+      "Comidas de cada día", "Ajustadas a tus macros y a lo que te gusta.", "Seguimiento de macros", "Marca cada comida y se suman sus macros.", "Menú a tu gusto", "Regenera tus comidas cuando quieras.", "Incluido en Plus",
+      "Estimación inicial según tus datos y objetivo. No sustituye una valoración nutricional individual."]) {
+      expect(nutritionWeb, text).toContain(text);
+      expect(nutritionApp, text).toContain(text);
+    }
+    expect(nutritionWeb).toContain("onUpgrade && !isIOSNative()");
+    expect(nutritionApp).not.toContain("Descubre Autopilot Plus");
+    // Ajustes de ChatGPT: índice agrupado con iconos que lleva a cada sección, en las dos.
+    const settingsWeb = read("src/app/components/SettingsPanel.tsx");
+    const settingsApp = read("native/Autopilot/Features/Account/AccountView.swift");
+    for (const text of ["Gestiona tu cuenta, plan y preferencias.", "Mi cuenta", "Nombre, foto y privacidad", "Tus datos y objetivo", "Edad, peso, objetivo y disponibilidad", "Mi plan",
+      "Preferencias", "Vista del entreno y descanso entre series", "Cambia tu contraseña", "Privacidad y legal", "Exporta tus datos y política de privacidad", "Términos, cookies y avisos"]) {
+      expect(settingsWeb, text).toContain(text);
+      expect(settingsApp, text).toContain(text);
+    }
+    // Cada fila del índice abre su página (sin la lista completa debajo): ids en la web, `SettingsPage` en la app.
+    for (const id of ["ajustes-perfil", "ajustes-datos", "ajustes-plan", "ajustes-entreno", "ajustes-contrasena", "ajustes-privacidad", "ajustes-legal", "ajustes-cuentas"]) {
+      expect(settingsWeb, id).toContain(`id="${id}"`);
+    }
+    expect(settingsApp).toContain("case perfil, datos, plan, entreno, contrasena, privacidad, legal, cuentas");
+    expect(settingsApp).toContain(".navigationDestination(item: $openPage)");
+    // Onboarding de ChatGPT: preguntas en negrita, opciones en tarjetas con icono y círculo de selección.
+    const quizWeb = read("src/app/pages/Configurator.tsx");
+    const quizApp = read("native/Autopilot/Features/Auth/OnboardingView.swift");
+    for (const text of ["¿Cómo vas a entrenar?", "¿Cuál es tu objetivo principal?", "¿Dónde entrenas habitualmente?"]) {
+      expect(quizWeb, text).toContain(text);
+      expect(quizApp, text).toContain(text);
+    }
+    expect(quizWeb).toContain("<SelectMark on={on} />");
+    expect(quizApp).toContain("selectMark(on)");
   });
 
   it("Nutrición sin peso: Gratis ve «Calcula tus macros» en la web y en la app, no solo la tarjeta de Plus", () => {
@@ -286,13 +409,13 @@ describe("paridad web ↔ apps nativas", () => {
     expect(read("src/shared/contexts/AuthContext.tsx")).toContain("exists: data?.user?.identities?.length === 0");
   });
 
-  it("Entreno: ejercicio a ejercicio por defecto, carrusel arriba y foto grande, «···» con opciones claras y lo avanzado oculto", () => {
+  it("Entreno: toda la sesión en lista por defecto, carrusel arriba y foto grande en ejercicio a ejercicio, «···» con opciones claras y lo avanzado oculto", () => {
     const web = read("src/app/components/dashboard/WorkoutTracker.tsx");
     const prefs = read("src/shared/lib/workoutPreferences.ts");
     const app = read("native/Autopilot/Features/Train/WorkoutView.swift");
-    expect(prefs).toContain('=== "list" ? "list" : "focus"');
-    expect(app).toContain('@AppStorage("workout-view") private var workoutView = "focus"');
-    expect(read("native/Autopilot/Features/Account/AccountView.swift")).toContain('forKey: "workout-view") ?? "focus"');
+    expect(prefs).toContain('=== "focus" ? "focus" : "list"');
+    expect(app).toContain('@AppStorage("workout-view") private var workoutView = "list"');
+    expect(read("native/Autopilot/Features/Account/AccountView.swift")).toContain('forKey: "workout-view") ?? "list"');
     for (const text of ["Ver toda la sesión", "Ver ejercicio a ejercicio", "Más opciones por serie", "Descartar entrenamiento"]) {
       expect(web, text).toContain(text);
       expect(app, text).toContain(text);
@@ -310,8 +433,80 @@ describe("paridad web ↔ apps nativas", () => {
     expect(appFocus).toContain(".frame(height: 220)");
     expect(web).toContain("aspect-[4/3] max-h-[26dvh]");
     // La foto no se repite: sin miniatura en la tarjeta del ejercicio en foco.
-    expect(web).toContain("{!focused && <ExerciseThumb");
-    expect(app).toContain("if !focused { WorkoutThumb(url: exercise.image_url");
+    expect(web).toMatch(/\{!focused && \(\s*<span className="relative shrink-0">\s*<ExerciseThumb/);
+    expect(app).toMatch(/if !focused \{\s*WorkoutThumb\(url: exercise\.image_url/);
+  });
+
+  it("Nombre e icono de cada sesión: mismos emojis, misma sugerencia y mismo campo `session_icon`, en la web y en la app", () => {
+    const web = read("src/shared/lib/sessionIdentity.ts");
+    const app = read("native/Autopilot/Core/Training.swift");
+    const list = (source: string, pattern: RegExp) => JSON.parse(`[${source.match(pattern)![1]}]`);
+    expect(list(app, /static let emojis = \[([^\]]+)\]/)).toEqual(list(web, /SESSION_EMOJIS = \[([^\]]+)\]/));
+    for (const name of ["Cuerpo completo", "Empuje", "Tirón", "Pierna", "Torso", "Entreno"]) {
+      expect(web, name).toContain(`"${name}"`);
+      expect(app, name).toContain(`"${name}"`);
+    }
+    expect(app).toContain("var session_icon: String?");
+    expect(read("supabase/functions/_shared/training-types.ts")).toContain("session_icon?: string;");
+    const train = read("native/Autopilot/Features/Train/TrainView.swift");
+    const sheet = read("src/app/components/dashboard/SessionIdentitySheet.tsx");
+    for (const text of ["Personalizar sesión", "Sugerido:", "La foto de la sesión o un emoji. El sugerido, con el punto dorado, sale de sus ejercicios."]) {
+      expect(sheet, text).toContain(text);
+      expect(train, text).toContain(text);
+    }
+    expect(read("src/app/components/dashboard/TrainingPlanView.tsx")).toContain("Nombre e icono");
+    expect(train).toContain('Label("Nombre e icono", systemImage: "pencil")');
+    // Solo se tocan esos dos campos: el modo del plan (custom) no cambia.
+    expect(app).toContain('object["session_icon"] = .string(icon)');
+    expect(read("src/app/pages/Dashboard.tsx")).toContain("withSessionIdentity(dayPlans, day, identity)");
+  });
+
+  it("«¿Quién entrena?» y el icono: misma cabecera que el login y la «A» plana de la marca, en la web y en la app", () => {
+    const web = read("src/shared/components/native/WhoIsTraining.tsx");
+    const app = read("native/Autopilot/Features/Auth/WhoIsTrainingView.swift");
+    for (const text of ["¿Quién entrena?", "Elige tu cuenta. Marca una como predeterminada y entrará sola al abrir la app.", "Añadir cuenta", "Otra persona en este dispositivo", "AUTOPILOT"]) {
+      expect(web, text).toContain(text);
+      expect(app, text).toContain(text);
+    }
+    expect(web).toContain("<BrandMark size={44} />");
+    expect(app).toContain("BrandMark(size: 44)");
+    expect(web).not.toContain("radial-gradient");
+    // Los iconos salen de la misma geometría que `BrandMark`, con el negro y el dorado de la app.
+    const icons = read("scripts/gen-icon.mjs");
+    expect(icons).toContain('path("BRAND_A")');
+    expect(icons).toContain('const GOLD = "#D8B25E"');
+    expect(read("native/Autopilot/Assets.xcassets/LaunchBackground.colorset/Contents.json")).toContain('"red":"0.042"');
+  });
+
+  it("App fluida: pestañas sin fundido, «Empezar» sin esperas fijas y Hoy pintado desde la caché en frío", () => {
+    const components = read("native/Autopilot/Design/Components.swift");
+    expect(components).not.toMatch(/withAnimation\([^)]*\)\s*\{\s*selection = tab/);
+    const home = read("native/Autopilot/Features/Home/HomeView.swift");
+    const root = read("native/Autopilot/Features/Shell/RootView.swift");
+    expect(home).not.toContain("Task.sleep(for: .milliseconds(450))");
+    expect(root).not.toContain("asyncAfter(deadline: .now() + 0.6)");
+    expect(root).toContain("TrainView.pendingStart = true");
+    // Primer fotograma: TodayCache cae al disco y se rehace tras terminar o editar (revisión local).
+    expect(home).toContain("TrainingRepo.revision(userId: userId)");
+    expect(home).toContain("HomeView.latestKey(userId)");
+    const training = read("native/Autopilot/Core/Training.swift");
+    expect(training).toContain("rows.append([day, date])");
+    expect(read("native/Autopilot/Features/Train/PlanEditorView.swift")).toContain("TrainingRepo.storePlanLocally(userId: userId, clean)");
+  });
+
+  it("Campana de avisos: la web y las apps leen los mismos avisos, con contador y la misma hoja", () => {
+    const web = read("src/app/components/NotificationsBell.tsx");
+    const native = read("native/Autopilot/Features/Shell/NotificationsBell.swift");
+    for (const text of ["Notificaciones", "Sin notificaciones", "Aquí verás los cambios en tu plan y los recordatorios."]) {
+      expect(web).toContain(text);
+      expect(native).toContain(text);
+    }
+    expect(native).toContain('from("notifications")');
+    // En el móvil va junto al avatar (MobileHeader) y en escritorio, en la barra superior.
+    expect(read("src/app/components/mobile/MobileHeader.tsx")).toContain("<NotificationsBell");
+    expect(read("native/Autopilot/Design/Components.swift")).toContain("NotificationsBell()");
+    expect(read("src/app/pages/Dashboard.tsx")).toContain("<NotificationsBell");
+    expect(read("native/Autopilot/Features/Shell/RootView.swift")).toContain("ToolbarItem(placement: .primaryAction) { NotificationsBell() }");
   });
 
   it("Al abrir se entra directo con la última cuenta: «¿Quién entrena?» solo si está protegida, en la web y en la app", () => {
@@ -335,7 +530,8 @@ describe("paridad web ↔ apps nativas", () => {
 
   it("Plan y progreso: portada de la sesión también en iPhone y, sin entrenos, una invitación en vez de «0 kg»", () => {
     const train = read("native/Autopilot/Features/Train/TrainView.swift");
-    expect(train).toContain("            if plan.isGym {\n                sessionCover(plan)");
+    // Rediseño: la foto de cada sesión va en su fila del plan semanal.
+    expect(train).toContain("CachedAsyncImage(url: URL(string: source), maxSide: 300)");
     const title = "Tu progreso empieza con tu primer entreno";
     const message = "Marca tus series al entrenar y aquí verás tus kilos, tu racha y tus récords.";
     for (const src of [read("src/app/components/dashboard/WorkoutProgress.tsx"), read("native/Autopilot/Features/Progress/ProgressScreen.swift")]) {
@@ -363,11 +559,11 @@ describe("paridad web ↔ apps nativas", () => {
     expect(app).not.toContain("sports: sports,");
   });
 
-  it("Color en el entreno: un solo dorado (serie actual y hecha), y «Terminar» dorado solo al completar, en la web y en la app", () => {
+  it("Color en el entreno: un solo dorado (serie actual y hecha) y «Finalizar» dorado en la barra inferior, en la web y en la app", () => {
     const web = read("src/app/components/dashboard/WorkoutTracker.tsx");
     const app = read("native/Autopilot/Features/Train/WorkoutView.swift");
-    expect(web).toContain('variant={allSetsDone ? "default" : "secondary"}');
-    expect(app).toContain(".buttonStyle(PillButtonStyle(kind: allSetsDone ? .primary : .secondary))");
+    expect(web).not.toContain("allSetsDone");
+    expect(app).toContain('barLabel("Finalizar", symbol: "checkmark", primary: true)');
     // Serie y ejercicio hechos en verde, nunca en dorado.
     expect(web).toContain('"border-primary bg-primary text-primary-foreground"');
     expect(web).toContain('<span className="flex h-11 w-9 items-center justify-center text-primary">');
@@ -377,6 +573,32 @@ describe("paridad web ↔ apps nativas", () => {
     expect(app).toContain(".foregroundStyle(allDone ? Palette.muted : Palette.foreground)");
     expect(web).not.toMatch(/pl-0\.5 pr-2 text-primary/);
     expect(app).not.toContain('Image(systemName: "ellipsis").font(.inter(size: 15, weight: .bold)).foregroundStyle(Palette.gold)');
+  });
+
+  it("Entreno activo (diseño ChatGPT): cabecera con avance, ejercicios numerados y plegables, y barra Pausar · tiempo · Finalizar con pausa real", () => {
+    const web = read("src/app/components/dashboard/WorkoutTracker.tsx");
+    const app = read("native/Autopilot/Features/Train/WorkoutView.swift");
+    const model = read("native/Autopilot/Features/Train/ActiveWorkout.swift");
+    for (const text of ["Entrenamiento en curso", "Entrenamiento en pausa", "Pausar", "Reanudar", "Tiempo transcurrido", "En pausa", "Finalizar", "ejercicios"]) {
+      expect(web, text).toContain(text);
+      expect(app, text).toContain(text);
+    }
+    // La pausa se guarda en el borrador y, al reanudar, inicio y descanso se desplazan lo que duró.
+    expect(read("src/shared/lib/activeWorkout.ts")).toContain("pausedAt?: number | null;");
+    expect(web).toContain("setSessionStartedAt((start) => start === null ? start : start + shift);");
+    expect(web).toContain("setRestEndsAt((end) => end === null ? end : end + shift);");
+    expect(model).toContain("var pausedAt: Date? = nil");
+    expect(model).toContain("draft.startedAt = draft.startedAt.addingTimeInterval(shift)");
+    expect(model).toContain("let newEnd = end.addingTimeInterval(shift)");
+    // En pausa el descanso se congela y la sesión no se puede anotar.
+    expect(web).toContain("if (pausedAt !== null) { setRestTimerState(remainingRestSeconds(restEndsAt, pausedAt)); return; }");
+    expect(app).toContain("end.timeIntervalSince(workout.draft.pausedAt ?? ctx.date)");
+    expect(app).toContain(".disabled(workout.isPaused)");
+    // Número de orden en la esquina y ejercicios plegables en la lista.
+    expect(web).toContain("i === currentExerciseIndex ? \"bg-primary text-primary-foreground\"");
+    expect(app).toContain("allDone || isCurrentExercise ? Palette.gold : Palette.secondary");
+    expect(web).toContain("closedExercises.includes(i)");
+    expect(app).toContain("workout.closedExercises.contains(index)");
   });
 
   it("Primer uso: Individual / En pareja son filas de una línea, como «Perder grasa», en la web y en la app", () => {
@@ -479,6 +701,47 @@ describe("paridad web ↔ apps nativas", () => {
     }
   });
 
+  it("Físico vacío y Récords (diseño premium): mismos textos y cifras en la web y en la app", () => {
+    const app = read("native/Autopilot/Features/Progress/ProgressScreen.swift");
+    const photos = read("src/app/components/dashboard/ProgressPhotos.tsx");
+    const records = read("src/app/components/dashboard/PRsList.tsx");
+    expect(app).toContain('eyebrow: "TU FÍSICO"');
+    expect(app).toContain('eyebrow: "TUS RÉCORDS"');
+    for (const text of ["Empieza a documentar", "El antes y el ahora, lado a lado", "Tus fotos ordenadas por mes", "Privadas: solo las ves tú", "Hacer mi primer scan"]) {
+      expect(photos, text).toContain(text);
+      expect(app, text).toContain(text);
+    }
+    for (const text of ["Ejercicios con récord", "Nuevos este mes", "Último récord", "Nuevo"]) {
+      expect(records, text).toContain(text);
+      expect(app, text).toContain(text);
+    }
+  });
+
+  it("Sin aire infantil: descanso con foto real, Scan sin siluetas y portadas de Progreso iguales en la web y en la app", () => {
+    const restApp = read("native/Autopilot/Design/Components.swift");
+    const homeWeb = read("src/app/components/dashboard/HomeOverview.tsx");
+    expect(restApp).toContain('var eyebrow = "DÍA DE DESCANSO"');
+    expect(homeWeb).toContain('{weekComplete ? "Semana completa" : "Tu plan"}');
+    expect(restApp).not.toContain("Circle().frame(width: 77, height: 77)");
+    const scanApp = read("native/Autopilot/Features/Scan/ScanView.swift");
+    const scanWeb = read("src/app/components/scan/ProgressScan.tsx");
+    expect(scanApp).not.toContain("dash: [6, 6]");
+    expect(scanWeb).not.toContain("border-dashed border-primary/35");
+    const progressApp = read("native/Autopilot/Features/Progress/ProgressScreen.swift");
+    const progressWeb = read("src/app/components/dashboard/WorkoutProgress.tsx") + read("src/app/components/dashboard/ProgressPhotos.tsx");
+    for (const text of ["Tu fuerza en cada ejercicio", "Tu racha de semanas entrenando", "Tus récords personales", "Empezar a entrenar", "Compara tu evolución", "Con otro scan del mismo ángulo verás el antes y el ahora, lado a lado."]) {
+      expect(progressWeb, text).toContain(text);
+      expect(progressApp, text).toContain(text);
+    }
+    expect(progressApp).toContain('eyebrow: "TU FUERZA"');
+    // Tu constancia sin series con peso: entrenos en vez de «0 kg» y sin gráfica vacía.
+    const noKg = "Registra series con peso y aquí verás tus kilos de cada semana.";
+    expect(read("src/app/components/dashboard/TrainingOverviewCard.tsx")).toContain(noKg);
+    expect(progressApp).toContain(noKg);
+    expect(progressApp).toContain('Text("TU ÚLTIMO SCAN")');
+    expect(progressWeb).toContain(">Tu último scan<");
+  });
+
   it("Biblioteca de ejercicios: misma entrada en Entrenar, mismos filtros y mismas secciones de ficha, en la web y en la app", () => {
     const app = read("native/Autopilot/Features/Train/ExerciseLibraryView.swift");
     const swiftArray = (name: string) => {
@@ -493,9 +756,9 @@ describe("paridad web ↔ apps nativas", () => {
     expect(EQUIPMENT).toHaveLength(11);
     expect(MODALITIES).toHaveLength(5);
     // Se abre desde la barra de la rutina, junto a «Editar», en los dos lados.
-    expect(read("src/app/pages/Dashboard.tsx")).toMatch(/label: "Ejercicios",[^}]*setLibraryOpen\(true\)/);
+    expect(read("src/app/pages/Dashboard.tsx")).toMatch(/aria: "Ejercicios",[^}]*setLibraryOpen\(true\)/);
     const train = read("native/Autopilot/Features/Train/TrainView.swift");
-    expect(train).toMatch(/Label\("Ejercicios", image: "lu-book-open"\)/);
+    expect(train).toMatch(/Image\("lu-book-open"\)[\s\S]{0,400}\.accessibilityLabel\("Ejercicios"\)/);
     expect(train).toContain("ExerciseLibraryView(userId: session.userId)");
     const web = read("src/app/components/library/ExerciseLibrarySheet.tsx");
     for (const text of ["Demostración en preparación", "Recientes", "Favoritos", "Quitar filtros"]) {

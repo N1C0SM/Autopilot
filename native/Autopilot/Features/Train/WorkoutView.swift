@@ -7,7 +7,7 @@ import AppKit
 
 /// Sesión en curso, calcada de `WorkoutTracker.tsx` (vista de lista): barra «Salir · título ·
 /// tiempo · X de Y series · ···», tarjetas de ejercicio con la tabla Serie/Previa/Kg/Reps/✓,
-/// «Añadir serie», y el pie con el descanso (−30 / +30 / Saltar) y «Terminar entrenamiento».
+/// «Añadir serie», y el pie con el descanso (−30 / +30 / Saltar) y Pausar · tiempo · Finalizar.
 struct WorkoutView: View {
     @ObservedObject var workout: ActiveWorkout
     let userId: UUID
@@ -21,16 +21,24 @@ struct WorkoutView: View {
     @State private var discardOpen = false
     @State private var rpe = 7
     @State private var summaryOpen = false
-    /// Vista elegida en «···» o en Ajustes: ejercicio a ejercicio (por defecto) o lista vertical.
-    @AppStorage("workout-view") private var workoutView = "focus"
-    private var focusMode: Bool { workoutView != "list" }
+    /// Vista elegida en «···» o en Ajustes: lista de toda la sesión (por defecto) o ejercicio a ejercicio.
+    @AppStorage("workout-view") private var workoutView = "list"
+    private var focusMode: Bool { workoutView == "focus" }
     /// RPE, bajadas, calentamiento y fallo: ocultos por defecto para que anotar sea serie, kg y reps.
     @AppStorage("workout-advanced") private var advanced = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
 
     private var progress: Double { workout.totalSets > 0 ? Double(workout.doneSets) / Double(workout.totalSets) : 0 }
-    private var allSetsDone: Bool { workout.totalSets > 0 && workout.doneSets >= workout.totalSets }
+    private var sessionTitle: String {
+        workout.draft.day.routine_name?.trimmingCharacters(in: .whitespaces).nilIfEmpty ?? workout.draft.day.title
+    }
+    private var doneExercises: Int {
+        workout.exercises.filter { ex in
+            let sets = workout.draft.logs[ex.name] ?? []
+            return !sets.isEmpty && sets.allSatisfy(\.done)
+        }.count
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -38,7 +46,8 @@ struct WorkoutView: View {
                 // LazyVStack: con muchas tarjetas solo se crean las visibles y, al abrir la sesión,
                 // no se lanzan las consultas de alternativas de todos los ejercicios a la vez.
                 LazyVStack(alignment: .leading, spacing: 12) {
-                    sessionStats
+                    if focusMode { sessionStats } else { listHeader }
+                    Group {
                     if focusMode, let i = Optional(min(workout.draft.currentExercise, max(workout.exercises.count - 1, 0))), let ex = workout.exercises[safe: i] {
                         FocusViewer(workout: workout, index: i)
                         SessionExerciseCard(workout: workout, exercise: ex, index: i, userId: userId, focused: true)
@@ -49,6 +58,10 @@ struct WorkoutView: View {
                             SessionExerciseCard(workout: workout, exercise: ex, index: i, userId: userId)
                         }
                     }
+                    }
+                    // En pausa no se anota nada: se ve atenuado hasta reanudar.
+                    .disabled(workout.isPaused)
+                    .opacity(workout.isPaused ? 0.4 : 1)
                     if let error = workout.saveError {
                         Text(error).font(.apFootnote).foregroundStyle(Palette.destructive)
                     }
@@ -79,16 +92,16 @@ struct WorkoutView: View {
                 .accessibilityHint("El entrenamiento queda guardado")
             }
             ToolbarItem(placement: .principal) {
-                VStack(spacing: 0) {
-                    Text(workout.draft.day.routine_name ?? workout.draft.day.title).font(.apHeadline).lineLimit(1)
-                    TimelineView(.periodic(from: .now, by: 1)) { ctx in
-                        Text("\(elapsed(ctx.date)) · \(workout.doneSets) de \(workout.totalSets) series")
+                // En la lista el título va grande en el contenido; arriba solo en ejercicio a ejercicio.
+                if focusMode {
+                    VStack(spacing: 0) {
+                        Text(sessionTitle).font(.apHeadline).lineLimit(1)
+                        Text("\(workout.doneSets) de \(workout.totalSets) series")
                             .font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted)
                             .contentTransition(.numericText())
-                            .transaction { $0.animation = reduceMotion ? nil : .snappy }
                     }
+                    .accessibilityElement(children: .combine)
                 }
-                .accessibilityElement(children: .combine)
             }
             ToolbarItem(placement: .primaryAction) {
                 // Opciones claras: cambiar de vista y de detalle; descartar, al final y en rojo.
@@ -156,16 +169,53 @@ struct WorkoutView: View {
     }
 
     private func elapsed(_ now: Date) -> String {
-        Duration.seconds(max(0, now.timeIntervalSince(workout.draft.startedAt))).formatted(.time(pattern: .minuteSecond))
+        let reference = workout.draft.pausedAt ?? now
+        return Duration.seconds(max(0, reference.timeIntervalSince(workout.draft.startedAt))).formatted(.time(pattern: .minuteSecond))
     }
 
     private func finish() {
         guard workout.doneSets > 0 else { return }
         Haptics.tap()
+        // Terminar en pausa la reanuda antes: la duración no cuenta el tiempo parado.
+        if workout.isPaused { workout.togglePause() }
         if workout.doneSets < workout.totalSets { finishIncompleteOpen = true } else { rpeOpen = true }
     }
 
-    // MARK: Pie fijo: descanso + «Terminar entrenamiento»
+    // MARK: Cabecera de la lista (diseño ChatGPT): estado, título grande y avance
+
+    private var listHeader: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Label(workout.isPaused ? "Entrenamiento en pausa" : "Entrenamiento en curso",
+                  systemImage: workout.isPaused ? "pause.fill" : "dumbbell.fill")
+                .font(.apFootnote.weight(.medium))
+                .foregroundStyle(workout.isPaused ? Palette.muted : Palette.gold)
+            Text(sessionTitle)
+                .font(.inter(size: 30, weight: .bold))
+                .lineLimit(2)
+                .accessibilityAddTraits(.isHeader)
+            Text("\(workout.exercises.count) ejercicios · \(workout.doneSets) de \(workout.totalSets) series")
+                .font(.apSubhead.monospacedDigit())
+                .foregroundStyle(Palette.muted)
+            HStack(spacing: 12) {
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(Palette.secondary)
+                        Capsule().fill(Palette.gold).frame(width: geo.size.width * progress)
+                    }
+                }
+                .frame(height: 6)
+                .accessibilityLabel("Avance de la sesión")
+                .accessibilityValue("\(Int(progress * 100)) por ciento")
+                Text("\(doneExercises)/\(workout.exercises.count) ejercicios")
+                    .font(.apFootnote.monospacedDigit())
+                    .foregroundStyle(Palette.muted)
+            }
+            .padding(.top, 6)
+        }
+        .padding(.horizontal, 4).padding(.bottom, 4)
+    }
+
+    // MARK: Pie fijo: descanso + Pausar · tiempo · Finalizar
 
     /// Stats en vivo de la sesión — tres columnas compactas bajo el título.
     private var sessionStats: some View {
@@ -205,26 +255,69 @@ struct WorkoutView: View {
         VStack(spacing: 10) {
             if let end = workout.draft.restEndsAt {
                 RestTimerRow(end: end, workout: workout)
+                    .disabled(workout.isPaused)
+                    .opacity(workout.isPaused ? 0.4 : 1)
                     .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
             }
-            Button { finish() } label: {
-                if workout.saving {
-                    HStack {
-                        BrandLoader().tint(allSetsDone ? .black : Palette.foreground)
-                        Text("Guardando…")
-                    }
-                } else {
-                    Text("Terminar entrenamiento")
+            HStack(spacing: 8) {
+                Button { Haptics.tap(); workout.togglePause() } label: {
+                    barLabel(workout.isPaused ? "Reanudar" : "Pausar", symbol: workout.isPaused ? "play.fill" : "pause.fill", primary: false)
                 }
+                .buttonStyle(PressableCardStyle(scale: 0.97))
+                .disabled(workout.saving)
+                .accessibilityAddTraits(workout.isPaused ? .isSelected : [])
+                TimelineView(.periodic(from: .now, by: 1)) { ctx in
+                    VStack(spacing: 0) {
+                        Text(elapsed(ctx.date))
+                            .font(.inter(size: 22, weight: .bold).monospacedDigit())
+                            .contentTransition(.numericText())
+                            .transaction { $0.animation = nil }
+                        Text(workout.isPaused ? "En pausa" : "Tiempo transcurrido")
+                            .font(.inter(size: 11))
+                            .foregroundStyle(Palette.muted)
+                            .lineLimit(1).minimumScaleFactor(0.8)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("Tiempo de sesión \(elapsed(ctx.date))\(workout.isPaused ? ", en pausa" : "")")
+                }
+                Button { finish() } label: {
+                    if workout.saving {
+                        HStack(spacing: 6) {
+                            BrandLoader().tint(.black)
+                            Text("Guardando…")
+                        }
+                        .font(.apHeadline)
+                        .padding(.horizontal, 18).frame(height: 52)
+                        .foregroundStyle(Palette.background)
+                        .background(Palette.gold, in: Capsule())
+                    } else {
+                        barLabel("Finalizar", symbol: "checkmark", primary: true)
+                    }
+                }
+                .buttonStyle(PressableCardStyle(scale: 0.97))
+                .disabled(workout.saving || workout.doneSets == 0)
+                .keyboardShortcut(.return, modifiers: .command)
             }
-            .buttonStyle(PillButtonStyle(kind: allSetsDone ? .primary : .secondary, height: 52))
-            .disabled(workout.saving || workout.doneSets == 0)
-            .keyboardShortcut(.return, modifiers: .command)
         }
         .padding(.horizontal, 16).padding(.top, 12).padding(.bottom, 12)
         .background(.ultraThinMaterial)
         .overlay(alignment: .top) { Rectangle().fill(Palette.separator).frame(height: 0.5) }
         .animation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.9), value: workout.draft.restEndsAt)
+    }
+
+    /// Píldora de la barra inferior: Pausar con contorno, Finalizar en dorado.
+    private func barLabel(_ title: String, symbol: String, primary: Bool) -> some View {
+        Label(title, systemImage: symbol)
+            .labelStyle(.titleAndIcon)
+            .font(.apHeadline)
+            .lineLimit(1)
+            .padding(.horizontal, 18)
+            .frame(height: 52)
+            .foregroundStyle(primary ? Palette.background : Palette.foreground)
+            .background(primary ? Palette.gold : Color.clear, in: Capsule())
+            .overlay { if !primary { Capsule().strokeBorder(Palette.foreground.opacity(0.3), lineWidth: 1) } }
+            .contentShape(Capsule())
     }
 
     // MARK: Resumen final (WorkoutSummary)
@@ -281,8 +374,15 @@ struct SessionExerciseCard: View {
 
     private var sets: [SetLog] { workout.draft.logs[exercise.name] ?? [] }
     private var allDone: Bool { !sets.isEmpty && sets.allSatisfy(\.done) }
-    /// El ejercicio siempre está desplegado: se anota sin pulsar antes (menos fricción).
-    private var isOpen: Bool { true }
+    /// Desplegado por defecto (se anota sin pulsar antes); en la lista se puede plegar.
+    private var isOpen: Bool { focused || !workout.closedExercises.contains(index) }
+    /// El primer ejercicio con series pendientes: su número va en dorado.
+    private var isCurrentExercise: Bool {
+        workout.exercises.firstIndex { ex in
+            let s = workout.draft.logs[ex.name] ?? []
+            return s.isEmpty || !s.allSatisfy(\.done)
+        } == index
+    }
     private var firstPending: Int? { sets.firstIndex { !$0.done } }
     @State private var technique = false
     /// Celebración breve al completar todas las series del ejercicio.
@@ -305,7 +405,20 @@ struct SessionExerciseCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 12) {
-                    if !focused { WorkoutThumb(url: exercise.image_url, completed: allDone) }
+                    if !focused {
+                        WorkoutThumb(url: exercise.image_url, completed: allDone)
+                            .overlay(alignment: .topLeading) {
+                                // Número de orden en la esquina: dorado el que toca ahora y los hechos.
+                                Text("\(index + 1)")
+                                    .font(.inter(size: 13, weight: .bold).monospacedDigit())
+                                    .foregroundStyle(allDone || isCurrentExercise ? Palette.background : Palette.foreground)
+                                    .frame(width: 24, height: 24)
+                                    .background(allDone || isCurrentExercise ? Palette.gold : Palette.secondary, in: Circle())
+                                    .overlay(Circle().strokeBorder(Palette.card, lineWidth: 2))
+                                    .offset(x: -6, y: -6)
+                                    .accessibilityHidden(true)
+                            }
+                    }
                     VStack(alignment: .leading, spacing: 5) {
                         Text(workout.swaps[exercise.name] ?? exercise.name)
                             .font(.apHeadline)
@@ -337,6 +450,17 @@ struct SessionExerciseCard: View {
                     Button { technique = true } label: { Image(systemName: "info.circle").font(.inter(size: 19)) }
                         .buttonStyle(.plain).foregroundStyle(Palette.muted).frame(width: 44, height: 44)
                         .accessibilityLabel("Ver ficha de técnica de \(exercise.name)")
+                    if !focused {
+                        Button {
+                            Haptics.selection()
+                            withAnimation(reduceMotion ? nil : .snappy) { workout.toggleCollapsed(index) }
+                        } label: {
+                            Image(systemName: "chevron.down").font(.inter(size: 15, weight: .semibold))
+                                .rotationEffect(.degrees(isOpen ? 180 : 0))
+                        }
+                        .buttonStyle(.plain).foregroundStyle(Palette.muted).frame(width: 32, height: 44)
+                        .accessibilityLabel(isOpen ? "Plegar \(exercise.name)" : "Desplegar \(exercise.name)")
+                    }
                 }
             .padding(.leading, 12).padding(.trailing, 8).frame(minHeight: 68)
 
@@ -998,7 +1122,8 @@ struct RestTimerRow: View {
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { ctx in
-            let left = max(0, Int(end.timeIntervalSince(ctx.date).rounded(.up)))
+            // En pausa el descanso se congela en la marca de pausa.
+            let left = max(0, Int(end.timeIntervalSince(workout.draft.pausedAt ?? ctx.date).rounded(.up)))
             let target = max(workout.restTarget, 1)
             let progress = min(1.0, Double(left) / Double(target))
 

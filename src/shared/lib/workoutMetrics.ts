@@ -66,7 +66,7 @@ export function buildExerciseHistory(logs: WorkoutLogRecord[]): Record<string, E
       completedSets: validSets.length,
       loadedSets: weightedSets.length,
       reps: validSets.reduce((sum, set) => sum + set.reps, 0),
-      bestSetLabel: bestSet ? `${bestSet.weight} kg × ${bestSet.reps}` : null,
+      bestSetLabel: bestSet ? `${bestSet.weight.toLocaleString("es-ES")} kg × ${bestSet.reps}` : null,
     };
 
     grouped[log.exercise_name] ??= {};
@@ -170,4 +170,22 @@ export function buildTrainingOverview(
     last4WeeksVolumeKg: Math.round(weeks.slice(-4).reduce((total, week) => total + week.volumeKg, 0)),
     streakWeeks,
   };
+}
+
+export interface ExerciseRecordSummary {
+  /** Mejor serie del ejercicio (por 1RM estimado), p. ej. «80 kg × 8»; null si nunca llevó peso. */
+  label: string | null;
+  /** Kg que ha subido la mejor serie desde la primera sesión con peso; null si no ha subido. */
+  gainKg: number | null;
+}
+
+const setWeightKg = (entry: ExerciseHistoryEntry) => (entry.bestSetLabel ? Number.parseFloat(entry.bestSetLabel) : Number.NaN);
+
+/** Récord del ejercicio y su subida en kg, solo con series reales (Progreso → «Tu fuerza»). */
+export function exerciseRecord(entries: ExerciseHistoryEntry[]): ExerciseRecordSummary {
+  const weighted = entries.filter((entry) => entry.bestEstimated1RmKg !== null && Number.isFinite(setWeightKg(entry)));
+  if (weighted.length === 0) return { label: null, gainKg: null };
+  const best = weighted.reduce((top, entry) => ((entry.bestEstimated1RmKg ?? 0) > (top.bestEstimated1RmKg ?? 0) ? entry : top));
+  const gain = Math.round((setWeightKg(best) - setWeightKg(weighted[0])) * 10) / 10;
+  return { label: best.bestSetLabel, gainKg: best !== weighted[0] && gain > 0 ? gain : null };
 }
