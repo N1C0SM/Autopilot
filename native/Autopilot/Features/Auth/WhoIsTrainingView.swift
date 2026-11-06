@@ -13,68 +13,48 @@ struct WhoIsTrainingView: View {
     /// a su ritmo y un foco automático le haría perder el hilo).
     @FocusState private var passwordFocused: Bool
 
-    private let columns = [GridItem(.adaptive(minimum: 120, maximum: 160), spacing: 20)]
-
     var body: some View {
         ScrollView {
             VStack(spacing: 28) {
-                Text("¿Quién entrena?").font(.apLargeTitle).padding(.top, 56).accessibilityAddTraits(.isHeader)
+                // Misma cabecera que «Hola de nuevo» (LoginView y `WhoIsTraining` en la web).
+                VStack(spacing: 14) {
+                    VStack(spacing: 10) {
+                        BrandMark(size: 44)
+                        Text("AUTOPILOT").font(.inter(size: 20, weight: .bold)).tracking(1.3)
+                    }
+                    .padding(.bottom, 10)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("Autopilot")
+                    Text("¿Quién entrena?")
+                        .font(.inter(size: 28, weight: .bold)).tracking(-0.6)
+                        .accessibilityAddTraits(.isHeader)
+                    Text("Elige tu cuenta. Marca una como predeterminada y entrará sola al abrir la app.")
+                        .font(.apSubhead).foregroundStyle(Palette.muted)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.top, 40)
 
-                LazyVGrid(columns: columns, spacing: 24) {
-                    ForEach(accounts.accounts) { account in
-                        Button { Task { await choose(account) } } label: {
-                            VStack(spacing: 10) {
-                                AvatarView(name: account.name, url: account.avatar, size: 88)
-                                HStack(spacing: 4) {
-                                    // Dos líneas con texto grande en vez de truncar el nombre.
-                                    Text(account.name).font(.apHeadline)
-                                        .lineLimit(2).minimumScaleFactor(0.8)
-                                        .multilineTextAlignment(.center)
-                                    if account.requirePassword {
-                                        Image(systemName: "lock.fill").font(.inter(.footnote)).foregroundStyle(Palette.muted)
-                                    }
-                                }
-                                if account.expired { Text("Vuelve a entrar").font(.apFootnote).foregroundStyle(Palette.muted) }
-                                if accounts.defaultId == account.id {
-                                    Text("Predeterminada").font(.apCaption).foregroundStyle(Palette.gold)
-                                }
-                            }
-                            .frame(minHeight: 44)
-                            .contentShape(Rectangle())
-                        }
-                        // Se hunde un poco al pulsar (feedback coherente con el resto de tarjetas).
-                        .buttonStyle(PressableCardStyle(scale: 0.96))
-                        .disabled(busy)
-                        .accessibilityLabel(account.name
-                                            + (account.requirePassword ? ", pide contraseña" : "")
-                                            + (account.expired ? ", vuelve a entrar" : "")
-                                            + (accounts.defaultId == account.id ? ", cuenta predeterminada" : "")
-                                            + (account.id == session.userIdString ? ", cuenta actual" : ""))
-                        .accessibilityHint(account.expired ? "Vuelve a entrar para renovar la sesión"
-                                           : account.requirePassword ? "Pide contraseña antes de entrar"
-                                           : "Abre esta cuenta")
-                        .contextMenu {
-                            if accounts.defaultId == account.id {
-                                Button("Ya no abrir con esta cuenta") { accounts.setDefault(nil) }
-                            } else {
-                                Button("Abrir siempre con esta cuenta") { accounts.setDefault(account.id) }
-                                    .disabled(account.requirePassword || account.expired)
-                            }
-                        }
-                    }
+                VStack(spacing: 10) {
+                    ForEach(accounts.accounts) { account in accountRow(account) }
                     Button { session.addAnotherAccount() } label: {
-                        VStack(spacing: 10) {
-                            Image(systemName: "plus").font(.inter(size: 30, weight: .semibold)).foregroundStyle(Palette.gold)
-                                .frame(width: 88, height: 88).background(Palette.gold.opacity(0.15), in: Circle())
-                            Text("Añadir").font(.apHeadline)
+                        HStack(spacing: 14) {
+                            Image(systemName: "plus").font(.inter(size: 22, weight: .semibold)).foregroundStyle(Palette.gold)
+                                .frame(width: 52, height: 52).background(Palette.secondary, in: Circle())
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Añadir cuenta").font(.apHeadline)
+                                Text("Otra persona en este dispositivo").font(.apSubhead).foregroundStyle(Palette.muted)
+                            }
+                            Spacer(minLength: 0)
                         }
-                        .contentShape(Rectangle())
+                        .accountCard()
                     }
-                    .buttonStyle(PressableCardStyle(scale: 0.96))
+                    .buttonStyle(PressableCardStyle(scale: 0.98))
+                    .disabled(busy)
+                    .accessibilityElement(children: .ignore)
                     .accessibilityLabel("Añadir otra cuenta")
                     .accessibilityHint("Inicia sesión con otra cuenta")
+                    .accessibilityAddTraits(.isButton)
                 }
-                .padding(.horizontal, 24)
 
                 if let message {
                     Text(message).font(.apFootnote).foregroundStyle(Palette.destructive)
@@ -88,7 +68,9 @@ struct WhoIsTrainingView: View {
                         .accessibilityHint("Cierra el selector y sigue con la cuenta actual")
                 }
             }
-            .frame(maxWidth: 640).frame(maxWidth: .infinity)
+            .padding(.horizontal, 20)
+            .padding(.bottom, 32)
+            .frame(maxWidth: 440).frame(maxWidth: .infinity)
         }
         .screenBackground()
         .sheet(item: $asking) { account in passwordSheet(account) }
@@ -98,10 +80,56 @@ struct WhoIsTrainingView: View {
         }
     }
 
+    /// Una tarjeta por persona: foto, nombre y correo (o «Predeterminada» / «Vuelve a entrar»).
+    private func accountRow(_ account: SavedAccount) -> some View {
+        let isDefault = accounts.defaultId == account.id
+        return Button { Task { await choose(account) } } label: {
+            HStack(spacing: 14) {
+                AvatarView(name: account.name, url: account.avatar, size: 52)
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 6) {
+                        Text(account.name).font(.apHeadline).lineLimit(1)
+                        if account.requirePassword {
+                            Image(systemName: "lock.fill").font(.inter(.caption)).foregroundStyle(Palette.muted)
+                        }
+                    }
+                    Text(account.expired ? "Vuelve a entrar" : isDefault ? "Predeterminada" : account.email)
+                        .font(.apSubhead).lineLimit(1)
+                        .foregroundStyle(account.expired || isDefault ? Palette.gold : Palette.muted)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right").font(.inter(.footnote).weight(.semibold)).foregroundStyle(Palette.muted)
+            }
+            .accountCard()
+        }
+        // Se hunde un poco al pulsar (feedback coherente con el resto de tarjetas).
+        .buttonStyle(PressableCardStyle(scale: 0.98))
+        .disabled(busy)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(account.name
+                            + (account.requirePassword ? ", pide contraseña" : "")
+                            + (account.expired ? ", vuelve a entrar" : "")
+                            + (isDefault ? ", cuenta predeterminada" : "")
+                            + (account.id == session.userIdString ? ", cuenta actual" : ""))
+        .accessibilityHint(account.expired ? "Vuelve a entrar para renovar la sesión"
+                           : account.requirePassword ? "Pide contraseña antes de entrar"
+                           : "Abre esta cuenta")
+        .accessibilityAddTraits(.isButton)
+        .contextMenu {
+            if isDefault {
+                Button("Ya no abrir con esta cuenta") { accounts.setDefault(nil) }
+            } else {
+                Button("Abrir siempre con esta cuenta") { accounts.setDefault(account.id) }
+                    .disabled(account.requirePassword || account.expired)
+            }
+        }
+    }
+
     private func passwordSheet(_ account: SavedAccount) -> some View {
         VStack(spacing: 20) {
             AvatarView(name: account.name, url: account.avatar, size: 72)
-            Text(account.name).font(.apTitle2).accessibilityAddTraits(.isHeader)
+            Text(account.name).font(.inter(size: 22, weight: .bold)).tracking(-0.4).accessibilityAddTraits(.isHeader)
+            Text("Introduce tu contraseña para continuar.").font(.apSubhead).foregroundStyle(Palette.muted)
             PillField(label: "Contraseña", text: $password, secure: true, contentType: .password)
                 .focused($passwordFocused)
                 .submitLabel(.go)
@@ -177,5 +205,15 @@ struct AvatarView: View {
             .foregroundStyle(Palette.gold)
             .frame(width: size, height: size)
             .background(Palette.secondary)
+    }
+}
+
+private extension View {
+    /// Fila de cuenta: tarjeta sin borde de 22 pt, como el resto de la app.
+    func accountCard() -> some View {
+        padding(.vertical, 12).padding(.leading, 12).padding(.trailing, 18)
+            .frame(maxWidth: .infinity, minHeight: 76, alignment: .leading)
+            .background(Palette.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 }

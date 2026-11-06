@@ -356,10 +356,12 @@ describe("paridad web ↔ apps nativas", () => {
       expect(settingsWeb, text).toContain(text);
       expect(settingsApp, text).toContain(text);
     }
-    for (const id of ["ajustes-perfil", "ajustes-datos", "ajustes-plan", "ajustes-entreno", "ajustes-contrasena", "ajustes-privacidad", "ajustes-legal"]) {
+    // Cada fila del índice abre su página (sin la lista completa debajo): ids en la web, `SettingsPage` en la app.
+    for (const id of ["ajustes-perfil", "ajustes-datos", "ajustes-plan", "ajustes-entreno", "ajustes-contrasena", "ajustes-privacidad", "ajustes-legal", "ajustes-cuentas"]) {
       expect(settingsWeb, id).toContain(`id="${id}"`);
-      expect(settingsApp, id).toContain(`.id("${id}")`);
     }
+    expect(settingsApp).toContain("case perfil, datos, plan, entreno, contrasena, privacidad, legal, cuentas");
+    expect(settingsApp).toContain(".navigationDestination(item: $openPage)");
     // Onboarding de ChatGPT: preguntas en negrita, opciones en tarjetas con icono y círculo de selección.
     const quizWeb = read("src/app/pages/Configurator.tsx");
     const quizApp = read("native/Autopilot/Features/Auth/OnboardingView.swift");
@@ -433,6 +435,47 @@ describe("paridad web ↔ apps nativas", () => {
     // La foto no se repite: sin miniatura en la tarjeta del ejercicio en foco.
     expect(web).toMatch(/\{!focused && \(\s*<span className="relative shrink-0">\s*<ExerciseThumb/);
     expect(app).toMatch(/if !focused \{\s*WorkoutThumb\(url: exercise\.image_url/);
+  });
+
+  it("Nombre e icono de cada sesión: mismos emojis, misma sugerencia y mismo campo `session_icon`, en la web y en la app", () => {
+    const web = read("src/shared/lib/sessionIdentity.ts");
+    const app = read("native/Autopilot/Core/Training.swift");
+    const list = (source: string, pattern: RegExp) => JSON.parse(`[${source.match(pattern)![1]}]`);
+    expect(list(app, /static let emojis = \[([^\]]+)\]/)).toEqual(list(web, /SESSION_EMOJIS = \[([^\]]+)\]/));
+    for (const name of ["Cuerpo completo", "Empuje", "Tirón", "Pierna", "Torso", "Entreno"]) {
+      expect(web, name).toContain(`"${name}"`);
+      expect(app, name).toContain(`"${name}"`);
+    }
+    expect(app).toContain("var session_icon: String?");
+    expect(read("supabase/functions/_shared/training-types.ts")).toContain("session_icon?: string;");
+    const train = read("native/Autopilot/Features/Train/TrainView.swift");
+    const sheet = read("src/app/components/dashboard/SessionIdentitySheet.tsx");
+    for (const text of ["Personalizar sesión", "Sugerido:", "La foto de la sesión o un emoji. El sugerido, con el punto dorado, sale de sus ejercicios."]) {
+      expect(sheet, text).toContain(text);
+      expect(train, text).toContain(text);
+    }
+    expect(read("src/app/components/dashboard/TrainingPlanView.tsx")).toContain("Nombre e icono");
+    expect(train).toContain('Label("Nombre e icono", systemImage: "pencil")');
+    // Solo se tocan esos dos campos: el modo del plan (custom) no cambia.
+    expect(app).toContain('object["session_icon"] = .string(icon)');
+    expect(read("src/app/pages/Dashboard.tsx")).toContain("withSessionIdentity(dayPlans, day, identity)");
+  });
+
+  it("«¿Quién entrena?» y el icono: misma cabecera que el login y la «A» plana de la marca, en la web y en la app", () => {
+    const web = read("src/shared/components/native/WhoIsTraining.tsx");
+    const app = read("native/Autopilot/Features/Auth/WhoIsTrainingView.swift");
+    for (const text of ["¿Quién entrena?", "Elige tu cuenta. Marca una como predeterminada y entrará sola al abrir la app.", "Añadir cuenta", "Otra persona en este dispositivo", "AUTOPILOT"]) {
+      expect(web, text).toContain(text);
+      expect(app, text).toContain(text);
+    }
+    expect(web).toContain("<BrandMark size={44} />");
+    expect(app).toContain("BrandMark(size: 44)");
+    expect(web).not.toContain("radial-gradient");
+    // Los iconos salen de la misma geometría que `BrandMark`, con el negro y el dorado de la app.
+    const icons = read("scripts/gen-icon.mjs");
+    expect(icons).toContain('path("BRAND_A")');
+    expect(icons).toContain('const GOLD = "#D8B25E"');
+    expect(read("native/Autopilot/Assets.xcassets/LaunchBackground.colorset/Contents.json")).toContain('"red":"0.042"');
   });
 
   it("Al abrir se entra directo con la última cuenta: «¿Quién entrena?» solo si está protegida, en la web y en la app", () => {
@@ -682,9 +725,9 @@ describe("paridad web ↔ apps nativas", () => {
     expect(EQUIPMENT).toHaveLength(11);
     expect(MODALITIES).toHaveLength(5);
     // Se abre desde la barra de la rutina, junto a «Editar», en los dos lados.
-    expect(read("src/app/pages/Dashboard.tsx")).toMatch(/label: "Ejercicios",[^}]*setLibraryOpen\(true\)/);
+    expect(read("src/app/pages/Dashboard.tsx")).toMatch(/aria: "Ejercicios",[^}]*setLibraryOpen\(true\)/);
     const train = read("native/Autopilot/Features/Train/TrainView.swift");
-    expect(train).toMatch(/Label\("Ejercicios", image: "lu-book-open"\)/);
+    expect(train).toMatch(/Image\("lu-book-open"\)[\s\S]{0,400}\.accessibilityLabel\("Ejercicios"\)/);
     expect(train).toContain("ExerciseLibraryView(userId: session.userId)");
     const web = read("src/app/components/library/ExerciseLibrarySheet.tsx");
     for (const text of ["Demostración en preparación", "Recientes", "Favoritos", "Quitar filtros"]) {

@@ -1,14 +1,12 @@
-import { forwardRef, useEffect, useState, type ButtonHTMLAttributes, type ReactNode, type SyntheticEvent } from "react";
-import { Calendar as CalendarIcon, CalendarDays, Check, ChevronRight, Clock, Copy, Download, Flame } from "lucide-react";
+import { useEffect, useState, type ReactNode, type SyntheticEvent } from "react";
+import { CalendarDays, Check, ChevronRight, Clock, Flame, Pencil } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { EmptyState } from "@/shared/components/ui/empty-state";
 import { ListGroup, ListRow } from "@/shared/components/ui/list";
 import { cn } from "@/shared/lib/utils";
-import { hapticSelection, hapticTap } from "@/shared/lib/native";
-import { toast } from "sonner";
+import { hapticSelection } from "@/shared/lib/native";
 import type { DayPlan } from "@/shared/types/training";
 import { formatTrainingTitle } from "@/shared/lib/trainingDisplay";
-import CalendarExportDialog from "@/app/components/dashboard/CalendarExportDialog";
 import AIDisclaimer from "@/shared/components/AIDisclaimer";
 import { ExerciseThumb } from "@/app/components/ExerciseMedia";
 import ExerciseFocus from "@/app/components/ExerciseFocus";
@@ -16,6 +14,8 @@ import { useExerciseMetadata } from "@/shared/hooks/useExerciseMetadata";
 import { cachedSessionCover, useSessionCover } from "@/shared/hooks/useSessionCover";
 import { BRAND_PHOTOS } from "@/shared/lib/brandPhotos";
 import { doneSessionCount, nextPendingSession, routineSessions } from "@/shared/lib/routineOrder";
+import { cleanSessionIcon } from "@/shared/lib/sessionIdentity";
+import SessionIdentitySheet from "@/app/components/dashboard/SessionIdentitySheet";
 
 interface Props {
   dayPlans: DayPlan[];
@@ -24,30 +24,10 @@ interface Props {
   /** Claves de las sesiones hechas esta semana (`day_completions.day_label`). */
   doneThisWeek?: string[];
   onOpenWorkout?: (day: string) => void;
-  /** Tarjeta de la rutina (modo del plan, Libre, Editar, Ejercicios): va bajo la lista de sesiones. */
+  /** Cabecera de la rutina (modo del plan, Libre, Editar, Ejercicios): va arriba, antes de las sesiones. */
   tools?: ReactNode;
-}
-
-function planToText(sessions: DayPlan[]): string {
-  let text = "MI PLAN DE ENTRENAMIENTO\n";
-  text += "═".repeat(40) + "\n\n";
-
-  sessions.forEach((session, index) => {
-    text += `SESIÓN ${index + 1}`;
-    if (session.type === "gimnasio") {
-      text += ` — ${session.routine_name || "Gimnasio"}\n`;
-      text += `   Músculos: ${session.muscle_focus || ""}\n\n`;
-      for (const ex of session.exercises || []) {
-        text += `   • ${ex.name}\n`;
-        text += `     ${ex.series} series × ${ex.reps} reps | Descanso: ${ex.rest}\n`;
-      }
-    } else {
-      text += ` — ${session.sport || "Actividad"}\n`;
-      text += `   Intensidad: ${session.intensity} | Duración: ${session.duration}\n`;
-    }
-    text += "\n" + "─".repeat(40) + "\n\n";
-  });
-  return text;
+  /** Guarda el nombre y el icono de una sesión («Personalizar»); false si no se pudo. */
+  onPersonalize?: (day: string, identity: { name: string; icon: string | null }) => Promise<boolean>;
 }
 
 const sessionTitle = (plan: DayPlan) =>
@@ -91,6 +71,7 @@ const SessionRow = ({ number, plan, isNext, done, expanded, photo, onSelect }: S
   const ids = gym && expanded ? (plan.exercises ?? []).map((exercise) => exercise.exercise_id) : [];
   const cover = useSessionCover(ids, photo);
   const title = sessionTitle(plan);
+  const emoji = cleanSessionIcon(plan.session_icon);
   const status = done ? "hecha esta semana" : isNext ? "siguiente" : null;
   return (
     <button
@@ -103,7 +84,11 @@ const SessionRow = ({ number, plan, isNext, done, expanded, photo, onSelect }: S
         expanded ? "border-primary/60" : "border-border",
       )}
     >
-      {gym ? (
+      {emoji ? (
+        <span aria-hidden className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-secondary text-[32px] leading-none">
+          {emoji}
+        </span>
+      ) : gym ? (
         <span aria-hidden className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-secondary">
           {cover && <img src={cover} alt="" decoding="async" loading="lazy" className="absolute inset-0 h-full w-full object-cover object-[50%_30%]" />}
         </span>
@@ -135,31 +120,7 @@ const SessionRow = ({ number, plan, isNext, done, expanded, photo, onSelect }: S
   );
 };
 
-interface ToolRowProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  icon: ReactNode;
-  label: string;
-}
-
-// Fila de lista que acepta ref y props de Radix: es el disparador del diálogo de calendario.
-const ToolRow = forwardRef<HTMLButtonElement, ToolRowProps>(({ icon, label, className, ...props }, ref) => (
-  <button
-    ref={ref}
-    type="button"
-    {...props}
-    className={cn(
-      "group/row relative flex min-h-[44px] w-full items-center gap-3 px-4 text-left transition-colors duration-150 active:bg-accent focus-visible:bg-accent focus-visible:outline-none",
-      className,
-    )}
-  >
-    <span className="flex w-7 shrink-0 items-center justify-center text-muted-foreground [&_svg]:size-5">{icon}</span>
-    <span className="flex min-h-[44px] min-w-0 flex-1 items-center py-[11px] group-[:not(:last-child)]/row:sep-b">
-      <span className="truncate type-body">{label}</span>
-    </span>
-  </button>
-));
-ToolRow.displayName = "ToolRow";
-
-const TrainingPlanView = ({ dayPlans, initialDay, doneThisWeek = [], onOpenWorkout, tools }: Props) => {
+const TrainingPlanView = ({ dayPlans, initialDay, doneThisWeek = [], onOpenWorkout, tools, onPersonalize }: Props) => {
   // La rutina en orden: solo sesiones, sin días de la semana ni días de descanso.
   const sessions = routineSessions(dayPlans);
   const next = nextPendingSession(sessions, doneThisWeek);
@@ -168,7 +129,8 @@ const TrainingPlanView = ({ dayPlans, initialDay, doneThisWeek = [], onOpenWorko
   // Se abre la pedida desde «Hoy»; si no, la siguiente pendiente; si no, la primera.
   const openKeyFor = (preferred?: string | null) =>
     (hasSession(preferred) ? preferred! : next?.day ?? sessions[0]?.day) ?? null;
-  const [expandedDay, setExpandedDay] = useState<string | null>(() => openKeyFor(initialDay));
+  // `null` = todas plegadas a propósito; `undefined` = aún sin decidir (se abre la que toca).
+  const [expandedDay, setExpandedDay] = useState<string | null | undefined>(() => openKeyFor(initialDay) ?? undefined);
   // La vista no se desmonta al cambiar de pestaña: sincroniza cada sesión pedida desde «Hoy».
   useEffect(() => {
     if (hasSession(initialDay)) setExpandedDay(initialDay!);
@@ -176,10 +138,9 @@ const TrainingPlanView = ({ dayPlans, initialDay, doneThisWeek = [], onOpenWorko
   }, [dayPlans, initialDay]);
   // El plan puede llegar después de montar: si la abierta ya no existe, se abre la que toca.
   useEffect(() => {
-    setExpandedDay((current) => (hasSession(current) ? current : openKeyFor(initialDay)));
+    setExpandedDay((current) => (current === null || hasSession(current) ? current : openKeyFor(initialDay) ?? undefined));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dayPlans, initialDay, next?.day]);
-  const [copied, setCopied] = useState(false);
   const [detail, setDetail] = useState<{
     name: string;
     image?: string | null;
@@ -194,6 +155,14 @@ const TrainingPlanView = ({ dayPlans, initialDay, doneThisWeek = [], onOpenWorko
     load?: string | null;
   } | null>(null);
   const exerciseMetadata = useExerciseMetadata(dayPlans);
+  /** Sesión que se está personalizando (nombre e icono). */
+  const [personalizing, setPersonalizing] = useState<string | null>(null);
+  const personalizePlan = sessions.find((session) => session.day === personalizing) ?? null;
+  const personalizeButton = (plan: DayPlan) => onPersonalize && (
+    <Button type="button" variant="secondary" size="lg" className="w-full" onClick={() => { void hapticSelection(); setPersonalizing(plan.day); }}>
+      <Pencil className="h-4 w-4" aria-hidden /> Nombre e icono
+    </Button>
+  );
   /** Imágenes de ejercicio que fallaron al cargar: la miniatura y la ficha usan su hueco compuesto, nunca la imagen rota. */
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
   const usableImage = (src?: string | null) => (src && !failedImages.has(src) ? src : null);
@@ -203,26 +172,6 @@ const TrainingPlanView = ({ dayPlans, initialDay, doneThisWeek = [], onOpenWorko
     const src = target.getAttribute("src");
     if (!src) return;
     setFailedImages((prev) => (prev.has(src) ? prev : new Set(prev).add(src)));
-  };
-
-  const handleCopy = async () => {
-    void hapticTap();
-    await navigator.clipboard.writeText(planToText(sessions));
-    setCopied(true);
-    toast.success("Plan copiado al portapapeles");
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleDownload = () => {
-    void hapticTap();
-    const blob = new Blob([planToText(sessions)], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "mi-plan-entrenamiento.txt";
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success("Plan descargado");
   };
 
   const selectedPlan = sessions.find((session) => session.day === expandedDay);
@@ -291,6 +240,7 @@ const TrainingPlanView = ({ dayPlans, initialDay, doneThisWeek = [], onOpenWorko
             </ListGroup>
           )}
           {!hasExercises && <p className="px-1 type-subhead text-muted-foreground">Esta sesión no tiene ejercicios todavía.</p>}
+          {personalizeButton(selectedPlan)}
         </section>
       );
     }
@@ -306,6 +256,7 @@ const TrainingPlanView = ({ dayPlans, initialDay, doneThisWeek = [], onOpenWorko
             <ListRow icon={<Flame className="text-muted-foreground" />} title="Intensidad" value={selectedPlan.intensity} />
             <ListRow icon={<Clock className="text-muted-foreground" />} title="Duración" value={selectedPlan.duration} />
           </ListGroup>
+          {personalizeButton(selectedPlan)}
         </section>
       );
     }
@@ -317,6 +268,8 @@ const TrainingPlanView = ({ dayPlans, initialDay, doneThisWeek = [], onOpenWorko
       <h2 className="sr-only">Entrenar</h2>
       {/* En el móvil, bajo el título grande «Entrenar»; en escritorio la barra ya lleva su pista. */}
       <p className="-mt-1 type-subhead text-muted-foreground md:hidden">Tus sesiones en orden. Hazlas el día que te venga bien.</p>
+
+      {tools}
 
       {sessions.length > 0 ? (
         <>
@@ -345,7 +298,8 @@ const TrainingPlanView = ({ dayPlans, initialDay, doneThisWeek = [], onOpenWorko
                     photo={rowPhoto(session)}
                     onSelect={() => {
                       void hapticSelection();
-                      setExpandedDay(session.day);
+                      // Tocar la abierta la pliega; tocar otra la abre.
+                      setExpandedDay((current) => (current === session.day ? null : session.day));
                     }}
                   />
                   {expanded && renderDetail()}
@@ -362,17 +316,6 @@ const TrainingPlanView = ({ dayPlans, initialDay, doneThisWeek = [], onOpenWorko
           description="Edita tu rutina para añadir tus sesiones."
         />
       )}
-
-      {tools}
-
-      <ListGroup>
-        <ToolRow icon={copied ? <Check /> : <Copy />} label={copied ? "Plan copiado" : "Copiar plan"} onClick={handleCopy} />
-        <ToolRow icon={<Download />} label="Descargar plan" onClick={handleDownload} />
-        <CalendarExportDialog
-          dayPlans={dayPlans}
-          trigger={<ToolRow icon={<CalendarIcon />} label="Exportar plan al calendario" onClick={() => void hapticTap()} />}
-        />
-      </ListGroup>
 
       <AIDisclaimer variant="compact" className="px-4 text-center" />
 
@@ -393,6 +336,14 @@ const TrainingPlanView = ({ dayPlans, initialDay, doneThisWeek = [], onOpenWorko
         } : null}
         onClose={() => setDetail(null)}
       />
+      {onPersonalize && (
+        <SessionIdentitySheet
+          plan={personalizePlan}
+          number={personalizePlan ? sessions.indexOf(personalizePlan) + 1 : 0}
+          onOpenChange={(open) => { if (!open) setPersonalizing(null); }}
+          onSave={(identity) => onPersonalize(personalizePlan!.day, identity)}
+        />
+      )}
     </div>
   );
 };

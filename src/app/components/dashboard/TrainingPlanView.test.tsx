@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 import TrainingPlanView from "@/app/components/dashboard/TrainingPlanView";
@@ -58,9 +58,28 @@ describe("routine in order", () => {
     expect(screen.getByText("1 ejercicio · 3 series")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Empezar sesión" }));
     expect(onOpenWorkout).toHaveBeenCalledWith("Jueves");
-    expect(screen.getByRole("button", { name: "Copiar plan" })).toBeVisible();
-    expect(screen.getByRole("button", { name: "Descargar plan" })).toBeVisible();
-    expect(screen.getByRole("button", { name: "Exportar plan al calendario" })).toBeVisible();
+    // Sin copiar, descargar ni exportar: solo la rutina.
+    expect(screen.queryByRole("button", { name: "Copiar plan" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Descargar plan" })).not.toBeInTheDocument();
+  });
+
+  it("folds the open session on a second tap and keeps the rest folded", () => {
+    render(<TrainingPlanView dayPlans={plans} onOpenWorkout={vi.fn()} />);
+    const first = screen.getByRole("button", { name: "Sesión 1: Piernas, siguiente" });
+    expect(first).toHaveAttribute("aria-expanded", "true");
+    fireEvent.click(first);
+    expect(first).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("button", { name: "Empezar sesión" })).not.toBeInTheDocument();
+  });
+
+  it("personalizes a session name and icon with the suggestion", async () => {
+    const onPersonalize = vi.fn().mockResolvedValue(true);
+    render(<TrainingPlanView dayPlans={[{ ...plans[0], session_icon: "🔥", exercises: [{ ...squat, muscle_group: "Cuádriceps" }] }, ...plans.slice(1)]} onOpenWorkout={vi.fn()} onPersonalize={onPersonalize} />);
+    fireEvent.click(screen.getByRole("button", { name: /Nombre e icono/ }));
+    expect(await screen.findByText("Personalizar sesión")).toBeVisible();
+    fireEvent.click(screen.getByRole("radio", { name: "🦵, sugerido" }));
+    fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+    await waitFor(() => expect(onPersonalize).toHaveBeenCalledWith("Lunes", { name: "Piernas", icon: "🦵" }));
   });
 
   it("opens the session asked for from Hoy and any other on tap", () => {

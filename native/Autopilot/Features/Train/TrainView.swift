@@ -67,7 +67,8 @@ struct TrainView: View {
                                     doneThisWeek: model.doneThisWeek,
                                     doneToday: model.doneTodayKeys,
                                     resumableDay: resumableDay,
-                                    routineBar: AnyView(routineBar)) { day in
+                                    routineBar: AnyView(routineBar),
+                                    onPersonalize: personalize) { day in
                         Task { await open(day) }
                     }
                 }
@@ -121,34 +122,33 @@ struct TrainView: View {
 
     // MARK: Cargar y abrir la sesión de la rutina
 
-    /// Barra de la rutina (como la web): modo del plan, «Ejercicios» (biblioteca) y «Editar» para crear o cambiar tu rutina.
+    /// Cabecera de la rutina (como la web), arriba: el modo en dorado, de dónde sale y sus acciones
+    /// («Ejercicios» y «Editar») como iconos y texto dorados, sin cápsulas grises.
     private var routineBar: some View {
-        HStack(spacing: 8) {
-            Text(model.days.contains { $0.custom == true } ? "Rutina personalizada" : "Piloto automático")
-                .font(.apSubhead.weight(.medium)).frame(maxWidth: .infinity, alignment: .leading)
+        let manual = model.days.contains { $0.custom == true }
+        return HStack(spacing: 8) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(manual ? "RUTINA PERSONALIZADA" : "PILOTO AUTOMÁTICO")
+                    .font(.apCaption.weight(.semibold)).tracking(1.6).foregroundStyle(Palette.gold)
+                Text(manual ? "Creada por ti." : "Preparada por Autopilot.")
+                    .font(.apSubhead).foregroundStyle(Palette.muted).lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityElement(children: .combine)
             Button { Haptics.tap(); library = true } label: {
-                Label("Ejercicios", image: "lu-book-open")
-                    #if os(iOS)
-                    .labelStyle(.iconOnly).frame(width: 44)
-                    #else
-                    .labelStyle(.titleOnly).padding(.horizontal, 14)
-                    #endif
-                    .font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.gold)
-                    .frame(minHeight: 44)
-                    .background(Palette.secondary, in: Capsule())
+                Image("lu-book-open").renderingMode(.template).resizable().frame(width: 20, height: 20)
+                    .foregroundStyle(Palette.gold).frame(width: 44, height: 44).contentShape(Circle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Ejercicios")
             Button { Haptics.tap(); editing = true } label: {
-                Label("Editar", image: "lu-settings").labelStyle(.titleOnly)
-                    .font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.gold)
-                    .padding(.horizontal, 14).frame(minHeight: 44)
-                    .background(Palette.secondary, in: Capsule())
+                Text("Editar").font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.gold)
+                    .padding(.horizontal, 10).frame(minHeight: 44).contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Editar rutina")
         }
-        .padding(.leading, 16).padding(.trailing, 8).padding(.vertical, 8)
+        .padding(.leading, 20).padding(.trailing, 8).padding(.vertical, 12)
         .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
     }
 
@@ -294,6 +294,21 @@ struct FlowRow: Layout {
 }
 
 @MainActor
+extension TrainView {
+    /// «Nombre e icono» de una sesión: guarda solo esos dos campos; el modo del plan no cambia.
+    func personalize(day: String, name: String, icon: String?) async -> Bool {
+        guard let userId = session.userId else { return false }
+        do {
+            model.days = try await TrainingRepo.saveSessionIdentity(userId: userId, plans: model.days, day: day, name: name, icon: icon)
+            Haptics.success()
+            return true
+        } catch {
+            Haptics.error()
+            return false
+        }
+    }
+}
+
 final class PlanModel: ObservableObject {
     @Published var days: [DayPlan] = []
     @Published var completions: [(day: String, date: String)] = []
@@ -352,23 +367,30 @@ struct RoutineListView: View {
     var doneToday: Set<String> = []
     /// Sesión con un entreno a medias: su acción pasa a ser «Continuar entreno».
     var resumableDay: String? = nil
-    /// Tarjeta de la rutina (modo, Ejercicios, Editar): va bajo la lista de sesiones, como en la web.
+    /// Cabecera de la rutina (modo, Ejercicios, Editar): va arriba, como en la web.
     var routineBar: AnyView? = nil
+    /// Guarda el nombre y el icono de una sesión; false si no se pudo.
+    var onPersonalize: ((String, String, String?) async -> Bool)? = nil
     var onOpen: (String) -> Void
     @State private var expanded: String?
+    /// Sesión que se está personalizando (nombre e icono).
+    @State private var personalizing: DayPlan?
+    /// Todas plegadas a propósito (se tocó la abierta): no se vuelve a abrir sola la siguiente.
+    @State private var collapsedAll = false
     @State private var detail: GymExercise?
-    @State private var copied = false
 
     private var sessions: [DayPlan] { RoutineOrder.sessions(days) }
     private var next: DayPlan? { RoutineOrder.nextPending(sessions, done: doneThisWeek) }
     /// La abierta: la elegida si sigue en el plan; si no, la siguiente que falta o la primera.
     private var openKey: String? {
+        if collapsedAll { return nil }
         if let expanded, sessions.contains(where: { $0.day == expanded }) { return expanded }
         return (next ?? sessions.first)?.day
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
+            if let routineBar { routineBar }
             if sessions.isEmpty {
                 emptyCard(icon: "lu-calendar", title: "Tu plan aún no tiene sesiones",
                           message: "Edita tu rutina para añadir tus sesiones.")
@@ -381,14 +403,18 @@ struct RoutineListView: View {
                     }
                 }
             }
-            if let routineBar { routineBar }
-            tools
             (Text("Análisis asistido por IA · tu plan se adapta a ti · ") + Text("[no sustituye consejo médico](https://autopilotplan.app/legal/disclaimer-medico)"))
                 .tint(Palette.gold)
                 .font(.apFootnote).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity).padding(.horizontal, 16)
         }
         .sheet(item: $detail) { TechniqueSheet(exercise: $0).presentationBackground(Palette.card) }
+        .sheet(item: $personalizing) { plan in
+            SessionIdentitySheet(plan: plan, number: (sessions.firstIndex { $0.day == plan.day } ?? 0) + 1) { name, icon in
+                await onPersonalize?(plan.day, name, icon) ?? false
+            }
+            .presentationBackground(Palette.card)
+        }
     }
 
     /// Lo hecho esta semana: un tramo por sesión, dorado si ya está hecha (como la web).
@@ -415,7 +441,10 @@ struct RoutineListView: View {
         let shape = RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
         return Button {
             Haptics.selection()
-            withAnimation(reduceMotion ? nil : .snappy) { expanded = plan.day }
+            // Tocar la abierta la pliega; tocar otra la abre.
+            withAnimation(reduceMotion ? nil : .snappy) {
+                if isExpanded { collapsedAll = true; expanded = nil } else { collapsedAll = false; expanded = plan.day }
+            }
         } label: {
             HStack(spacing: 14) {
                 rowThumb(plan)
@@ -467,7 +496,12 @@ struct RoutineListView: View {
     /// Foto de la fila: la del primer ejercicio o la de marca; la actividad, su llama.
     @ViewBuilder private func rowThumb(_ plan: DayPlan) -> some View {
         let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
-        if plan.isGym {
+        if let emoji = SessionIdentity.clean(plan.session_icon) {
+            Text(emoji).font(.system(size: 32))
+                .frame(width: 64, height: 64)
+                .background(Palette.secondary, in: shape)
+                .accessibilityHidden(true)
+        } else if plan.isGym {
             let source = (plan.exercises ?? []).compactMap(\.image_url).first { !$0.isEmpty } ?? Self.brandGymPhoto
             CachedAsyncImage(url: URL(string: source), maxSide: 300) {
                 $0.resizable().scaledToFill()
@@ -546,6 +580,13 @@ struct RoutineListView: View {
                     infoRow("lu-clock", "Duración", planDurations(plan), last: true)
                 }
                 .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            }
+            if onPersonalize != nil {
+                Button { Haptics.selection(); personalizing = plan } label: {
+                    Label("Nombre e icono", systemImage: "pencil")
+                }
+                .buttonStyle(.pillSecondary)
+                .accessibilityHint("Cambia el nombre y el icono de esta sesión")
             }
         }
     }
@@ -636,63 +677,121 @@ struct RoutineListView: View {
         .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
     }
 
-    private var tools: some View {
-        VStack(spacing: 0) {
-            Button { copy() } label: { toolRow(copied ? "lu-check" : "lu-copy", copied ? "Plan copiado" : "Copiar plan", last: false) }.buttonStyle(.plain)
-            ShareLink(item: PlanText.file(days)) { toolRow("lu-download", "Descargar plan", last: true) }.buttonStyle(.plain)
-        }
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-    }
-
-    private func toolRow(_ icon: String, _ label: String, last: Bool) -> some View {
-        HStack(spacing: 12) {
-            Image(icon).renderingMode(.template).resizable().frame(width: 20, height: 20)
-                .foregroundStyle(Palette.muted).frame(width: 28)
-            Text(label).font(.apBody).foregroundStyle(Palette.foreground)
-                .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
-        }
-        .padding(.horizontal, 16)
-        .overlay(alignment: .bottom) {
-            if !last {
-                Rectangle().fill(Palette.separator).frame(height: 0.5)
-                    .padding(.leading, 56).padding(.trailing, 16)
-            }
-        }
-        .contentShape(Rectangle())
-    }
-
-    private func copy() {
-        Haptics.tap()
-        #if os(iOS)
-        UIPasteboard.general.string = PlanText.text(days)
-        #else
-        NSPasteboard.general.clearContents(); NSPasteboard.general.setString(PlanText.text(days), forType: .string)
-        #endif
-        copied = true
-        Task { try? await Task.sleep(for: .seconds(2)); copied = false }
-    }
 }
 
-/// Texto del plan como `planToText` de la web (copiar y descargar).
-enum PlanText {
-    static func text(_ days: [DayPlan]) -> String {
-        var t = "MI PLAN DE ENTRENAMIENTO\n" + String(repeating: "═", count: 40) + "\n\n"
-        for (i, d) in RoutineOrder.sessions(days).enumerated() {
-            t += "SESIÓN \(i + 1)"
-            if d.isGym {
-                t += " — \(d.routine_name ?? "Gimnasio")\n   Músculos: \(d.muscle_focus ?? "")\n\n"
-                for e in d.exercises ?? [] { t += "   • \(e.name)\n     \(e.series) series × \(e.reps) reps | Descanso: \(e.rest)\n" }
-            } else {
-                t += " — \(d.sport ?? "Actividad")\n   Intensidad: \(d.intensity ?? "") | Duración: \(d.duration ?? "")\n"
-            }
-            t += "\n" + String(repeating: "─", count: 40) + "\n\n"
-        }
-        return t
-    }
-    static func file(_ days: [DayPlan]) -> URL {
-        let u = FileManager.default.temporaryDirectory.appendingPathComponent("mi-plan-entrenamiento.txt")
-        try? text(days).write(to: u, atomically: true, encoding: .utf8)
-        return u
+/// «Personalizar sesión» (`SessionIdentitySheet.tsx`): nombre propio o sugerido y un icono
+/// (la foto de la sesión, un emoji propio o el sugerido según sus ejercicios).
+struct SessionIdentitySheet: View {
+    let plan: DayPlan
+    let number: Int
+    let onSave: (String, String?) async -> Bool
+    @Environment(\.dismiss) private var dismiss
+    @State private var name: String
+    @State private var icon: String?
+    @State private var saving = false
+    @State private var failed = false
+
+    init(plan: DayPlan, number: Int, onSave: @escaping (String, String?) async -> Bool) {
+        self.plan = plan
+        self.number = number
+        self.onSave = onSave
+        _name = State(initialValue: plan.routine_name ?? "")
+        _icon = State(initialValue: SessionIdentity.clean(plan.session_icon))
     }
 
+    private var suggestedName: String { SessionIdentity.suggestedName(plan) }
+    private var suggestedIcon: String { SessionIdentity.suggestedIcon(plan) }
+    private var options: [String] { [suggestedIcon] + SessionIdentity.emojis.filter { $0 != suggestedIcon } }
+    private let columns = [GridItem(.adaptive(minimum: 48, maximum: 56), spacing: 10)]
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Sesión \(number)").font(.apFootnote.weight(.medium)).foregroundStyle(Palette.muted)
+                    Text("Personalizar sesión").font(.inter(size: 22, weight: .bold)).tracking(-0.4)
+                        .accessibilityAddTraits(.isHeader)
+                }
+
+                if plan.isGym {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Nombre").font(.apSubhead.weight(.semibold))
+                        PillField(label: suggestedName, text: $name)
+                        if name.trimmingCharacters(in: .whitespaces) != suggestedName {
+                            Button { Haptics.selection(); name = suggestedName } label: {
+                                (Text("Sugerido: ").foregroundColor(Palette.muted) + Text(suggestedName).foregroundColor(Palette.foreground))
+                                    .font(.apSubhead)
+                                    .padding(.horizontal, 16).frame(minHeight: 44)
+                                    .background(Palette.secondary, in: Capsule())
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Usar el nombre sugerido: \(suggestedName)")
+                        }
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Icono").font(.apSubhead.weight(.semibold))
+                    Text(plan.isGym ? "La foto de la sesión o un emoji. El sugerido, con el punto dorado, sale de sus ejercicios."
+                                    : "El icono de la actividad o un emoji. El sugerido lleva el punto dorado.")
+                        .font(.apFootnote).foregroundStyle(Palette.muted)
+                    LazyVGrid(columns: columns, alignment: .leading, spacing: 10) {
+                        iconOption(nil)
+                        ForEach(options, id: \.self) { iconOption($0) }
+                    }
+                }
+
+                if failed {
+                    Text("No se pudo guardar. Inténtalo de nuevo.").font(.apFootnote).foregroundStyle(Palette.destructive)
+                        .accessibilityAddTraits(.updatesFrequently)
+                }
+
+                Button(saving ? "Guardando…" : "Guardar") {
+                    Task {
+                        saving = true
+                        failed = false
+                        let ok = await onSave(name, icon)
+                        saving = false
+                        if ok { dismiss() } else { failed = true; A11y.announce("No se pudo guardar") }
+                    }
+                }
+                .buttonStyle(.pill)
+                .disabled(saving || (plan.isGym && name.trimmingCharacters(in: .whitespaces).isEmpty))
+            }
+            .padding(24)
+        }
+        .presentationDetents([.large])
+        #if os(macOS)
+        .frame(minWidth: 420, minHeight: 560)
+        #endif
+    }
+
+    /// Una opción del icono: `nil` es la foto de la sesión (o la llama de la actividad).
+    private func iconOption(_ value: String?) -> some View {
+        let selected = icon == value
+        let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
+        return Button { Haptics.selection(); icon = value } label: {
+            Group {
+                if let value {
+                    Text(value).font(.system(size: 24))
+                } else {
+                    Image(systemName: plan.isGym ? "photo" : "flame")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundStyle(plan.isGym ? Palette.muted : Palette.gold)
+                }
+            }
+            .frame(width: 48, height: 48)
+            .background(Palette.secondary, in: shape)
+            .overlay(shape.strokeBorder(selected ? Palette.gold : .clear, lineWidth: 2))
+            .overlay(alignment: .topTrailing) {
+                if value == suggestedIcon {
+                    Circle().fill(Palette.gold).frame(width: 10, height: 10)
+                        .overlay(Circle().stroke(Palette.card, lineWidth: 2)).offset(x: 2, y: -2)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(value.map { $0 == suggestedIcon ? "\($0), sugerido" : $0 } ?? (plan.isGym ? "Foto de la sesión" : "Icono de actividad"))
+        .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
+    }
 }

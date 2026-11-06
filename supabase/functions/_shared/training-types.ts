@@ -28,4 +28,6 @@ export interface DayPlan {
   exercises?: GymExerciseEntry[];
   /** Día creado o editado a mano: el piloto automático no lo sustituye sin permiso. */
   custom?: boolean;
+  /** Emoji que el usuario eligió para la sesión (si no hay, se ve su foto). */
+  session_icon?: string;
 }
