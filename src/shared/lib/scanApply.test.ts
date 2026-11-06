@@ -94,7 +94,7 @@ describe("lo que aplica un scan al plan", () => {
     expect(buildScanPlanUpdates({ protocol: { training_days_per_week: 4 } })).toEqual({});
     expect(buildScanPlanUpdates(
       { protocol: { training_days_per_week: 5 } },
-      { availability: { days: 3, hours: 60, training_days: [0, 2] } },
+      { availability: { days: 3, hours: 60, training_days: [0, 2] } } as never,
     )).toEqual({});
     // Pero la recomendación llega intacta al servidor, que solo usa lo aplicable.
     expect(buildScanPlanUpdates({ inferred_goal: "recomp", protocol: { training_days_per_week: 5 } }))
@@ -106,7 +106,7 @@ describe("lo que aplica un scan al plan", () => {
     expect(hasScanInferences({ protocol: { calorie_adjustment_kcal: -300 } })).toBe(true);
     expect(hasScanInferences({ protocol: { key_lifts: ["Press militar"] } })).toBe(true);
     expect(hasScanInferences({ protocol: { training_days_per_week: 5 } })).toBe(false);
-    expect(hasScanInferences({ protocol: { training_days_per_week: 5, cardio_minutes_per_week: 120 } })).toBe(false);
+    expect(hasScanInferences({ protocol: { training_days_per_week: 5, cardio_minutes_per_week: 120 } as never })).toBe(false);
   });
 });
 
