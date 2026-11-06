@@ -86,7 +86,7 @@ describe("signup", () => {
     fireEvent.change(screen.getByLabelText("Contraseña"), { target: { value: "123456" } });
     fireEvent.click(screen.getByRole("button", { name: "Crear cuenta gratis" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Password is too weak");
+    expect(await screen.findByRole("alert")).toHaveTextContent("La contraseña es demasiado débil");
     await waitFor(() => expect(hapticNotify).toHaveBeenCalledWith("error"));
   });
   it("si el correo ya tiene cuenta lo dice sin consultar antes: el código sale en la misma petición", async () => {

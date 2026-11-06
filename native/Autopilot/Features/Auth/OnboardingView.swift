@@ -681,8 +681,7 @@ struct CreateAccountView: View {
         } catch {
             fail(AccountStore.isNetworkError(error)
                  ? "No hemos podido crear tu cuenta. Comprueba tu conexión y vuelve a intentarlo."
-                 : String(describing: error).contains("weak_password") ? "La contraseña debe tener al menos 6 caracteres."
-                 : "No hemos podido crear tu cuenta. Revisa el correo y la contraseña.")
+                 : Self.signupMessage(String(describing: error).lowercased()))
         }
     }
 
@@ -716,6 +715,26 @@ struct CreateAccountView: View {
         } catch {
             fail("No hemos podido reenviar el código. Espera un momento y vuelve a intentarlo.")
         }
+    }
+
+    /// Mismos textos que el alta web (`signupErrorMessage` en authFormHelpers.ts).
+    static func signupMessage(_ text: String) -> String {
+        if text.contains("pwned") || text.contains("known to be weak") || text.contains("easy to guess") {
+            return "Esa contraseña es demasiado común. Elige otra que no uses en otros sitios."
+        }
+        if text.contains("weak_password") || text.contains("password should") || text.contains("at least") {
+            return "La contraseña es demasiado débil. Usa al menos 6 caracteres mezclando letras y números."
+        }
+        if text.contains("rate limit") || text.contains("too many") || text.contains("429") {
+            return "Demasiados intentos seguidos. Espera un minuto y vuelve a intentarlo."
+        }
+        if (text.contains("invalid") && text.contains("email")) || text.contains("email_address_invalid") {
+            return "Ese correo no parece válido. Revisa que tenga el formato nombre@dominio.com."
+        }
+        if text.contains("signup") && (text.contains("disabled") || text.contains("not allowed")) {
+            return "Ahora mismo no se pueden crear cuentas. Inténtalo en unos minutos."
+        }
+        return "No hemos podido crear tu cuenta. Revisa el correo y la contraseña."
     }
 
     private func fail(_ message: String) {

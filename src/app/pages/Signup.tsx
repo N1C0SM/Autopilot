@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { Camera, Eye, EyeOff, Gift, LockKeyhole, Mail, Sparkles, UserRound } from "lucide-react";
 import { AppleSignInButton } from "@/app/components/auth/AppleSignInButton";
 import { AuthAppMark, AuthFieldGroup, AuthFieldNote, AuthFieldRow, AuthHero, AuthImage, AuthNotice } from "@/app/components/auth/AuthScreenParts";
-import { authFieldInputClass, authSecondaryActionClass, focusNextOnEnter, hideWithKeyboardClass } from "@/app/components/auth/authFormHelpers";
+import { authFieldInputClass, authSecondaryActionClass, focusNextOnEnter, hideWithKeyboardClass, signupErrorMessage } from "@/app/components/auth/authFormHelpers";
 import { useAuth } from "@/shared/contexts/AuthContext";
 import { track } from "@/shared/lib/analytics";
 import { postVerificationPath, readSignupEmail, readVerifyContext, saveSignupEmail, saveVerifyContext } from "@/shared/lib/signupVerification";
@@ -114,6 +114,8 @@ const Signup = () => {
   const fail = (message: string) => {
     setFormError(message);
     void hapticNotify("error");
+    // En el iPhone el aviso queda bajo el botón fijo del pie: se trae a la vista.
+    requestAnimationFrame(() => document.getElementById("signup-error")?.scrollIntoView?.({ block: "center", behavior: "smooth" }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -149,7 +151,7 @@ const Signup = () => {
         ...acquisitionMetadata(),
       }, { next: nextAfterVerify });
       if (error) {
-        fail(error.message);
+        fail(signupErrorMessage(error as { message?: string; code?: string }));
         setLoading(false);
         return;
       }
@@ -189,7 +191,7 @@ const Signup = () => {
         {loading ? (
           <><Spinner size="sm" className="text-primary-foreground" aria-hidden="true" /> Creando cuenta…</>
         ) : (
-          isFree ? "Crear cuenta gratis" : "Crear cuenta"
+          isFree || fromQuiz ? "Crear cuenta gratis" : "Crear cuenta"
         )}
       </Button>
       {appleSignInEnabled() && (
@@ -242,7 +244,7 @@ const Signup = () => {
             : fromQuiz
             ? "Último paso para desbloquear tu plan."
             : fromScan
-            ? "Último paso para desbloquear tu AI Report y plan completo."
+            ? "Último paso para desbloquear tu informe y tu plan completo."
             : "Empieza hoy."
         }
       />
@@ -259,7 +261,7 @@ const Signup = () => {
                   fallback={<Camera strokeWidth={1.75} />}
                 />
               }
-              title="Tu AI Report está reservado"
+              title="Tu informe está reservado"
             >
               <p>
                 Potencial <span className="tabular-nums text-foreground">{formatDecimal(scanCtx.result.potential, 1)}/10</span> · {scanCtx.result.improvements?.length || 0} mejoras detectadas
@@ -270,7 +272,7 @@ const Signup = () => {
 
           {fromQuiz && (
             <AuthNotice icon={<Sparkles strokeWidth={1.75} />} title="Tu plan personalizado está reservado">
-              {plans.plus || plans.coach ? "7 días de prueba · se pide tarjeta al contratar, no se cobra hasta el día 8" : "Gratis y sin tarjeta"}
+              Gratis y sin tarjeta
             </AuthNotice>
           )}
 
@@ -284,7 +286,7 @@ const Signup = () => {
             <>
               {fieldError ? <AuthFieldNote id="signup-error" tone="error">{fieldError}</AuthFieldNote> : null}
               {isFree ? (
-                <AuthFieldNote>Sin tarjeta ni prueba que cancelar. El seguimiento de un entrenador es opcional y de pago.</AuthFieldNote>
+                <AuthFieldNote>Sin tarjeta ni prueba que cancelar.</AuthFieldNote>
               ) : null}
             </>
           }

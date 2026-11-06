@@ -721,7 +721,8 @@ const Dashboard = () => {
               {!campaign && <CoachingOffer
                 onChoose={handleCompletePayment}
                 compact
-                defaultPlan={landingPlan ?? (wantsCoach ? "full" : "training")}
+                // Solo «Elegiste Plus en la web» si de verdad lo eligió antes de registrarse.
+                defaultPlan={landingPlan ?? (wantsCoach ? "full" : undefined)}
               />}
             </div>
           )}
