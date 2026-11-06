@@ -15,8 +15,8 @@ interface Props {
 }
 
 /**
- * Badges "Descarga en App Store / Google Play".
- * Si ninguna URL está configurada en src/config/appStores.ts se oculta
+ * Badges "Descarga en App Store / Mac App Store / Google Play".
+ * Si ninguna URL está configurada en Admin → Landing se oculta
  * el bloque entero. Si sólo una está configurada, sólo se muestra esa.
  */
 const AppStoreBadges = (props: Props) => {
@@ -36,6 +36,7 @@ const StoreBadges = ({
   // a una app de terceros como valor por defecto.
   const [appStoreUrl, setAppStoreUrl] = useState("");
   const [playStoreUrl, setPlayStoreUrl] = useState("");
+  const [macStoreUrl, setMacStoreUrl] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -48,6 +49,7 @@ const StoreBadges = ({
         if (row && row.show_app_download !== false) {
           setAppStoreUrl((row.app_store_url || "").trim());
           setPlayStoreUrl((row.play_store_url || "").trim());
+          setMacStoreUrl((row.mac_store_url || "").trim());
         }
       } catch {
         // Sin datos no mostramos badges: nunca enlazamos a otra app por defecto.
@@ -58,7 +60,7 @@ const StoreBadges = ({
     };
   }, []);
 
-  if (!appStoreUrl && !playStoreUrl) return null;
+  if (!appStoreUrl && !playStoreUrl && !macStoreUrl) return null;
 
   const isCompact = size === "compact";
   const iconSize = isCompact ? "w-5 h-5" : "w-6 h-6";
@@ -82,6 +84,22 @@ const StoreBadges = ({
           <span className="flex flex-col text-left">
             <span className="type-caption2 opacity-70">Descarga en</span>
             <span className={`${bigText} font-semibold`}>App Store</span>
+          </span>
+        </a>
+      )}
+      {macStoreUrl && (
+        <a
+          href={macStoreUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Descargar en el Mac App Store"
+          onClick={() => void hapticTap()}
+          className={badge}
+        >
+          <AppleLogo className={`${iconSize} shrink-0`} />
+          <span className="flex flex-col text-left">
+            <span className="type-caption2 opacity-70">Descarga en</span>
+            <span className={`${bigText} font-semibold`}>Mac App Store</span>
           </span>
         </a>
       )}

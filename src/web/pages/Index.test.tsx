@@ -47,24 +47,56 @@ describe("short public home", () => {
     expect(within(main).getByRole("link", { name: "Ver la comparativa completa" })).toHaveAttribute("href", "/planes");
   });
 
-  it("shows the store badges with real logos until the admin turns them off", async () => {
-    open();
-    const main = await screen.findByRole("main");
-    const play = within(main).getByRole("link", { name: /Google Play/ });
-    expect(play).toHaveAttribute("href", "/app");
-    expect(play.querySelectorAll("svg path")).toHaveLength(4);
-    cleanup();
-    const rpc = vi.mocked(supabase.rpc);
-    const original = rpc.getMockImplementation();
-    rpc.mockResolvedValue({ data: [{ show_app_download: false, show_store_badges: false }], error: null } as never);
-    try {
-      open();
-      const hidden = await screen.findByRole("main");
-      await waitFor(() => expect(within(hidden).queryByRole("link", { name: /Google Play/ })).not.toBeInTheDocument());
-      expect(within(hidden).queryByRole("link", { name: /App Store/ })).not.toBeInTheDocument();
-    } finally {
-      rpc.mockImplementation(original!);
-    }
+  describe("devices section with store links", () => {
+    const withSettings = async (row: Record<string, unknown>, check: () => Promise<void>) => {
+      const rpc = vi.mocked(supabase.rpc);
+      const original = rpc.getMockImplementation();
+      rpc.mockResolvedValue({ data: [row], error: null } as never);
+      try { await check(); } finally { rpc.mockImplementation(original!); }
+    };
+    const heading = /Todo tu progreso/;
+
+    it("hides the whole section when no store link is set", async () => {
+      await withSettings({ app_store_url: "", mac_store_url: "", play_store_url: "" }, async () => {
+        open();
+        const main = await screen.findByRole("main");
+        await waitFor(() => expect(vi.mocked(supabase.rpc)).toHaveBeenCalledWith("get_public_settings"));
+        expect(within(main).queryByRole("heading", { name: heading })).not.toBeInTheDocument();
+        expect(within(main).queryByText("Android")).not.toBeInTheDocument();
+      });
+    });
+
+    it("shows only the configured store, with its real logo and link", async () => {
+      await withSettings({ app_store_url: "", play_store_url: "https://play.google.com/store/apps/details?id=x" }, async () => {
+        open();
+        const main = await screen.findByRole("main");
+        expect(await within(main).findByRole("heading", { name: heading })).toBeInTheDocument();
+        const play = within(main).getByRole("link", { name: /Google Play/ });
+        expect(play).toHaveAttribute("href", "https://play.google.com/store/apps/details?id=x");
+        expect(play.querySelectorAll("svg path")).toHaveLength(4);
+        expect(within(main).queryByRole("link", { name: /App Store/ })).not.toBeInTheDocument();
+      });
+    });
+
+    it("shows App Store, Mac App Store and Google Play when all three are set", async () => {
+      await withSettings({ app_store_url: "https://apps.apple.com/app/id1", mac_store_url: "https://apps.apple.com/app/id2", play_store_url: "https://play.google.com/x" }, async () => {
+        open();
+        const main = await screen.findByRole("main");
+        await within(main).findByRole("heading", { name: heading });
+        expect(within(main).getByRole("link", { name: "Descargar en App Store" })).toHaveAttribute("href", "https://apps.apple.com/app/id1");
+        expect(within(main).getByRole("link", { name: "Descargar en Mac App Store" })).toHaveAttribute("href", "https://apps.apple.com/app/id2");
+        expect(within(main).getByRole("link", { name: /Google Play/ })).toHaveAttribute("href", "https://play.google.com/x");
+      });
+    });
+
+    it("stays hidden with links when the admin switch is off", async () => {
+      await withSettings({ show_store_badges: false, app_store_url: "https://apps.apple.com/app/id1" }, async () => {
+        open();
+        const main = await screen.findByRole("main");
+        await waitFor(() => expect(vi.mocked(supabase.rpc)).toHaveBeenCalledWith("get_public_settings"));
+        expect(within(main).queryByRole("heading", { name: heading })).not.toBeInTheDocument();
+      });
+    });
   });
 
   it("opens mobile navigation and reaches the questions page", async () => {

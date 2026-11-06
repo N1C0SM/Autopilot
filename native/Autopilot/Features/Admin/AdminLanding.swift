@@ -98,14 +98,15 @@ struct AdminLandingView: View {
                         }
                         Button("Guardar vídeo") { Task { await saveFields(["hero_video_url", "hero_video_poster_url"]) } }.buttonStyle(.pill).frame(maxWidth: 320)
                     }
-                    section("Enlaces a la app (App Store / Google Play)", "Pega aquí las URLs cuando publiques la app. Si dejas un campo vacío, ese botón se ocultará en la web.") {
+                    section("Enlaces a la app (App Store / Mac App Store / Google Play)", "Pega aquí las URLs cuando publiques la app. Si dejas un campo vacío, ese botón se ocultará en la web; sin ninguno, la portada oculta la sección «Todo tu progreso, en todos tus dispositivos».") {
                         group {
                             settingToggle("Mostrar descarga de la app", nil, "show_app_download", first: true)
-                            settingToggle("Insignias de tiendas en la portada", "App Store, Google Play y Mac en «Todo tu progreso, en todos tus dispositivos».", "show_store_badges")
+                            settingToggle("Insignias de tiendas en la portada", "La sección «Todo tu progreso, en todos tus dispositivos», con un botón por cada enlace de abajo.", "show_store_badges")
                             settingText("App Store", "https://apps.apple.com/app/id0000000000", "app_store_url")
+                            settingText("Mac App Store", "https://apps.apple.com/app/id0000000000?platform=mac", "mac_store_url")
                             settingText("Google Play", "https://play.google.com/store/apps/details?id=…", "play_store_url")
                         }
-                        Button("Guardar enlaces") { Task { await saveFields(["app_store_url", "play_store_url"]) } }.buttonStyle(.pill).frame(maxWidth: 320)
+                        Button("Guardar enlaces") { Task { await saveFields(["app_store_url", "mac_store_url", "play_store_url"]) } }.buttonStyle(.pill).frame(maxWidth: 320)
                     }
                     section("Plazas de Transformación", "Esta cifra aparece en la landing. Usa 0 cuando no queden plazas disponibles.") {
                         group { settingNumber("Plazas disponibles", nil, "transformation_slots", first: true, autosave: false) }
@@ -385,8 +386,9 @@ struct AdminLandingView: View {
         }
         let sl: [[String: AnyJSON]] = (try? await Backend.client.from("settings").select("social_links").limit(1).execute().value) ?? []
         // Aparte, como en la web: sin la columna, el resto carga igual y las insignias siguen visibles.
-        let sb: [[String: AnyJSON]] = (try? await Backend.client.from("settings").select("show_store_badges").limit(1).execute().value) ?? []
+        let sb: [[String: AnyJSON]] = (try? await Backend.client.from("settings").select("show_store_badges, mac_store_url").limit(1).execute().value) ?? []
         settings["show_store_badges"] = sb.first?["show_store_badges"] ?? .bool(true)
+        settings["mac_store_url"] = sb.first?["mac_store_url"] ?? .string("")
         if case .object(let o) = sl.first?["social_links"] { for (k, v) in o { if case .string(let s) = v { social[k] = s } } }
         if let data = try? JSONEncoder().encode(settings["recommendations"] ?? .array([])) { recs = (try? JSONDecoder().decode([Recommendation].self, from: data)) ?? [] }
         struct S: Decodable { let key: String; let value: String }

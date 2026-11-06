@@ -797,13 +797,17 @@ describe("paridad web ↔ apps nativas", () => {
     expect(read("native/Autopilot/Features/Admin/AdminExercises.swift")).toContain("AdminCatalogImportCard {");
   });
 
-  it("Admin → Contenido web: el interruptor de las insignias de tiendas de la portada está en la web y en la app", () => {
+  it("Admin → Landing: enlaces de App Store, Mac App Store y Google Play y el interruptor de la portada, en la web y en la app", () => {
     const web = read("src/app/components/admin/SiteContentEditor.tsx");
     const app = read("native/Autopilot/Features/Admin/AdminLanding.swift");
-    for (const text of ["Insignias de tiendas en la portada", "App Store, Google Play y Mac en «Todo tu progreso, en todos tus dispositivos».", "show_store_badges"]) {
+    for (const text of ["Insignias de tiendas en la portada", "La sección «Todo tu progreso, en todos tus dispositivos», con un botón por cada enlace de abajo.", "show_store_badges",
+      "Enlaces a la app (App Store / Mac App Store / Google Play)", "sin ninguno, la portada oculta la sección «Todo tu progreso, en todos tus dispositivos».", "mac_store_url"]) {
       expect(web).toContain(text);
       expect(app).toContain(text);
     }
-    expect(read("src/web/components/LandingSections.tsx")).toContain("row.show_store_badges !== false");
+    // Sin ningún enlace (o con el interruptor apagado) la portada no enseña la sección.
+    const landing = read("src/web/components/LandingSections.tsx");
+    expect(landing).toContain('row.show_store_badges === false');
+    expect(landing).toContain("if (!links) return null;");
   });
 });

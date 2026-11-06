@@ -104,7 +104,7 @@ const SiteContentEditor = () => {
   const [saving, setSaving] = useState(false);
   const [trainer, setTrainer] = useState({ trainer_name: "", trainer_photo_url: "", trainer_bio: "", contact_phone: "" });
   const [hero, setHero] = useState({ hero_video_url: "", hero_video_poster_url: "" });
-  const [stores, setStores] = useState({ app_store_url: "", play_store_url: "" });
+  const [stores, setStores] = useState({ app_store_url: "", mac_store_url: "", play_store_url: "" });
   const [showAppDownload, setShowAppDownload] = useState(true);
   const [showStoreBadges, setShowStoreBadges] = useState(true);
   const [transformationSlots, setTransformationSlots] = useState(10);
@@ -178,9 +178,10 @@ const SiteContentEditor = () => {
       supabase.from("settings").select("id, trainer_name, trainer_photo_url, trainer_bio, contact_phone, hero_video_url, hero_video_poster_url, app_store_url, play_store_url, show_app_download, transformation_slots, show_blog, show_ebooks, show_recommendations, ebooks, recommendations, guide_ebook_url, landing_ebooks_count, landing_recommendations_count").limit(1).maybeSingle(),
       supabase.from("site_testimonials").select("*").order("sort_order"),
       // Aparte: si la columna aún no existe, el resto del editor carga igual.
-      supabase.from("settings").select("show_store_badges").limit(1).maybeSingle(),
+      supabase.from("settings").select("show_store_badges, mac_store_url").limit(1).maybeSingle(),
     ]);
     setShowStoreBadges(badges?.show_store_badges ?? true);
+    setStores((v) => ({ ...v, mac_store_url: badges?.mac_store_url || "" }));
     if (s) {
       setSettingsId(s.id);
       setTrainer({
@@ -193,10 +194,11 @@ const SiteContentEditor = () => {
         hero_video_url: s.hero_video_url || "",
         hero_video_poster_url: s.hero_video_poster_url || "",
       });
-      setStores({
+      setStores((v) => ({
+        ...v,
         app_store_url: s.app_store_url || "",
         play_store_url: s.play_store_url || "",
-      });
+      }));
       setShowAppDownload(s.show_app_download ?? true);
       setTransformationSlots(Math.max(0, Number(s.transformation_slots ?? 10)));
       setSections({
@@ -344,10 +346,11 @@ const SiteContentEditor = () => {
     setSaving(true);
     const clean = {
       app_store_url: stores.app_store_url.trim(),
+      mac_store_url: stores.mac_store_url.trim(),
       play_store_url: stores.play_store_url.trim(),
     };
     const isValid = (u: string) => !u || /^https?:\/\//i.test(u);
-    if (!isValid(clean.app_store_url) || !isValid(clean.play_store_url)) {
+    if (!Object.values(clean).every(isValid)) {
       toast.error("Las URLs deben empezar por http(s)://");
       setSaving(false);
       return;
@@ -854,8 +857,8 @@ const SiteContentEditor = () => {
 
       {/* Enlaces a las tiendas de la app */}
       <Section
-        title="Enlaces a la app (App Store / Google Play)"
-        description="Pega aquí las URLs cuando publiques la app. Si dejas un campo vacío, ese botón se ocultará en la web (ideal antes de estar publicado)."
+        title="Enlaces a la app (App Store / Mac App Store / Google Play)"
+        description="Pega aquí las URLs cuando publiques la app. Si dejas un campo vacío, ese botón se ocultará en la web; sin ninguno, la portada oculta la sección «Todo tu progreso, en todos tus dispositivos»."
       >
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-4">
@@ -868,7 +871,7 @@ const SiteContentEditor = () => {
           <div className="flex items-center justify-between gap-4">
             <div>
               <Label htmlFor="show-store-badges" className={FIELD_LABEL}>Insignias de tiendas en la portada</Label>
-              <p className="type-footnote text-muted-foreground">App Store, Google Play y Mac en «Todo tu progreso, en todos tus dispositivos».</p>
+              <p className="type-footnote text-muted-foreground">La sección «Todo tu progreso, en todos tus dispositivos», con un botón por cada enlace de abajo.</p>
             </div>
             <Switch id="show-store-badges" checked={showStoreBadges} onCheckedChange={(v) => void toggleStoreBadges(v)} />
           </div>
@@ -882,6 +885,18 @@ const SiteContentEditor = () => {
               placeholder="https://apps.apple.com/app/id0000000000"
               value={stores.app_store_url}
               onChange={(e) => setStores((s) => ({ ...s, app_store_url: e.target.value }))}
+            />
+          </div>
+          <div>
+            <Label htmlFor="mac-store-url" className={FIELD_LABEL}>URL Mac App Store (Mac)</Label>
+            <Input
+              id="mac-store-url"
+              {...URL_INPUT}
+              enterKeyHint="next"
+              className={MONO_FIELD}
+              placeholder="https://apps.apple.com/app/id0000000000?platform=mac"
+              value={stores.mac_store_url}
+              onChange={(e) => setStores((s) => ({ ...s, mac_store_url: e.target.value }))}
             />
           </div>
           <div>

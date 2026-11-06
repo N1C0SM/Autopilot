@@ -1,9 +1,11 @@
 -- Copia de drizzle/migrations/0019_show_store_badges.sql en la ruta del CLI de Supabase. Idempotente.
--- Interruptor de Admin para las insignias «App Store · Google Play · Mac» de la portada.
--- Por defecto true: la portada se sigue viendo igual hasta que el admin lo apague.
--- get_public_settings devuelve lo mismo que en 0009 más show_store_badges.
+-- Insignias «App Store · Mac App Store · Google Play» de la portada: interruptor de Admin
+-- (por defecto true) y la URL del Mac App Store junto a las de App Store y Google Play.
+-- La portada solo enseña la sección si está encendido y hay algún enlace.
+-- get_public_settings devuelve lo mismo que en 0009 más show_store_badges y mac_store_url.
 ALTER TABLE public.settings ADD COLUMN IF NOT EXISTS show_app_download boolean NOT NULL DEFAULT true;
 ALTER TABLE public.settings ADD COLUMN IF NOT EXISTS show_store_badges boolean NOT NULL DEFAULT true;
+ALTER TABLE public.settings ADD COLUMN IF NOT EXISTS mac_store_url text NOT NULL DEFAULT '';
 
 DROP FUNCTION IF EXISTS public.get_public_settings();
 
@@ -14,7 +16,8 @@ RETURNS TABLE(
   app_store_url text, play_store_url text, show_blog boolean, show_ebooks boolean,
   show_recommendations boolean, ebooks jsonb, recommendations jsonb, guide_ebook_url text,
   booking_url text, transformation_slots integer, landing_ebooks_count integer,
-  landing_recommendations_count integer, show_app_download boolean, show_store_badges boolean
+  landing_recommendations_count integer, show_app_download boolean, show_store_badges boolean,
+  mac_store_url text
 )
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public'
 AS $function$
@@ -29,7 +32,8 @@ AS $function$
          COALESCE(landing_ebooks_count, 4) AS landing_ebooks_count,
          COALESCE(landing_recommendations_count, 3) AS landing_recommendations_count,
          COALESCE(show_app_download, true) AS show_app_download,
-         COALESCE(show_store_badges, true) AS show_store_badges
+         COALESCE(show_store_badges, true) AS show_store_badges,
+         COALESCE(mac_store_url, '') AS mac_store_url
   FROM public.settings
   LIMIT 1;
 $function$;

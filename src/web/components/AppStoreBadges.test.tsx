@@ -43,6 +43,14 @@ describe("app store badges", () => {
     expect(screen.queryByRole("link", { name: "Disponible en Google Play" })).not.toBeInTheDocument();
   });
 
+  it("shows the Mac App Store badge on its own", async () => {
+    rpc.mockResolvedValue({ data: [{ app_store_url: "", play_store_url: "", mac_store_url: "https://apps.apple.com/app/id2" }], error: null });
+    render(<AppStoreBadges />);
+
+    expect(await screen.findByRole("link", { name: "Descargar en el Mac App Store" })).toHaveAttribute("href", "https://apps.apple.com/app/id2");
+    expect(screen.queryByRole("link", { name: "Descargar en la App Store" })).not.toBeInTheDocument();
+  });
+
   it("hides its context when no store link is configured", async () => {
     rpc.mockResolvedValue({ data: [{ app_store_url: "", play_store_url: "" }], error: null });
     render(<AppStoreBadges wrap={(badges) => <section><p>Llévate tu plan al gimnasio</p>{badges}</section>} />);

@@ -54,10 +54,10 @@ export function LandingHero({ ctaRef }: { ctaRef: React.Ref<HTMLDivElement> }) {
   </section>;
 }
 
-function StoreButton({ to, small, big, children }: { to: string; small: string; big: string; children: React.ReactNode }) {
-  return <Link to={to} className="inline-flex h-12 items-center gap-2.5 rounded-xl border border-foreground/40 px-3.5 transition-colors hover:bg-foreground/5">
+function StoreButton({ href, small, big, children }: { href: string; small: string; big: string; children: React.ReactNode }) {
+  return <a href={href} target="_blank" rel="noopener noreferrer" aria-label={`${small} ${big}`} onClick={() => void hapticTap()} className="inline-flex h-12 items-center gap-2.5 rounded-xl border border-foreground/40 px-3.5 transition-colors hover:bg-foreground/5">
     {children}<span className="text-left leading-none"><span className="block text-[9px]">{small}</span><span className="mt-0.5 block text-[17px] font-semibold">{big}</span></span>
-  </Link>;
+  </a>;
 }
 
 /** Lienzo a tamaño real reducido al ancho de su caja: el portátil y el móvil son la app tal cual, en pequeño. */
@@ -130,33 +130,42 @@ function DevicesMockup() {
   </div>;
 }
 
-/** Interruptor de Admin → Contenido web («Insignias de tiendas en la portada»); sin dato, se ven como siempre. */
-function useShowStoreBadges() {
-  const [show, setShow] = useState(true);
+type StoreLinks = { appStore: string; macStore: string; playStore: string };
+
+/**
+ * Enlaces de Admin → Landing (App Store, Mac App Store, Google Play) y su interruptor
+ * «Insignias de tiendas en la portada». null mientras no hay ninguno que enseñar.
+ */
+function useStoreLinks() {
+  const [links, setLinks] = useState<StoreLinks | null>(null);
   useEffect(() => {
     let alive = true;
     void supabase.rpc("get_public_settings").then(({ data }) => {
       const row = Array.isArray(data) ? data[0] : data;
-      if (alive && row) setShow(row.show_store_badges !== false);
+      if (!alive || !row || row.show_store_badges === false) return;
+      const found = { appStore: (row.app_store_url || "").trim(), macStore: (row.mac_store_url || "").trim(), playStore: (row.play_store_url || "").trim() };
+      if (found.appStore || found.macStore || found.playStore) setLinks(found);
     }, () => undefined);
     return () => { alive = false; };
   }, []);
-  return show;
+  return links;
 }
 
+/** «Todo tu progreso, en todos tus dispositivos»: solo con algún enlace de tienda; cada botón, el suyo. */
 export function LandingExperience() {
-  const showStores = useShowStoreBadges();
+  const links = useStoreLinks();
+  if (!links) return null;
   return <section aria-labelledby="exp-t" className="px-5 pb-0 pt-8 sm:px-8">
     <div className="mx-auto grid max-w-6xl items-end gap-10 lg:grid-cols-[1fr_1fr]">
       <div className="pb-6">
         <Kicker>La experiencia</Kicker>
         <h2 id="exp-t" className="mt-3 text-[30px] font-bold leading-[1.15] tracking-[-0.015em] sm:text-[36px]">Todo tu progreso,<br />en todos tus dispositivos.</h2>
         <p className="mt-4 max-w-[400px] text-[16px] leading-[22px] text-foreground/85">Entrena, planifica tu nutrición y sigue tu evolución donde quieras. Una experiencia fluida, sincronizada y pensada para ti.</p>
-        {showStores && <div className="mt-6 flex flex-wrap gap-3">
-          <StoreButton to="/app" small="Descargar en" big="App Store"><AppleLogo className="h-6 w-6 shrink-0" /></StoreButton>
-          <StoreButton to="/app" small="DISPONIBLE EN" big="Google Play"><GooglePlayLogo className="h-6 w-6 shrink-0" /></StoreButton>
-          <StoreButton to="/app" small="Disponible en" big="Mac"><Monitor className="h-6 w-6 shrink-0" /></StoreButton>
-        </div>}
+        <div className="mt-6 flex flex-wrap gap-3">
+          {links.appStore && <StoreButton href={links.appStore} small="Descargar en" big="App Store"><AppleLogo className="h-6 w-6 shrink-0" /></StoreButton>}
+          {links.macStore && <StoreButton href={links.macStore} small="Descargar en" big="Mac App Store"><AppleLogo className="h-6 w-6 shrink-0" /></StoreButton>}
+          {links.playStore && <StoreButton href={links.playStore} small="DISPONIBLE EN" big="Google Play"><GooglePlayLogo className="h-6 w-6 shrink-0" /></StoreButton>}
+        </div>
         <p className="mt-5 flex flex-wrap items-center gap-2 text-[13px] text-foreground/85"><Smartphone className="h-4 w-4" />iPhone · <Smartphone className="h-4 w-4" />Android · <Monitor className="h-4 w-4" />Mac</p>
       </div>
       <DevicesMockup />
