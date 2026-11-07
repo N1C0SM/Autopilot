@@ -4,8 +4,8 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Check, ChevronLeft, CloudOff, Dumbbell, Flame, Clock, CalendarDays,
-  TrendingDown, Plus, X, Info, Play, Pause, MoreHorizontal, ChevronDown,
+  Check, ChevronLeft, ChevronRight, CloudOff, Dumbbell, Flame, Clock, CalendarDays,
+  TrendingDown, Plus, X, Info, Play, Pause, MoreHorizontal, ChevronDown, Minus,
 } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Spinner } from "@/shared/components/ui/spinner";
@@ -123,6 +123,10 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
   const [advanced, setAdvancedState] = useState(() => getWorkoutAdvanced(userId));
   // En la lista todos los ejercicios nacen abiertos; se guardan solo los que el usuario pliega.
   const [closedExercises, setClosedExercises] = useState<number[]>([]);
+  // Campo que se está editando: alimenta la barra del teclado (‹ ›, ± y «Listo»),
+  // igual que la barra del teclado de la app nativa.
+  const [activeField, setActiveField] = useState<{ kind: "weight" | "reps"; exercise: string; set: number; drop?: number } | null>(null);
+  const activeFieldEl = useRef<HTMLInputElement | null>(null);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(() => 
     window.matchMedia("(prefers-reduced-motion: reduce)").matches
   );
@@ -644,6 +648,67 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
     mutateSet(exerciseName, setIndex, (set) => removeWorkoutSetDrop(set, dropIndex));
     void hapticTap();
   };
+
+  // MARK: Barra del teclado (‹ › y ±)
+
+  const focusField = (
+    e: React.FocusEvent<HTMLInputElement>,
+    field: { kind: "weight" | "reps"; exercise: string; set: number; drop?: number },
+  ) => {
+    focusSetField(e);
+    activeFieldEl.current = e.currentTarget;
+    setActiveField(field);
+  };
+
+  /// Pasa al campo anterior o siguiente en el orden en que se ven (los plegados no cuentan:
+  /// no están en el DOM). Se busca en el documento para no duplicar el modelo.
+  const moveField = (direction: -1 | 1) => {
+    const current = activeFieldEl.current;
+    if (!current) return;
+    const all = Array.from(document.querySelectorAll<HTMLInputElement>('input[data-set-field]'));
+    const index = all.indexOf(current);
+    if (index < 0) return;
+    const next = all[Math.min(Math.max(index + direction, 0), all.length - 1)];
+    next?.focus();
+    next?.select();
+  };
+
+  /// ±2,5 kg o ±1 rep sin teclear, como la fila de ajuste de la app.
+  const stepField = (direction: -1 | 1, kind?: "weight" | "reps") => {
+    if (!activeField) return;
+    const field = { ...activeField, kind: kind ?? activeField.kind };
+    const set = exerciseLogs[field.exercise]?.[field.set];
+    if (!set) return;
+    if (field.kind === "weight") {
+      const current = field.drop == null
+        ? set.weight
+        : getWorkoutSetDrops(set)[field.drop]?.weight ?? "";
+      const base = parsePositiveWeight(current) ?? 0;
+      const next = Math.max(0, base + direction * 2.5);
+      const text = next > 0 ? String(Math.round(next * 100) / 100) : "";
+      if (field.drop == null) updateSet(field.exercise, field.set, "weight", text);
+      else updateDrop(field.exercise, field.set, field.drop, { weight: text });
+    } else {
+      const current = field.drop == null
+        ? set.reps
+        : getWorkoutSetDrops(set)[field.drop]?.reps ?? 0;
+      const next = Math.max(1, (current || 0) + direction);
+      if (field.drop == null) updateSet(field.exercise, field.set, "reps", next);
+      else updateDrop(field.exercise, field.set, field.drop, { reps: next });
+    }
+    void hapticTap();
+  };
+
+  /// «Listo»: cierra el teclado y deja de ofrecer la fila de ajuste.
+  const clearField = () => {
+    activeFieldEl.current?.blur();
+    activeFieldEl.current = null;
+    setActiveField(null);
+  };
+
+  /// Los botones de la fila de ajuste no deben robar el foco: si lo hicieran, el campo
+  /// se cerraría y el ± dejaría de saber sobre qué actúa.
+  const keepFocus = (e: React.PointerEvent) => e.preventDefault();
 
   // Calentamiento: la serie se sigue guardando y se puede marcar con ✓, pero
   // deja de contar en volumen, récords y series completadas.
@@ -1802,8 +1867,16 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                           return (
                           <div key={si} aria-current={si === firstPendingIndex ? "step" : undefined} className={`pl-3 transition-colors duration-300 ${si === firstPendingIndex ? "rounded-chip ring-1 ring-inset ring-primary/40" : set.done && !isWarmup ? "rounded-chip bg-foreground/[0.04]" : ""}`}>
                             <div className={`py-2 pr-2 ${si > 0 ? "sep-t" : ""}`}>
-                            {/* Segmento principal de la serie */}
-                            <div className={SET_GRID}>
+                            {/* Segmento principal de la serie. Tocar el hueco de la fila la marca
+                                hecha (sin acertar en el círculo); nunca la desmarca. */}
+                            <div
+                              className={SET_GRID}
+                              onClick={(e) => {
+                                if (set.done || !(set.reps > 0)) return;
+                                if ((e.target as HTMLElement).closest("input, button, a, label, [role='button']")) return;
+                                toggleSetDone(ex.name, si, restSec, trackingConfig.fixedBodyweight ? undefined : String(progression?.weight || prevSets?.[si]?.weight || ex.weight || ""));
+                              }}
+                            >
                               {/* Set number */}
                               <span className={`text-center type-headline tabular-nums ${si === firstPendingIndex ? "text-primary" : "text-muted-foreground"} ${dim}`}>
                                 {isWarmup ? <Flame className="mx-auto h-4 w-4" aria-hidden="true" /> : si + 1}
@@ -1826,7 +1899,9 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                                   value={set.weight}
                                   onChange={(e) => updateSet(ex.name, si, "weight", e.target.value)}
                                   placeholder={String(progression?.weight || prevSets?.[si]?.weight || ex.weight || trackingConfig.weightPlaceholder || "kg")}
-                                  onFocus={focusSetField}
+                                  data-set-field=""
+                                  onFocus={(e) => focusField(e, { kind: "weight", exercise: ex.name, set: si })}
+                                  onBlur={() => setActiveField(null)}
                                   aria-label={`Peso de la serie ${si + 1} de ${ex.name}`}
                                   aria-invalid={Boolean(inputError && mainError && set.weight.trim())}
                                   className={`${NUMBER_FIELD} ${si === firstPendingIndex ? CURRENT_FIGURE : ""} ${isWarmup || (!set.done && prevSets?.[si]?.done && set.weight === prevSets[si].weight) ? "text-muted-foreground" : ""}`}
@@ -1848,7 +1923,9 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                                     const val = parseInt(e.target.value);
                                     if (!isNaN(val)) updateSet(ex.name, si, "reps", val);
                                   }}
-                                  onFocus={focusSetField}
+                                  data-set-field=""
+                                  onFocus={(e) => focusField(e, { kind: "reps", exercise: ex.name, set: si })}
+                                  onBlur={() => setActiveField(null)}
                                   aria-label={`Repeticiones de la serie ${si + 1} de ${ex.name}`}
                                   className={`${NUMBER_FIELD} ${si === firstPendingIndex ? CURRENT_FIGURE : ""} ${isWarmup || repsMissing || (!set.done && prevSets?.[si]?.done && set.reps === prevSets[si].reps) ? "text-muted-foreground" : ""}`}
                                 />
@@ -1902,7 +1979,9 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                                     value={drop.weight}
                                     onChange={(e) => updateDrop(ex.name, si, di, { weight: e.target.value })}
                                     placeholder="kg"
-                                    onFocus={focusSetField}
+                                    data-set-field=""
+                                    onFocus={(e) => focusField(e, { kind: "weight", exercise: ex.name, set: si, drop: di })}
+                                    onBlur={() => setActiveField(null)}
                                     aria-label={`Peso de la bajada ${di + 1} de la serie ${si + 1} de ${ex.name}`}
                                     aria-invalid={Boolean(dropError && drop.weight.trim() && Number.isInteger(drop.reps) && drop.reps > 0)}
                                     className={`${NUMBER_FIELD} ${dim}`}
@@ -1918,7 +1997,9 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                                       const val = parseInt(e.target.value);
                                       if (!isNaN(val)) updateDrop(ex.name, si, di, { reps: val });
                                     }}
-                                    onFocus={focusSetField}
+                                    data-set-field=""
+                                    onFocus={(e) => focusField(e, { kind: "reps", exercise: ex.name, set: si, drop: di })}
+                                    onBlur={() => setActiveField(null)}
                                     aria-label={`Repeticiones de la bajada ${di + 1} de la serie ${si + 1} de ${ex.name}`}
                                     className={`${NUMBER_FIELD} ${dim}`}
                                   />
@@ -1935,6 +2016,85 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                                 </div>
                                 );
                               })}
+                              {/* Fila de ajuste mientras se edita la serie: una cápsula en cada
+                                  extremo, simétricas, con ± en los bordes; debajo, salto de campo. */}
+                              {activeField?.exercise === ex.name && activeField?.set === si && (
+                                <div className="mt-2 space-y-1.5">
+                                  <div className="flex items-stretch gap-1.5">
+                                    <div className="flex flex-1 items-center justify-between rounded-full bg-secondary">
+                                      <button
+                                        type="button"
+                                        onPointerDown={keepFocus}
+                                        onClick={() => stepField(-1, "weight")}
+                                        aria-label={`Restar 2,5 kilos a la serie ${si + 1} de ${ex.name}`}
+                                        className="flex h-10 w-9 items-center justify-center rounded-full text-foreground transition-opacity active:opacity-60"
+                                      >
+                                        <Minus className="h-4 w-4" aria-hidden="true" />
+                                      </button>
+                                      <span className="type-footnote tabular-nums text-muted-foreground">2,5 kg</span>
+                                      <button
+                                        type="button"
+                                        onPointerDown={keepFocus}
+                                        onClick={() => stepField(1, "weight")}
+                                        aria-label={`Sumar 2,5 kilos a la serie ${si + 1} de ${ex.name}`}
+                                        className="flex h-10 w-9 items-center justify-center rounded-full text-foreground transition-opacity active:opacity-60"
+                                      >
+                                        <Plus className="h-4 w-4" aria-hidden="true" />
+                                      </button>
+                                    </div>
+                                    <div className="flex flex-1 items-center justify-between rounded-full bg-secondary">
+                                      <button
+                                        type="button"
+                                        onPointerDown={keepFocus}
+                                        onClick={() => stepField(-1, "reps")}
+                                        aria-label={`Restar una repetición a la serie ${si + 1} de ${ex.name}`}
+                                        className="flex h-10 w-9 items-center justify-center rounded-full text-foreground transition-opacity active:opacity-60"
+                                      >
+                                        <Minus className="h-4 w-4" aria-hidden="true" />
+                                      </button>
+                                      <span className="type-footnote tabular-nums text-muted-foreground">1 rep</span>
+                                      <button
+                                        type="button"
+                                        onPointerDown={keepFocus}
+                                        onClick={() => stepField(1, "reps")}
+                                        aria-label={`Sumar una repetición a la serie ${si + 1} de ${ex.name}`}
+                                        className="flex h-10 w-9 items-center justify-center rounded-full text-foreground transition-opacity active:opacity-60"
+                                      >
+                                        <Plus className="h-4 w-4" aria-hidden="true" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center justify-end gap-1">
+                                    <button
+                                      type="button"
+                                      onPointerDown={keepFocus}
+                                      onClick={() => moveField(-1)}
+                                      aria-label="Campo anterior"
+                                      className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-foreground transition-opacity active:opacity-60"
+                                    >
+                                      <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onPointerDown={keepFocus}
+                                      onClick={() => moveField(1)}
+                                      aria-label="Campo siguiente"
+                                      className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-foreground transition-opacity active:opacity-60"
+                                    >
+                                      <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onPointerDown={keepFocus}
+                                      onClick={clearField}
+                                      aria-label="Cerrar el teclado"
+                                      className="flex h-9 items-center rounded-full bg-secondary px-3 type-footnote font-semibold text-primary transition-opacity active:opacity-60"
+                                    >
+                                      Listo
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
                               {si === firstPendingIndex && advanced && (
                               <div className="mt-2 flex gap-2">
                               <Button
