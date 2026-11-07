@@ -757,9 +757,10 @@ struct AccountView: View {
 
     private func actionRow(_ title: String, disabled: Bool = false, action: @escaping () async -> Void) -> some View {
         Button { Task { await action() } } label: {
-            Text(title).font(.apBody).foregroundStyle(Palette.gold).frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            Text(title).frame(maxWidth: .infinity)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pill)
+        .padding(.vertical, 8)
         .disabled(disabled || busy)
         .opacity(disabled ? 0.4 : 1)
     }
