@@ -103,16 +103,6 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
 struct RootView: View {
     @EnvironmentObject private var session: SessionModel
 
-    /// Solo QA: `-previewWorkout` abre la sesión con datos de muestra sin cuenta, para
-    /// capturas del simulador. Siempre `false` en Release (la vista ni se compila).
-    private var previewingWorkout: Bool {
-        #if DEBUG
-        session.session == nil && ProcessInfo.processInfo.arguments.contains("-previewWorkout")
-        #else
-        false
-        #endif
-    }
-
     var body: some View {
         Group {
             if !session.ready {
@@ -122,10 +112,6 @@ struct RootView: View {
                     .accessibilityLabel("Autopilot")
             } else if session.showPicker {
                 WhoIsTrainingView()
-            } else if previewingWorkout {
-                #if DEBUG
-                WorkoutPreviewScreen()
-                #endif
             } else if session.session == nil || session.addingAccount || session.finishingSignup {
                 // Primer uso sin cuenta: bienvenida y cuestionario; con cuentas guardadas, el acceso.
                 SignedOutView()
@@ -136,32 +122,6 @@ struct RootView: View {
         .animation(.easeOut(duration: 0.2), value: session.session?.user.id)
     }
 }
-
-#if DEBUG
-/// Solo QA: la sesión real con datos de muestra y sin cuenta, para capturas del simulador
-/// (`xcrun simctl launch ... -previewWorkout`). Nunca se compila en Release.
-private struct WorkoutPreviewScreen: View {
-    @State private var workout: ActiveWorkout?
-
-    var body: some View {
-        Group {
-            if let workout {
-                NavigationStack {
-                    WorkoutView(workout: workout, userId: UUID()) { _ in }
-                }
-            } else {
-                BrandMark(size: 72, beat: true)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity).screenBackground()
-            }
-        }
-        .task {
-            // Sin red: con un entreno de muestra las miniaturas son el glifo de movimiento,
-            // que es el visual propio de Autopilot y aparece al instante.
-            if workout == nil { workout = await MainShell.mockWorkout(withPhotos: false) }
-        }
-    }
-}
-#endif
 
 /// Pestañas en iPhone; barra lateral nativa en Mac y iPad.
 struct MainShell: View {
@@ -366,7 +326,7 @@ struct MainShell: View {
 
     #if DEBUG
     @MainActor
-    static func mockWorkout(withPhotos: Bool = true) async -> ActiveWorkout {
+    static func mockWorkout() async -> ActiveWorkout {
         func ex(_ id: String, _ name: String, _ series: Int, _ reps: String, _ weight: String, _ rest: String, _ muscle: String) -> GymExercise {
             let json = """
             {"exercise_id":"\(id)","name":"\(name)","series":\(series),"reps":"\(reps)","weight":"\(weight)","rest":"\(rest)","muscle_group":"\(muscle)"}
@@ -382,8 +342,7 @@ struct MainShell: View {
                             ex("3", "Remo con barra", 3, "10", "60", "90s", "Espalda"),
                           ], custom: nil)
         // Fotos reales de la biblioteca, como en un entreno de verdad.
-        let withImages = withPhotos ? (await TrainingRepo.withImages([day]).first ?? day) : day
-        let w = ActiveWorkout(userId: "preview", day: withImages, previous: [:])
+        let w = ActiveWorkout(userId: "preview", day: await TrainingRepo.withImages([day]).first ?? day, previous: [:])
         w.draft.startedAt = Date().addingTimeInterval(-42 * 60)
         for (name, weight) in [("Press militar con barra de pie estricto", "40"), ("Press inclinado con barra", "42,5"), ("Remo con barra", "60")] {
             if var sets = w.draft.logs[name] {

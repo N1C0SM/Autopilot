@@ -5,20 +5,6 @@ import UIKit
 import AppKit
 #endif
 
-/// Campo numérico de una serie: peso o reps, de la serie principal o de una bajada.
-/// Se usa para saber qué se está editando y poder pasar de uno a otro sin tocar la pantalla.
-struct WorkoutField: Hashable {
-    enum Kind: Hashable { case weight, reps }
-    let exercise: String
-    let set: Int
-    let kind: Kind
-    /// Índice de la bajada dentro de la serie; `nil` es la serie principal.
-    var drop: Int? = nil
-
-    /// Identificador de la fila que se desplaza al enfocar (la serie entera, no cada campo).
-    var rowID: WorkoutField { WorkoutField(exercise: exercise, set: set, kind: .weight) }
-}
-
 /// Sesión en curso, calcada de `WorkoutTracker.tsx` (vista de lista): barra «Salir · título ·
 /// tiempo · X de Y series · ···», tarjetas de ejercicio con la tabla Serie/Previa/Kg/Reps/✓,
 /// «Añadir serie», y el pie con el descanso (−30 / +30 / Saltar) y Pausar · tiempo · Finalizar.
@@ -35,9 +21,6 @@ struct WorkoutView: View {
     @State private var discardOpen = false
     @State private var rpe = 7
     @State private var summaryOpen = false
-    /// Campo numérico enfocado: mueve la barra del teclado (anterior/siguiente, ± y «Listo»)
-    /// y permite centrar la serie sin que el teclado la tape.
-    @FocusState private var focus: WorkoutField?
     /// Vista elegida en «···» o en Ajustes: lista de toda la sesión (por defecto) o ejercicio a ejercicio.
     @AppStorage("workout-view") private var workoutView = "list"
     private var focusMode: Bool { workoutView == "focus" }
@@ -59,71 +42,41 @@ struct WorkoutView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            ScrollViewReader { proxy in
-                ScrollView {
-                    // LazyVStack: con muchas tarjetas solo se crean las visibles y, al abrir la sesión,
-                    // no se lanzan las consultas de alternativas de todos los ejercicios a la vez.
-                    LazyVStack(alignment: .leading, spacing: 12) {
-                        if focusMode { sessionStats } else { listHeader }
-                        Group {
-                        if focusMode, let i = Optional(min(workout.draft.currentExercise, max(workout.exercises.count - 1, 0))), let ex = workout.exercises[safe: i] {
-                            FocusViewer(workout: workout, index: i)
-                            SessionExerciseCard(workout: workout, exercise: ex, index: i, userId: userId, focused: true, focus: $focus)
-                                .onAppear { workout.openExercises.insert(i) }
-                                .id(ex.id)
-                        } else {
-                            ForEach(Array(workout.exercises.enumerated()), id: \.element.id) { i, ex in
-                                SessionExerciseCard(workout: workout, exercise: ex, index: i, userId: userId, focus: $focus)
-                            }
-                        }
-                        }
-                        // En pausa no se anota nada: se ve atenuado hasta reanudar.
-                        .disabled(workout.isPaused)
-                        .opacity(workout.isPaused ? 0.4 : 1)
-                        if let error = workout.saveError {
-                            Text(error).font(.apFootnote).foregroundStyle(Palette.destructive)
+            ScrollView {
+                // LazyVStack: con muchas tarjetas solo se crean las visibles y, al abrir la sesión,
+                // no se lanzan las consultas de alternativas de todos los ejercicios a la vez.
+                LazyVStack(alignment: .leading, spacing: 12) {
+                    if focusMode { sessionStats } else { listHeader }
+                    Group {
+                    if focusMode, let i = Optional(min(workout.draft.currentExercise, max(workout.exercises.count - 1, 0))), let ex = workout.exercises[safe: i] {
+                        FocusViewer(workout: workout, index: i)
+                        SessionExerciseCard(workout: workout, exercise: ex, index: i, userId: userId, focused: true)
+                            .onAppear { workout.openExercises.insert(i) }
+                            .id(ex.id)
+                    } else {
+                        ForEach(Array(workout.exercises.enumerated()), id: \.element.id) { i, ex in
+                            SessionExerciseCard(workout: workout, exercise: ex, index: i, userId: userId)
                         }
                     }
-                    .padding(.horizontal, 16).padding(.top, 12).padding(.bottom, 24)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .scrollDismissesKeyboard(.interactively)
-                // La serie que se edita se centra sola: con el teclado abierto nunca queda tapada.
-                .onChange(of: focus) { _, field in
-                    guard let field else { return }
-                    Task { @MainActor in
-                        try? await Task.sleep(for: .milliseconds(80))
-                        withAnimation(reduceMotion ? nil : .easeOut(duration: 0.25)) {
-                            proxy.scrollTo(field.rowID, anchor: .center)
-                        }
+                    }
+                    // En pausa no se anota nada: se ve atenuado hasta reanudar.
+                    .disabled(workout.isPaused)
+                    .opacity(workout.isPaused ? 0.4 : 1)
+                    if let error = workout.saveError {
+                        Text(error).font(.apFootnote).foregroundStyle(Palette.destructive)
                     }
                 }
+                .padding(.horizontal, 16).padding(.top, 12).padding(.bottom, 24)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .scrollDismissesKeyboard(.interactively)
             footer
         }
         .screenBackground()
-        #if os(iOS)
-        // La pantalla no se apaga durante la sesión: en el descanso no hay que desbloquear
-        // el móvil para ver cuánto queda (la web ya lo hace con Wake Lock).
-        .onAppear { UIApplication.shared.isIdleTimerDisabled = true }
-        .onDisappear { UIApplication.shared.isIdleTimerDisabled = false }
-        #endif
         .task {
             // Calienta las miniaturas de la sesión: al hacer scroll ya están.
             let urls = workout.exercises.compactMap(\.image_url).compactMap(URL.init(string:))
             ImageCache.shared.prefetch(urls, maxSide: 140)
-            #if DEBUG
-            // Solo QA: `-focusFirstSet` abre el teclado en la primera serie pendiente,
-            // para capturar la barra del teclado (‹ ›, ± y «Listo»).
-            if ProcessInfo.processInfo.arguments.contains("-focusFirstSet"),
-               let ex = workout.exercises.first(where: { item in
-                   (workout.draft.logs[item.name] ?? []).contains { !$0.done }
-               }),
-               let si = workout.draft.logs[ex.name]?.firstIndex(where: { !$0.done }) {
-                try? await Task.sleep(for: .milliseconds(700))
-                focus = WorkoutField(exercise: ex.name, set: si, kind: .weight)
-            }
-            #endif
         }
         .navigationTitle(workout.draft.day.routine_name?.trimmingCharacters(in: .whitespaces).nilIfEmpty ?? workout.draft.day.title)
         #if os(iOS)
@@ -228,44 +181,6 @@ struct WorkoutView: View {
         if workout.doneSets < workout.totalSets { finishIncompleteOpen = true } else { rpeOpen = true }
     }
 
-    // MARK: Teclado (‹ › y ±)
-
-    /// Campos editables en el orden en que se ven, para pasar de uno a otro desde el teclado.
-    /// Solo los visibles: en lista se saltan los ejercicios plegados; en foco, los que no tocan.
-    private var orderedFields: [WorkoutField] {
-        var out: [WorkoutField] = []
-        let indices = focusMode
-            ? [min(workout.draft.currentExercise, max(workout.exercises.count - 1, 0))]
-            : Array(workout.exercises.indices).filter { !workout.closedExercises.contains($0) }
-        for i in indices where workout.exercises.indices.contains(i) {
-            let name = workout.exercises[i].name
-            for (si, set) in (workout.draft.logs[name] ?? []).enumerated() {
-                out.append(WorkoutField(exercise: name, set: si, kind: .weight))
-                out.append(WorkoutField(exercise: name, set: si, kind: .reps))
-                for di in 0..<(set.drops?.count ?? 0) {
-                    out.append(WorkoutField(exercise: name, set: si, kind: .weight, drop: di))
-                    out.append(WorkoutField(exercise: name, set: si, kind: .reps, drop: di))
-                }
-            }
-        }
-        return out
-    }
-
-    private func moveFocus(_ direction: Int) {
-        let fields = orderedFields
-        guard !fields.isEmpty else { return }
-        let current = focus.flatMap { fields.firstIndex(of: $0) }
-        let next = min(max((current ?? -1) + direction, 0), fields.count - 1)
-        Haptics.selection()
-        focus = fields[next]
-    }
-
-    /// ±2,5 kg o ±1 rep sobre el campo enfocado, sin teclear nada.
-    private func adjustFocused(_ direction: Int) {
-        guard let field = focus else { return }
-        workout.stepField(field, by: direction)
-    }
-
     // MARK: Cabecera de la lista (diseño ChatGPT): estado, título grande y avance
 
     private var listHeader: some View {
@@ -338,41 +253,6 @@ struct WorkoutView: View {
 
     private var footer: some View {
         VStack(spacing: 10) {
-            // Con un campo en edición, aquí están «Anterior · Siguiente · Listo». Va en el pie
-            // (no en la barra del sistema) porque el teclado numérico no tiene tecla de retorno
-            // y la barra del teclado no aparece siempre; así está garantizada y se ve igual en Mac.
-            if focus != nil {
-                HStack(spacing: 8) {
-                    Button { moveFocus(-1) } label: {
-                        Label("Anterior", systemImage: "chevron.left")
-                            .font(.apSubhead.weight(.medium))
-                            .padding(.horizontal, 14).frame(height: 40)
-                            .background(Palette.secondary, in: Capsule())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Campo anterior")
-                    Button { moveFocus(1) } label: {
-                        Label("Siguiente", systemImage: "chevron.right")
-                            .font(.apSubhead.weight(.medium))
-                            .padding(.horizontal, 14).frame(height: 40)
-                            .background(Palette.secondary, in: Capsule())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Campo siguiente")
-                    Spacer(minLength: 0)
-                    Button { Haptics.tap(); focus = nil } label: {
-                        Text("Listo")
-                            .font(.apSubhead.weight(.semibold))
-                            .foregroundStyle(Palette.gold)
-                            .padding(.horizontal, 16).frame(height: 40)
-                            .background(Palette.secondary, in: Capsule())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Cerrar el teclado")
-                }
-                .foregroundStyle(Palette.foreground)
-                .transition(.opacity)
-            }
             if let end = workout.draft.restEndsAt {
                 RestTimerRow(end: end, workout: workout)
                     .disabled(workout.isPaused)
@@ -488,8 +368,6 @@ struct SessionExerciseCard: View {
     let userId: UUID
     /// En «ejercicio a ejercicio» la foto ya está arriba: sin miniatura repetida (como la web).
     var focused = false
-    /// Foco compartido de la sesión (barra del teclado y centrado de la serie).
-    var focus: FocusState<WorkoutField?>.Binding
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage("workout-advanced") private var advanced = false
@@ -511,10 +389,6 @@ struct SessionExerciseCard: View {
     @State private var justCompleted = false
     @State private var swapSheet = false
     @State private var swapOptions: [String] = []
-    /// Nota del ejercicio y calculadora de discos: dos hojas que no interrumpen la sesión.
-    @State private var noteOpen = false
-    @State private var noteDraft = ""
-    @State private var plateOpen = false
 
     private func metaChip(icon: String, text: String) -> some View {
         HStack(spacing: 4) {
@@ -526,45 +400,6 @@ struct SessionExerciseCard: View {
         .padding(.vertical, 3)
         .background(Palette.secondary, in: Capsule())
         .accessibilityElement(children: .combine)
-    }
-
-    /// Chip del descanso: al tocarlo se elige el de esta sesión sin salir del entreno.
-    private var restChip: some View {
-        Menu {
-            ForEach([60, 90, 120, 150, 180, 240, 300], id: \.self) { seconds in
-                Button {
-                    workout.setRest(seconds, for: exercise.name)
-                } label: {
-                    if workout.restSeconds(for: exercise) == seconds {
-                        Label("\(seconds) s", systemImage: "checkmark")
-                    } else {
-                        Text("\(seconds) s")
-                    }
-                }
-            }
-            if workout.draft.restOverrides?[exercise.name] != nil {
-                Divider()
-                Button("El del plan (\(exercise.rest))") { workout.setRest(0, for: exercise.name) }
-            }
-        } label: {
-            metaChip(icon: "clock", text: "Descanso \(workout.restSeconds(for: exercise)) s")
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Descanso de \(exercise.name): \(workout.restSeconds(for: exercise)) segundos")
-        .accessibilityHint("Elegir otro descanso para esta sesión")
-    }
-
-    /// Acción pequeña del pie de la tarjeta (nota, rampa, discos).
-    private func cardAction(_ title: String, icon: String, action: @escaping () -> Void) -> some View {
-        Button { Haptics.selection(); action() } label: {
-            Label(title, systemImage: icon)
-                .font(.apSubhead.weight(.medium))
-                .lineLimit(1)
-                .foregroundStyle(Palette.foreground)
-                .padding(.horizontal, 14).frame(height: 40)
-                .background(Palette.secondary, in: Capsule())
-        }
-        .buttonStyle(.plain)
     }
 
     var body: some View {
@@ -594,24 +429,12 @@ struct SessionExerciseCard: View {
                         }
                         // Chips como en Hevy: descanso y prescripción, legibles de un vistazo.
                         FlowRow(spacing: 6) {
-                            restChip
+                            metaChip(icon: "clock", text: "Descanso \(exercise.rest)")
                             metaChip(icon: "dumbbell", text: "\(exercise.series) × \(exercise.reps)")
                             if let pos = workout.supersetPosition(of: exercise.name) {
                                 metaChip(icon: "link", text: "Superset \(pos.letter)")
                                     .foregroundStyle(Palette.gold)
                             }
-                        }
-                        if !workout.note(exercise.name).isEmpty {
-                            Button { noteDraft = workout.note(exercise.name); noteOpen = true } label: {
-                                HStack(spacing: 5) {
-                                    Image(systemName: "text.bubble").font(.inter(size: 11, weight: .semibold))
-                                    Text(workout.note(exercise.name)).font(.apFootnote).lineLimit(2)
-                                        .multilineTextAlignment(.leading)
-                                }
-                                .foregroundStyle(Palette.muted)
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel("Nota de \(exercise.name): \(workout.note(exercise.name)). Tocar para editar")
                         }
                     }
                     Spacer(minLength: 0)
@@ -662,8 +485,7 @@ struct SessionExerciseCard: View {
                         ForEach(sets.indices, id: \.self) { si in
                             SetLine(workout: workout, exercise: exercise, index: si, set: sets[si],
                                     previous: workout.previous[exercise.name]?[safe: si],
-                                    isCurrent: si == firstPending, separator: si > 0, focus: focus)
-                                .id(WorkoutField(exercise: exercise.name, set: si, kind: .weight))
+                                    isCurrent: si == firstPending, separator: si > 0)
                         }
                     }
                     .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
@@ -676,19 +498,6 @@ struct SessionExerciseCard: View {
                             .background(Palette.secondary, in: Capsule())
                     }
                     .buttonStyle(.plain)
-
-                    // Sin salir de la sesión: nota, rampa de calentamiento y calculadora de discos.
-                    FlowRow(spacing: 8) {
-                        cardAction(workout.note(exercise.name).isEmpty ? "Nota" : "Editar nota", icon: "text.bubble") {
-                            noteDraft = workout.note(exercise.name)
-                            noteOpen = true
-                        }
-                        if !sets.contains(where: { $0.isWarmup == true }) {
-                            cardAction("Rampa", icon: "flame") { workout.addWarmupRamp(exercise) }
-                        }
-                        cardAction("Discos", icon: "circle.grid.2x2") { plateOpen = true }
-                    }
-                    .padding(.top, 2)
                 }
                 .padding(.horizontal, 8).padding(.bottom, 12).padding(.top, 4)
             }
@@ -734,12 +543,6 @@ struct SessionExerciseCard: View {
         }
         .accessibilityHint("Mantén pulsado para cambiar el ejercicio o hacer un superset")
         .sheet(isPresented: $technique) { TechniqueSheet(exercise: exercise) }
-        .sheet(isPresented: $noteOpen) {
-            ExerciseNoteSheet(exercise: exercise.name, text: noteDraft) { workout.setNote($0, for: exercise.name) }
-        }
-        .sheet(isPresented: $plateOpen) {
-            PlateCalculatorSheet(weight: sets.first(where: { $0.isWarmup != true && !$0.weight.isEmpty })?.weight ?? exercise.weight)
-        }
         .sheet(isPresented: $swapSheet) { swapSheetContent }
     }
 
@@ -993,137 +796,6 @@ struct ExerciseSwapMenu: View {
     }
 }
 
-/// Nota libre del ejercicio: se guarda con el borrador de la sesión, no se envía a ningún sitio.
-struct ExerciseNoteSheet: View {
-    let exercise: String
-    var onSave: (String) -> Void
-    @Environment(\.dismiss) private var dismiss
-    @State private var text: String
-    @FocusState private var focused: Bool
-
-    init(exercise: String, text: String, onSave: @escaping (String) -> Void) {
-        self.exercise = exercise
-        self.onSave = onSave
-        _text = State(initialValue: text)
-    }
-
-    var body: some View {
-        NavigationStack {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Técnica, agarre, cómo te sentó… Solo la ves tú y solo en esta sesión.")
-                    .font(.apFootnote).foregroundStyle(Palette.muted)
-                TextField("Escribe una nota", text: $text, axis: .vertical)
-                    .font(.apBody)
-                    .lineLimit(4...10)
-                    .padding(14)
-                    .background(Palette.secondary, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    .focused($focused)
-                Spacer(minLength: 0)
-            }
-            .padding(20)
-            .screenBackground()
-            .navigationTitle(exercise)
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancelar") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Guardar") { onSave(text); dismiss() }.fontWeight(.semibold)
-                }
-            }
-        }
-        .presentationDetents([.medium])
-        .presentationBackground(Palette.card)
-        .onAppear { focused = true }
-    }
-}
-
-/// Calculadora de discos: qué poner en cada lado de la barra para el peso de la serie.
-struct PlateCalculatorSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    @State private var weight: String
-    @State private var bar: Double = 20
-    @FocusState private var focused: Bool
-
-    init(weight: String) {
-        _weight = State(initialValue: weight.replacingOccurrences(of: ".", with: ","))
-    }
-
-    private var target: Double {
-        Progression.weight(weight.replacingOccurrences(of: ",", with: ".")) ?? 0
-    }
-    private var result: (plates: [Double], missing: Double) {
-        PlateMath.perSide(target: target, bar: bar)
-    }
-
-    var body: some View {
-        NavigationStack {
-            VStack(alignment: .leading, spacing: 18) {
-                HStack(spacing: 10) {
-                    TextField("kg", text: $weight)
-                        .textFieldStyle(.plain)
-                        .multilineTextAlignment(.center)
-                        .font(.inter(size: 24, weight: .bold).monospacedDigit())
-                        .frame(maxWidth: .infinity, minHeight: 52)
-                        .background(Palette.secondary, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        #if os(iOS)
-                        .keyboardType(.decimalPad)
-                        #endif
-                        .focused($focused)
-                        .accessibilityLabel("Peso total con barra")
-                    Text("kg").font(.apHeadline).foregroundStyle(Palette.muted)
-                }
-
-                HStack(spacing: 8) {
-                    Text("Barra").font(.apSubhead).foregroundStyle(Palette.muted)
-                    ForEach(PlateMath.bars, id: \.self) { option in
-                        Button {
-                            Haptics.selection()
-                            bar = option
-                        } label: {
-                            Text(option == 0 ? "sin" : PlateMath.kg(option))
-                                .font(.apSubhead.weight(.semibold))
-                                .foregroundStyle(bar == option ? Color.black : Palette.foreground)
-                                .padding(.horizontal, 14).frame(height: 38)
-                                .background(bar == option ? Palette.gold : Palette.secondary, in: Capsule())
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(option == 0 ? "Sin barra" : "Barra de \(PlateMath.kg(option)) kilos")
-                    }
-                }
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Por lado").font(.apFootnote).foregroundStyle(Palette.muted)
-                    Text(PlateMath.describe(result.plates))
-                        .font(.inter(size: 26, weight: .bold))
-                        .foregroundStyle(Palette.gold)
-                        .accessibilityLabel("Por lado: \(PlateMath.describe(result.plates))")
-                    if result.missing > 0 {
-                        Text("Con estos discos no se llega: faltan \(PlateMath.kg(result.missing)) kg por lado.")
-                            .font(.apFootnote).foregroundStyle(Palette.destructive)
-                    } else if target > 0, target < bar {
-                        Text("El peso es menor que la barra.").font(.apFootnote).foregroundStyle(Palette.muted)
-                    }
-                }
-
-                Spacer(minLength: 0)
-            }
-            .padding(20)
-            .screenBackground()
-            .navigationTitle("Discos")
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) { Button("Listo") { dismiss() }.fontWeight(.semibold) }
-            }
-        }
-        .presentationDetents([.medium])
-        .presentationBackground(Palette.card)
-    }
-}
-
 /// Ficha de técnica del ejercicio (ExerciseFocus): imagen o vídeo, series, reps, descanso y músculo.
 struct TechniqueSheet: View {
     let exercise: GymExercise
@@ -1182,46 +854,9 @@ struct SetLine: View {
     let previous: SetLog?
     let isCurrent: Bool
     let separator: Bool
-    var focus: FocusState<WorkoutField?>.Binding
 
     private var isWarmup: Bool { self.set.isWarmup == true }
     @AppStorage("workout-advanced") private var advanced = false
-
-    /// Campo que se está editando en esta fila (kg, reps o una bajada), si es el caso.
-    private var isEditing: Bool {
-        guard let field = focus.wrappedValue else { return false }
-        return field.exercise == exercise.name && field.set == index
-    }
-    private var dropIndex: Int? { isEditing ? focus.wrappedValue?.drop : nil }
-
-    /// Cápsula «− 2,5 kg +»: sube o baja la carga (o las reps) sin abrir el teclado.
-    /// Ocupa media fila, con los signos en los extremos: dos cápsulas simétricas.
-    private func stepper(field: WorkoutField, step: String) -> some View {
-        HStack(spacing: 0) {
-            Button { workout.stepField(field, by: -1) } label: {
-                Image(systemName: "minus")
-                    .font(.inter(size: 13, weight: .bold))
-                    .frame(width: 36, height: 40)
-                    .contentShape(Rectangle())
-            }
-            .accessibilityLabel("Restar \(step)")
-            Spacer(minLength: 2)
-            Text(step).font(.apSubhead.monospacedDigit()).foregroundStyle(Palette.muted)
-                .lineLimit(1).fixedSize()
-            Spacer(minLength: 2)
-            Button { workout.stepField(field, by: 1) } label: {
-                Image(systemName: "plus")
-                    .font(.inter(size: 13, weight: .bold))
-                    .frame(width: 36, height: 40)
-                    .contentShape(Rectangle())
-            }
-            .accessibilityLabel("Sumar \(step)")
-        }
-        .foregroundStyle(Palette.foreground)
-        .frame(maxWidth: .infinity, minHeight: 40)
-        .background(Palette.secondary, in: Capsule())
-        .buttonStyle(.plain)
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -1252,17 +887,13 @@ struct SetLine: View {
                 .accessibilityLabel("Previa: " + (previous.map { "\($0.weight) kilos por \($0.reps)" } ?? "sin datos"))
             NumberField(value: set.weight,
                         placeholder: previous?.weight.nilIfEmpty ?? exercise.weight.nilIfEmpty ?? "kg",
-                        big: isCurrent, decimal: true,
-                        field: WorkoutField(exercise: exercise.name, set: index, kind: .weight),
-                        focus: focus) { v in
+                        big: isCurrent, decimal: true) { v in
                 workout.update(exercise.name, set: index) { $0.weight = v }
             }
                 .accessibilityLabel("Peso de la serie \(index + 1) de \(exercise.name)")
             NumberField(value: set.reps > 0 ? String(set.reps) : "",
                         placeholder: String(exercise.repsTarget),
-                        big: isCurrent, decimal: false,
-                        field: WorkoutField(exercise: exercise.name, set: index, kind: .reps),
-                        focus: focus) { v in
+                        big: isCurrent, decimal: false) { v in
                 if let n = Int(v) { workout.update(exercise.name, set: index) { $0.reps = n } }
             }
                 .accessibilityLabel("Repeticiones de la serie \(index + 1) de \(exercise.name)")
@@ -1310,44 +941,16 @@ struct SetLine: View {
             .accessibilityLabel("\(set.done ? "Desmarcar" : "Marcar") serie \(index + 1) de \(exercise.name)")
             .sensoryFeedback(.success, trigger: set.done)
         }
-        // Tocar la fila entera marca la serie (sin acertar en el círculo). Nunca la desmarca:
-        // para eso está el círculo, así no se pierde una serie hecha al tocar por error.
-        .background {
-            if !set.done {
-                Color.clear
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        guard set.reps > 0 else { return }
-                        workout.toggleDone(exercise, set: index)
-                    }
-                    .accessibilityHidden(true)
-            }
-        }
-        // Fila de ajuste mientras se edita esta serie: ± sin teclear, siempre visible
-        // (no depende de la barra del teclado) y con «Listo» para cerrarlo.
-        if isEditing {
-            HStack(spacing: 10) {
-                stepper(field: WorkoutField(exercise: exercise.name, set: index, kind: .weight, drop: dropIndex),
-                        step: "2,5 kg")
-                stepper(field: WorkoutField(exercise: exercise.name, set: index, kind: .reps, drop: dropIndex),
-                        step: "1 rep")
-            }
-            .transition(.opacity)
-        }
         // Bajadas del dropset: dentro de la misma serie, sin descanso.
         ForEach(Array((set.drops ?? []).enumerated()), id: \.offset) { di, drop in
             HStack(spacing: 8) {
                 Image(systemName: "arrow.down.right").font(.inter(size: 13)).foregroundStyle(Palette.muted).frame(width: 24)
                 Color.clear.frame(width: 52, height: 1)
-                NumberField(value: drop.weight, placeholder: "kg", big: false, decimal: true,
-                            field: WorkoutField(exercise: exercise.name, set: index, kind: .weight, drop: di),
-                            focus: focus) { v in
+                NumberField(value: drop.weight, placeholder: "kg", big: false, decimal: true) { v in
                     workout.updateDrop(exercise.name, set: index, drop: di) { $0.weight = v }
                 }
                     .accessibilityLabel("Peso de la bajada \(di + 1) de la serie \(index + 1)")
-                NumberField(value: drop.reps > 0 ? String(drop.reps) : "", placeholder: "reps", big: false, decimal: false,
-                            field: WorkoutField(exercise: exercise.name, set: index, kind: .reps, drop: di),
-                            focus: focus) { v in
+                NumberField(value: drop.reps > 0 ? String(drop.reps) : "", placeholder: "reps", big: false, decimal: false) { v in
                     if let n = Int(v) { workout.updateDrop(exercise.name, set: index, drop: di) { $0.reps = n } }
                 }
                     .accessibilityLabel("Repeticiones de la bajada \(di + 1) de la serie \(index + 1)")
@@ -1429,32 +1032,19 @@ struct NumberField: View {
     let placeholder: String
     let big: Bool
     let decimal: Bool
-    /// Campo al que pertenece: el foco es de la sesión, para poder saltar de kg a reps
-    /// y ajustar con ± desde la barra del teclado.
-    let field: WorkoutField
-    var focus: FocusState<WorkoutField?>.Binding
     var onCommit: (String) -> Void
 
     @State private var text: String
-    /// Último texto que salió de este campo: distingue lo que escribe el usuario de un cambio
-    /// externo (progresión o ±), que sí debe reflejarse aunque el teclado esté abierto.
-    @State private var lastCommitted: String
     @State private var commitTask: Task<Void, Never>?
+    @FocusState private var focused: Bool
 
-    private var focused: Bool { focus.wrappedValue == field }
-
-    init(value: String, placeholder: String, big: Bool, decimal: Bool,
-         field: WorkoutField, focus: FocusState<WorkoutField?>.Binding,
-         onCommit: @escaping (String) -> Void) {
+    init(value: String, placeholder: String, big: Bool, decimal: Bool, onCommit: @escaping (String) -> Void) {
         self.value = value
         self.placeholder = placeholder
         self.big = big
         self.decimal = decimal
-        self.field = field
-        self.focus = focus
         self.onCommit = onCommit
         _text = State(initialValue: value)
-        _lastCommitted = State(initialValue: value)
     }
 
     var body: some View {
@@ -1468,13 +1058,12 @@ struct NumberField: View {
             #if os(iOS)
             .keyboardType(decimal ? .decimalPad : .numberPad)
             #endif
-            .focused(focus, equals: field)
+            .focused($focused)
             .onChange(of: text) { _, newValue in scheduleCommit(newValue) }
             .onChange(of: focused) { _, isFocused in if !isFocused { commitNow() } }
             .onChange(of: value) { _, newValue in
-                // Cambió desde fuera (p. ej. «Aplicar» progresión o ± del teclado): se refleja
-                // aunque se esté escribiendo; lo que escribimos aquí ya coincide con `lastCommitted`.
-                guard newValue != lastCommitted, text != newValue else { return }
+                // El modelo cambió desde fuera (p. ej. «Aplicar» progresión): sincroniza sin editar.
+                guard !focused, text != newValue else { return }
                 commitTask?.cancel()
                 commitTask = nil
                 text = newValue
@@ -1484,13 +1073,10 @@ struct NumberField: View {
 
     private func scheduleCommit(_ newValue: String) {
         commitTask?.cancel()
-        // Sin diferencia real no hay nada que guardar (también evita reescribir al sincronizar).
-        guard newValue != value, newValue != lastCommitted else { commitTask = nil; return }
         let commit = onCommit
         commitTask = Task {
             try? await Task.sleep(nanoseconds: 350_000_000)
             guard !Task.isCancelled else { return }
-            lastCommitted = newValue
             commit(newValue)
         }
     }
@@ -1498,8 +1084,6 @@ struct NumberField: View {
     private func commitNow() {
         commitTask?.cancel()
         commitTask = nil
-        guard text != lastCommitted else { return }
-        lastCommitted = text
         onCommit(text)
     }
 }

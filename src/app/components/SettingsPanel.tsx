@@ -829,12 +829,12 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
               className={rowInput}
             />
           </FieldRow>
+          <ListRow
+            title={<span className="inline-flex items-center gap-1.5 text-primary">{saveRowContent(profileSaveState, "Guardar perfil")}</span>}
+            disabled={profileSaveState === "saving"}
+            onClick={() => void saveProfile()}
+          />
         </ListGroup>
-        <div className={(hideForAdmin + only("ajustes-perfil")).trim() + " -mt-2 flex justify-end"}>
-          <Button className="rounded-full px-6" disabled={profileSaveState === "saving"} onClick={() => void saveProfile()}>
-            <span className="inline-flex items-center gap-1.5">{saveRowContent(profileSaveState, "Guardar perfil")}</span>
-          </Button>
-        </div>
 
         <ListGroup
           className={(hideForAdmin + only("ajustes-perfil")).trim()}
@@ -938,11 +938,13 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
           </ListGroup>
           </>}
 
-          <div className="flex justify-end">
-            <Button className="rounded-full px-6" disabled={dataSaveState === "saving"} onClick={() => void saveOnboarding()}>
-              <span className="inline-flex items-center gap-1.5">{saveRowContent(dataSaveState, "Guardar datos")}</span>
-            </Button>
-          </div>
+          <ListGroup>
+            <ListRow
+              title={<span className="inline-flex items-center gap-1.5 text-primary">{saveRowContent(dataSaveState, "Guardar datos")}</span>}
+              disabled={dataSaveState === "saving"}
+              onClick={() => void saveOnboarding()}
+            />
+          </ListGroup>
 
           <AlertDialog open={confirmingMeals} onOpenChange={setConfirmingMeals}>
             <AlertDialogContent>

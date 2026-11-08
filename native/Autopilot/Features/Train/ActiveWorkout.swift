@@ -16,10 +16,6 @@ struct WorkoutDraft: Codable {
     var supersets: [[String]]? = nil
     /// Marca de pausa (como `pausedAt` en la web). Al reanudar, inicio y descanso se desplazan.
     var pausedAt: Date? = nil
-    /// Nota libre por ejercicio (técnica, agarre, molestias). Solo de esta sesión.
-    var notes: [String: String]? = nil
-    /// Descanso elegido desde la tarjeta, en segundos, por ejercicio y solo esta sesión.
-    var restOverrides: [String: Int]? = nil
 }
 
 @MainActor
@@ -194,134 +190,17 @@ final class ActiveWorkout: ObservableObject {
         persist()
     }
 
-    /// ±2,5 kg o ±1 rep sobre un campo, sin teclear. Lo usan la barra del teclado y la
-    /// fila de ajustes de la serie; si el campo está vacío, parte de la carga sugerida
-    /// (la que se ve en gris) para que el primer toque ya haga algo útil.
-    func stepField(_ field: WorkoutField, by direction: Int) {
-        guard let sets = draft.logs[field.exercise], sets.indices.contains(field.set) else { return }
-        let set = sets[field.set]
-        if let drop = field.drop {
-            guard let drops = set.drops, drops.indices.contains(drop) else { return }
-            if field.kind == .weight {
-                let base = Progression.weight(drops[drop].weight) ?? Progression.weight(set.weight) ?? 0
-                let next = max(0, base + Double(direction) * Self.weightStep)
-                updateDrop(field.exercise, set: field.set, drop: drop) {
-                    $0.weight = next > 0 ? Self.weightText(next) : ""
-                }
-            } else {
-                let base = drops[drop].reps > 0 ? drops[drop].reps : max(set.reps, 1)
-                updateDrop(field.exercise, set: field.set, drop: drop) { $0.reps = max(1, base + direction) }
-            }
-        } else if field.kind == .weight {
-            let base = Progression.weight(set.weight)
-                ?? previous[field.exercise]?[safe: field.set].flatMap { Progression.weight($0.weight) }
-                ?? exercises.first { $0.name == field.exercise }.flatMap { Progression.weight($0.weight) }
-                ?? 0
-            let next = max(0, base + Double(direction) * Self.weightStep)
-            update(field.exercise, set: field.set) {
-                $0.weight = next > 0 ? Self.weightText(next) : ""
-            }
-        } else {
-            let base = set.reps > 0 ? set.reps : (previous[field.exercise]?[safe: field.set]?.reps ?? 0)
-            update(field.exercise, set: field.set) { $0.reps = max(1, base + direction) }
-        }
-        Haptics.tap()
-    }
-
-    static let weightStep = 2.5
-    static func weightText(_ w: Double) -> String {
-        w.truncatingRemainder(dividingBy: 1) == 0 ? String(Int(w)) : String(w)
-    }
-
     func toggleDone(_ exercise: GymExercise, set index: Int) {
         var nowDone = false
         update(exercise.name, set: index) { $0.done.toggle(); nowDone = $0.done }
         if nowDone {
             Haptics.signature()
-            startRest(seconds: restSeconds(for: exercise))
+            // Descanso elegido en Ajustes → Tu forma de entrenar; si no hay, el del ejercicio.
+            let chosen = UserDefaults.standard.integer(forKey: "rest-seconds")
+            startRest(seconds: chosen > 0 ? chosen : exercise.restSeconds)
         } else {
             Haptics.tap()
         }
-    }
-
-    // MARK: Nota y descanso del ejercicio (solo esta sesión)
-
-    /// Descanso que se aplica al marcar la serie: el elegido en la tarjeta, si no el de
-    /// Ajustes → Tu forma de entrenar, y si no el que pide el ejercicio.
-    func restSeconds(for exercise: GymExercise) -> Int {
-        if let chosen = draft.restOverrides?[exercise.name], chosen > 0 { return chosen }
-        let global = UserDefaults.standard.integer(forKey: "rest-seconds")
-        return global > 0 ? global : exercise.restSeconds
-    }
-
-    func setRest(_ seconds: Int, for exercise: String) {
-        var map = draft.restOverrides ?? [:]
-        if seconds <= 0 { map[exercise] = nil } else { map[exercise] = seconds }
-        draft.restOverrides = map.isEmpty ? nil : map
-        persist()
-        Haptics.selection()
-    }
-
-    func note(_ exercise: String) -> String { draft.notes?[exercise] ?? "" }
-
-    func setNote(_ text: String, for exercise: String) {
-        let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        var map = draft.notes ?? [:]
-        if clean.isEmpty { map[exercise] = nil } else { map[exercise] = clean }
-        draft.notes = map.isEmpty ? nil : map
-        persist()
-    }
-
-    // MARK: Añadir ejercicios y rampa de calentamiento
-
-    /// Añade ejercicios a la sesión en curso sin salir de ella (como la web). Entran al final,
-    /// con sus series vacías, y el plan guardado no se toca: es solo esta sesión.
-    func addExercises(_ items: [GymExercise]) {
-        var day = draft.day
-        var list = day.exercises ?? []
-        let existing = Set(list.map(\.name))
-        let fresh = items.filter { !existing.contains($0.name) }
-        guard !fresh.isEmpty else { return }
-        list.append(contentsOf: fresh)
-        day.exercises = list
-        draft.day = day
-        var logs = draft.logs
-        for e in fresh where logs[e.name] == nil {
-            logs[e.name] = (0..<max(e.series, 1)).map { _ in
-                SetLog(reps: e.repsTarget, weight: "", done: false, isWarmup: nil)
-            }
-        }
-        draft.logs = logs
-        openExercises.insert(list.count - 1)
-        persist()
-        Haptics.success()
-    }
-
-    /// Rampa de calentamiento: tres series al 50 %, 70 % y 85 % de la carga de trabajo
-    /// (8, 5 y 3 reps), marcadas como calentamiento para no contar en volumen ni récords.
-    func addWarmupRamp(_ exercise: GymExercise) {
-        guard var sets = draft.logs[exercise.name],
-              !sets.contains(where: { $0.isWarmup == true }) else { return }
-        let working = sets.first(where: { $0.isWarmup != true }).flatMap { Progression.weight($0.weight) }
-            ?? Progression.weight(exercise.weight)
-            ?? previous[exercise.name]?.first.flatMap { Progression.weight($0.weight) }
-        let target = sets.first(where: { $0.isWarmup != true })?.reps ?? exercise.repsTarget
-        let steps: [(percent: Double, reps: Int)] = [(0.5, 8), (0.7, 5), (0.85, 3)]
-        let ramp = steps.map { step -> SetLog in
-            let weight = working.map { Self.roundToPlate($0 * step.percent) }
-            return SetLog(reps: max(1, min(step.reps, max(target, 1))),
-                          weight: weight.map(Self.weightText) ?? "",
-                          done: false, isWarmup: true)
-        }
-        sets.insert(contentsOf: ramp, at: 0)
-        draft.logs[exercise.name] = sets
-        persist()
-        Haptics.success()
-    }
-
-    /// Redondea al disco más cercano de 2,5 kg (lo que se puede montar en la barra).
-    static func roundToPlate(_ value: Double) -> Double {
-        max(0, (value / 2.5).rounded() * 2.5)
     }
 
     func addSet(_ exercise: String) {
