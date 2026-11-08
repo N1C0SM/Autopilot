@@ -618,9 +618,23 @@ const Dashboard = () => {
       ? "Sube una foto cada 2 semanas, misma luz y misma hora. Es la forma más fiable de ver el cambio."
       : null;
 
+  const prepareRoutine = async () => {
+    void hapticTap();
+    setPreparingRoutine(true);
+    try {
+      const { data, error } = await generatePlanGuarded(supabase, { user_id: user?.id }, { userId: user?.id });
+      if (error || (!data?.success && !data?.protected)) throw new Error("generation_failed");
+      await fetchData();
+    } catch {
+      toast.error("No se ha podido preparar la rutina. Vuelve a intentarlo.");
+    } finally {
+      setPreparingRoutine(false);
+    }
+  };
+
   const renderContent = (section: MobileTab) => (
     <>
-      {!coaching && !hasPlan && (section === "home" || section === "training") && (
+      {!coaching && !hasPlan && section === "training" && (
         <div className="flex w-full flex-1 flex-col">
           <EmptyState
             className="flex-1"
@@ -628,16 +642,9 @@ const Dashboard = () => {
             title="Prepara tu rutina inicial gratis"
             description="Te la preparamos en unos segundos."
           />
-          <Button size="lg" className="w-full md:w-auto md:self-center" disabled={preparingRoutine} onClick={async () => {
-            void hapticTap();
-            setPreparingRoutine(true);
-            try {
-              const { data, error } = await generatePlanGuarded(supabase, { user_id: user?.id }, { userId: user?.id });
-              if (error || (!data?.success && !data?.protected)) throw new Error("generation_failed");
-              await fetchData();
-            } catch { toast.error("No se ha podido preparar la rutina. Vuelve a intentarlo."); }
-            finally { setPreparingRoutine(false); }
-          }}>{preparingRoutine ? "Preparando…" : "Preparar mi rutina gratis"}</Button>
+          <Button size="lg" className="w-full md:w-auto md:self-center" disabled={preparingRoutine} onClick={() => void prepareRoutine()}>
+            {preparingRoutine ? "Preparando…" : "Preparar mi rutina gratis"}
+          </Button>
         </div>
       )}
       {!campaign && !coaching && section === "nutrition" && user && (
@@ -670,11 +677,14 @@ const Dashboard = () => {
         />
       )}
 
-      {hasPlan && section === "home" && (
+      {section === "home" && (hasPlan || !coaching) && (
         // Hoy llena la pantalla: HomeOverview reparte el alto y lo demás va debajo.
         <div className="flex w-full flex-1 flex-col gap-3">
           <HomeOverview
             userId={user?.id}
+            hasPlan={hasPlan}
+            preparingRoutine={preparingRoutine}
+            onPrepareRoutine={() => void prepareRoutine()}
             meals={meals}
             nutrition={nutrition || campaign}
             planStatus={planStatus}
@@ -939,7 +949,7 @@ const Dashboard = () => {
         </div>
       )}
 
-      {hasPlan && section === "progress" && user && (
+      {section === "progress" && user && (
         <Tabs
           value={progressTab}
           onValueChange={(tab) => {

@@ -88,6 +88,32 @@ describe("dashboard home overview", () => {
     expect(weekPlan.compareDocumentPosition(nutrition) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
+  it("keeps progress and nutrition visible on Home before a routine exists", () => {
+    const onNavigate = vi.fn();
+    const onPrepareRoutine = vi.fn();
+    render(
+      <HomeOverview
+        dayPlans={[]}
+        hasPlan={false}
+        nutrition={false}
+        onNavigate={onNavigate}
+        onPrepareRoutine={onPrepareRoutine}
+      />,
+    );
+
+    expect(screen.getByText("Prepara tu rutina inicial gratis")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Preparar mi rutina gratis" }));
+    expect(onPrepareRoutine).toHaveBeenCalledOnce();
+    const progress = screen.getByRole("button", { name: /Tu progreso/ });
+    const nutrition = screen.getByRole("button", { name: /Nutrición/ });
+    expect(progress).toBeVisible();
+    expect(nutrition).toBeVisible();
+    fireEvent.click(progress);
+    expect(onNavigate).toHaveBeenCalledWith("progress");
+    fireEvent.click(nutrition);
+    expect(onNavigate).toHaveBeenLastCalledWith("nutrition");
+  });
+
   it("proposes the next pending session whatever the weekday, with one mark per session", () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-10-04T12:00:00")); // domingo: no cambia nada

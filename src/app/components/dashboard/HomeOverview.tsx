@@ -38,6 +38,9 @@ interface Props {
   dayPlans: DayPlan[];
   meals?: Meal[];
   userId?: string;
+  hasPlan?: boolean;
+  preparingRoutine?: boolean;
+  onPrepareRoutine?: () => void;
   /** Navegación del panel. «training» sin día abre la siguiente sesión. */
   onNavigate: (section: UserSection, day?: string) => void;
   /** Empieza la sesión indicada (la clave `day` de la siguiente pendiente). */
@@ -127,6 +130,9 @@ const HomeOverview = ({
   dayPlans,
   meals = [],
   userId,
+  hasPlan = true,
+  preparingRoutine = false,
+  onPrepareRoutine,
   onNavigate,
   onStartWorkout,
   onCompleteActivity,
@@ -355,7 +361,23 @@ const HomeOverview = ({
 
       {/* Siguiente sesión de la rutina: la que toca hoy, sea el día que sea */}
       <section className="mt-6 lg:col-start-1 lg:row-start-2 lg:mt-8" aria-label="Tu siguiente sesión">
-        {activeWorkout && activeWorkoutIsToday ? (
+        {!hasPlan ? (
+          <div className="rounded-[22px] bg-card p-4">
+            <EmptyState
+              icon={Dumbbell}
+              title="Prepara tu rutina inicial gratis"
+              description="Te la preparamos en unos segundos."
+            />
+            <Button
+              size="lg"
+              className="mt-4 w-full"
+              disabled={preparingRoutine}
+              onClick={onPrepareRoutine}
+            >
+              {preparingRoutine ? "Preparando…" : "Preparar mi rutina gratis"}
+            </Button>
+          </div>
+        ) : activeWorkout && activeWorkoutIsToday ? (
           <div className="rounded-2xl bg-card p-4">
             <p className="text-[13px] font-medium text-primary">En curso</p>
             <h3 className="mt-0.5 text-[17px] font-semibold leading-6">{planTitle(activeWorkout.plan)}</h3>
