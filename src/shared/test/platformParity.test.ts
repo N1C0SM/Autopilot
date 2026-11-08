@@ -6,16 +6,15 @@ import { ADMIN_NAV_GROUPS } from "@/app/components/admin/adminNav";
 import { DETAIL_SECTIONS, EQUIPMENT, FILTER_GROUPS, MODALITIES } from "@/shared/lib/exerciseLibrary";
 
 /**
- * Web y apps nativas son un solo producto: web grande = Mac, web pequeña = iPhone.
- * Este test falla si los menús se separan (una sección añadida o quitada solo en un lado).
- * El chat de cliente no cuenta: está detrás del corte de lanzamiento (`releaseScope.ts`).
+ * La web grande comparte el menú lateral de Mac; la navegación móvil web mantiene
+ * solo Hoy, Nutrición y Progreso. Entrenar se abre desde Inicio.
  */
 const root = resolve(__dirname, "../../..");
 const read = (p: string) => readFileSync(resolve(root, p), "utf8");
 const swift = read("native/Autopilot/Features/Shell/RootView.swift");
 
 /** `case .x: "Título"` de un `switch` concreto de RootView.swift. */
-const swiftTitles = (prop: "title" | "tabTitle") => {
+const swiftTitles = (prop: "title") => {
   const body = swift.slice(swift.indexOf(`var ${prop}: String {`));
   const block = body.slice(0, body.indexOf("\n    }\n"));
   return Object.fromEntries([...block.matchAll(/case \.(\w+): "([^"]+)"/g)].map((m) => [m[1], m[2]]));
@@ -25,7 +24,6 @@ const swiftList = (name: string) => {
   return (m?.[1] ?? "").split(",").map((s) => s.trim().replace(/^\./, "")).filter(Boolean);
 };
 const titles = swiftTitles("title");
-const tabTitles = { ...titles, ...swiftTitles("tabTitle") };
 
 /** Títulos visibles de una lista de la web (`{ title: "…", section: "…" }` o `{ key: "…", label: "…" }`). */
 const webItems = (file: string, list: string, label: "title" | "label", key: "section" | "key") => {
@@ -44,10 +42,13 @@ describe("paridad web ↔ apps nativas", () => {
     expect(webItems("src/app/components/UserSidebar.tsx", "NAV_ITEMS", "title", "section")).toEqual(mac);
   });
 
-  it("web pequeña = iPhone: mismas pestañas, en el mismo orden", () => {
-    const iphone = swiftList("userTabs").map((s) => tabTitles[s]);
-    expect(iphone).toHaveLength(4);
-    expect(webItems("src/app/components/mobile/MobileTabBar.tsx", "TABS", "label", "key")).toEqual(iphone);
+  it("web móvil: solo Hoy, Nutrición y Progreso en la navegación principal", () => {
+    expect(webItems("src/app/components/mobile/MobileTabBar.tsx", "TABS", "label", "key")).toEqual([
+      "Hoy", "Nutrición", "Progreso",
+    ]);
+    expect(webItems("src/web/components/LandingSections.tsx", "PHONE_TABS", "label", "key")).toEqual([
+      "Hoy", "Nutrición", "Progreso",
+    ]);
   });
 
   it("Admin: mismos grupos y secciones en la web y en la app", () => {

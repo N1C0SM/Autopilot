@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import MobileAppShell from "@/app/components/mobile/MobileAppShell";
 import type { MobileTab } from "@/app/components/mobile/MobileTabBar";
@@ -21,6 +21,14 @@ const shell = (active: MobileTab, onChange = vi.fn()) => (
 );
 
 describe("MobileAppShell", () => {
+  it("shows only Home, Nutrition, and Progress in the mobile web navigation", () => {
+    render(shell("home"));
+    const navigation = screen.getByRole("navigation", { name: "Navegación principal" });
+    expect(within(navigation).getAllByRole("button").map((button) => button.getAttribute("aria-label"))).toEqual([
+      "Hoy", "Nutrición", "Progreso",
+    ]);
+  });
+
   it("anima la entrada de una pantalla empujada", () => {
     const { rerender } = render(shell("home"));
     expect(screen.getByRole("main")).not.toHaveClass("mobile-screen-push");

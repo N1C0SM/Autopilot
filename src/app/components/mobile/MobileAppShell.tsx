@@ -319,7 +319,7 @@ const MobileAppShell = ({
         </div>
       </main>
 
-      {/* Sin botón flotante «Ir a entrenar»: Entrenar ya es la segunda pestaña. */}
+      {/* El entrenamiento se abre desde las acciones de Inicio, no desde una pestaña independiente. */}
       {!workoutMode && !online && (
         <OfflineBanner onRetry={onRefresh ? () => onRefresh() : undefined} />
       )}

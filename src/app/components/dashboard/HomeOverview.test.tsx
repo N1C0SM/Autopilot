@@ -30,10 +30,12 @@ const today = DAYS[(new Date().getDay() + 6) % 7];
 describe("dashboard home overview", () => {
   it("shows today's session as the primary action and previews it before opening the workout", () => {
     const onNavigate = vi.fn();
+    const onStartWorkout = vi.fn();
     render(
       <HomeOverview
         dayPlans={[{ day: today, type: "gimnasio", routine_name: "Pull B", muscle_focus: "Espalda · Bíceps", exercises: [{ exercise_id: "squat", name: "Sentadilla", series: 3, reps: 8, weight: "", rest: "90 s" }] }]}
         onNavigate={onNavigate}
+        onStartWorkout={onStartWorkout}
         profileName="Nicolás Pérez"
       />,
     );
@@ -50,7 +52,8 @@ describe("dashboard home overview", () => {
     fireEvent.click(startButton);
     expect(within(screen.getByRole("dialog")).getByText("Sentadilla")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Empezar entrenamiento" }));
-    expect(onNavigate).toHaveBeenCalledWith("training", today);
+    expect(onStartWorkout).toHaveBeenCalledWith(today);
+    expect(onNavigate).not.toHaveBeenCalled();
     expect(mocks.hapticTap).toHaveBeenCalledTimes(2);
   });
 

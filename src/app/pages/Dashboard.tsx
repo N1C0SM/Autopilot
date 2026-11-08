@@ -702,6 +702,7 @@ const Dashboard = () => {
               setTrainingDay(day);
               setTrainingView("tracker");
               setAutoStartWorkout(true);
+              setWorkoutMode(true);
               setSection("training");
             }}
             onCompleteActivity={async (day) => {
@@ -729,6 +730,7 @@ const Dashboard = () => {
               setResumeWorkout(true);
               setAutoStartWorkout(false);
               setTrainingView("tracker");
+              setWorkoutMode(true);
               setSection("training");
             }}
             profileName={profileName}
@@ -828,13 +830,13 @@ const Dashboard = () => {
                     if (!active) void fetchData();
                   }}
                   onCancel={() => {
-                    // «Salir» antes de empezar vuelve a la rutina semanal, no a Inicio.
+                    // El tracker se abre desde Inicio; salir antes de empezar vuelve allí.
                     setWorkoutMode(false);
                     setFreePlans(null);
                     setResumeWorkout(false);
                     setAutoStartWorkout(false);
                     setTrainingView("plan");
-                    setSection("training");
+                    setSection("home");
                   }}
                   onExit={() => {
                     setWorkoutMode(false);
