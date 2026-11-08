@@ -1,5 +1,10 @@
 # Roadmap
 
+## Peticiones actuales
+- [ ] Aplicar los 29 ejercicios y los siete días de THE 0.1% PROTOCOL a la cuenta indicada y verificar la lectura.
+- [ ] Rematar telemetría de Progreso, botones de Ajustes, estados vacíos y proporciones de escritorio en web e iPhone/Mac.
+- [ ] Priorizar fotos reales en nativo, regenerar Xcode si está disponible y verificar pruebas y capturas sin publicar.
+
 - [ ] Muestras públicas fieles al móvil: Hoy, Entrenar, Progreso y navegación; verificar en móvil y escritorio.
 
 - [x] Resumen final del cuestionario más visual (semana, objetivo, datos clave)
