@@ -170,7 +170,11 @@ describe("dashboard home overview", () => {
   it("shows a completion summary before opening progress", () => {
     const onNavigate = vi.fn();
     render(<HomeOverview dayPlans={[{ day: "Lunes", type: "gimnasio", exercises: [] }]} completedToday onNavigate={onNavigate} />);
-    fireEvent.click(screen.getByRole("button", { name: "Ver el resumen de la sesión de hoy" }));
+    const doneCard = screen.getByRole("button", { name: /Hecho hoy: Sesión completada/ });
+    expect(within(doneCard).getByText("HECHO HOY")).toBeVisible();
+    expect(within(doneCard).getByText("Sesión completada")).toBeVisible();
+    expect(within(doneCard).getByText("Resumen")).toBeVisible();
+    fireEvent.click(doneCard);
     expect(screen.getByText("Completado hoy")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Ver mi progreso" }));
     expect(onNavigate).toHaveBeenCalledWith("progress");
@@ -220,8 +224,8 @@ describe("dashboard home overview", () => {
     const onNavigate = vi.fn();
     render(<HomeOverview dayPlans={[{ day: today, type: "gimnasio", exercises: [] }]} onNavigate={onNavigate} completedToday />);
 
-    expect(screen.getByText("Hecho hoy")).toBeVisible();
-    const doneCard = screen.getByRole("button", { name: "Ver el resumen de la sesión de hoy" });
+    expect(screen.getByText("HECHO HOY")).toBeVisible();
+    const doneCard = screen.getByRole("button", { name: /Hecho hoy: Sesión completada/ });
     expect(doneCard).toBeVisible();
     fireEvent.click(doneCard);
     expect(onNavigate).not.toHaveBeenCalled();

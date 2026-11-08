@@ -412,20 +412,25 @@ const HomeOverview = ({
           <button
             type="button"
             onClick={() => { void hapticTap(); openSessionPreview(null, true); }}
-            className="flex w-full items-center gap-3.5 rounded-2xl bg-card p-4 text-left transition-opacity active:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label="Ver el resumen de la sesión de hoy"
+            className="group w-full overflow-hidden rounded-[28px] bg-card text-left transition-opacity active:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label={`Hecho hoy: Sesión completada. ${nextSession ?? ""}`}
+            aria-description="Abre el resumen del entreno de hoy"
           >
-            <span aria-hidden="true" className="h-14 w-14 shrink-0 overflow-hidden rounded-media bg-secondary">
-              <img src={BRAND_PHOTOS.gym} alt="" className="h-full w-full object-cover" />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="flex items-center gap-1 text-[13px] font-medium text-success">
-                <Check className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden="true" />Hecho hoy
+            <span aria-hidden="true" className="relative block h-[210px] w-full overflow-hidden bg-secondary">
+              <img src={BRAND_PHOTOS.gym} alt="" decoding="async" className="h-full w-full object-cover" />
+              <span className="absolute inset-0 bg-gradient-to-b from-transparent via-black/10 to-black/80" />
+              <span className="absolute bottom-[18px] left-[18px] inline-flex items-center gap-1.5 text-[12px] font-bold tracking-[0.067em] text-primary">
+                <Check className="h-3 w-3" strokeWidth={2.5} />
+                HECHO HOY
               </span>
-              <span className="block truncate text-[17px] font-semibold leading-6">Sesión completada</span>
-              <span className="block text-[13px] text-muted-foreground">{nextSession ?? "Hoy toca recuperar."}</span>
             </span>
-            <span className="shrink-0 text-[15px] font-medium text-primary">Resumen</span>
+            <span className="flex items-center gap-3 p-[18px]">
+              <span className="min-w-0 flex-1">
+                <span className="block type-title2">Sesión completada</span>
+                <span className="block line-clamp-2 type-footnote text-muted-foreground">{nextSession ?? "Buen trabajo. Hoy toca recuperar."}</span>
+              </span>
+              <span className="shrink-0 type-subhead font-semibold text-primary">Resumen</span>
+            </span>
           </button>
         ) : (
           // Semana completa (o plan sin sesiones): la misma tarjeta que la sesión, con foto real fundida a la derecha y sin dibujos (como `RestCard` en la app).
