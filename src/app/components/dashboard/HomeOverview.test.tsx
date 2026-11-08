@@ -48,10 +48,36 @@ describe("dashboard home overview", () => {
     expect(within(startButton).getByText("1 ejercicio")).toBeVisible();
     expect(within(startButton).getByText("Siguiente sesión · 1 de 1")).toBeVisible();
     fireEvent.click(startButton);
-    expect(screen.getByText("Sentadilla")).toBeVisible();
+    expect(within(screen.getByRole("dialog")).getByText("Sentadilla")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Empezar entrenamiento" }));
     expect(onNavigate).toHaveBeenCalledWith("training", today);
     expect(mocks.hapticTap).toHaveBeenCalledTimes(2);
+  });
+
+  it("shows the routine list on mobile and starts its first session", () => {
+    const onStartWorkout = vi.fn();
+    render(
+      <HomeOverview
+        dayPlans={[{
+          day: "Lunes",
+          type: "gimnasio",
+          routine_name: "Upper A",
+          muscle_focus: "Pecho, espalda, hombros",
+          exercises: [
+            { exercise_id: "bench", name: "Press banca plano", series: 4, reps: 8, weight: "", rest: "2 min" },
+            { exercise_id: "row", name: "Remo sentado", series: 3, reps: 10, weight: "", rest: "90 s" },
+          ],
+        }]}
+        onNavigate={vi.fn()}
+        onStartWorkout={onStartWorkout}
+      />,
+    );
+
+    const routines = screen.getByRole("region", { name: "Tus rutinas" });
+    expect(within(routines).getByText("Upper A · Pecho, espalda y hombros")).toBeVisible();
+    expect(within(routines).getByText("Press banca plano")).toBeVisible();
+    fireEvent.click(within(routines).getByRole("button", { name: "Empezar" }));
+    expect(onStartWorkout).toHaveBeenCalledWith("Lunes");
   });
 
   it("proposes the next pending session whatever the weekday, with one mark per session", () => {

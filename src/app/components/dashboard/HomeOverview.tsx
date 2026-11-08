@@ -189,6 +189,7 @@ const HomeOverview = ({
   const now = new Date();
   // Sin días de la semana: la sesión de hoy es la siguiente de la rutina que falta esta semana.
   const sessions = routineSessions(dayPlans);
+  const firstRoutine = sessions[0] ?? null;
   const todayPlan = nextPendingSession(sessions, completedDays);
   const todayPlanNumber = todayPlan ? sessions.indexOf(todayPlan) + 1 : 0;
   const weekComplete = sessions.length > 0 && !todayPlan;
@@ -462,6 +463,46 @@ const HomeOverview = ({
           </div>
         )}
       </section>
+
+      {firstRoutine && (
+        <section className="mt-4 lg:hidden" aria-label="Tus rutinas">
+          <h3 className="type-headline text-foreground">Tus rutinas</h3>
+          <div className="mt-3 rounded-[22px] bg-card p-4">
+            <div className="flex items-start gap-3">
+              <span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Dumbbell className="h-5 w-5" strokeWidth={1.75} />
+              </span>
+              <p className="min-w-0 flex-1 type-headline leading-6">{planTitle(firstRoutine)}</p>
+            </div>
+            {firstRoutine.exercises?.length > 0 && (
+              <div className="mt-3 space-y-1 border-t border-border/60 pt-3" aria-label={`Ejercicios de ${planTitle(firstRoutine)}`}>
+                {firstRoutine.exercises.slice(0, 4).map((exercise, index) => (
+                  <div key={`${firstRoutine.day}-${exercise.exercise_id || exercise.name}-${index}`} className="flex items-center justify-between gap-3 type-footnote">
+                    <span className="min-w-0 truncate text-muted-foreground">{exercise.name}</span>
+                    <span className="shrink-0 tabular-nums text-foreground">{exercise.series} × {exercise.reps}</span>
+                  </div>
+                ))}
+                {firstRoutine.exercises.length > 4 && (
+                  <p className="pt-1 type-footnote text-muted-foreground">+{firstRoutine.exercises.length - 4} ejercicios</p>
+                )}
+              </div>
+            )}
+            <Button
+              type="button"
+              size="lg"
+              className="mt-4 w-full"
+              onClick={() => {
+                void hapticTap();
+                if (activeWorkout?.plan.day === firstRoutine.day && onResumeWorkout) onResumeWorkout();
+                else if (onStartWorkout) onStartWorkout(firstRoutine.day);
+                else onNavigate("training", firstRoutine.day);
+              }}
+            >
+              {activeWorkout?.plan.day === firstRoutine.day ? "Continuar entreno" : "Empezar"}
+            </Button>
+          </div>
+        </section>
+      )}
 
       {/* Rediseño (ChatGPT): «Tu progreso» y «Tu plan» en tarjetas con icono dorado y chevron */}
       <ul data-home-rows className="mt-3 space-y-3 lg:col-start-2 lg:row-start-2 lg:mt-8">
