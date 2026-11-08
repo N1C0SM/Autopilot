@@ -114,7 +114,9 @@ struct SetLog: Codable, Hashable {
         self.reps = reps; self.weight = weight; self.done = done; self.isWarmup = isWarmup; self.drops = drops; self.rpe = rpe; self.failure = failure
     }
 
-    enum CodingKeys: String, CodingKey { case reps, weight, done, isWarmup, drops }
+    /// `rpe` y `failure` van en las claves: antes se quedaban fuera y se perdían al guardar
+    /// el borrador y al escribir `workout_logs.sets_completed` (la web lee los mismos campos).
+    enum CodingKeys: String, CodingKey { case reps, weight, done, isWarmup, drops, rpe, failure }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -123,6 +125,8 @@ struct SetLog: Codable, Hashable {
         done = (try? c.decode(Bool.self, forKey: .done)) ?? false
         isWarmup = try? c.decodeIfPresent(Bool.self, forKey: .isWarmup)
         drops = try? c.decodeIfPresent([Drop].self, forKey: .drops)
+        rpe = FlexibleValue.int(c, .rpe).flatMap { (1...10).contains($0) ? $0 : nil }
+        failure = (try? c.decodeIfPresent(Bool.self, forKey: .failure)) == true ? true : nil
     }
 }
 

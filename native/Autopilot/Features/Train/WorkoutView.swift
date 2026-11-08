@@ -21,6 +21,7 @@ struct WorkoutView: View {
     @State private var discardOpen = false
     @State private var rpe = 7
     @State private var summaryOpen = false
+    @State private var addExerciseOpen = false
     /// Vista elegida en «···» o en Ajustes: lista de toda la sesión (por defecto) o ejercicio a ejercicio.
     @AppStorage("workout-view") private var workoutView = "list"
     private var focusMode: Bool { workoutView == "focus" }
@@ -58,6 +59,15 @@ struct WorkoutView: View {
                             SessionExerciseCard(workout: workout, exercise: ex, index: i, userId: userId)
                         }
                     }
+                    // Como la web: el ejercicio entra solo en esta sesión, nunca en la rutina guardada.
+                    Button { Haptics.tap(); addExerciseOpen = true } label: {
+                        Label("Añadir ejercicio a esta sesión", systemImage: "plus")
+                            .font(.apBody.weight(.medium))
+                            .foregroundStyle(Palette.foreground)
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                            .background(Palette.secondary, in: Capsule())
+                    }
+                    .buttonStyle(.plain)
                     }
                     // En pausa no se anota nada: se ve atenuado hasta reanudar.
                     .disabled(workout.isPaused)
@@ -158,6 +168,11 @@ struct WorkoutView: View {
             if pendingSummary { pendingSummary = false; summaryOpen = true }
         }) { rpeSheet }
         .sheet(isPresented: $summaryOpen, onDismiss: { onClose(true) }) { summarySheet }
+        .sheet(isPresented: $addExerciseOpen) {
+            ExercisePickerView(existing: Set(workout.exercises.map(\.name))) { picked in
+                Task { await workout.addExercises(picked, userId: userId) }
+            }
+        }
         .onChange(of: scenePhase) { _, phase in
             // El borrador se guarda con retardo: al salir de la app se fuerza la escritura.
             if phase != .active { workout.persistNow() }
@@ -390,16 +405,40 @@ struct SessionExerciseCard: View {
     @State private var swapSheet = false
     @State private var swapOptions: [String] = []
 
-    private func metaChip(icon: String, text: String) -> some View {
+    private func metaChip(icon: String, text: String, tint: Color = Palette.muted) -> some View {
         HStack(spacing: 4) {
             Image(systemName: icon).font(.inter(size: 10, weight: .semibold))
             Text(text).font(.apCaption).lineLimit(1)
         }
-        .foregroundStyle(Palette.muted)
+        .foregroundStyle(tint)
         .padding(.horizontal, 8)
         .padding(.vertical, 3)
         .background(Palette.secondary, in: Capsule())
         .accessibilityElement(children: .combine)
+    }
+
+    /// Descanso de este ejercicio (como el temporizador por ejercicio de Hevy): se recuerda para la próxima vez.
+    private var restMenu: some View {
+        let chosen = workout.restChoice(for: exercise.name)
+        let current = workout.restSeconds(for: exercise)
+        return Menu {
+            Section("Descanso de este ejercicio") {
+                ForEach(RestFormat.presets, id: \.self) { seconds in
+                    Button { workout.setRestChoice(seconds, for: exercise.name) } label: {
+                        if chosen == seconds { Label(RestFormat.label(seconds), systemImage: "checkmark") } else { Text(RestFormat.label(seconds)) }
+                    }
+                }
+                if chosen != nil {
+                    Button("Volver al de siempre") { workout.setRestChoice(nil, for: exercise.name) }
+                }
+            }
+        } label: {
+            metaChip(icon: "clock", text: "Descanso \(RestFormat.label(current))", tint: chosen == nil ? Palette.muted : Palette.gold)
+                .frame(minHeight: 28).contentShape(Rectangle())
+        }
+        .menuStyle(.button).buttonStyle(.plain)
+        .accessibilityLabel("Descanso de este ejercicio: \(RestFormat.spoken(current))")
+        .accessibilityHint("Cambia el descanso de \(exercise.name)")
     }
 
     var body: some View {
@@ -429,7 +468,7 @@ struct SessionExerciseCard: View {
                         }
                         // Chips como en Hevy: descanso y prescripción, legibles de un vistazo.
                         FlowRow(spacing: 6) {
-                            metaChip(icon: "clock", text: "Descanso \(exercise.rest)")
+                            restMenu
                             metaChip(icon: "dumbbell", text: "\(exercise.series) × \(exercise.reps)")
                             if let pos = workout.supersetPosition(of: exercise.name) {
                                 metaChip(icon: "link", text: "Superset \(pos.letter)")
@@ -858,6 +897,58 @@ struct SetLine: View {
     private var isWarmup: Bool { self.set.isWarmup == true }
     @AppStorage("workout-advanced") private var advanced = false
 
+    // Deslizar a la izquierda para borrar (como Hevy): a medias deja ver «Borrar»; del todo, borra.
+    @State private var swipe: CGFloat = 0
+    @State private var swipeOpen = false
+    @State private var dragging = false
+    private static let reveal: CGFloat = 84
+    private static let fullSwipe: CGFloat = 190
+
+    private var swipeGesture: some Gesture {
+        DragGesture(minimumDistance: 16)
+            .onChanged { v in
+                let dx = v.translation.width, dy = v.translation.height
+                guard workout.canRemoveSet(exercise.name), dragging || abs(dx) > abs(dy) * 1.4 else { return }
+                dragging = true
+                let next = min(0, max((swipeOpen ? -Self.reveal : 0) + dx, -Self.fullSwipe - 40))
+                if (next <= -Self.fullSwipe) != (swipe <= -Self.fullSwipe) { Haptics.selection() }
+                swipe = next
+            }
+            .onEnded { _ in
+                guard dragging else { return }
+                dragging = false
+                if swipe <= -Self.fullSwipe { deleteSet(); return }
+                withAnimation(.snappy) {
+                    swipeOpen = swipe < -Self.reveal / 2
+                    swipe = swipeOpen ? -Self.reveal : 0
+                }
+            }
+    }
+
+    private func deleteSet() {
+        Haptics.warning()
+        swipe = 0
+        swipeOpen = false
+        withAnimation(.snappy) { workout.removeSet(exercise.name, at: index) }
+    }
+
+    private var deleteAction: some View {
+        Button { deleteSet() } label: {
+            VStack(spacing: 2) {
+                Image(systemName: "trash").font(.inter(size: 16, weight: .semibold))
+                Text("Borrar").font(.apCaption.weight(.semibold))
+            }
+            .foregroundStyle(Color.white)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Palette.destructive, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .frame(width: max(0, -swipe))
+        .opacity(swipe < 0 ? 1 : 0)
+        // VoiceOver borra con la acción «Quitar serie»; este botón es solo para el gesto.
+        .accessibilityHidden(true)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
         HStack(spacing: 8) {
@@ -881,10 +972,18 @@ struct SetLine: View {
                 }
             }
                 .accessibilityHidden(true)
-            Text(previous.map { $0.done ? "\($0.weight.isEmpty ? "—" : $0.weight.replacingOccurrences(of: ".", with: ","))×\($0.reps)" : "—" } ?? "—")
-                .font(.inter(.caption).monospacedDigit()).foregroundStyle(Palette.muted).lineLimit(1).minimumScaleFactor(0.7)
-                .frame(width: 52)
-                .accessibilityLabel("Previa: " + (previous.map { "\($0.weight) kilos por \($0.reps)" } ?? "sin datos"))
+            // Tocar «Previa» copia sus kg y reps en la serie (como en Hevy).
+            Button { workout.copyPrevious(exercise.name, set: index) } label: {
+                Text(previous.map { $0.done ? "\($0.weight.isEmpty ? "—" : $0.weight.replacingOccurrences(of: ".", with: ","))×\($0.reps)" : "—" } ?? "—")
+                    .font(.inter(.caption).monospacedDigit()).foregroundStyle(Palette.muted).lineLimit(1).minimumScaleFactor(0.7)
+                    .frame(width: 52, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .allowsHitTesting(previous?.done == true && !set.done)
+            .accessibilityLabel(previous?.done == true
+                ? "Copiar la previa: \(previous!.weight) kilos por \(previous!.reps)"
+                : "Previa: sin datos")
             NumberField(value: set.weight,
                         placeholder: previous?.weight.nilIfEmpty ?? exercise.weight.nilIfEmpty ?? "kg",
                         big: isCurrent, decimal: true) { v in
@@ -940,6 +1039,15 @@ struct SetLine: View {
             .buttonStyle(.plain)
             .accessibilityLabel("\(set.done ? "Desmarcar" : "Marcar") serie \(index + 1) de \(exercise.name)")
             .sensoryFeedback(.success, trigger: set.done)
+        }
+        if let record = workout.livePRs["\(exercise.name)#\(index)"] {
+            Text("Récord personal · \(record)")
+                .font(.apFootnote.weight(.semibold).monospacedDigit())
+                .foregroundStyle(Palette.gold)
+                .padding(.horizontal, 10).padding(.vertical, 3)
+                .overlay(Capsule().strokeBorder(Palette.gold.opacity(0.4), lineWidth: 1))
+                .transition(.opacity.combined(with: .offset(y: 2)))
+                .accessibilityLabel("Récord personal: \(record)")
         }
         // Bajadas del dropset: dentro de la misma serie, sin descanso.
         ForEach(Array((set.drops ?? []).enumerated()), id: \.offset) { di, drop in
@@ -1001,6 +1109,11 @@ struct SetLine: View {
                 .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(isCurrent ? Palette.gold.opacity(0.5) : .clear, lineWidth: 1))
         )
         .overlay(alignment: .top) { if separator && !isCurrent { Rectangle().fill(Palette.separator).frame(height: 0.5).padding(.leading, 12) } }
+        .offset(x: swipe)
+        .background(alignment: .trailing) { deleteAction }
+        .clipped()
+        .simultaneousGesture(swipeGesture)
+        .onChange(of: set.done) { _, _ in if swipe != 0 { withAnimation(.snappy) { swipe = 0; swipeOpen = false } } }
         .accessibilityAction(named: "Quitar serie") { workout.removeSet(exercise.name, at: index) }
         .contextMenu {
             Button(role: .destructive) { Haptics.warning(); workout.removeSet(exercise.name, at: index) } label: {

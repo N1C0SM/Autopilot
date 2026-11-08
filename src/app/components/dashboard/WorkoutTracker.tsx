@@ -5,7 +5,7 @@ import { supabase } from "@/shared/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Check, ChevronLeft, CloudOff, Dumbbell, Flame, Clock, CalendarDays,
-  TrendingDown, Plus, X, Info, Play, Pause, MoreHorizontal, ChevronDown,
+  TrendingDown, Plus, X, Info, Play, Pause, MoreHorizontal, ChevronDown, Zap,
 } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Spinner } from "@/shared/components/ui/spinner";
@@ -20,8 +20,9 @@ import RPEDialog from "@/app/components/dashboard/RPEDialog";
 import { ExerciseThumb, isDirectFile } from "@/app/components/ExerciseMedia";
 import ExerciseFocus from "@/app/components/ExerciseFocus";
 import { useExerciseMetadata } from "@/shared/hooks/useExerciseMetadata";
-import { getWorkoutAdvanced, getWorkoutRestPreference, getWorkoutView, setWorkoutAdvanced, setWorkoutView, WORKOUT_VIEW_EVENT } from "@/shared/lib/workoutPreferences";
-import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu";
+import { formatRestLabel, getExerciseRestChoices, getWorkoutAdvanced, getWorkoutRestPreference, getWorkoutView, REST_PRESETS, setExerciseRestChoice, setWorkoutAdvanced, setWorkoutView, WORKOUT_VIEW_EVENT } from "@/shared/lib/workoutPreferences";
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu";
+import SwipeToDelete from "@/app/components/dashboard/SwipeToDelete";
 import { readActiveWorkout, saveActiveWorkout, clearActiveWorkout, clearPendingOfflineSeries, remainingRestSeconds, formatElapsed, playRestBeep } from "@/shared/lib/activeWorkout";
 import { getProgressionSuggestion } from "@/shared/lib/workoutProgression";
 import { parsePositiveWeight } from "@/shared/lib/weight";
@@ -35,6 +36,7 @@ import LogAllSetsButton from "@/app/components/dashboard/LogAllSetsButton";
 import NumericWeightPicker from "@/app/components/dashboard/NumericWeightPicker";
 import {
   addWorkoutSetDrop,
+  copyPreviousIntoSet,
   createWorkoutSetLogs,
   resolveConfirmWeight,
   formatWorkoutSetSummary,
@@ -42,8 +44,13 @@ import {
   getWorkoutSetDrops,
   getWorkoutSetDropsInputError,
   getWorkoutSetInputError,
+  getWorkoutSetRpe,
+  isWorkoutSetFailure,
   isWorkoutSetWarmup,
+  reindexLiveRecords,
   removeWorkoutSetDrop,
+  setWorkoutSetFailure,
+  setWorkoutSetRpe,
   setWorkoutSetWarmup,
   updateWorkoutSetDrop,
   type WorkoutSetDrop,
@@ -92,6 +99,9 @@ const MUSCLE_INTENSITY = {
 
 // Misma rejilla para la cabecera, las series y sus bajadas: n.º, previa, carga, valor, check.
 const SET_GRID = "grid grid-cols-[24px_52px_minmax(0,1fr)_minmax(0,1fr)_44px] items-center gap-2";
+// «Más opciones por serie»: columna de RPE antes del ✓ (como la app).
+const SET_GRID_ADVANCED = "grid grid-cols-[24px_52px_minmax(0,1fr)_minmax(0,1fr)_44px_44px] items-center gap-2";
+const SET_RPE_VALUES = [6, 7, 8, 9, 10] as const;
 const NUMBER_FIELD = "scroll-mb-40 h-11 w-full min-w-0 rounded-[10px] border-0 bg-secondary px-1 text-center font-rounded type-headline tabular-nums outline-none transition-colors duration-150 placeholder:font-normal placeholder:text-muted-foreground/60 focus:bg-accent focus:ring-1 focus:ring-inset focus:ring-primary/40 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-inset aria-[invalid=true]:ring-destructive";
 // La serie en curso: cifras más grandes que el resto.
 const CURRENT_FIGURE = "!text-[22px] !font-bold !leading-7";
@@ -660,6 +670,43 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
     void hapticTap();
   };
 
+  // RPE y fallo por serie (como la app): se guardan dentro de la serie, sin migración.
+  const chooseSetRpe = (exerciseName: string, setIndex: number, rpe: number | null) => {
+    mutateSet(exerciseName, setIndex, (set) => setWorkoutSetRpe(set, rpe));
+    void hapticSelection();
+  };
+
+  const toggleFailure = (exerciseName: string, setIndex: number) => {
+    mutateSet(exerciseName, setIndex, (set) => setWorkoutSetFailure(set, !isWorkoutSetFailure(set)));
+    void hapticSelection();
+  };
+
+  // Tocar «Previa» copia sus kg y reps en la serie (como Hevy).
+  const copyPrevious = (exerciseName: string, setIndex: number) => {
+    const previous = previousLogs[exerciseName]?.[setIndex];
+    if (!previous?.done) return;
+    mutateSet(exerciseName, setIndex, (set) => copyPreviousIntoSet(set, previous));
+    void hapticTap();
+  };
+
+  // Deslizar para borrar: siempre queda al menos una serie.
+  const removeSet = (exerciseName: string, setIndex: number) => {
+    setExerciseLogs((prev) => {
+      const sets = prev[exerciseName] || [];
+      if (sets.length <= 1 || !sets[setIndex]) return prev;
+      return { ...prev, [exerciseName]: sets.filter((_, index) => index !== setIndex) };
+    });
+    setLivePRs((prev) => reindexLiveRecords(prev, exerciseName, setIndex));
+    void hapticNotify("warning");
+  };
+
+  // Descanso de cada ejercicio, elegido desde su tarjeta y recordado para la próxima vez.
+  const [exerciseRest, setExerciseRest] = useState<Record<string, number>>(() => getExerciseRestChoices(userId));
+  const chooseExerciseRest = (exerciseName: string, seconds: number | null) => {
+    setExerciseRest(setExerciseRestChoice(userId, exerciseName, seconds));
+    void hapticSelection();
+  };
+
   const toggleSetDone = (exerciseName: string, setIndex: number, restSeconds?: number, suggestedWeight?: string) => {
     const rawSet = exerciseLogs[exerciseName]?.[setIndex];
     const wasDone = rawSet?.done;
@@ -698,7 +745,8 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
       if (continuesSuperset === null) {
         // Si el usuario eligió un descanso global, manda; si no, el prescrito
         // por el plan (antes el fallback estaba muerto y siempre eran 60 s).
-        const configuredRest = getWorkoutRestPreference(userId);
+        // El descanso elegido en la tarjeta del ejercicio manda sobre el global.
+        const configuredRest = exerciseRest[exerciseName] ?? getWorkoutRestPreference(userId);
         const effectiveRest = configuredRest ?? restSeconds ?? 60;
         setRestTarget(effectiveRest);
         setRestTimer(effectiveRest);
@@ -712,7 +760,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
         .map((s) => parsePositiveWeight(s.weight) || 0));
       if (!isWarmup && w && prevBest > 0 && w > prevBest) {
         const diff = Math.round((w - prevBest) * 10) / 10;
-        setLivePRs((prev) => ({ ...prev, [`${exerciseName}#${setIndex}`]: `+${diff} kg` }));
+        setLivePRs((prev) => ({ ...prev, [`${exerciseName}#${setIndex}`]: `+${diff.toLocaleString("es-ES")} kg` }));
         void hapticImpact("heavy");
         void hapticNotify("success");
         setRecordMoment({ exercise: exerciseName, diff: `+${diff.toLocaleString("es-ES")} kg`, key: Date.now() });
@@ -1575,6 +1623,9 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
             const allDone = doneSets === sets.length && sets.length > 0;
             const prevSets = previousLogs[ex.name];
             const restSec = parseRestSeconds(ex.rest);
+            const chosenRest = exerciseRest[ex.name] ?? null;
+            const effectiveRest = chosenRest ?? getWorkoutRestPreference(userId) ?? restSec ?? 60;
+            const grid = advanced ? SET_GRID_ADVANCED : SET_GRID;
             const metadata = exerciseMetadata.byId[ex.exercise_id] || exerciseMetadata.byName[ex.name];
             const exerciseVideo = ex.video_url || metadata?.video_url;
             const exerciseCategory = ex.muscle_group || metadata?.muscle_group;
@@ -1658,7 +1709,36 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                     </div>
                     {swaps[ex.name] && <div className="truncate type-footnote text-muted-foreground">En lugar de {ex.name}</div>}
                     <div className={`mt-0.5 tabular-nums text-muted-foreground ${focused ? "type-subhead" : "type-footnote"}`}>
-                      {ex.series} series · {ex.reps} reps · {ex.rest}
+                      {ex.series} series · {ex.reps} reps · {!started ? ex.rest : (
+                        // Descanso de este ejercicio (como el temporizador por ejercicio de Hevy).
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <span
+                              role="button"
+                              tabIndex={0}
+                              onClick={(e) => e.stopPropagation()}
+                              aria-label={`Descanso de este ejercicio: ${formatRestLabel(effectiveRest)}`}
+                              className={`inline-flex min-h-7 items-center gap-1 rounded-full bg-secondary px-2 align-middle type-caption1 transition-opacity active:opacity-60 ${chosenRest !== null ? "text-primary" : ""}`}
+                            >
+                              <Clock className="h-3 w-3" aria-hidden="true" />Descanso {formatRestLabel(effectiveRest)}
+                            </span>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start" onClick={(e) => e.stopPropagation()}>
+                            <DropdownMenuLabel>Descanso de este ejercicio</DropdownMenuLabel>
+                            {REST_PRESETS.map((seconds) => (
+                              <DropdownMenuCheckboxItem key={seconds} checked={chosenRest === seconds} onCheckedChange={() => chooseExerciseRest(ex.name, seconds)}>
+                                {formatRestLabel(seconds)}
+                              </DropdownMenuCheckboxItem>
+                            ))}
+                            {chosenRest !== null && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onSelect={() => chooseExerciseRest(ex.name, null)}>Volver al de siempre</DropdownMenuItem>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                     </div>
                   </div>
                   {/* Antes de empezar, la lista solo informa: cambiar y ficha viven dentro de la sesión. */}
@@ -1763,7 +1843,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                     >
                       <div className="px-2 pb-3 pt-2">
                         {/* Column headers */}
-                        <div className={`${SET_GRID} pb-1.5 pl-3 pr-2 type-caption1 text-muted-foreground`}>
+                        <div className={`${grid} pb-1.5 pl-3 pr-2 type-caption1 text-muted-foreground`}>
                           <span className="whitespace-nowrap">Serie</span>
                           <span className="text-center">Previa</span>
                           <span className="truncate text-center">
@@ -1772,6 +1852,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                           <span className="truncate text-center">
                             {trackingConfig.valueLabel}
                           </span>
+                          {advanced && <span className="text-center">RPE</span>}
                           <span className="flex items-center justify-center">
                             <Check className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden="true" />
                           </span>
@@ -1788,6 +1869,9 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                           const dropRepsMissing = drops.some((drop) => !Number.isInteger(drop.reps) || drop.reps <= 0);
                           const inputError = (repsMissing ? null : mainError) ?? (dropRepsMissing ? null : dropsError);
                           const isWarmup = isWorkoutSetWarmup(set);
+                          const isFailure = isWorkoutSetFailure(set);
+                          const setRpe = getWorkoutSetRpe(set);
+                          const previousSet = prevSets?.[si];
                           const livePR = livePRs[`${ex.name}#${si}`];
                           // Serie hecha: la fila se atenúa y el círculo se rellena con el tinte.
                           // La de calentamiento va atenuada y nunca con el color de serie hecha.
@@ -1800,17 +1884,26 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                               ? "border-destructive text-destructive"
                               : "border-muted-foreground/40 text-muted-foreground/40";
                           return (
-                          <div key={si} aria-current={si === firstPendingIndex ? "step" : undefined} className={`pl-3 transition-colors duration-300 ${si === firstPendingIndex ? "rounded-chip ring-1 ring-inset ring-primary/40" : set.done && !isWarmup ? "rounded-chip bg-foreground/[0.04]" : ""}`}>
+                          <SwipeToDelete key={si} enabled={sets.length > 1} onDelete={() => removeSet(ex.name, si)} label={`Quitar la serie ${si + 1} de ${ex.name}`}>
+                          <div aria-current={si === firstPendingIndex ? "step" : undefined} className={`pl-3 transition-colors duration-300 ${si === firstPendingIndex ? "rounded-chip ring-1 ring-inset ring-primary/40" : set.done && !isWarmup ? "rounded-chip bg-foreground/[0.04]" : ""}`}>
                             <div className={`py-2 pr-2 ${si > 0 ? "sep-t" : ""}`}>
                             {/* Segmento principal de la serie */}
-                            <div className={SET_GRID}>
-                              {/* Set number */}
-                              <span className={`text-center type-headline tabular-nums ${si === firstPendingIndex ? "text-primary" : "text-muted-foreground"} ${dim}`}>
+                            <div className={grid}>
+                              {/* Set number: en rojo con un punto si la serie fue al fallo (como la app) */}
+                              <span className={`relative text-center type-headline tabular-nums ${isFailure && !isWarmup ? "text-destructive" : si === firstPendingIndex ? "text-primary" : "text-muted-foreground"} ${dim}`}>
                                 {isWarmup ? <Flame className="mx-auto h-4 w-4" aria-hidden="true" /> : si + 1}
+                                {isFailure && !isWarmup && <span aria-hidden="true" className="absolute -bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-destructive" />}
                               </span>
-                              <span className={`truncate text-center type-caption1 tabular-nums text-muted-foreground ${dim}`}>
-                                {prevSets?.[si]?.done ? (trackingConfig.fixedBodyweight ? `${prevSets[si].reps}${trackingConfig.valueSuffix ?? ""}` : `${prevSets[si].weight || (trackingConfig.kind === "weighted_bodyweight" ? "PC" : "—")}×${prevSets[si].reps}${trackingConfig.valueSuffix ?? ""}`) : "—"}
-                              </span>
+                              {/* Tocar «Previa» copia sus kg y reps en la serie (como Hevy) */}
+                              <button
+                                type="button"
+                                onClick={() => copyPrevious(ex.name, si)}
+                                disabled={!previousSet?.done || set.done}
+                                aria-label={previousSet?.done ? `Copiar la previa: ${previousSet.weight || "sin peso"} kilos por ${previousSet.reps}` : "Previa: sin datos"}
+                                className={`h-11 min-w-0 truncate text-center type-caption1 tabular-nums text-muted-foreground transition-opacity active:opacity-60 disabled:cursor-default disabled:active:opacity-100 ${dim}`}
+                              >
+                                {previousSet?.done ? (trackingConfig.fixedBodyweight ? `${previousSet.reps}${trackingConfig.valueSuffix ?? ""}` : `${previousSet.weight || (trackingConfig.kind === "weighted_bodyweight" ? "PC" : "—")}×${previousSet.reps}${trackingConfig.valueSuffix ?? ""}`) : "—"}
+                              </button>
 
                               {/* Weight input */}
                               <div className={`min-w-0 ${dim}`}>
@@ -1854,6 +1947,34 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                                 />
                               </div>
 
+                              {advanced && (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <button
+                                      type="button"
+                                      aria-label={`RPE de la serie ${si + 1} de ${ex.name}: ${setRpe !== null ? `${setRpe} de 10` : "sin definir"}`}
+                                      className="flex h-11 w-11 items-center justify-center justify-self-center rounded-full transition-opacity duration-150 active:opacity-60 [touch-action:manipulation]"
+                                    >
+                                      <span className={`flex h-8 w-10 items-center justify-center rounded-full font-rounded text-[12px] font-semibold tabular-nums ${setRpe === null ? "bg-secondary text-muted-foreground/60" : "bg-primary/15 text-primary"}`}>
+                                        {setRpe ?? "—"}
+                                      </span>
+                                    </button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    {SET_RPE_VALUES.map((value) => (
+                                      <DropdownMenuCheckboxItem key={value} checked={setRpe === value} onCheckedChange={() => chooseSetRpe(ex.name, si, value)}>
+                                        RPE {value}
+                                      </DropdownMenuCheckboxItem>
+                                    ))}
+                                    {setRpe !== null && (
+                                      <>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem className="text-destructive" onSelect={() => chooseSetRpe(ex.name, si, null)}>Quitar RPE</DropdownMenuItem>
+                                      </>
+                                    )}
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              )}
                               {/* Done toggle: marca la serie entera (bajadas incluidas) y arranca el descanso */}
                               <Button
                                 type="button"
@@ -1889,7 +2010,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                               {drops.map((drop, di) => {
                                 const dropError = !set.done ? getWorkoutSetDropInputError(drop) : null;
                                 return (
-                                <div key={di} className={`mt-3 ${SET_GRID}`}>
+                                <div key={di} className={`mt-3 ${grid}`}>
                                   <span className={`flex items-center justify-center text-muted-foreground ${dim}`}>
                                     <TrendingDown className="h-4 w-4" aria-hidden="true" />
                                   </span>
@@ -1922,6 +2043,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                                     aria-label={`Repeticiones de la bajada ${di + 1} de la serie ${si + 1} de ${ex.name}`}
                                     className={`${NUMBER_FIELD} ${dim}`}
                                   />
+                                  {advanced && <span aria-hidden="true" />}
                                   <button
                                     type="button"
                                     onClick={() => removeDrop(ex.name, si, di)}
@@ -1942,10 +2064,11 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                                 variant="secondary"
                                 size="sm"
                                 onClick={() => addDrop(ex.name, si)}
+                                aria-label={`Añadir una bajada a la serie ${si + 1} de ${ex.name}`}
                                 className={`flex-1 px-2 ${CAPSULE_HIT}`}
                               >
                                 <Plus aria-hidden="true" />
-                                Añadir bajada
+                                Bajada
                               </Button>
                               {/* Calentamiento: se guarda y se marca con ✓, pero no cuenta en tus métricas */}
                               <Button
@@ -1958,7 +2081,20 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                                 className={`flex-1 px-2 ${CAPSULE_HIT}`}
                               >
                                 <Flame fill={isWarmup ? "currentColor" : "none"} aria-hidden="true" />
-                                Calentamiento
+                                Calent.
+                              </Button>
+                              {/* Fallo: la serie se llevó hasta no poder más (como la app y Hevy) */}
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                aria-pressed={isFailure}
+                                aria-label={`${isFailure ? "Quitar" : "Marcar"} la serie ${si + 1} de ${ex.name} como llevada al fallo`}
+                                onClick={() => toggleFailure(ex.name, si)}
+                                className={`flex-1 px-2 ${CAPSULE_HIT} ${isFailure ? "bg-destructive/15 text-destructive hover:bg-destructive/20" : ""}`}
+                              >
+                                <Zap fill={isFailure ? "currentColor" : "none"} aria-hidden="true" />
+                                Fallo
                               </Button>
                               </div>
                               )}
@@ -1976,6 +2112,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                             {inputError && <p className="mt-2 type-footnote text-destructive">{inputError}</p>}
                             </div>
                           </div>
+                          </SwipeToDelete>
                           );
                         })}
                         </div>
