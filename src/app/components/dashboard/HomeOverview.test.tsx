@@ -57,8 +57,7 @@ describe("dashboard home overview", () => {
     expect(mocks.hapticTap).toHaveBeenCalledTimes(2);
   });
 
-  it("shows the routine list on mobile and starts its first session", () => {
-    const onStartWorkout = vi.fn();
+  it("matches the mobile app home order without adding a separate routines section", () => {
     render(
       <HomeOverview
         dayPlans={[{
@@ -72,15 +71,21 @@ describe("dashboard home overview", () => {
           ],
         }]}
         onNavigate={vi.fn()}
-        onStartWorkout={onStartWorkout}
       />,
     );
 
-    const routines = screen.getByRole("region", { name: "Tus rutinas" });
-    expect(within(routines).getByText("Upper A · Pecho, espalda y hombros")).toBeVisible();
-    expect(within(routines).getByText("Press banca plano")).toBeVisible();
-    fireEvent.click(within(routines).getByRole("button", { name: "Empezar" }));
-    expect(onStartWorkout).toHaveBeenCalledWith("Lunes");
+    expect(screen.queryByRole("region", { name: "Tus rutinas" })).not.toBeInTheDocument();
+    const mainAction = screen.getByRole("button", { name: "Ver la sesión Upper A · Pecho, espalda y hombros" });
+    const homeRows = screen.getByRole("button", { name: /Tu progreso/ }).closest("[data-home-rows]");
+    const weekPlan = screen.getByRole("region", { name: /Esta semana:/ });
+    const nutrition = screen.getByRole("button", { name: /Nutrición/ });
+    expect(mainAction).toBeVisible();
+    expect(homeRows).toBeVisible();
+    expect(weekPlan).toBeVisible();
+    expect(nutrition).toBeVisible();
+    expect(mainAction.compareDocumentPosition(homeRows!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(homeRows!.compareDocumentPosition(weekPlan) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(weekPlan.compareDocumentPosition(nutrition) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("proposes the next pending session whatever the weekday, with one mark per session", () => {
