@@ -1,6 +1,6 @@
 import { readMealsDone as readMealsDoneFor } from "@/shared/lib/mealsDone";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { Flame as Apple, BarChart3, Check, ChevronRight, Clock, Dumbbell, Layers, LockKeyhole } from "lucide-react";
+import { Flame as Apple, Check, ChevronRight, Clock, Dumbbell, LockKeyhole } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { EmptyState } from "@/shared/components/ui/empty-state";
 import { supabase } from "@/shared/integrations/supabase/client";
@@ -37,6 +37,8 @@ interface Props {
   userId?: string;
   /** Navegación del panel. «training» sin día abre la siguiente sesión. */
   onNavigate: (section: UserSection, day?: string) => void;
+  /** Abre la rutina indicada para verla/editar sus ejercicios (toque en «Tus rutinas»). */
+  onEditRoutine?: (day: string) => void;
   /** Empieza la sesión indicada (la clave `day` de la siguiente pendiente). */
   onStartWorkout?: (day: string) => void;
   onResumeWorkout?: () => void;
@@ -123,6 +125,7 @@ const HomeOverview = ({
   meals = [],
   userId,
   onNavigate,
+  onEditRoutine,
   onStartWorkout,
   onResumeWorkout,
   profileName,
@@ -349,6 +352,7 @@ const HomeOverview = ({
               </span>
               <span className="mt-1.5 line-clamp-2 text-[22px] font-bold leading-7 tracking-[-0.02em]">{sessionName}</span>
               {sessionFocus && <span className="mt-0.5 line-clamp-2 type-subhead text-muted-foreground">{sessionFocus}</span>}
+
               {sessionDetail.length > 0 && (
                 <span className="mt-auto flex items-center gap-1.5 pt-3.5 type-footnote tabular-nums text-muted-foreground">
                   <Dumbbell aria-hidden="true" className="h-3.5 w-3.5 shrink-0" strokeWidth={2} />
@@ -394,8 +398,19 @@ const HomeOverview = ({
               <p className="mt-1 pr-24 type-subhead text-muted-foreground">
                 {weekComplete ? `${nextSession} El lunes empieza otra vuelta.` : "Edita tu rutina para añadir tus sesiones."}
               </p>
-              <Button type="button" variant="secondary" size="lg" className="mt-5 w-full" onClick={() => { void hapticTap(); onNavigate("training"); }}>
-                {weekComplete ? "Entrenar igualmente" : "Ir a Entrenar"}
+              <Button
+                type="button"
+                variant="secondary"
+                size="lg"
+                className="mt-5 w-full"
+                onClick={() => {
+                  void hapticTap();
+                  if (sessions[0] && onStartWorkout) { onStartWorkout(sessions[0].day); return; }
+                  if (onEditRoutine) { onEditRoutine(sessions[0]?.day ?? "Lunes"); return; }
+                  onNavigate("training");
+                }}
+              >
+                {weekComplete ? "Entrenar igualmente" : "Editar mi rutina"}
               </Button>
             </div>
           </div>
@@ -415,35 +430,18 @@ const HomeOverview = ({
         )}
       </section>
 
-      {/* Rediseño (ChatGPT): «Tu progreso» y «Tu plan» en tarjetas con icono dorado y chevron */}
-      <ul data-home-rows className="mt-3 space-y-3 lg:col-start-2 lg:row-start-2 lg:mt-8">
-        <li>
-          <HomeRow
-            icon={<BarChart3 className="h-[22px] w-[22px]" strokeWidth={1.75} />}
-            title="Tu progreso"
-            detail={lastPr
-                ? `${lastPr.exercise_name} · ${lastPr.weight.toLocaleString("es-ES")} kg × ${lastPr.reps}`
-                : "Sigue tu evolución semana a semana."}
-            onClick={() => onNavigate("progress")}
-          />
-        </li>
-        <li>
-          <HomeRow
-            icon={<Layers className="h-[22px] w-[22px]" strokeWidth={1.75} />}
-            title="Tu plan"
-            detail="Revisa y ajusta tu plan de entrenamiento."
-            onClick={() => onNavigate("training")}
-          />
-        </li>
-      </ul>
-
       {/* Semana compacta: una marca por sesión de la rutina, sin días de la semana */}
       <section className="mt-3 rounded-[22px] border border-border bg-card p-4 lg:col-start-2 lg:row-start-3 lg:mt-4 lg:p-5" aria-label={`Esta semana: ${sessionCount} de ${sessions.length} sesiones`}>
         <div className="flex items-center justify-between">
           <p className="type-headline text-foreground">Esta semana</p>
           <button
             type="button"
-            onClick={() => { void hapticTap(); onNavigate("training"); }}
+            onClick={() => {
+              void hapticTap();
+              const next = sessions.find((p) => !completedDays.includes(p.day)) ?? sessions[0];
+              if (onEditRoutine && next) { onEditRoutine(next.day); return; }
+              onNavigate("training");
+            }}
             className="-mr-2 inline-flex min-h-11 items-center gap-1 px-2 type-subhead font-semibold text-primary transition-opacity active:opacity-60"
           >
             Ver detalle
@@ -473,6 +471,56 @@ const HomeOverview = ({
           </div>
         )}
       </section>
+
+      {/* Tus rutinas: cada una con sus ejercicios y un botón para empezar */}
+      {dayPlans.length > 0 && (
+        <section className="mt-3 lg:col-start-1 lg:row-start-3 lg:mt-4">
+          <p className="mb-2 type-headline text-foreground">Tus rutinas</p>
+          <div className="space-y-3">
+            {dayPlans.map((plan) => (
+              <div key={plan.day} className="rounded-[22px] border border-border bg-card p-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    void hapticTap();
+                    if (onEditRoutine) onEditRoutine(plan.day);
+                  }}
+                  className="flex w-full items-start gap-3 text-left transition-opacity active:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label={`Ver y editar ${formatTrainingTitle(plan.routine_name, plan.muscle_focus) || "Entrenamiento"}`}
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block type-subhead font-semibold text-foreground">{formatTrainingTitle(plan.routine_name, plan.muscle_focus) || "Entrenamiento"}</span>
+                    {plan.muscle_focus && <span className="mt-0.5 block type-footnote text-muted-foreground">{plan.muscle_focus}</span>}
+                    {(plan.exercises ?? []).length > 0 && (
+                      <span className="mt-3 flex flex-col gap-1">
+                        {(plan.exercises ?? []).slice(0, 4).map((ex, i) => (
+                          <span key={`${i}-${ex.name}`} className="flex items-center gap-1.5 type-footnote text-muted-foreground">
+                            <span aria-hidden="true" className="h-1 w-1 shrink-0 rounded-full bg-primary/60" />
+                            <span className="min-w-0 truncate">{ex.name}</span>
+                            <span className="ml-auto shrink-0 tabular-nums">{ex.series}×{ex.reps}</span>
+                          </span>
+                        ))}
+                        {(plan.exercises ?? []).length > 4 && (
+                          <span className="type-footnote text-muted-foreground">+ {(plan.exercises ?? []).length - 4} más</span>
+                        )}
+                      </span>
+                    )}
+                  </span>
+                  <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={2.5} aria-hidden="true" />
+                </button>
+                <Button
+                  type="button"
+                  size="lg"
+                  className="mt-4 w-full"
+                  onClick={() => { void hapticTap(); if (onStartWorkout) onStartWorkout(plan.day); else onNavigate("training", plan.day); }}
+                >
+                  Empezar
+                </Button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Nutrición en su tarjeta: kcal del día o, sin plan, la insignia Plus */}
       <div className="mt-3 lg:col-start-1 lg:row-start-3 lg:mt-4">

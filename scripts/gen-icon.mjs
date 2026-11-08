@@ -30,8 +30,8 @@ const glyph = (cx, cy, width) => {
 };
 
 /** Cuadrado a sangre (iPhone, web, PWA): el sistema pone la máscara. */
-const square = (size, ratio = 0.52, background = BLACK) => `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}">
-  ${background ? `<rect width="${size}" height="${size}" fill="${background}"/>` : ""}
+const square = (size, ratio = 0.58, background = BLACK) => `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}">
+  <rect width="${size}" height="${size}" fill="${BLACK}"/>
   ${glyph(size / 2, size * 0.495, size * ratio)}
 </svg>`;
 
@@ -39,7 +39,7 @@ const square = (size, ratio = 0.52, background = BLACK) => `<svg xmlns="http://w
 const mac = `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024">
   <defs><filter id="s" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#000" flood-opacity="0.35"/></filter></defs>
   <rect x="100" y="100" width="824" height="824" rx="185.4" fill="${BLACK}" filter="url(#s)"/>
-  ${glyph(512, 508, 824 * 0.52)}
+  ${glyph(512, 508, 824 * 0.58)}
 </svg>`;
 
 // CHROMIUM_PATH: otro Chromium si el de Playwright no está instalado.

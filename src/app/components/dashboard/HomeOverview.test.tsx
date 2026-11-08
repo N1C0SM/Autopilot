@@ -116,7 +116,7 @@ describe("dashboard home overview", () => {
     expect(images[0]).toHaveAttribute("aria-hidden", "true");
   });
 
-  it("shows the weekly progress and nutrition cards while keeping paid nutrition reachable", () => {
+  it("keeps paid nutrition reachable below the session action", () => {
     const onNavigate = vi.fn();
     render(
       <HomeOverview
@@ -132,35 +132,28 @@ describe("dashboard home overview", () => {
       />,
     );
 
-        expect(screen.getByText("Plan de nutrición")).toBeVisible();
+    expect(screen.getByText("Plan de nutrición")).toBeVisible();
     const nutritionCard = screen.getByRole("button", { name: /Nutrición/ });
-    const progressCard = screen.getByRole("button", { name: /Tu progreso/ });
     expect(nutritionCard).toBeVisible();
-    expect(progressCard).toBeVisible();
-    // «Tu progreso» y «Tu plan» van juntos, después de la acción principal.
-    expect(progressCard.closest("[data-home-rows]")).toBe(screen.getByRole("button", { name: /Tu plan/ }).closest("[data-home-rows]"));
     const startButton = screen.getByRole("button", { name: /Empezar Entrenamiento de fuerza/ });
     expect(startButton).toBeVisible();
     const allButtons = screen.getAllByRole("button");
     expect(allButtons.indexOf(startButton)).toBeLessThan(allButtons.indexOf(nutritionCard));
-    expect(allButtons.indexOf(startButton)).toBeLessThan(allButtons.indexOf(progressCard));
     fireEvent.click(nutritionCard);
     expect(onNavigate).toHaveBeenLastCalledWith("nutrition");
-    fireEvent.click(progressCard);
-    expect(onNavigate).toHaveBeenLastCalledWith("progress");
-    expect(mocks.hapticTap).toHaveBeenCalledTimes(2);
+    expect(mocks.hapticTap).toHaveBeenCalledTimes(1);
   });
 
-  it("rests only when the whole week is done and still opens training", () => {
+  it("rests only when the whole week is done and still starts a routine", () => {
     const onNavigate = vi.fn();
     const onStartWorkout = vi.fn();
     render(<HomeOverview dayPlans={[{ day: "Lunes", type: "gimnasio", exercises: [] }]} completedDays={["Lunes"]} onNavigate={onNavigate} onStartWorkout={onStartWorkout} />);
     expect(screen.getByText("Semana completa")).toBeVisible();
     expect(screen.getByText("Has hecho tu sesión de esta semana. El lunes empieza otra vuelta.")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Entrenar igualmente" }));
-    // Se abre Entrenar, sin sesión concreta.
-    expect(onNavigate).toHaveBeenCalledWith("training");
-    expect(onStartWorkout).not.toHaveBeenCalled();
+    // Sin la pestaña Entrenar: arranca la primera rutina directamente.
+    expect(onStartWorkout).toHaveBeenCalledWith("Lunes");
+    expect(onNavigate).not.toHaveBeenCalled();
   });
 
   it("sends the completed card to training without a day (session summary)", () => {

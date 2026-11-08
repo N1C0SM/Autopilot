@@ -154,12 +154,12 @@ const Dashboard = () => {
   const [searchParams] = useSearchParams();
   const [section, setSectionState] = useState<MobileTab>(() => {
     const fromParam = searchParams.get("section");
-    if (fromParam && ["home", "training", "nutrition", "chat", "progress", "settings", "resources"].includes(fromParam)) {
+    if (fromParam && ["home", "nutrition", "chat", "progress", "settings", "resources"].includes(fromParam)) {
       return fromParam as MobileTab;
     }
     try {
       const saved = sessionStorage.getItem("autopilot_section");
-      if (saved && ["home", "training", "nutrition", "chat", "progress", "settings", "resources"].includes(saved)) return saved as MobileTab;
+      if (saved && ["home", "nutrition", "chat", "progress", "settings", "resources"].includes(saved)) return saved as MobileTab;
     } catch { /* storage no disponible */ }
     return "home";
   });
@@ -189,6 +189,8 @@ const Dashboard = () => {
   /** Día pulsado en la tira de «Hoy»: abre la rutina semanal en ese día. */
   const [planFocusDay, setPlanFocusDay] = useState<string | undefined>();
   const [editorOpen, setEditorOpen] = useState(false);
+  /** Rutina que se abre directamente al entrar en el editor (toque en «Tus rutinas»). */
+  const [editorDay, setEditorDay] = useState<string | undefined>();
   const [freeOpen, setFreeOpen] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [freePlans, setFreePlans] = useState<DayPlan[] | null>(null);
@@ -201,7 +203,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     const sec = searchParams.get("section");
-    if (sec && ["home", "training", "nutrition", "chat", "progress", "settings", "resources"].includes(sec)) {
+    if (sec && ["home", "nutrition", "chat", "progress", "settings", "resources"].includes(sec)) {
       setSectionState(sec as MobileTab);
     }
     const vw = searchParams.get("view");
@@ -694,6 +696,10 @@ const Dashboard = () => {
               setAutoStartWorkout(true);
               setSection("training");
             }}
+            onEditRoutine={(day) => {
+              setEditorDay(day);
+              setEditorOpen(true);
+            }}
             onResumeWorkout={() => {
               if (!user) return;
               const draft = readActiveWorkout(user.id);
@@ -763,7 +769,7 @@ const Dashboard = () => {
                     <button
                       type="button"
                       aria-label="Editar rutina"
-                      onClick={() => { void hapticTap(); setEditorOpen(true); }}
+                      onClick={() => { void hapticTap(); setEditorDay(undefined); setEditorOpen(true); }}
                       className="flex h-11 items-center rounded-full px-3 type-subhead font-semibold text-primary transition-opacity hover:bg-foreground/5 active:opacity-50"
                     >
                       Editar
@@ -828,6 +834,7 @@ const Dashboard = () => {
             onOpenChange={setEditorOpen}
             userId={user.id}
             dayPlans={dayPlans}
+            initialDay={editorDay}
             onSaved={(p) => { setDayPlans(p); setTrainingView("plan"); }}
           />
           <ExerciseLibrarySheet open={libraryOpen} onOpenChange={setLibraryOpen} userId={user.id} />

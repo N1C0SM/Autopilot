@@ -169,7 +169,7 @@ struct ProgressScreen: View {
                 // Cuenta recién creada: misma portada que Físico y Récords, con foto real y el camino a Entrenar.
                 progressHero(photo: Self.brandPullupPhoto, eyebrow: "TU FUERZA", title: "Tu progreso empieza con tu primer entreno",
                              message: "Marca tus series al entrenar y aquí verás tus kilos, tu racha y tus récords.",
-                             perks: Self.strengthPerks, button: "Empezar a entrenar") { onNavigate(.train) }
+                             perks: Self.strengthPerks, button: "Empezar a entrenar") { onNavigate(.home) }
             }
         } else if let error = model.detailsError {
             ProgressRetryCard(title: "No hemos podido cargar «Por ejercicio»", message: error) {
@@ -355,7 +355,7 @@ struct ProgressScreen: View {
     private var recordsEmpty: some View {
         progressHero(photo: Self.brandDumbbellsPhoto, eyebrow: "TUS RÉCORDS", title: "Tu primer récord está a un entreno",
                      message: "Cada vez que registras una serie con peso, guardamos tu mejor marca de ese ejercicio.",
-                     perks: Self.recordPerks, button: "Ir a entrenar") { onNavigate(.train) }
+                     perks: Self.recordPerks, button: "Ir a entrenar") { onNavigate(.home) }
     }
 
     /// Portada de una sección vacía de Progreso: foto real, titular, lo que tendrá aquí (todo real) y una acción.

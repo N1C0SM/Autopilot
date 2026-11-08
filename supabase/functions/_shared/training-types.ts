@@ -30,4 +30,5 @@ export interface DayPlan {
   custom?: boolean;
   /** Emoji que el usuario eligió para la sesión (si no hay, se ve su foto). */
   session_icon?: string;
+  cover_url?: string;
 }

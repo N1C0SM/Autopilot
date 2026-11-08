@@ -10,7 +10,7 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/shared/components/ui/sidebar";
-import { Home, Dumbbell, Flame as Apple, MessageCircle, Settings, LogOut, TrendingUp as Sparkles, Lock, ArrowLeftRight } from "lucide-react";
+import { Home, Flame as Apple, MessageCircle, Settings, LogOut, TrendingUp as Sparkles, Lock, ArrowLeftRight } from "lucide-react";
 import { openAccountPicker } from "@/shared/lib/accounts";
 import { supportsMultipleAccounts } from "@/shared/lib/platform";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/tooltip";
@@ -41,7 +41,6 @@ interface Props {
 
 const NAV_ITEMS: { title: string; section: UserSection; icon: typeof Home }[] = [
   { title: "Inicio",        section: "home",       icon: Home },
-  { title: "Entrenamiento", section: "training",   icon: Dumbbell },
   { title: "Nutrición",     section: "nutrition",  icon: Apple },
   { title: "Mi progreso",   section: "progress",   icon: Sparkles },
   { title: "Chat",          section: "chat",       icon: MessageCircle },

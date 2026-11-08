@@ -49,6 +49,7 @@
 		C17254753A884901E29E432F /* HealthKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A57E68C8EAB6DFD893FAFDF5 /* HealthKitManager.swift */; };
 		C33EEF6918E30230C1551E46 /* AdminTrainers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AB2F8559DD0B658B4DA48C0 /* AdminTrainers.swift */; };
 		C38BFD538EEEA7E82ADCB392 /* Training.swift in Sources */ = {isa = PBXBuildFile; fileRef = C60F84451BD2C06501A2E80E /* Training.swift */; };
+		CDC65C8AAD8F8F7358F3D540 /* RoutineDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2B3C99B8B09F4962E9E5ADC /* RoutineDetailSheet.swift */; };
 		D6DA59DC5917CE17B6D42958 /* InterVariable.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 523B49FFF874D33F1F331FA9 /* InterVariable.ttf */; };
 		DDEB07BF5162DA692EE1F4F6 /* MuscleMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 736261749DDF4F29B5E99A13 /* MuscleMapView.swift */; };
 		DE5E50505FB213A9666E7902 /* AdminAcquisition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BF4A6FB7014FD1B1927D2F6 /* AdminAcquisition.swift */; };
@@ -58,6 +59,7 @@
 		EA850B866D90DA72011F3A9A /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 172F9A007BDD4D9E6CB124BB /* AccountView.swift */; };
 		EB35510AE5F8A100568AEED6 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80424D4030A49FC7F8638EEF /* RootView.swift */; };
 		EE5E7A661E85D7347DAA3162 /* AdminBlog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18F52B91A212936EB6B6D716 /* AdminBlog.swift */; };
+		F232F7024B4438B6628F6075 /* PlateMath.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7AEC08CBD57F8E77D6FF0DA /* PlateMath.swift */; };
 		FCFFD3603C60F4F778EE1911 /* AdminCatalogImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39B292B7E4F06B3F6E1B0BBA /* AdminCatalogImport.swift */; };
 		FE5FFFEBFADDA7C63208E610 /* AutopilotApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74B2604636425A7A76330A3C /* AutopilotApp.swift */; };
 /* End PBXBuildFile section */
@@ -99,7 +101,9 @@
 		92E329249B146C8FEF5E45AF /* TrainView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainView.swift; sourceTree = "<group>"; };
 		94FDE3BFE671B103E0039E96 /* NutritionSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NutritionSetupView.swift; sourceTree = "<group>"; };
 		9FD92FC3A4FA899A9AF2A41F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A2B3C99B8B09F4962E9E5ADC /* RoutineDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutineDetailSheet.swift; sourceTree = "<group>"; };
 		A57E68C8EAB6DFD893FAFDF5 /* HealthKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitManager.swift; sourceTree = "<group>"; };
+		A7AEC08CBD57F8E77D6FF0DA /* PlateMath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlateMath.swift; sourceTree = "<group>"; };
 		A89DEAE73DCF19644F3BDEC6 /* ScanShareCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanShareCardView.swift; sourceTree = "<group>"; };
 		ABDC5FBCB982DC18600B15B1 /* AdminLanding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminLanding.swift; sourceTree = "<group>"; };
 		AEFB057618D570CFBDF91E63 /* AdminUserDetail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminUserDetail.swift; sourceTree = "<group>"; };
@@ -201,6 +205,7 @@
 			isa = PBXGroup;
 			children = (
 				EBDF230DE9FE12D555FC3505 /* HomeView.swift */,
+				A2B3C99B8B09F4962E9E5ADC /* RoutineDetailSheet.swift */,
 			);
 			path = Home;
 			sourceTree = "<group>";
@@ -272,6 +277,7 @@
 				5D06C6CE81D75452F06C8802 /* Backend.swift */,
 				2ABEA2EE0F4882F9B05D3C21 /* Haptics.swift */,
 				A57E68C8EAB6DFD893FAFDF5 /* HealthKitManager.swift */,
+				A7AEC08CBD57F8E77D6FF0DA /* PlateMath.swift */,
 				F4D7A51FF897F39CC070F086 /* Progression.swift */,
 				D9E053FD3BBE7DBA136AACF9 /* Session.swift */,
 				87BC260CE2642615E55007E6 /* Snapshots.swift */,
@@ -441,10 +447,12 @@
 				6AF473D054AE230F2A3D39E0 /* OnboardingView.swift in Sources */,
 				4A4158E5A447BF480BE6C342 /* OtherViews.swift in Sources */,
 				30C1A16D10C334C0D2EFB9D1 /* PlanEditorView.swift in Sources */,
+				F232F7024B4438B6628F6075 /* PlateMath.swift in Sources */,
 				642DC69615ED6F9C9C49CE51 /* ProgressScreen.swift in Sources */,
 				9A0975F2340BFE3928FD9F8A /* Progression.swift in Sources */,
 				B303B7824C6D835D37EB539F /* RoadmapView.swift in Sources */,
 				EB35510AE5F8A100568AEED6 /* RootView.swift in Sources */,
+				CDC65C8AAD8F8F7358F3D540 /* RoutineDetailSheet.swift in Sources */,
 				445258069304B4AF9A7AB111 /* ScanShareCardView.swift in Sources */,
 				87E60DB75F6066D44856E541 /* ScanView.swift in Sources */,
 				3CD2ECE76B612C811CF540BA /* Session.swift in Sources */,

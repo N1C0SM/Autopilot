@@ -122,6 +122,7 @@ extension Notification.Name {
     static let goToSection = Notification.Name("autopilot.goToSection")
     static let refreshSection = Notification.Name("autopilot.refresh")
     static let startTodayWorkout = Notification.Name("autopilot.startToday")
+    static let startWorkoutDay = Notification.Name("autopilot.startDay")
     static let finishWorkout = Notification.Name("autopilot.finishWorkout")
     static let skipRest = Notification.Name("autopilot.skipRest")
     static let restPlus = Notification.Name("autopilot.restPlus")

@@ -57,7 +57,17 @@ struct DayPlan: Codable, Hashable, Identifiable {
     var custom: Bool?
     /// Emoji elegido para la sesión (si no hay, se ve su foto). `session_icon` en la web.
     var session_icon: String?
+    /// Portada generada con IA (session-cover) para esta sesión, opcional.
+    var cover_url: String? = nil
     var id: String { day }
+
+    init(day: String, type: String, sport: String? = nil, intensity: String? = nil, duration: String? = nil,
+         routine_name: String? = nil, muscle_focus: String? = nil, exercises: [GymExercise]? = nil,
+         custom: Bool? = nil, session_icon: String? = nil, cover_url: String? = nil) {
+        self.day = day; self.type = type; self.sport = sport; self.intensity = intensity; self.duration = duration
+        self.routine_name = routine_name; self.muscle_focus = muscle_focus; self.exercises = exercises
+        self.custom = custom; self.session_icon = session_icon; self.cover_url = cover_url
+    }
 
     var isGym: Bool { type == "gimnasio" }
     /// Igual que `formatTrainingTitle` de la web: «Full Body A · Pecho, espalda, piernas y core».

@@ -40,13 +40,13 @@ const webItems = (file: string, list: string, label: "title" | "label", key: "se
 describe("paridad web ↔ apps nativas", () => {
   it("web grande = Mac: mismo menú lateral, en el mismo orden", () => {
     const mac = swiftList("userSections").map((s) => titles[s]);
-    expect(mac).toHaveLength(5);
+    expect(mac).toHaveLength(4);
     expect(webItems("src/app/components/UserSidebar.tsx", "NAV_ITEMS", "title", "section")).toEqual(mac);
   });
 
   it("web pequeña = iPhone: mismas pestañas, en el mismo orden", () => {
     const iphone = swiftList("userTabs").map((s) => tabTitles[s]);
-    expect(iphone).toHaveLength(4);
+    expect(iphone).toHaveLength(3);
     expect(webItems("src/app/components/mobile/MobileTabBar.tsx", "TABS", "label", "key")).toEqual(iphone);
   });
 
@@ -294,11 +294,11 @@ describe("paridad web ↔ apps nativas", () => {
     // La semana de Hoy va en tarjeta en las dos.
     expect(homeWeb).toContain('rounded-[22px] border border-border bg-card p-4');
     expect(homeApp).toContain("return Card(padding: 16) {");
-    // Hoy de ChatGPT: «Hoy» grande, sesión con foto a la derecha, «Tu progreso», «Tu plan», «Ver detalle» y Nutrición en tarjetas.
-    for (const text of ['>Hoy<', "Siguiente sesión", "Tu progreso", "Tu plan", "Revisa y ajusta tu plan de entrenamiento.", "Ver detalle"]) {
+    // Hoy minimalista (Hevy): «Hoy» grande, sesión con foto a la derecha, «Tus rutinas» y «Ver detalle».
+    for (const text of ['>Hoy<', "Siguiente sesión", "Tus rutinas", "Ver detalle"]) {
       expect(homeWeb, text).toContain(text);
     }
-    for (const text of ['Text("Hoy")', "Siguiente sesión", "Tu progreso", "Tu plan", "Revisa y ajusta tu plan de entrenamiento.", "Ver detalle"]) {
+    for (const text of ['Text("Hoy")', "Siguiente sesión", "Tus rutinas", "Ver detalle"]) {
       expect(homeApp, text).toContain(text);
     }
     // Entrenar sin semana: cualquier sesión se hace cualquier día. Título «Entrenar», las sesiones
@@ -492,7 +492,7 @@ describe("paridad web ↔ apps nativas", () => {
     const root = read("native/Autopilot/Features/Shell/RootView.swift");
     expect(home).not.toContain("Task.sleep(for: .milliseconds(450))");
     expect(root).not.toContain("asyncAfter(deadline: .now() + 0.6)");
-    expect(root).toContain("TrainView.pendingStart = true");
+    expect(root).toContain("HomeView.pendingStartToday = true");
     // Primer fotograma: TodayCache cae al disco y se rehace tras terminar o editar (revisión local).
     expect(home).toContain("TrainingRepo.revision(userId: userId)");
     expect(home).toContain("HomeView.latestKey(userId)");
@@ -566,11 +566,14 @@ describe("paridad web ↔ apps nativas", () => {
     expect(app).not.toContain("sports: sports,");
   });
 
-  it("Color en el entreno: un solo dorado (serie actual y hecha) y «Finalizar» dorado en la barra inferior, en la web y en la app", () => {
+  it("Color en el entreno: un solo dorado (serie actual y hecha) y «Finalizar» arriba a la derecha, en la web y en la app", () => {
     const web = read("src/app/components/dashboard/WorkoutTracker.tsx");
     const app = read("native/Autopilot/Features/Train/WorkoutView.swift");
     expect(web).not.toContain("allSetsDone");
-    expect(app).toContain('barLabel("Finalizar", symbol: "checkmark", primary: true)');
+    // «Finalizar» vive en la barra superior, como en Hevy, no en el pie.
+    expect(app).toContain("private var finishButton: some View");
+    expect(app).toContain('Text("Finalizar")');
+    expect(web).toContain('aria-label="Finalizar entrenamiento"');
     // Serie y ejercicio hechos en verde, nunca en dorado.
     expect(web).toContain('"border-primary bg-primary text-primary-foreground"');
     expect(web).toContain('<span className="flex h-11 w-9 items-center justify-center text-primary">');

@@ -14,10 +14,10 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
 
     var id: String { rawValue }
 
-    /// Barra lateral de la web (UserSidebar): Inicio, Entrenamiento, Nutrición, Mi progreso, Ajustes.
-    static let userSections: [AppSection] = [.home, .train, .nutrition, .progress, .settings]
-    /// Pestañas del iPhone (MobileTabBar): Hoy, Entrenar, Nutrición, Progreso. Ajustes va en el avatar.
-    static let userTabs: [AppSection] = [.home, .train, .nutrition, .progress]
+    /// Barra lateral de la web (UserSidebar): Inicio, Nutrición, Mi progreso, Ajustes.
+    static let userSections: [AppSection] = [.home, .nutrition, .progress, .settings]
+    /// Pestañas del iPhone (MobileTabBar): Hoy, Nutrición, Progreso. Ajustes va en el avatar.
+    static let userTabs: [AppSection] = [.home, .nutrition, .progress]
     static let trainerSections: [AppSection] = [.trainerClients, .trainerProfile, .settings]
 
     static let adminGroups: [(label: String, items: [AppSection])] = [
@@ -103,9 +103,32 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
 struct RootView: View {
     @EnvironmentObject private var session: SessionModel
 
+    /// Solo QA: `-previewHome` muestra el Inicio con datos de muestra sin cuenta.
+    private var previewingHome: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.arguments.contains("-previewHome")
+        #else
+        false
+        #endif
+    }
+
+    /// Solo QA: `-previewWorkout` abre la sesión con datos de muestra sin cuenta, para
+    /// capturas del simulador. Siempre `false` en Release (la vista ni se compila).
+    private var previewingWorkout: Bool {
+        #if DEBUG
+        session.session == nil && ProcessInfo.processInfo.arguments.contains("-previewWorkout")
+        #else
+        false
+        #endif
+    }
+
     var body: some View {
         Group {
-            if !session.ready {
+            if previewingHome {
+                #if DEBUG
+                HomeView(onNavigate: { _ in })
+                #endif
+            } else if !session.ready {
                 // Arranque con la firma de marca: la misma «A» del splash, con el rayo latiendo.
                 BrandMark(size: 72, beat: true)
                     .frame(maxWidth: .infinity, maxHeight: .infinity).screenBackground()
@@ -247,10 +270,10 @@ struct MainShell: View {
         }
         .onChange(of: session.role) { _, _ in selection = nil; adminMenuOpen = false }
         .onReceive(NotificationCenter.default.publisher(for: .startTodayWorkout)) { _ in
-            if session.role == .user && selection != .train {
-                // Entrenar abre el entreno nada más aparecer (con su rutina en caché), sin esperas fijas.
-                TrainView.pendingStart = true
-                selection = .train
+            if session.role == .user {
+                // Inicio abre el entreno de hoy directamente (sin la pestaña Entrenar).
+                HomeView.pendingStartToday = true
+                selection = .home
             }
         }
     }

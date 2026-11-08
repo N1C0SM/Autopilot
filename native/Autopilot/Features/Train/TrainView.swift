@@ -100,6 +100,9 @@ struct TrainView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .refreshSection)) { _ in Task { await load() } }
         .onReceive(NotificationCenter.default.publisher(for: .startTodayWorkout)) { _ in Task { await openToday() } }
+        .onReceive(NotificationCenter.default.publisher(for: .startWorkoutDay)) { note in
+            if let day = note.object as? String { Task { await open(day) } }
+        }
         .sheet(isPresented: $editing) {
             PlanEditorView(original: model.days) { saved in model.days = saved }
                 .presentationBackground(Palette.background)

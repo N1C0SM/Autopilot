@@ -18,6 +18,8 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   userId: string;
   dayPlans: DayPlan[];
+  /** Día que se abre al entrar (tocar una rutina en Inicio). */
+  initialDay?: string;
   onSaved: (plans: DayPlan[]) => void;
 }
 
@@ -38,7 +40,7 @@ const daySummary = (p?: DayPlan) => {
   return `${n} ejerc. · ${p.exercises!.reduce((a, e) => a + e.series, 0)} series`;
 };
 
-const PlanEditor = ({ open, onOpenChange, userId, dayPlans, onSaved }: Props) => {
+const PlanEditor = ({ open, onOpenChange, userId, dayPlans, initialDay, onSaved }: Props) => {
   const [draft, setDraft] = useState<DayPlan[]>([]);
   const [day, setDay] = useState<string>(DAYS[0]);
   const [picker, setPicker] = useState(false);
@@ -51,12 +53,12 @@ const PlanEditor = ({ open, onOpenChange, userId, dayPlans, onSaved }: Props) =>
   useEffect(() => {
     if (open) {
       setDraft(clone(dayPlans));
-      setDay(dayPlans[0]?.day ?? DAYS[0]);
+      setDay(initialDay ?? dayPlans[0]?.day ?? DAYS[0]);
       setCopyOpen(false);
       setConfirmReset(false);
       setConfirmDiscard(false);
     }
-  }, [open, dayPlans]);
+  }, [open, dayPlans, initialDay]);
 
   const plan = draft.find((p) => p.day === day);
   const exercises = plan?.type === "gimnasio" ? plan.exercises ?? [] : [];
