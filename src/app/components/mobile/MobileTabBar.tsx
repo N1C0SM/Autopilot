@@ -1,4 +1,4 @@
-import { MessageCircle, Flame as Apple, TrendingUp, Home, type LucideIcon } from "lucide-react";
+import { Flame as Apple, TrendingUp, Home, type LucideIcon } from "lucide-react";
 import type { UserSection } from "@/app/components/UserSidebar";
 import FloatingMobileNav from "@/app/components/mobile/FloatingMobileNav";
 
@@ -28,12 +28,6 @@ const ProgressFill = ({ className }: { className?: string }) => (
     <path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99z" />
   </svg>
 );
-const ChatFill = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-    <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
-  </svg>
-);
-
 // Iconos outline finos para estado inactivo — trazo 1.7 consistente con el diseño
 const NutritionIcon = ({ className, strokeWidth }: { className?: string; strokeWidth?: number }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth ?? 1.7} strokeLinecap="round" strokeLinejoin="round">
@@ -50,12 +44,11 @@ const ProgressIcon = ({ className, strokeWidth }: { className?: string; strokeWi
   </svg>
 );
 
-/** Pestañas de la app (también las usa el móvil de muestra de la web pública). */
-export const TABS: { key: MobileTab; label: string; icon: LucideIcon; activeIcon?: typeof HomeFill }[] = [
+/** Navegación móvil web; Entrenar se abre desde Inicio, no como pestaña. */
+export const TABS: { key: MobileTab; label: string; icon: LucideIcon | typeof NutritionIcon | typeof ProgressIcon; activeIcon?: typeof HomeFill }[] = [
   { key: "home", label: "Hoy", icon: Home, activeIcon: HomeFill },
   { key: "nutrition", label: "Nutrición", icon: NutritionIcon, activeIcon: NutritionFill },
   { key: "progress", label: "Progreso", icon: ProgressIcon, activeIcon: ProgressFill },
-  { key: "chat", label: "Chat", icon: MessageCircle, activeIcon: ChatFill },
 ];
 
 const ITEMS = TABS.map((tab) => ({ ...tab }));

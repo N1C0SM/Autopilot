@@ -23,6 +23,10 @@ interface Props {
   initialDay?: string;
   /** Claves de las sesiones hechas esta semana (`day_completions.day_label`). */
   doneThisWeek?: string[];
+  /** Claves de las sesiones completadas hoy. */
+  doneToday?: string[];
+  /** Día de la rutina que tiene un borrador de entreno recuperable. */
+  resumableDay?: string | null;
   onOpenWorkout?: (day: string) => void;
   /** Cabecera de la rutina (modo del plan, Libre, Editar, Ejercicios): va arriba, antes de las sesiones. */
   tools?: ReactNode;
@@ -120,7 +124,7 @@ const SessionRow = ({ number, plan, isNext, done, expanded, photo, onSelect }: S
   );
 };
 
-const TrainingPlanView = ({ dayPlans, initialDay, doneThisWeek = [], onOpenWorkout, tools, onPersonalize }: Props) => {
+const TrainingPlanView = ({ dayPlans, initialDay, doneThisWeek = [], doneToday = [], resumableDay = null, onOpenWorkout, tools, onPersonalize }: Props) => {
   // La rutina en orden: solo sesiones, sin días de la semana ni días de descanso.
   const sessions = routineSessions(dayPlans);
   const next = nextPendingSession(sessions, doneThisWeek);
@@ -192,11 +196,15 @@ const TrainingPlanView = ({ dayPlans, initialDay, doneThisWeek = [], onOpenWorko
     if (selectedPlan?.type === "gimnasio") {
       return (
         <section aria-label={`Ejercicios de ${sessionTitle(selectedPlan)}`} className="space-y-3">
-          {onOpenWorkout && hasExercises && (
+          {doneToday.includes(selectedPlan.day) ? (
+            <p role="status" className="flex min-h-12 items-center justify-center gap-2 rounded-full bg-primary/10 px-4 type-headline text-primary">
+              <Check className="h-4 w-4" aria-hidden />Entrenamiento completado
+            </p>
+          ) : onOpenWorkout && hasExercises ? (
             <Button type="button" variant="hero" size="lg" className="w-full" onClick={() => onOpenWorkout(selectedPlan.day)}>
-              Empezar sesión
+              {resumableDay === selectedPlan.day ? "Continuar entreno" : "Empezar sesión"}
             </Button>
-          )}
+          ) : null}
           {hasExercises && (
             <ListGroup aria-label="Ejercicios">
               {selectedPlan.exercises?.map((ex, i) => {
@@ -247,11 +255,15 @@ const TrainingPlanView = ({ dayPlans, initialDay, doneThisWeek = [], onOpenWorko
     if (selectedPlan?.type === "actividad") {
       return (
         <section aria-label={`Detalle de ${sessionTitle(selectedPlan)}`} className="space-y-3">
-          {onOpenWorkout && (
+          {doneToday.includes(selectedPlan.day) ? (
+            <p role="status" className="flex min-h-12 items-center justify-center gap-2 rounded-full bg-primary/10 px-4 type-headline text-primary">
+              <Check className="h-4 w-4" aria-hidden />Actividad completada
+            </p>
+          ) : onOpenWorkout ? (
             <Button type="button" variant="hero" size="lg" className="w-full" onClick={() => onOpenWorkout(selectedPlan.day)}>
               Empezar actividad
             </Button>
-          )}
+          ) : null}
           <ListGroup>
             <ListRow icon={<Flame className="text-muted-foreground" />} title="Intensidad" value={selectedPlan.intensity} />
             <ListRow icon={<Clock className="text-muted-foreground" />} title="Duración" value={selectedPlan.duration} />

@@ -3,7 +3,7 @@ import { generatePlanGuarded, isManualPlan } from "@/shared/lib/planShield";
 import { withSessionIdentity } from "@/shared/lib/sessionIdentity";
 import type { Json } from "@/shared/integrations/supabase/types";
 import { DASHBOARD_CHAT_ENABLED } from "@/shared/lib/releaseScope";
-import { readActiveWorkout } from "@/shared/lib/activeWorkout";
+import { localDateKey, readActiveWorkout } from "@/shared/lib/activeWorkout";
 import { readScreen, writeScreen } from "@/shared/lib/screenCache";
 import { hasCoaching, hasNutrition, getConsumerPlan, type ConsumerPlan } from "@/shared/lib/entitlements";
 import { PlanPaywall, CoachPendingAssignment } from "@/app/components/dashboard/PlanPaywall";
@@ -109,6 +109,7 @@ interface DashboardSnapshot {
   meals: Meal[];
   completedThisWeek: number;
   completedDays?: string[];
+  completedTodayDays?: string[];
   completedToday: boolean;
 }
 
@@ -154,12 +155,12 @@ const Dashboard = () => {
   const [searchParams] = useSearchParams();
   const [section, setSectionState] = useState<MobileTab>(() => {
     const fromParam = searchParams.get("section");
-    if (fromParam && ["home", "nutrition", "chat", "progress", "settings", "resources"].includes(fromParam)) {
+    if (fromParam && ["home", "training", "nutrition", "chat", "progress", "settings", "resources"].includes(fromParam)) {
       return fromParam as MobileTab;
     }
     try {
       const saved = sessionStorage.getItem("autopilot_section");
-      if (saved && ["home", "nutrition", "chat", "progress", "settings", "resources"].includes(saved)) return saved as MobileTab;
+      if (saved && ["home", "training", "nutrition", "chat", "progress", "settings", "resources"].includes(saved)) return saved as MobileTab;
     } catch { /* storage no disponible */ }
     return "home";
   });
@@ -181,6 +182,7 @@ const Dashboard = () => {
   const [photosVersion, setPhotosVersion] = useState(0);
   const [completedThisWeek, setCompletedThisWeek] = useState(cached?.completedThisWeek ?? 0);
   const [completedDays, setCompletedDays] = useState<string[]>(cached?.completedDays ?? []);
+  const [completedTodayDays, setCompletedTodayDays] = useState<string[]>(cached?.completedTodayDays ?? []);
   const [completedToday, setCompletedToday] = useState(cached?.completedToday ?? false);
   const [workoutMode, setWorkoutMode] = useState(false);
   const [autoStartWorkout, setAutoStartWorkout] = useState(false);
@@ -189,8 +191,6 @@ const Dashboard = () => {
   /** Día pulsado en la tira de «Hoy»: abre la rutina semanal en ese día. */
   const [planFocusDay, setPlanFocusDay] = useState<string | undefined>();
   const [editorOpen, setEditorOpen] = useState(false);
-  /** Rutina que se abre directamente al entrar en el editor (toque en «Tus rutinas»). */
-  const [editorDay, setEditorDay] = useState<string | undefined>();
   const [freeOpen, setFreeOpen] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [freePlans, setFreePlans] = useState<DayPlan[] | null>(null);
@@ -203,7 +203,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     const sec = searchParams.get("section");
-    if (sec && ["home", "nutrition", "chat", "progress", "settings", "resources"].includes(sec)) {
+    if (sec && ["home", "training", "nutrition", "chat", "progress", "settings", "resources"].includes(sec)) {
       setSectionState(sec as MobileTab);
     }
     const vw = searchParams.get("view");
@@ -295,16 +295,14 @@ const Dashboard = () => {
         const weekStart = new Date(today);
         weekStart.setDate(today.getDate() - ((today.getDay() + 6) % 7));
         const weekStartDate = `${weekStart.getFullYear()}-${String(weekStart.getMonth() + 1).padStart(2, "0")}-${String(weekStart.getDate()).padStart(2, "0")}`;
-        const [{ data: tp }, { data: np }, { data: todayCompletion }, weeklyCompletions] = await Promise.all([
+        const [{ data: tp }, { data: np }, todayCompletions, weeklyCompletions] = await Promise.all([
           supabase.from("training_plan").select("workouts_json").eq("user_id", user.id).maybeSingle(),
           supabase.from("nutrition_plan").select("macros_json, meals_json").eq("user_id", user.id).maybeSingle(),
           supabase
             .from("day_completions")
-            .select("id")
+            .select("day_label")
             .eq("user_id", user.id)
-            .eq("completed_at", todayDate)
-            .limit(1)
-            .maybeSingle(),
+            .eq("completed_at", todayDate),
           supabase
             .from("day_completions")
             .select("day_label")
@@ -318,10 +316,21 @@ const Dashboard = () => {
           setDayPlans(plans);
           try { localStorage.setItem(`autopilot_cached_routine_${user.id}`, JSON.stringify(plans)); } catch { /* sin espacio */ }
         }
+        const scheduledDays = new Set((plans || []).map((plan) => plan.day));
+        if (todayCompletions.error) {
+          toast.error("No se pudo cargar el resumen de hoy.");
+        } else {
+          const todayDays = new Set(
+            (todayCompletions.data || [])
+              .map((row) => row.day_label)
+              .filter((day): day is string => Boolean(day && scheduledDays.has(day))),
+          );
+          setCompletedTodayDays([...todayDays]);
+          setCompletedToday(Boolean(todayCompletions.data?.length));
+        }
         if (weeklyCompletions.error) {
           toast.error("No se pudo cargar el resumen de esta semana.");
         } else {
-          const scheduledDays = new Set((plans || []).map((plan) => plan.day));
           const days = new Set(
             (weeklyCompletions.data || [])
               .map((row) => row.day_label)
@@ -334,7 +343,6 @@ const Dashboard = () => {
           setMacros(parseMacroTargets(np.macros_json));
           setMeals(np.meals_json as unknown as Meal[]);
         }
-        setCompletedToday(Boolean(todayCompletion));
       }
     }
     lastFetchRef.current = Date.now();
@@ -348,12 +356,12 @@ const Dashboard = () => {
     writeScreen<DashboardSnapshot>(user.id, "dashboard", {
       profileName, profileAvatar, planStatus, paymentStatus, coaching, consumerPlan,
       coachAssigned, nutrition, subscriptionTier, dayPlans, macros, meals,
-      completedThisWeek, completedDays, completedToday,
+      completedThisWeek, completedDays, completedTodayDays, completedToday,
     });
   }, [
     user, loading, loadError, planStatus, paymentStatus, profileName, profileAvatar, coaching,
     consumerPlan, coachAssigned, nutrition, subscriptionTier, dayPlans, macros, meals,
-    completedThisWeek, completedDays, completedToday,
+    completedThisWeek, completedDays, completedTodayDays, completedToday,
   ]);
 
   useEffect(() => {
@@ -610,9 +618,23 @@ const Dashboard = () => {
       ? "Sube una foto cada 2 semanas, misma luz y misma hora. Es la forma más fiable de ver el cambio."
       : null;
 
+  const prepareRoutine = async () => {
+    void hapticTap();
+    setPreparingRoutine(true);
+    try {
+      const { data, error } = await generatePlanGuarded(supabase, { user_id: user?.id }, { userId: user?.id });
+      if (error || (!data?.success && !data?.protected)) throw new Error("generation_failed");
+      await fetchData();
+    } catch {
+      toast.error("No se ha podido preparar la rutina. Vuelve a intentarlo.");
+    } finally {
+      setPreparingRoutine(false);
+    }
+  };
+
   const renderContent = (section: MobileTab) => (
     <>
-      {!coaching && !hasPlan && (section === "home" || section === "training") && (
+      {!coaching && !hasPlan && section === "training" && (
         <div className="flex w-full flex-1 flex-col">
           <EmptyState
             className="flex-1"
@@ -620,16 +642,9 @@ const Dashboard = () => {
             title="Prepara tu rutina inicial gratis"
             description="Te la preparamos en unos segundos."
           />
-          <Button size="lg" className="w-full md:w-auto md:self-center" disabled={preparingRoutine} onClick={async () => {
-            void hapticTap();
-            setPreparingRoutine(true);
-            try {
-              const { data, error } = await generatePlanGuarded(supabase, { user_id: user?.id }, { userId: user?.id });
-              if (error || (!data?.success && !data?.protected)) throw new Error("generation_failed");
-              await fetchData();
-            } catch { toast.error("No se ha podido preparar la rutina. Vuelve a intentarlo."); }
-            finally { setPreparingRoutine(false); }
-          }}>{preparingRoutine ? "Preparando…" : "Preparar mi rutina gratis"}</Button>
+          <Button size="lg" className="w-full md:w-auto md:self-center" disabled={preparingRoutine} onClick={() => void prepareRoutine()}>
+            {preparingRoutine ? "Preparando…" : "Preparar mi rutina gratis"}
+          </Button>
         </div>
       )}
       {!campaign && !coaching && section === "nutrition" && user && (
@@ -662,11 +677,14 @@ const Dashboard = () => {
         />
       )}
 
-      {hasPlan && section === "home" && (
+      {section === "home" && (hasPlan || !coaching) && (
         // Hoy llena la pantalla: HomeOverview reparte el alto y lo demás va debajo.
         <div className="flex w-full flex-1 flex-col gap-3">
           <HomeOverview
             userId={user?.id}
+            hasPlan={hasPlan}
+            preparingRoutine={preparingRoutine}
+            onPrepareRoutine={() => void prepareRoutine()}
             meals={meals}
             nutrition={nutrition || campaign}
             planStatus={planStatus}
@@ -694,11 +712,24 @@ const Dashboard = () => {
               setTrainingDay(day);
               setTrainingView("tracker");
               setAutoStartWorkout(true);
+              setWorkoutMode(true);
               setSection("training");
             }}
-            onEditRoutine={(day) => {
-              setEditorDay(day);
-              setEditorOpen(true);
+            onCompleteActivity={async (day) => {
+              if (!user) return false;
+              const { error } = await supabase.from("day_completions").upsert({
+                user_id: user.id,
+                day_label: day,
+                completed_at: localDateKey(),
+                rpe: null,
+              });
+              if (error) {
+                toast.error("No se pudo marcar la actividad. Inténtalo de nuevo.");
+                return false;
+              }
+              void hapticTap();
+              void fetchData();
+              return true;
             }}
             onResumeWorkout={() => {
               if (!user) return;
@@ -709,6 +740,7 @@ const Dashboard = () => {
               setResumeWorkout(true);
               setAutoStartWorkout(false);
               setTrainingView("tracker");
+              setWorkoutMode(true);
               setSection("training");
             }}
             profileName={profileName}
@@ -740,7 +772,7 @@ const Dashboard = () => {
         <div className="w-full min-w-0">
           <Suspense fallback={<SectionFallback />}>
               {trainingView === "plan" && !workoutMode && !autoStartWorkout ? (
-                <TrainingPlanView dayPlans={dayPlans} initialDay={planFocusDay} doneThisWeek={completedDays} tools={(
+                <TrainingPlanView dayPlans={dayPlans} initialDay={planFocusDay} doneThisWeek={completedDays} doneToday={completedTodayDays} resumableDay={readActiveWorkout(user.id)?.plan.day} tools={(
                 // Cabecera de la rutina, arriba: el modo en dorado, de dónde sale y sus acciones (sin cápsulas).
                 <div className="flex w-full items-center gap-3 rounded-[22px] bg-card py-3.5 pl-5 pr-3">
                   <div className="min-w-0 flex-1">
@@ -769,7 +801,7 @@ const Dashboard = () => {
                     <button
                       type="button"
                       aria-label="Editar rutina"
-                      onClick={() => { void hapticTap(); setEditorDay(undefined); setEditorOpen(true); }}
+                      onClick={() => { void hapticTap(); setEditorOpen(true); }}
                       className="flex h-11 items-center rounded-full px-3 type-subhead font-semibold text-primary transition-opacity hover:bg-foreground/5 active:opacity-50"
                     >
                       Editar
@@ -777,6 +809,8 @@ const Dashboard = () => {
                   </div>
                 </div>
                 )} onOpenWorkout={(day) => {
+                  setResumeWorkout(readActiveWorkout(user.id)?.plan.day === day);
+                  setAutoStartWorkout(false);
                   setTrainingDay(day);
                   setTrainingView("tracker");
                 }} onPersonalize={async (day, identity) => {
@@ -806,13 +840,13 @@ const Dashboard = () => {
                     if (!active) void fetchData();
                   }}
                   onCancel={() => {
-                    // «Salir» antes de empezar vuelve a la rutina semanal, no a Inicio.
+                    // El tracker se abre desde Inicio; salir antes de empezar vuelve allí.
                     setWorkoutMode(false);
                     setFreePlans(null);
                     setResumeWorkout(false);
                     setAutoStartWorkout(false);
                     setTrainingView("plan");
-                    setSection("training");
+                    setSection("home");
                   }}
                   onExit={() => {
                     setWorkoutMode(false);
@@ -834,7 +868,6 @@ const Dashboard = () => {
             onOpenChange={setEditorOpen}
             userId={user.id}
             dayPlans={dayPlans}
-            initialDay={editorDay}
             onSaved={(p) => { setDayPlans(p); setTrainingView("plan"); }}
           />
           <ExerciseLibrarySheet open={libraryOpen} onOpenChange={setLibraryOpen} userId={user.id} />
@@ -916,7 +949,7 @@ const Dashboard = () => {
         </div>
       )}
 
-      {hasPlan && section === "progress" && user && (
+      {section === "progress" && user && (
         <Tabs
           value={progressTab}
           onValueChange={(tab) => {

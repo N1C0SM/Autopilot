@@ -1,6 +1,6 @@
 import { readMealsDone as readMealsDoneFor } from "@/shared/lib/mealsDone";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { Flame as Apple, Check, ChevronRight, Clock, Dumbbell, LockKeyhole } from "lucide-react";
+import { Flame as Apple, Flame, BarChart3, Check, ChevronRight, Clock, Dumbbell, Layers, LockKeyhole } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { EmptyState } from "@/shared/components/ui/empty-state";
 import { supabase } from "@/shared/integrations/supabase/client";
@@ -18,6 +18,9 @@ import { useSessionCover } from "@/shared/hooks/useSessionCover";
 import { useExerciseMetadata } from "@/shared/hooks/useExerciseMetadata";
 import { BRAND_PHOTOS } from "@/shared/lib/brandPhotos";
 import { nextPendingSession, routineSessions } from "@/shared/lib/routineOrder";
+import ResponsiveSheet from "@/app/components/dashboard/ResponsiveSheet";
+import { ExerciseThumb } from "@/app/components/ExerciseMedia";
+import { ListGroup, ListRow } from "@/shared/components/ui/list";
 
 interface Macros {
   protein: number;
@@ -35,12 +38,15 @@ interface Props {
   dayPlans: DayPlan[];
   meals?: Meal[];
   userId?: string;
+  hasPlan?: boolean;
+  preparingRoutine?: boolean;
+  onPrepareRoutine?: () => void;
   /** Navegación del panel. «training» sin día abre la siguiente sesión. */
   onNavigate: (section: UserSection, day?: string) => void;
-  /** Abre la rutina indicada para verla/editar sus ejercicios (toque en «Tus rutinas»). */
-  onEditRoutine?: (day: string) => void;
   /** Empieza la sesión indicada (la clave `day` de la siguiente pendiente). */
   onStartWorkout?: (day: string) => void;
+  /** Marca una actividad como hecha en la fecha local. */
+  onCompleteActivity?: (day: string) => Promise<boolean>;
   onResumeWorkout?: () => void;
   profileName?: string;
   macros?: Macros | null;
@@ -124,9 +130,12 @@ const HomeOverview = ({
   dayPlans,
   meals = [],
   userId,
+  hasPlan = true,
+  preparingRoutine = false,
+  onPrepareRoutine,
   onNavigate,
-  onEditRoutine,
   onStartWorkout,
+  onCompleteActivity,
   onResumeWorkout,
   profileName,
   macros,
@@ -149,6 +158,9 @@ const HomeOverview = ({
   }, [userId]);
   const activeWorkoutIsToday = isActiveWorkoutToday(activeWorkout);
   const activeWorkoutDate = activeWorkout ? formatDraftDate(activeWorkout.date) : "";
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewPlan, setPreviewPlan] = useState<DayPlan | null>(null);
+  const [previewCompleted, setPreviewCompleted] = useState(false);
 
   const { ask: confirmDiscard, dialog: discardDialog } = useConfirm();
   const discardActiveWorkout = async () => {
@@ -212,6 +224,43 @@ const HomeOverview = ({
     : null;
   const canStart = !completedToday && Boolean(todayPlan);
   const sessionTitle = todayPlan ? planTitle(todayPlan) : "";
+  const previewResumable = Boolean(activeWorkout && previewPlan?.day === activeWorkout.plan.day);
+  const previewExercises = previewPlan?.exercises ?? [];
+  const previewSets = previewExercises.reduce((total, exercise) => total + (Number(exercise.series) || 0), 0);
+  const previewDescription = previewCompleted
+    ? "Tu sesión de hoy ya está registrada."
+    : previewPlan?.type === "gimnasio"
+      ? [
+        previewExercises.length && `${previewExercises.length} ${previewExercises.length === 1 ? "ejercicio" : "ejercicios"}`,
+        previewSets && `${previewSets} ${previewSets === 1 ? "serie" : "series"}`,
+      ].filter(Boolean).join(" · ")
+      : [previewPlan?.intensity, previewPlan?.duration].filter(Boolean).join(" · ");
+
+  const openSessionPreview = (plan: DayPlan | null, completed = false) => {
+    setPreviewPlan(plan);
+    setPreviewCompleted(completed);
+    setPreviewOpen(true);
+  };
+
+  const startPreviewSession = () => {
+    if (!previewPlan) return;
+    void hapticTap();
+    setPreviewOpen(false);
+    if (previewResumable && onResumeWorkout) onResumeWorkout();
+    else if (onStartWorkout) onStartWorkout(previewPlan.day);
+    else onNavigate("training", previewPlan.day);
+  };
+
+  const completePreviewActivity = async () => {
+    if (!previewPlan) return;
+    if (onCompleteActivity) {
+      if (!await onCompleteActivity(previewPlan.day)) return;
+    } else {
+      void hapticTap();
+      onNavigate("training", previewPlan.day);
+    }
+    setPreviewOpen(false);
+  };
 
   const sessionDetail: string[] = [];
   if (todayPlan?.type === "gimnasio") {
@@ -312,7 +361,23 @@ const HomeOverview = ({
 
       {/* Siguiente sesión de la rutina: la que toca hoy, sea el día que sea */}
       <section className="mt-6 lg:col-start-1 lg:row-start-2 lg:mt-8" aria-label="Tu siguiente sesión">
-        {activeWorkout && activeWorkoutIsToday ? (
+        {!hasPlan ? (
+          <div className="rounded-[22px] bg-card p-4">
+            <EmptyState
+              icon={Dumbbell}
+              title="Prepara tu rutina inicial gratis"
+              description="Te la preparamos en unos segundos."
+            />
+            <Button
+              size="lg"
+              className="mt-4 w-full"
+              disabled={preparingRoutine}
+              onClick={onPrepareRoutine}
+            >
+              {preparingRoutine ? "Preparando…" : "Preparar mi rutina gratis"}
+            </Button>
+          </div>
+        ) : activeWorkout && activeWorkoutIsToday ? (
           <div className="rounded-2xl bg-card p-4">
             <p className="text-[13px] font-medium text-primary">En curso</p>
             <h3 className="mt-0.5 text-[17px] font-semibold leading-6">{planTitle(activeWorkout.plan)}</h3>
@@ -321,8 +386,7 @@ const HomeOverview = ({
             </p>
             <Button size="lg" className="mt-4 w-full" onClick={() => {
               void hapticTap();
-              if (onResumeWorkout) onResumeWorkout();
-              else onNavigate("training");
+              openSessionPreview(activeWorkout.plan);
             }}>Continuar entreno</Button>
             <Button type="button" variant="plain" size="sm" className="mt-1 w-full" onClick={() => { void hapticTap(); void discardActiveWorkout(); }}>
               Descartar sesión
@@ -333,11 +397,10 @@ const HomeOverview = ({
             type="button"
             onClick={() => {
               void hapticTap();
-              if (onStartWorkout && todayPlan) onStartWorkout(todayPlan.day);
-              else onNavigate("training", todayPlan?.day);
+              openSessionPreview(todayPlan);
             }}
             className="group relative flex min-h-[156px] w-full overflow-hidden rounded-[22px] border border-border bg-card text-left transition-transform duration-150 active:scale-[0.985] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label={`Empezar ${sessionTitle}`}
+            aria-label={`Ver la sesión ${sessionTitle}`}
           >
             {/* Rediseño (ChatGPT): texto a la izquierda, foto a la derecha fundida con la tarjeta y chevron dorado. */}
             {dayPhoto && (
@@ -352,7 +415,6 @@ const HomeOverview = ({
               </span>
               <span className="mt-1.5 line-clamp-2 text-[22px] font-bold leading-7 tracking-[-0.02em]">{sessionName}</span>
               {sessionFocus && <span className="mt-0.5 line-clamp-2 type-subhead text-muted-foreground">{sessionFocus}</span>}
-
               {sessionDetail.length > 0 && (
                 <span className="mt-auto flex items-center gap-1.5 pt-3.5 type-footnote tabular-nums text-muted-foreground">
                   <Dumbbell aria-hidden="true" className="h-3.5 w-3.5 shrink-0" strokeWidth={2} />
@@ -371,21 +433,26 @@ const HomeOverview = ({
         ) : completedToday ? (
           <button
             type="button"
-            onClick={() => { void hapticTap(); onNavigate("training"); }}
-            className="flex w-full items-center gap-3.5 rounded-2xl bg-card p-4 text-left transition-opacity active:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label="Ver el resumen de la sesión de hoy"
+            onClick={() => { void hapticTap(); openSessionPreview(null, true); }}
+            className="group w-full overflow-hidden rounded-[28px] bg-card text-left transition-opacity active:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label={`Hecho hoy: Sesión completada. ${nextSession ?? ""}`}
+            aria-description="Abre el resumen del entreno de hoy"
           >
-            <span aria-hidden="true" className="h-14 w-14 shrink-0 overflow-hidden rounded-media bg-secondary">
-              <img src={BRAND_PHOTOS.gym} alt="" className="h-full w-full object-cover" />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="flex items-center gap-1 text-[13px] font-medium text-success">
-                <Check className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden="true" />Hecho hoy
+            <span aria-hidden="true" className="relative block h-[210px] w-full overflow-hidden bg-secondary">
+              <img src={BRAND_PHOTOS.gym} alt="" decoding="async" className="h-full w-full object-cover" />
+              <span className="absolute inset-0 bg-gradient-to-b from-transparent via-black/10 to-black/80" />
+              <span className="absolute bottom-[18px] left-[18px] inline-flex items-center gap-1.5 text-[12px] font-bold tracking-[0.067em] text-primary">
+                <Check className="h-3 w-3" strokeWidth={2.5} />
+                HECHO HOY
               </span>
-              <span className="block truncate text-[17px] font-semibold leading-6">Sesión completada</span>
-              <span className="block text-[13px] text-muted-foreground">{nextSession ?? "Hoy toca recuperar."}</span>
             </span>
-            <span className="shrink-0 text-[15px] font-medium text-primary">Resumen</span>
+            <span className="flex items-center gap-3 p-[18px]">
+              <span className="min-w-0 flex-1">
+                <span className="block type-title2">Sesión completada</span>
+                <span className="block line-clamp-2 type-footnote text-muted-foreground">{nextSession ?? "Buen trabajo. Hoy toca recuperar."}</span>
+              </span>
+              <span className="shrink-0 type-subhead font-semibold text-primary">Resumen</span>
+            </span>
           </button>
         ) : (
           // Semana completa (o plan sin sesiones): la misma tarjeta que la sesión, con foto real fundida a la derecha y sin dibujos (como `RestCard` en la app).
@@ -398,19 +465,8 @@ const HomeOverview = ({
               <p className="mt-1 pr-24 type-subhead text-muted-foreground">
                 {weekComplete ? `${nextSession} El lunes empieza otra vuelta.` : "Edita tu rutina para añadir tus sesiones."}
               </p>
-              <Button
-                type="button"
-                variant="secondary"
-                size="lg"
-                className="mt-5 w-full"
-                onClick={() => {
-                  void hapticTap();
-                  if (sessions[0] && onStartWorkout) { onStartWorkout(sessions[0].day); return; }
-                  if (onEditRoutine) { onEditRoutine(sessions[0]?.day ?? "Lunes"); return; }
-                  onNavigate("training");
-                }}
-              >
-                {weekComplete ? "Entrenar igualmente" : "Editar mi rutina"}
+              <Button type="button" variant="secondary" size="lg" className="mt-5 w-full" onClick={() => { void hapticTap(); onNavigate("training"); }}>
+                {weekComplete ? "Entrenar igualmente" : "Ir a Entrenar"}
               </Button>
             </div>
           </div>
@@ -420,8 +476,7 @@ const HomeOverview = ({
             <p className="min-w-0 flex-1 text-[13px] text-muted-foreground">Tienes una sesión sin terminar del {activeWorkoutDate}.</p>
             <Button size="sm" onClick={() => {
               void hapticTap();
-              if (onResumeWorkout) onResumeWorkout();
-              else onNavigate("training");
+              openSessionPreview(activeWorkout.plan);
             }}>Reanudar</Button>
             <Button type="button" variant="plain" size="sm" onClick={() => { void hapticTap(); void discardActiveWorkout(); }}>
               Descartar
@@ -430,18 +485,35 @@ const HomeOverview = ({
         )}
       </section>
 
+      {/* Rediseño (ChatGPT): «Tu progreso» y «Tu plan» en tarjetas con icono dorado y chevron */}
+      <ul data-home-rows className="mt-3 space-y-3 lg:col-start-2 lg:row-start-2 lg:mt-8">
+        <li>
+          <HomeRow
+            icon={<BarChart3 className="h-[22px] w-[22px]" strokeWidth={1.75} />}
+            title="Tu progreso"
+            detail={lastPr
+                ? `${lastPr.exercise_name} · ${lastPr.weight.toLocaleString("es-ES")} kg × ${lastPr.reps}`
+                : "Sigue tu evolución semana a semana."}
+            onClick={() => onNavigate("progress")}
+          />
+        </li>
+        <li>
+          <HomeRow
+            icon={<Layers className="h-[22px] w-[22px]" strokeWidth={1.75} />}
+            title="Tu plan"
+            detail="Revisa y ajusta tu plan de entrenamiento."
+            onClick={() => onNavigate("training")}
+          />
+        </li>
+      </ul>
+
       {/* Semana compacta: una marca por sesión de la rutina, sin días de la semana */}
       <section className="mt-3 rounded-[22px] border border-border bg-card p-4 lg:col-start-2 lg:row-start-3 lg:mt-4 lg:p-5" aria-label={`Esta semana: ${sessionCount} de ${sessions.length} sesiones`}>
         <div className="flex items-center justify-between">
           <p className="type-headline text-foreground">Esta semana</p>
           <button
             type="button"
-            onClick={() => {
-              void hapticTap();
-              const next = sessions.find((p) => !completedDays.includes(p.day)) ?? sessions[0];
-              if (onEditRoutine && next) { onEditRoutine(next.day); return; }
-              onNavigate("training");
-            }}
+            onClick={() => { void hapticTap(); onNavigate("training"); }}
             className="-mr-2 inline-flex min-h-11 items-center gap-1 px-2 type-subhead font-semibold text-primary transition-opacity active:opacity-60"
           >
             Ver detalle
@@ -472,56 +544,6 @@ const HomeOverview = ({
         )}
       </section>
 
-      {/* Tus rutinas: cada una con sus ejercicios y un botón para empezar */}
-      {dayPlans.length > 0 && (
-        <section className="mt-3 lg:col-start-1 lg:row-start-3 lg:mt-4">
-          <p className="mb-2 type-headline text-foreground">Tus rutinas</p>
-          <div className="space-y-3">
-            {dayPlans.map((plan) => (
-              <div key={plan.day} className="rounded-[22px] border border-border bg-card p-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    void hapticTap();
-                    if (onEditRoutine) onEditRoutine(plan.day);
-                  }}
-                  className="flex w-full items-start gap-3 text-left transition-opacity active:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  aria-label={`Ver y editar ${formatTrainingTitle(plan.routine_name, plan.muscle_focus) || "Entrenamiento"}`}
-                >
-                  <span className="min-w-0 flex-1">
-                    <span className="block type-subhead font-semibold text-foreground">{formatTrainingTitle(plan.routine_name, plan.muscle_focus) || "Entrenamiento"}</span>
-                    {plan.muscle_focus && <span className="mt-0.5 block type-footnote text-muted-foreground">{plan.muscle_focus}</span>}
-                    {(plan.exercises ?? []).length > 0 && (
-                      <span className="mt-3 flex flex-col gap-1">
-                        {(plan.exercises ?? []).slice(0, 4).map((ex, i) => (
-                          <span key={`${i}-${ex.name}`} className="flex items-center gap-1.5 type-footnote text-muted-foreground">
-                            <span aria-hidden="true" className="h-1 w-1 shrink-0 rounded-full bg-primary/60" />
-                            <span className="min-w-0 truncate">{ex.name}</span>
-                            <span className="ml-auto shrink-0 tabular-nums">{ex.series}×{ex.reps}</span>
-                          </span>
-                        ))}
-                        {(plan.exercises ?? []).length > 4 && (
-                          <span className="type-footnote text-muted-foreground">+ {(plan.exercises ?? []).length - 4} más</span>
-                        )}
-                      </span>
-                    )}
-                  </span>
-                  <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={2.5} aria-hidden="true" />
-                </button>
-                <Button
-                  type="button"
-                  size="lg"
-                  className="mt-4 w-full"
-                  onClick={() => { void hapticTap(); if (onStartWorkout) onStartWorkout(plan.day); else onNavigate("training", plan.day); }}
-                >
-                  Empezar
-                </Button>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
       {/* Nutrición en su tarjeta: kcal del día o, sin plan, la insignia Plus */}
       <div className="mt-3 lg:col-start-1 lg:row-start-3 lg:mt-4">
         <HomeRow
@@ -534,6 +556,57 @@ const HomeOverview = ({
         />
       </div>
       {discardDialog}
+      <ResponsiveSheet
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        title={previewCompleted ? "Completado hoy" : previewPlan?.type === "actividad" ? "Siguiente actividad" : "Siguiente sesión"}
+        description={previewCompleted ? "Tu sesión de hoy ya está registrada." : `${previewPlan ? planTitle(previewPlan) : ""}${previewDescription ? ` · ${previewDescription}` : ""}`}
+        footer={
+          previewCompleted ? (
+            <Button size="lg" className="w-full" onClick={() => { void hapticTap(); setPreviewOpen(false); onNavigate("progress"); }}>
+              Ver mi progreso
+            </Button>
+          ) : previewPlan ? (
+            previewPlan.type === "actividad" ? (
+              <Button size="lg" className="w-full" onClick={() => void completePreviewActivity()}>
+                Marcar actividad como hecha
+              </Button>
+            ) : (
+              <Button size="lg" className="w-full" onClick={startPreviewSession}>
+                {previewResumable ? "Continuar entreno" : "Empezar entrenamiento"}
+              </Button>
+            )
+          ) : null
+        }
+      >
+        {previewCompleted ? null : previewPlan?.type === "gimnasio" ? (
+          previewExercises.length ? (
+            <ListGroup aria-label="Ejercicios de la sesión">
+              {previewExercises.map((exercise, index) => {
+                const metadata = exerciseMetadata.byId[exercise.exercise_id] || exerciseMetadata.byName[exercise.name];
+                const image = metadata?.image_url || exercise.image_url;
+                const info = [exercise.rest, exercise.muscle_group || metadata?.muscle_group].filter(Boolean).join(" · ");
+                return (
+                  <ListRow
+                    key={`${previewPlan.day}-${exercise.exercise_id || exercise.name}-${index}`}
+                    leading={<ExerciseThumb image={image} name={exercise.name} size="md" />}
+                    title={exercise.name}
+                    subtitle={info || undefined}
+                    value={`${exercise.series} × ${exercise.reps}`}
+                  />
+                );
+              })}
+            </ListGroup>
+          ) : (
+            <p className="py-4 type-subhead text-muted-foreground">Esta sesión no tiene ejercicios todavía.</p>
+          )
+        ) : previewPlan ? (
+          <ListGroup aria-label="Detalle de la actividad">
+            <ListRow icon={<Flame />} title="Intensidad" value={previewPlan.intensity || "—"} />
+            <ListRow icon={<Clock />} title="Duración" value={previewPlan.duration || "—"} />
+          </ListGroup>
+        ) : null}
+      </ResponsiveSheet>
     </div>
   );
 };

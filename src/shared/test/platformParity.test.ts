@@ -6,16 +6,15 @@ import { ADMIN_NAV_GROUPS } from "@/app/components/admin/adminNav";
 import { DETAIL_SECTIONS, EQUIPMENT, FILTER_GROUPS, MODALITIES } from "@/shared/lib/exerciseLibrary";
 
 /**
- * Web y apps nativas son un solo producto: web grande = Mac, web pequeña = iPhone.
- * Este test falla si los menús se separan (una sección añadida o quitada solo en un lado).
- * El chat de cliente no cuenta: está detrás del corte de lanzamiento (`releaseScope.ts`).
+ * La web grande comparte el menú lateral de Mac; la navegación móvil web mantiene
+ * solo Hoy, Nutrición y Progreso. Entrenar se abre desde Inicio.
  */
 const root = resolve(__dirname, "../../..");
 const read = (p: string) => readFileSync(resolve(root, p), "utf8");
 const swift = read("native/Autopilot/Features/Shell/RootView.swift");
 
 /** `case .x: "Título"` de un `switch` concreto de RootView.swift. */
-const swiftTitles = (prop: "title" | "tabTitle") => {
+const swiftTitles = (prop: "title") => {
   const body = swift.slice(swift.indexOf(`var ${prop}: String {`));
   const block = body.slice(0, body.indexOf("\n    }\n"));
   return Object.fromEntries([...block.matchAll(/case \.(\w+): "([^"]+)"/g)].map((m) => [m[1], m[2]]));
@@ -25,7 +24,6 @@ const swiftList = (name: string) => {
   return (m?.[1] ?? "").split(",").map((s) => s.trim().replace(/^\./, "")).filter(Boolean);
 };
 const titles = swiftTitles("title");
-const tabTitles = { ...titles, ...swiftTitles("tabTitle") };
 
 /** Títulos visibles de una lista de la web (`{ title: "…", section: "…" }` o `{ key: "…", label: "…" }`). */
 const webItems = (file: string, list: string, label: "title" | "label", key: "section" | "key") => {
@@ -40,14 +38,17 @@ const webItems = (file: string, list: string, label: "title" | "label", key: "se
 describe("paridad web ↔ apps nativas", () => {
   it("web grande = Mac: mismo menú lateral, en el mismo orden", () => {
     const mac = swiftList("userSections").map((s) => titles[s]);
-    expect(mac).toHaveLength(4);
+    expect(mac).toHaveLength(5);
     expect(webItems("src/app/components/UserSidebar.tsx", "NAV_ITEMS", "title", "section")).toEqual(mac);
   });
 
-  it("web pequeña = iPhone: mismas pestañas, en el mismo orden", () => {
-    const iphone = swiftList("userTabs").map((s) => tabTitles[s]);
-    expect(iphone).toHaveLength(3);
-    expect(webItems("src/app/components/mobile/MobileTabBar.tsx", "TABS", "label", "key")).toEqual(iphone);
+  it("web móvil: solo Hoy, Nutrición y Progreso en la navegación principal", () => {
+    expect(webItems("src/app/components/mobile/MobileTabBar.tsx", "TABS", "label", "key")).toEqual([
+      "Hoy", "Nutrición", "Progreso",
+    ]);
+    expect(webItems("src/web/components/LandingSections.tsx", "PHONE_TABS", "label", "key")).toEqual([
+      "Hoy", "Nutrición", "Progreso",
+    ]);
   });
 
   it("Admin: mismos grupos y secciones en la web y en la app", () => {
@@ -188,10 +189,9 @@ describe("paridad web ↔ apps nativas", () => {
     const preview = read("src/app/components/PlanPreview.tsx");
     const app = read("native/Autopilot/Features/Auth/OnboardingView.swift");
     for (const text of [
-      "Te damos la bienvenida a", "Crear mi rutina gratis", "Ya tengo cuenta",
-      "Tu rutina se adapta cada semana a lo que haces y a cómo progresas.",
-      "Calorías, macros y comidas que encajan con tu objetivo y tu día.",
-      "Tu plan se mantiene al día solo. Tú apareces, él se encarga del resto.",
+      "AUTOPILOT", "Entrenamiento adaptativo", "Tu entrenamiento,", "en piloto automático.",
+      "Rutina adaptativa que sube las cargas cada semana", "Nutrición: macros y comidas del día",
+      "Todo en automático, tú solo apareces", "Crear mi rutina gratis", "Ya tengo cuenta",
     ]) {
       expect(welcome, text).toContain(text);
       expect(app, text).toContain(text);
@@ -294,11 +294,11 @@ describe("paridad web ↔ apps nativas", () => {
     // La semana de Hoy va en tarjeta en las dos.
     expect(homeWeb).toContain('rounded-[22px] border border-border bg-card p-4');
     expect(homeApp).toContain("return Card(padding: 16) {");
-    // Hoy minimalista (Hevy): «Hoy» grande, sesión con foto a la derecha, «Tus rutinas» y «Ver detalle».
-    for (const text of ['>Hoy<', "Siguiente sesión", "Tus rutinas", "Ver detalle"]) {
+    // Hoy de ChatGPT: «Hoy» grande, sesión con foto a la derecha, «Tu progreso», «Tu plan», «Ver detalle» y Nutrición en tarjetas.
+    for (const text of ['>Hoy<', "Siguiente sesión", "Tu progreso", "Tu plan", "Revisa y ajusta tu plan de entrenamiento.", "Ver detalle"]) {
       expect(homeWeb, text).toContain(text);
     }
-    for (const text of ['Text("Hoy")', "Siguiente sesión", "Tus rutinas", "Ver detalle"]) {
+    for (const text of ['Text("Hoy")', "Siguiente sesión", "Tu progreso", "Tu plan", "Revisa y ajusta tu plan de entrenamiento.", "Ver detalle"]) {
       expect(homeApp, text).toContain(text);
     }
     // Entrenar sin semana: cualquier sesión se hace cualquier día. Título «Entrenar», las sesiones
@@ -492,7 +492,7 @@ describe("paridad web ↔ apps nativas", () => {
     const root = read("native/Autopilot/Features/Shell/RootView.swift");
     expect(home).not.toContain("Task.sleep(for: .milliseconds(450))");
     expect(root).not.toContain("asyncAfter(deadline: .now() + 0.6)");
-    expect(root).toContain("HomeView.pendingStartToday = true");
+    expect(root).toContain("TrainView.pendingStart = true");
     // Primer fotograma: TodayCache cae al disco y se rehace tras terminar o editar (revisión local).
     expect(home).toContain("TrainingRepo.revision(userId: userId)");
     expect(home).toContain("HomeView.latestKey(userId)");
@@ -566,14 +566,11 @@ describe("paridad web ↔ apps nativas", () => {
     expect(app).not.toContain("sports: sports,");
   });
 
-  it("Color en el entreno: un solo dorado (serie actual y hecha) y «Finalizar» arriba a la derecha, en la web y en la app", () => {
+  it("Color en el entreno: un solo dorado (serie actual y hecha) y «Finalizar» dorado en la barra inferior, en la web y en la app", () => {
     const web = read("src/app/components/dashboard/WorkoutTracker.tsx");
     const app = read("native/Autopilot/Features/Train/WorkoutView.swift");
     expect(web).not.toContain("allSetsDone");
-    // «Finalizar» vive en la barra superior, como en Hevy, no en el pie.
-    expect(app).toContain("private var finishButton: some View");
-    expect(app).toContain('Text("Finalizar")');
-    expect(web).toContain('aria-label="Finalizar entrenamiento"');
+    expect(app).toContain('barLabel("Finalizar", symbol: "checkmark", primary: true)');
     // Serie y ejercicio hechos en verde, nunca en dorado.
     expect(web).toContain('"border-primary bg-primary text-primary-foreground"');
     expect(web).toContain('<span className="flex h-11 w-9 items-center justify-center text-primary">');
