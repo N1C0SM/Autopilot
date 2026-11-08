@@ -5,6 +5,17 @@ import UIKit
 import AppKit
 #endif
 
+/// Campo enfocado en la sesión: identifica el input activo para la barra del teclado.
+struct WorkoutField: Hashable {
+    enum Kind { case weight, reps }
+    let exercise: String
+    let set: Int
+    let kind: Kind
+    var drop: Int? = nil
+
+    var rowID: String { "\(exercise)_\(set)" }
+}
+
 /// Sesión en curso, calcada de `WorkoutTracker.tsx` (vista de lista): barra «Salir · título ·
 /// tiempo · X de Y series · ···», tarjetas de ejercicio con la tabla Serie/Previa/Kg/Reps/✓,
 /// «Añadir serie», y el pie con el descanso (−30 / +30 / Saltar) y Pausar · tiempo · Finalizar.
@@ -271,7 +282,18 @@ struct WorkoutView: View {
 
     private func adjustFocused(_ direction: Int) {
         guard let field = focus else { return }
-        workout.stepField(field, by: direction)
+        let name = field.exercise
+        let si = field.set
+        guard var sets = workout.draft.logs[name], sets.indices.contains(si) else { return }
+        if field.kind == .weight {
+            let current = Double(sets[si].weight ?? "0") ?? 0
+            let next = max(0, current + Double(direction) * 2.5)
+            sets[si].weight = next > 0 ? String(next) : "0"
+        } else {
+            let current = sets[si].reps ?? 0
+            sets[si].reps = max(1, current + direction)
+        }
+        workout.draft.logs[name] = sets
     }
 
     // MARK: Cabecera de la lista (diseño ChatGPT): estado, título grande y avance
@@ -477,30 +499,9 @@ struct SessionExerciseCard: View {
         .accessibilityElement(children: .combine)
     }
 
-    /// Chip del descanso: al tocarlo se elige el de esta sesión sin salir del entreno.
+    /// Chip del descanso: muestra el descanso prescrito por el plan.
     private var restChip: some View {
-        Menu {
-            ForEach([60, 90, 120, 150, 180, 240, 300], id: \.self) { seconds in
-                Button {
-                    workout.setRest(seconds, for: exercise.name)
-                } label: {
-                    if workout.restSeconds(for: exercise) == seconds {
-                        Label("\(seconds) s", systemImage: "checkmark")
-                    } else {
-                        Text("\(seconds) s")
-                    }
-                }
-            }
-            if workout.draft.restOverrides?[exercise.name] != nil {
-                Divider()
-                Button("El del plan (\(exercise.rest))") { workout.setRest(0, for: exercise.name) }
-            }
-        } label: {
-            metaChip(icon: "clock", text: "Descanso \(workout.restSeconds(for: exercise)) s")
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Descanso de \(exercise.name): \(workout.restSeconds(for: exercise)) segundos")
-        .accessibilityHint("Elegir otro descanso para esta sesión")
+        metaChip(icon: "clock", text: "Descanso \(exercise.rest)")
     }
 
     var body: some View {
@@ -514,7 +515,7 @@ struct SessionExerciseCard: View {
                                     .font(.inter(size: 13, weight: .bold).monospacedDigit())
                                     .foregroundStyle(allDone || isCurrentExercise ? Palette.background : Palette.foreground)
                                     .frame(width: 24, height: 24)
-                                    .background(allDone || isCurrentExercise ? Palette.gold : Palette.secondary, in: Circle())
+                                    .background((allDone || isCurrentExercise) ? Palette.gold : Palette.secondary, in: Circle())
                                     .overlay(Circle().strokeBorder(Palette.card, lineWidth: 2))
                                     .offset(x: -6, y: -6)
                                     .accessibilityHidden(true)
@@ -550,7 +551,7 @@ struct SessionExerciseCard: View {
                     }
                     Button { technique = true } label: { Image(systemName: "info.circle").font(.inter(size: 19)) }
                         .buttonStyle(.plain).foregroundStyle(Palette.muted).frame(width: 44, height: 44)
-                        .accessibilityLabel("Ver ficha de técnica de \(exercise.name)")
+                        .accessibilityLabel("Técnica: \(exercise.name)")
                     if !focused {
                         Button {
                             Haptics.selection()
