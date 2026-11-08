@@ -188,10 +188,9 @@ describe("paridad web ↔ apps nativas", () => {
     const preview = read("src/app/components/PlanPreview.tsx");
     const app = read("native/Autopilot/Features/Auth/OnboardingView.swift");
     for (const text of [
-      "Te damos la bienvenida a", "Crear mi rutina gratis", "Ya tengo cuenta",
-      "Tu rutina se adapta cada semana a lo que haces y a cómo progresas.",
-      "Calorías, macros y comidas que encajan con tu objetivo y tu día.",
-      "Tu plan se mantiene al día solo. Tú apareces, él se encarga del resto.",
+      "AUTOPILOT", "Entrenamiento adaptativo", "Tu entrenamiento,", "en piloto automático.",
+      "Rutina adaptativa que sube las cargas cada semana", "Nutrición: macros y comidas del día",
+      "Todo en automático, tú solo apareces", "Crear mi rutina gratis", "Ya tengo cuenta",
     ]) {
       expect(welcome, text).toContain(text);
       expect(app, text).toContain(text);

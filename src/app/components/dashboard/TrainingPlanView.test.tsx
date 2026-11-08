@@ -63,6 +63,19 @@ describe("routine in order", () => {
     expect(screen.queryByRole("button", { name: "Descargar plan" })).not.toBeInTheDocument();
   });
 
+  it("shows completed sessions without offering to start them again", () => {
+    render(<TrainingPlanView dayPlans={plans} initialDay="Lunes" doneToday={["Lunes"]} onOpenWorkout={vi.fn()} />);
+    expect(screen.getByRole("status")).toHaveTextContent("Entrenamiento completado");
+    expect(screen.queryByRole("button", { name: "Empezar sesión" })).not.toBeInTheDocument();
+  });
+
+  it("offers to resume a saved workout draft", () => {
+    const onOpenWorkout = vi.fn();
+    render(<TrainingPlanView dayPlans={plans} initialDay="Jueves" resumableDay="Jueves" onOpenWorkout={onOpenWorkout} />);
+    fireEvent.click(screen.getByRole("button", { name: "Continuar entreno" }));
+    expect(onOpenWorkout).toHaveBeenCalledWith("Jueves");
+  });
+
   it("folds the open session on a second tap and keeps the rest folded", () => {
     render(<TrainingPlanView dayPlans={plans} onOpenWorkout={vi.fn()} />);
     const first = screen.getByRole("button", { name: "Sesión 1: Piernas, siguiente" });

@@ -3,7 +3,7 @@ import { generatePlanGuarded, isManualPlan } from "@/shared/lib/planShield";
 import { withSessionIdentity } from "@/shared/lib/sessionIdentity";
 import type { Json } from "@/shared/integrations/supabase/types";
 import { DASHBOARD_CHAT_ENABLED } from "@/shared/lib/releaseScope";
-import { readActiveWorkout } from "@/shared/lib/activeWorkout";
+import { localDateKey, readActiveWorkout } from "@/shared/lib/activeWorkout";
 import { readScreen, writeScreen } from "@/shared/lib/screenCache";
 import { hasCoaching, hasNutrition, getConsumerPlan, type ConsumerPlan } from "@/shared/lib/entitlements";
 import { PlanPaywall, CoachPendingAssignment } from "@/app/components/dashboard/PlanPaywall";
@@ -109,6 +109,7 @@ interface DashboardSnapshot {
   meals: Meal[];
   completedThisWeek: number;
   completedDays?: string[];
+  completedTodayDays?: string[];
   completedToday: boolean;
 }
 
@@ -181,6 +182,7 @@ const Dashboard = () => {
   const [photosVersion, setPhotosVersion] = useState(0);
   const [completedThisWeek, setCompletedThisWeek] = useState(cached?.completedThisWeek ?? 0);
   const [completedDays, setCompletedDays] = useState<string[]>(cached?.completedDays ?? []);
+  const [completedTodayDays, setCompletedTodayDays] = useState<string[]>(cached?.completedTodayDays ?? []);
   const [completedToday, setCompletedToday] = useState(cached?.completedToday ?? false);
   const [workoutMode, setWorkoutMode] = useState(false);
   const [autoStartWorkout, setAutoStartWorkout] = useState(false);
@@ -293,16 +295,14 @@ const Dashboard = () => {
         const weekStart = new Date(today);
         weekStart.setDate(today.getDate() - ((today.getDay() + 6) % 7));
         const weekStartDate = `${weekStart.getFullYear()}-${String(weekStart.getMonth() + 1).padStart(2, "0")}-${String(weekStart.getDate()).padStart(2, "0")}`;
-        const [{ data: tp }, { data: np }, { data: todayCompletion }, weeklyCompletions] = await Promise.all([
+        const [{ data: tp }, { data: np }, todayCompletions, weeklyCompletions] = await Promise.all([
           supabase.from("training_plan").select("workouts_json").eq("user_id", user.id).maybeSingle(),
           supabase.from("nutrition_plan").select("macros_json, meals_json").eq("user_id", user.id).maybeSingle(),
           supabase
             .from("day_completions")
-            .select("id")
+            .select("day_label")
             .eq("user_id", user.id)
-            .eq("completed_at", todayDate)
-            .limit(1)
-            .maybeSingle(),
+            .eq("completed_at", todayDate),
           supabase
             .from("day_completions")
             .select("day_label")
@@ -316,10 +316,21 @@ const Dashboard = () => {
           setDayPlans(plans);
           try { localStorage.setItem(`autopilot_cached_routine_${user.id}`, JSON.stringify(plans)); } catch { /* sin espacio */ }
         }
+        const scheduledDays = new Set((plans || []).map((plan) => plan.day));
+        if (todayCompletions.error) {
+          toast.error("No se pudo cargar el resumen de hoy.");
+        } else {
+          const todayDays = new Set(
+            (todayCompletions.data || [])
+              .map((row) => row.day_label)
+              .filter((day): day is string => Boolean(day && scheduledDays.has(day))),
+          );
+          setCompletedTodayDays([...todayDays]);
+          setCompletedToday(Boolean(todayCompletions.data?.length));
+        }
         if (weeklyCompletions.error) {
           toast.error("No se pudo cargar el resumen de esta semana.");
         } else {
-          const scheduledDays = new Set((plans || []).map((plan) => plan.day));
           const days = new Set(
             (weeklyCompletions.data || [])
               .map((row) => row.day_label)
@@ -332,7 +343,6 @@ const Dashboard = () => {
           setMacros(parseMacroTargets(np.macros_json));
           setMeals(np.meals_json as unknown as Meal[]);
         }
-        setCompletedToday(Boolean(todayCompletion));
       }
     }
     lastFetchRef.current = Date.now();
@@ -346,12 +356,12 @@ const Dashboard = () => {
     writeScreen<DashboardSnapshot>(user.id, "dashboard", {
       profileName, profileAvatar, planStatus, paymentStatus, coaching, consumerPlan,
       coachAssigned, nutrition, subscriptionTier, dayPlans, macros, meals,
-      completedThisWeek, completedDays, completedToday,
+      completedThisWeek, completedDays, completedTodayDays, completedToday,
     });
   }, [
     user, loading, loadError, planStatus, paymentStatus, profileName, profileAvatar, coaching,
     consumerPlan, coachAssigned, nutrition, subscriptionTier, dayPlans, macros, meals,
-    completedThisWeek, completedDays, completedToday,
+    completedThisWeek, completedDays, completedTodayDays, completedToday,
   ]);
 
   useEffect(() => {
@@ -694,6 +704,22 @@ const Dashboard = () => {
               setAutoStartWorkout(true);
               setSection("training");
             }}
+            onCompleteActivity={async (day) => {
+              if (!user) return false;
+              const { error } = await supabase.from("day_completions").upsert({
+                user_id: user.id,
+                day_label: day,
+                completed_at: localDateKey(),
+                rpe: null,
+              });
+              if (error) {
+                toast.error("No se pudo marcar la actividad. Inténtalo de nuevo.");
+                return false;
+              }
+              void hapticTap();
+              void fetchData();
+              return true;
+            }}
             onResumeWorkout={() => {
               if (!user) return;
               const draft = readActiveWorkout(user.id);
@@ -734,7 +760,7 @@ const Dashboard = () => {
         <div className="w-full min-w-0">
           <Suspense fallback={<SectionFallback />}>
               {trainingView === "plan" && !workoutMode && !autoStartWorkout ? (
-                <TrainingPlanView dayPlans={dayPlans} initialDay={planFocusDay} doneThisWeek={completedDays} tools={(
+                <TrainingPlanView dayPlans={dayPlans} initialDay={planFocusDay} doneThisWeek={completedDays} doneToday={completedTodayDays} resumableDay={readActiveWorkout(user.id)?.plan.day} tools={(
                 // Cabecera de la rutina, arriba: el modo en dorado, de dónde sale y sus acciones (sin cápsulas).
                 <div className="flex w-full items-center gap-3 rounded-[22px] bg-card py-3.5 pl-5 pr-3">
                   <div className="min-w-0 flex-1">
@@ -771,6 +797,8 @@ const Dashboard = () => {
                   </div>
                 </div>
                 )} onOpenWorkout={(day) => {
+                  setResumeWorkout(readActiveWorkout(user.id)?.plan.day === day);
+                  setAutoStartWorkout(false);
                   setTrainingDay(day);
                   setTrainingView("tracker");
                 }} onPersonalize={async (day, identity) => {
