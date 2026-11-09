@@ -31,10 +31,15 @@ const mocks = vi.hoisted(() => ({
   invoked: [] as string[],
   invokeArgs: [] as { name: string; body?: unknown }[],
   compressImage: vi.fn(async (file: File) => file),
+  toBrowserFriendlyImage: vi.fn(async (file: File) => file),
 }));
 vi.mock("sonner", () => ({ toast: mocks.toast }));
 vi.mock("@/shared/lib/platform", async (importOriginal) => ({ ...(await importOriginal<typeof import("@/shared/lib/platform")>()), isIOSNative: () => mocks.ios }));
-vi.mock("@/shared/lib/imageCompression", () => ({ compressImage: mocks.compressImage }));
+vi.mock("@/shared/lib/imageCompression", () => ({
+  compressImage: mocks.compressImage,
+  isHeicImage: (file: File) => /image\/hei[cf]/i.test(file.type) || /\.hei[cf]$/i.test(file.name),
+  toBrowserFriendlyImage: mocks.toBrowserFriendlyImage,
+}));
 vi.mock("@/shared/contexts/AuthContext", () => ({ useAuth: () => ({ user: mocks.user, signOut: vi.fn() }) }));
 vi.mock("@/shared/integrations/supabase/client", () => ({ supabase: {
   from: (table: string) => {
@@ -74,7 +79,7 @@ beforeEach(() => {
   mocks.authError = null; mocks.confirmedEmail = null;
   mocks.syncResponse = { data: { updated: false, reason: "no_access" }, error: null };
   mocks.mealsResponse = { data: { meals: defaultMeals }, error: null };
-  mocks.uploads = []; mocks.uploadError = null; mocks.compressImage.mockClear();
+  mocks.uploads = []; mocks.uploadError = null; mocks.compressImage.mockClear(); mocks.toBrowserFriendlyImage.mockClear();
   mocks.toast.error.mockClear(); mocks.toast.success.mockClear(); mocks.toast.info.mockClear();
 });
 afterEach(cleanup);
@@ -351,9 +356,41 @@ describe("settings avatar upload", () => {
     fireEvent.change(await fileInputOf(container), { target: { files: [original] } });
 
     await waitFor(() => expect(mocks.uploads).toHaveLength(1));
+    expect(mocks.toBrowserFriendlyImage).toHaveBeenCalledWith(original);
     expect(mocks.compressImage).toHaveBeenCalledWith(original, expect.objectContaining({ maxDimension: 1024, mimeType: "image/jpeg" }));
     expect(mocks.uploads[0]).toEqual({ bucket: "avatars", path: "user/avatar.jpg", file: compressed });
     await waitFor(() => expect(mocks.toast.success).toHaveBeenCalledWith("Foto actualizada"));
-    expect(mocks.updates.some((u) => u.table === "profiles" && typeof u.row.avatar_url === "string")).toBe(true);
+    const savedProfile = mocks.updates.find((u) => u.table === "profiles" && typeof u.row.avatar_url === "string");
+    expect(savedProfile?.row.avatar_url).toMatch(/^https:\/\/cdn\.test\/avatars\/user\/avatar\.jpg\?t=\d+$/);
+    const avatar = screen.getByRole("button", { name: "Cambiar foto de perfil" }).querySelector("img");
+    expect(avatar).toHaveAttribute("src", savedProfile?.row.avatar_url);
+  });
+
+  it("convierte una foto HEIC antes de comprimirla y subirla", async () => {
+    const { container } = show();
+    const heic = new File(["heic"], "IMG_0001.HEIC", { type: "image/heic" });
+    const jpeg = new File(["jpeg"], "IMG_0001.jpg", { type: "image/jpeg" });
+    mocks.toBrowserFriendlyImage.mockResolvedValueOnce(jpeg);
+    mocks.compressImage.mockResolvedValueOnce(jpeg);
+
+    fireEvent.change(await fileInputOf(container), { target: { files: [heic] } });
+
+    await waitFor(() => expect(mocks.uploads).toHaveLength(1));
+    expect(mocks.toBrowserFriendlyImage).toHaveBeenCalledWith(heic);
+    expect(mocks.compressImage).toHaveBeenCalledWith(jpeg, expect.objectContaining({ mimeType: "image/jpeg" }));
+    expect(mocks.uploads[0].file).toBe(jpeg);
+  });
+
+  it("no sube una foto HEIC si el navegador no consigue convertirla", async () => {
+    const { container } = show();
+    const heic = new File(["heic"], "IMG_0001.HEIC", { type: "image/heic" });
+
+    fireEvent.change(await fileInputOf(container), { target: { files: [heic] } });
+
+    await waitFor(() => expect(mocks.toast.error).toHaveBeenCalledWith(
+      "No se pudo convertir la foto HEIC. Elige una foto JPG, PNG o WebP.",
+    ));
+    expect(mocks.compressImage).not.toHaveBeenCalled();
+    expect(mocks.uploads).toHaveLength(0);
   });
 });

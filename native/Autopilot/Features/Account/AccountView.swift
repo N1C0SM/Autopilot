@@ -38,7 +38,7 @@ struct AccountView: View {
     @State private var sports = ""
     @State private var nutritionPrefs = ""
     @State private var allergies = ""
-    @State private var workoutView = UserDefaults.standard.string(forKey: "workout-view") ?? "list"
+    @State private var workoutView = UserDefaults.standard.string(forKey: "workout-view") ?? "focus"
     @State private var workoutLayout = UserDefaults.standard.string(forKey: "workout-layout") ?? "rows"
     @AppStorage("appearance") private var appearance: String = "system"
     @State private var photo: PhotosPickerItem?

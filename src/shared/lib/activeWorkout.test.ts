@@ -33,10 +33,12 @@ describe("active workout recovery", () => {
     expect(remainingRestSeconds(61000, 61000)).toBeNull();
     expect(remainingRestSeconds(61000, 91000)).toBeNull();
   });
-  it("keeps either display choice per account, the whole session list by default", () => {
-    expect(getWorkoutView("athlete")).toBe("list");
+  it("defaults to focus mode, keeps explicit display choices per account", () => {
+    expect(getWorkoutView("athlete")).toBe("focus");
     setWorkoutView("athlete", "focus");
     expect(getWorkoutView("athlete")).toBe("focus");
+    expect(getWorkoutView("other")).toBe("focus");
+    setWorkoutView("other", "list");
     expect(getWorkoutView("other")).toBe("list");
     setWorkoutView("athlete", "list");
     expect(getWorkoutView("athlete")).toBe("list");

@@ -81,7 +81,7 @@ export async function compressImage(
   });
 }
 
-const isHeic = (file: File) => /image\/hei[cf]/i.test(file.type) || /\.hei[cf]$/i.test(file.name);
+export const isHeicImage = (file: File) => /image\/hei[cf]/i.test(file.type) || /\.hei[cf]$/i.test(file.name);
 
 /**
  * Las fotos de la cámara del iPhone llegan en HEIC, que la mayoría de navegadores no
@@ -90,7 +90,7 @@ const isHeic = (file: File) => /image\/hei[cf]/i.test(file.type) || /\.hei[cf]$/
  * si no puede, se devuelve tal cual.
  */
 export async function toBrowserFriendlyImage(file: File, maxDimension = 2048, timeoutMs = 8000): Promise<File> {
-  if (!isHeic(file)) return file;
+  if (!isHeicImage(file)) return file;
   return new Promise((done) => {
     // Si el sistema no llega a decodificarla, no bloqueamos la subida: va el original.
     let settled = false;

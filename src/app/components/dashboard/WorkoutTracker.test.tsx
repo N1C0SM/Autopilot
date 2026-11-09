@@ -105,6 +105,29 @@ describe("routine navigation and saved session dates", () => {
     // las filas de series fuera de la pantalla.
     expect(screen.getAllByLabelText("Desliza para cambiar de ejercicio")).toHaveLength(1);
   });
+  it("opens the next unfinished exercise when the current exercise is complete", async () => {
+    const first = plan("Lunes", "Remo");
+    const next = plan("Lunes", "Press");
+    render(<WorkoutTracker userId="user" dayPlans={[{ ...first, exercises: [...(first.exercises || []), ...(next.exercises || [])] }]} initialDay="Lunes" />);
+    fireEvent.click(await screen.findByRole("button", { name: "Empezar entrenamiento" }));
+    await waitFor(() => expect(screen.getByRole("textbox", { name: "Peso de la serie 1 de Remo" })).toBeVisible());
+    expect(screen.queryByRole("textbox", { name: "Peso de la serie 1 de Press" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Marcar serie 1 de Remo" }));
+
+    await waitFor(() => expect(screen.getByRole("textbox", { name: "Peso de la serie 1 de Press" })).toBeVisible());
+    expect(screen.queryByRole("textbox", { name: "Peso de la serie 1 de Remo" })).not.toBeInTheDocument();
+  });
+  it("does not advance when sets are completed out of order", async () => {
+    const twoSets = { ...plan("Lunes", "Remo"), exercises: [{ exercise_id: "Remo", name: "Remo", series: 2, reps: 8, weight: "20", rest: "60 s" }] };
+    const next = plan("Lunes", "Press");
+    render(<WorkoutTracker userId="user" dayPlans={[{ ...twoSets, exercises: [...(twoSets.exercises || []), ...(next.exercises || [])] }]} initialDay="Lunes" />);
+    fireEvent.click(await screen.findByRole("button", { name: "Empezar entrenamiento" }));
+    fireEvent.click(screen.getByRole("button", { name: "Marcar serie 2 de Remo" }));
+
+    await waitFor(() => expect(screen.getByRole("textbox", { name: "Peso de la serie 1 de Remo" })).toBeVisible());
+    expect(screen.queryByRole("textbox", { name: "Peso de la serie 1 de Press" })).not.toBeInTheDocument();
+  });
   it("opens the first session of the routine, without weekdays or a rest screen", async () => {
     render(<WorkoutTracker userId="user" dayPlans={[plan("Lunes", "Sentadilla"), plan("Jueves", "Press banca")]} />);
     // Domingo y sin sesión pedida: se abre la primera de la rutina. Solo hay sesiones, en orden.

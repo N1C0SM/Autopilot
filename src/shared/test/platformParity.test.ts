@@ -420,13 +420,13 @@ describe("paridad web ↔ apps nativas", () => {
     expect(read("src/shared/contexts/AuthContext.tsx")).toContain("exists: data?.user?.identities?.length === 0");
   });
 
-  it("Entreno: toda la sesión en lista por defecto, carrusel arriba y foto grande en ejercicio a ejercicio, «···» con opciones claras y lo avanzado oculto", () => {
+  it("Entreno: ejercicio a ejercicio por defecto, carrusel arriba y foto grande en foco, «···» con opciones claras y lo avanzado oculto", () => {
     const web = read("src/app/components/dashboard/WorkoutTracker.tsx");
     const prefs = read("src/shared/lib/workoutPreferences.ts");
     const app = read("native/Autopilot/Features/Train/WorkoutView.swift");
-    expect(prefs).toContain('=== "focus" ? "focus" : "list"');
-    expect(app).toContain('@AppStorage("workout-view") private var workoutView = "list"');
-    expect(read("native/Autopilot/Features/Account/AccountView.swift")).toContain('forKey: "workout-view") ?? "list"');
+    expect(prefs).toContain('=== "list" ? "list" : "focus"');
+    expect(app).toContain('@AppStorage("workout-view") private var workoutView = "focus"');
+    expect(read("native/Autopilot/Features/Account/AccountView.swift")).toContain('forKey: "workout-view") ?? "focus"');
     for (const text of ["Ver toda la sesión", "Ver ejercicio a ejercicio", "Más opciones por serie", "Descartar entrenamiento"]) {
       expect(web, text).toContain(text);
       expect(app, text).toContain(text);

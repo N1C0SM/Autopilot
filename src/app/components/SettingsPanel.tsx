@@ -35,7 +35,7 @@ import { getAvailabilityDayCount, getAvailabilityHours } from "@/shared/lib/avai
 import { euro, usePlanAvailability } from "@/shared/lib/planCatalog";
 import { hapticNotify, hapticSelection, hapticTap } from "@/shared/lib/native";
 import { isIOSNative, isNativeApp, supportsMultipleAccounts } from "@/shared/lib/platform";
-import { compressImage } from "@/shared/lib/imageCompression";
+import { compressImage, isHeicImage, toBrowserFriendlyImage } from "@/shared/lib/imageCompression";
 import type { Json } from "@/shared/integrations/supabase/types";
 
 import { useFreeCampaign } from "@/shared/lib/freeCampaign";
@@ -329,7 +329,13 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
     try {
       // Comprimimos en el navegador antes de subir: una foto de cámara pesa
       // 4-12 MB y la de perfil se muestra a 80 px, así que no hace falta.
-      const compressed = await compressImage(file, { maxDimension: 1024, quality: 0.82, mimeType: "image/jpeg" });
+      const browserFriendly = await toBrowserFriendlyImage(file);
+      if (isHeicImage(browserFriendly)) {
+        toast.error("No se pudo convertir la foto HEIC. Elige una foto JPG, PNG o WebP.");
+        void hapticNotify("error");
+        return;
+      }
+      const compressed = await compressImage(browserFriendly, { maxDimension: 1024, quality: 0.82, mimeType: "image/jpeg" });
       if (compressed.size > AVATAR_MAX_UPLOAD_BYTES) {
         toast.error("La imagen sigue siendo demasiado grande después de comprimirla. Prueba con otra foto.");
         void hapticNotify("error");

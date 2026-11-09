@@ -73,8 +73,11 @@ const Login = () => {
     if (!cleaned) { setLoading(false); return; }
 
     let error: Error | null = null;
+    let authenticatedUserId: string | null = null;
     if (isEmail(cleaned)) {
-      ({ error } = await signIn(cleaned, password));
+      const result = await signIn(cleaned, password);
+      error = result.error;
+      authenticatedUserId = result.user?.id ?? null;
     } else {
       const { data, error: fnError } = await supabase.functions.invoke("login-identifier", { body: { identifier: cleaned, password } });
       if (fnError || !data?.access_token) {
@@ -82,8 +85,9 @@ const Login = () => {
         try { code = (await (fnError as { context?: Response })?.context?.json())?.error || code; } catch { /* noop */ }
         error = new Error(code === "email_not_confirmed" ? "Email not confirmed" : code);
       } else {
-        const { error: sessionError } = await supabase.auth.setSession({ access_token: data.access_token, refresh_token: data.refresh_token });
+        const { data: sessionData, error: sessionError } = await supabase.auth.setSession({ access_token: data.access_token, refresh_token: data.refresh_token });
         error = sessionError;
+        authenticatedUserId = sessionData.session?.user.id ?? null;
       }
     }
     setLoading(false);
@@ -100,18 +104,22 @@ const Login = () => {
     } else {
       // Si había una verificación pendiente de otra cuenta, ya no aplica.
       clearVerifyContext();
-      // Resolve destination based on role
-      const { data: { user: authedUser } } = await supabase.auth.getUser();
-      if (authedUser) {
-        if (offerLock) setRequirePassword(authedUser.id, lockAccount);
-        const { data: prof } = await supabase.from("profiles").select("name, avatar_url").eq("user_id", authedUser.id).maybeSingle();
+      if (authenticatedUserId && offerLock) setRequirePassword(authenticatedUserId, lockAccount);
+      // Deep links have an authoritative destination: don't wait for profile/role
+      // lookups or make another Auth request before opening the requested screen.
+      if (nextPath) {
+        try { localStorage.setItem("autopilot:last-login", JSON.stringify({ id: cleaned, name: "", avatar: "" })); } catch { /* noop */ }
+        navigate(nextPath);
+        return;
+      }
+      if (authenticatedUserId) {
+        const [{ data: prof }, { data: isAdmin }, { data: isTrainer }] = await Promise.all([
+          supabase.from("profiles").select("name, avatar_url").eq("user_id", authenticatedUserId).maybeSingle(),
+          supabase.rpc("has_role", { _user_id: authenticatedUserId, _role: "admin" }),
+          supabase.rpc("has_role", { _user_id: authenticatedUserId, _role: "trainer" }),
+        ]);
         const memo = { id: cleaned, name: prof?.name || "", avatar: prof?.avatar_url || "" };
         try { localStorage.setItem("autopilot:last-login", JSON.stringify(memo)); } catch { /* noop */ }
-        if (nextPath) { navigate(nextPath); return; }
-        const [{ data: isAdmin }, { data: isTrainer }] = await Promise.all([
-          supabase.rpc("has_role", { _user_id: authedUser.id, _role: "admin" }),
-          supabase.rpc("has_role", { _user_id: authedUser.id, _role: "trainer" }),
-        ]);
         if (isAdmin) navigate("/admin");
         else if (isTrainer) navigate("/trainer");
         else navigate("/dashboard");

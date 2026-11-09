@@ -5,33 +5,39 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Login from "@/app/pages/Login";
 import { readSignupEmail, readVerifyContext } from "@/shared/lib/signupVerification";
 
-const signIn = vi.fn();
-const hapticNotify = vi.fn();
+const mocks = vi.hoisted(() => ({
+  signIn: vi.fn(),
+  hapticNotify: vi.fn(),
+  getUser: vi.fn(),
+  from: vi.fn(),
+  rpc: vi.fn(),
+  signInWithGoogle: vi.fn(),
+}));
+const { signIn, hapticNotify, getUser, from, rpc, signInWithGoogle } = mocks;
 
 vi.mock("@/shared/contexts/AuthContext", () => ({
-  useAuth: () => ({ signIn }),
+  useAuth: () => ({ signIn: mocks.signIn }),
 }));
 
 vi.mock("@/shared/integrations/supabase/client", () => ({
   supabase: {
-    auth: { getUser: vi.fn(), setSession: vi.fn() },
+    auth: { getUser: mocks.getUser, setSession: vi.fn() },
     functions: { invoke: vi.fn() },
-    from: vi.fn(),
-    rpc: vi.fn(),
+    from: mocks.from,
+    rpc: mocks.rpc,
   },
 }));
 
-const signInWithGoogle = vi.fn();
 vi.mock("@/shared/lib/nativeAuth", () => ({
   signInWithApple: vi.fn(),
-  signInWithGoogle: (...args: unknown[]) => signInWithGoogle(...args),
+  signInWithGoogle: (...args: unknown[]) => mocks.signInWithGoogle(...args),
 }));
 
 vi.mock("@/shared/lib/native", () => ({
   hapticTap: vi.fn(),
   hapticSelection: vi.fn(),
   hapticImpact: vi.fn(),
-  hapticNotify: (...args: unknown[]) => hapticNotify(...args),
+  hapticNotify: (...args: unknown[]) => mocks.hapticNotify(...args),
   isNative: vi.fn().mockReturnValue(false),
 }));
 
@@ -47,6 +53,9 @@ const renderLogin = () =>
 beforeEach(() => {
   localStorage.clear();
   signIn.mockReset();
+  getUser.mockReset();
+  from.mockReset();
+  rpc.mockReset();
   hapticNotify.mockReset();
   signInWithGoogle.mockReset().mockResolvedValue({ error: null });
 });
@@ -92,6 +101,27 @@ describe("login", () => {
     fireEvent.change(screen.getByLabelText("Contraseña"), { target: { value: "wrong-pass2" } });
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
+
+  it("opens a requested destination without an extra Auth or profile round trip", async () => {
+    signIn.mockResolvedValue({ error: null, user: { id: "athlete" } });
+    render(
+      <HelmetProvider>
+        <MemoryRouter initialEntries={["/login?next=/progreso"]}>
+          <Login />
+        </MemoryRouter>
+      </HelmetProvider>,
+    );
+
+    fireEvent.change(screen.getByLabelText("Usuario o correo"), { target: { value: "ana@example.test" } });
+    fireEvent.change(screen.getByLabelText("Contraseña"), { target: { value: "secret123" } });
+    fireEvent.click(screen.getByRole("button", { name: "Iniciar sesión" }));
+
+    await waitFor(() => expect(signIn).toHaveBeenCalled());
+    expect(getUser).not.toHaveBeenCalled();
+    expect(from).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
   it("ofrece introducir el código cuando el correo no está verificado", async () => {
     signIn.mockResolvedValue({ error: new Error("Email not confirmed") });
     sessionStorage.clear();

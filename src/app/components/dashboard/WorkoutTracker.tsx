@@ -757,8 +757,14 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
       // cadena por el primer ejercicio con series pendientes.
       const chain = getSupersetChain(exerciseNames, supersetLinks, exerciseIndex);
       restChainRef.current = chain.length > 1 ? chain : null;
-      if (chain.length === 1 && setIndex === sets.length - 1 && activePlan?.exercises?.[exerciseIndex + 1]) {
-        setExpandedExercise(exerciseIndex + 1);
+      const exerciseFinished = sets.length > 0 && sets.every((candidate, candidateIndex) =>
+        candidateIndex === setIndex || candidate.done,
+      );
+      if (chain.length === 1 && exerciseFinished) {
+        const nextIndex = (activePlan?.exercises || []).findIndex((candidate, candidateIndex) =>
+          candidateIndex > exerciseIndex && (exerciseLogs[candidate.name] || []).some((candidateSet) => !candidateSet.done),
+        );
+        if (nextIndex >= 0) setExpandedExercise(nextIndex);
       }
     }
   };
@@ -2061,7 +2067,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
             </p>
           )}
           <AnimatePresence initial={false}>
-            {!workoutCompleted && restTimer !== null && (
+            {!workoutCompleted && (restTimer !== null || (started && focusMode)) && (
               <motion.div
                 initial={{ y: 120, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
@@ -2069,30 +2075,42 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                 transition={prefersReducedMotion ? { duration: 0.2 } : { type: "spring", stiffness: 340, damping: 34 }}
                 className="app-chrome sticky bottom-0 z-20 -mx-4 mt-auto border-t-[0.5px] px-4 pb-[max(0.75rem,var(--safe-bottom))] pt-3"
               >
-                <div role="timer" aria-label="Descanso entre series" aria-disabled={paused || undefined} className={`transition-opacity ${paused ? "pointer-events-none opacity-40" : ""}`}>
-                  <div className="flex items-center justify-center gap-4 py-2">
-                    <button type="button" aria-label="Restar 15 segundos" onClick={() => { void hapticSelection(); adjustRest(-15); }} className="h-11 min-w-[72px] rounded-full bg-secondary font-semibold tabular-nums text-foreground transition-opacity active:opacity-60 [touch-action:manipulation]">−15 s</button>
-                    <div aria-hidden="true" className="relative h-[88px] w-[88px]">
-                      <svg width="88" height="88" viewBox="0 0 88 88" style={{ transform: "rotate(-90deg)" }}>
-                        <circle cx="44" cy="44" r="40" fill="none" stroke="hsl(var(--secondary))" strokeWidth="4" />
-                        <circle
-                          cx="44" cy="44" r="40" fill="none"
-                          stroke="hsl(var(--primary))" strokeWidth="4"
-                          strokeLinecap="round"
-                          strokeDasharray="251.33"
-                          strokeDashoffset={251.33 * (1 - Math.min(1, restTimer / Math.max(restTarget, 1)))}
-                          style={{ transition: "stroke-dashoffset 1s linear" }}
-                        />
-                      </svg>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="font-rounded text-[26px] font-bold tabular-nums text-foreground">
-                          {Math.floor(restTimer / 60)}:{(restTimer % 60).toString().padStart(2, "0")}
-                        </span>
-                      </div>
-                    </div>
-                    <button type="button" aria-label="Sumar 15 segundos" onClick={() => { void hapticSelection(); adjustRest(15); }} className="h-11 min-w-[72px] rounded-full bg-secondary font-semibold tabular-nums text-foreground transition-opacity active:opacity-60 [touch-action:manipulation]">+15 s</button>
+                {started && focusMode && (
+                  <div className="mb-2 flex items-center gap-3">
+                    <Button type="button" className="min-h-11 flex-1" variant={paused ? "default" : "secondary"} onClick={() => { void hapticTap(); if (paused) resumeWorkout(); else pauseWorkout(); }}>
+                      {paused ? "Reanudar" : "Pausar"}
+                    </Button>
+                    {paused && <span className="type-footnote font-medium text-muted-foreground">En pausa</span>}
+                    <span aria-label="Tiempo de sesión" className="type-footnote tabular-nums text-muted-foreground">{formatElapsed(sessionElapsedMs)}</span>
+                    <span className="type-footnote tabular-nums text-muted-foreground">{completedExercises}/{currentPlan.exercises?.length ?? 0}</span>
                   </div>
-                </div>
+                )}
+                {restTimer !== null && (
+                  <div role="timer" aria-label="Descanso entre series" aria-disabled={paused || undefined} className={`transition-opacity ${paused ? "pointer-events-none opacity-40" : ""}`}>
+                    <div className="flex items-center justify-center gap-4 py-2">
+                      <button type="button" aria-label="Restar 15 segundos" onClick={() => { void hapticSelection(); adjustRest(-15); }} className="h-11 min-w-[72px] rounded-full bg-secondary font-semibold tabular-nums text-foreground transition-opacity active:opacity-60 [touch-action:manipulation]">−15 s</button>
+                      <div aria-hidden="true" className="relative h-[88px] w-[88px]">
+                        <svg width="88" height="88" viewBox="0 0 88 88" style={{ transform: "rotate(-90deg)" }}>
+                          <circle cx="44" cy="44" r="40" fill="none" stroke="hsl(var(--secondary))" strokeWidth="4" />
+                          <circle
+                            cx="44" cy="44" r="40" fill="none"
+                            stroke="hsl(var(--primary))" strokeWidth="4"
+                            strokeLinecap="round"
+                            strokeDasharray="251.33"
+                            strokeDashoffset={251.33 * (1 - Math.min(1, restTimer / Math.max(restTarget, 1)))}
+                            style={{ transition: "stroke-dashoffset 1s linear" }}
+                          />
+                        </svg>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="font-rounded text-[26px] font-bold tabular-nums text-foreground">
+                            {Math.floor(restTimer / 60)}:{(restTimer % 60).toString().padStart(2, "0")}
+                          </span>
+                        </div>
+                      </div>
+                      <button type="button" aria-label="Sumar 15 segundos" onClick={() => { void hapticSelection(); adjustRest(15); }} className="h-11 min-w-[72px] rounded-full bg-secondary font-semibold tabular-nums text-foreground transition-opacity active:opacity-60 [touch-action:manipulation]">+15 s</button>
+                    </div>
+                  </div>
+                )}
               </motion.div>
             )}
           </AnimatePresence>

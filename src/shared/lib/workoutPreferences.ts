@@ -5,10 +5,10 @@ export type WorkoutLayout = "rows" | "columns";
 export const WORKOUT_VIEW_EVENT = "autopilot:workout-view-changed";
 const viewKey = (userId: string) => `autopilot:workout-view:${userId}`;
 const layoutKey = (userId: string) => `autopilot:workout-layout:${userId}`;
-/** La sesión entera en lista por defecto (como la app); ejercicio a ejercicio, solo si se elige. */
+/** En el gimnasio se prioriza el ejercicio actual; la sesión completa sigue disponible. */
 export function getWorkoutView(userId: string): WorkoutView {
-  try { return localStorage.getItem(viewKey(userId)) === "focus" ? "focus" : "list"; }
-  catch { return "list"; }
+  try { return localStorage.getItem(viewKey(userId)) === "list" ? "list" : "focus"; }
+  catch { return "focus"; }
 }
 export function setWorkoutView(userId: string, view: WorkoutView) {
   try { localStorage.setItem(viewKey(userId), view); } catch { /* storage unavailable */ }

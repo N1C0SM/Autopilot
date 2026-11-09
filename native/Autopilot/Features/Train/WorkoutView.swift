@@ -46,7 +46,7 @@ struct WorkoutView: View {
     /// Metadatos del ejercicio (patrón/estímulo/carga) para el glifo de movimiento.
     @State private var motionMeta: [String: (pattern: String?, stimulus: String?, load: String?)] = [:]
     /// Vista elegida en «···» o en Ajustes: lista de toda la sesión (por defecto) o ejercicio a ejercicio.
-    @AppStorage("workout-view") private var workoutView = "list"
+    @AppStorage("workout-view") private var workoutView = "focus"
     @AppStorage("workout-layout") private var workoutLayout = "rows"
     private var focusMode: Bool { workoutView == "focus" }
     /// RPE, bajadas, calentamiento y fallo: ocultos por defecto para que anotar sea serie, kg y reps.
@@ -453,6 +453,27 @@ struct WorkoutView: View {
 
     @ViewBuilder private var footer: some View {
         VStack(spacing: 10) {
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                HStack(spacing: 12) {
+                    Button { Haptics.tap(); workout.togglePause() } label: {
+                        Text(workout.isPaused ? "Reanudar" : "Pausar")
+                            .font(.apSubhead.weight(.semibold))
+                            .foregroundStyle(workout.isPaused ? Palette.background : Palette.foreground)
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                            .background(workout.isPaused ? Palette.gold : Palette.secondary, in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(workout.isPaused ? "Reanudar entrenamiento" : "Pausar entrenamiento")
+                    Text(elapsed(context.date))
+                        .font(.apFootnote.monospacedDigit())
+                        .foregroundStyle(Palette.muted)
+                        .accessibilityLabel("Tiempo de sesión \(elapsed(context.date))")
+                    Text("\(doneExercises)/\(workout.exercises.count)")
+                        .font(.apFootnote.monospacedDigit())
+                        .foregroundStyle(Palette.muted)
+                        .accessibilityLabel("\(doneExercises) de \(workout.exercises.count) ejercicios completados")
+                }
+            }
             if focus != nil {
                 HStack(spacing: 8) {
                     Button { moveFocus(-1) } label: {
@@ -738,6 +759,18 @@ struct SessionExerciseCard: View {
         .onChange(of: allDone) { _, done in
             guard done else { justCompleted = false; return }
             withAnimation(reduceMotion ? nil : .snappy) { justCompleted = true }
+            if focused, workout.exercises.indices.contains(index) {
+                let count = workout.exercises.count
+                let candidates = Array((index + 1)..<count) + Array(0..<index)
+                if let next = candidates.first(where: { candidate in
+                    let pending = workout.draft.logs[workout.exercises[candidate].name] ?? []
+                    return pending.isEmpty || !pending.allSatisfy(\.done)
+                }) {
+                    workout.draft.currentExercise = next
+                    workout.openExercises.insert(next)
+                    workout.persist()
+                }
+            }
             Task {
                 try? await Task.sleep(for: .seconds(1.2))
                 withAnimation(reduceMotion ? nil : .easeOut(duration: 0.3)) { justCompleted = false }
