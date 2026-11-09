@@ -65,7 +65,9 @@ const NativeSplashSync = () => {
   return null;
 };
 
-const RootRoute = () => (isNativeApp() ? <Welcome /> : <Index />);
+// app.autopilotplan.com opens the web app directly; the main domain keeps the landing.
+const isAppHost = () => typeof window !== "undefined" && window.location.hostname.startsWith("app.");
+const RootRoute = () => (isNativeApp() ? <Welcome /> : isAppHost() ? <DashboardRedirect /> : <Index />);
 
 const DashboardRedirect = () => {
   const { user, loading } = useAuth();
