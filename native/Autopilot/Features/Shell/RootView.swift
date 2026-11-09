@@ -4,7 +4,7 @@ import Foundation
 /// Secciones de la app. Admin usa los mismos grupos que `src/app/components/admin/adminNav.ts`.
 enum AppSection: String, CaseIterable, Identifiable, Hashable {
     // Usuario
-    case home, train, progress, nutrition, scan, settings
+    case home, progress, nutrition, scan, settings
     // Entrenador
     case trainerClients, trainerProfile
     // Admin
@@ -33,7 +33,6 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
     var tabTitle: String {
         switch self {
         case .home: "Hoy"
-        case .train: "Entrenar"
         case .progress: "Progreso"
         default: title
         }
@@ -42,7 +41,6 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
     var title: String {
         switch self {
         case .home: "Inicio"
-        case .train: "Entrenamiento"
         case .progress: "Mi progreso"
         case .nutrition: "Nutrición"
         case .scan: "Escáner"
@@ -72,7 +70,6 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
     var symbol: String {
         switch self {
         case .home: "house.fill"
-        case .train: "dumbbell.fill"
         case .progress: "chart.line.uptrend.xyaxis"
         case .nutrition: "fork.knife"
         case .scan: "figure.stand"
@@ -469,8 +466,6 @@ struct SectionView: View {
         Group {
             switch section {
             case .home: HomeView(onNavigate: onNavigate)
-            // Con el usuario ya en el init: Entrenar pinta su rutina en caché en el primer fotograma.
-            case .train: TrainView(userId: session.userId)
             case .progress: ProgressScreen(onNavigate: onNavigate)
             case .nutrition: NutritionView()
             case .scan: ScanView()
@@ -516,7 +511,6 @@ extension AppSection {
     var lucide: String? {
         switch self {
         case .home: "lu-house"
-        case .train: "lu-dumbbell"
         case .nutrition: "lu-apple"
         case .progress: "lu-sparkles"
         case .settings: "lu-settings"
@@ -527,7 +521,6 @@ extension AppSection {
     /// Título y pista de la cabecera de escritorio (SECTION_LABELS / SECTION_HINTS de la web).
     var deskTitle: String {
         switch self {
-        case .train: "Entrenamiento"
         case .progress: "Progreso"
         default: title
         }
@@ -535,7 +528,6 @@ extension AppSection {
     var deskHint: String? {
         switch self {
         case .home: "Tu entreno de hoy y lo que toca comer"
-        case .train: "Tus sesiones en orden, el día que te venga bien"
         case .nutrition: "Tus macros y comidas del día"
         case .progress: "Fotos, peso y evolución semanal"
         case .settings: "Perfil, suscripción y notificaciones"
@@ -546,7 +538,6 @@ extension AppSection {
     var navTitle: String {
         switch self {
         case .home: "Hoy"
-        case .train: "Entrenar"
         case .progress: "Progreso"
         default: title
         }

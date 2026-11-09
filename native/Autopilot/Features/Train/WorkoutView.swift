@@ -509,23 +509,36 @@ struct SessionExerciseCard: View {
         .accessibilityElement(children: .combine)
     }
 
-    /// Chip del descanso: muestra el descanso prescrito por el plan.
+    /// Visual del ejercicio dentro de la tarjeta desplegada.
+    /// En modo focus: glifo animado si hay spec, foto si no. En modo lista: solo el glifo si hay
+    /// spec (la foto ya está en la miniatura de la cabecera; no se repite).
     @ViewBuilder private func exerciseVisual(motionSpec: ExerciseMotion.Spec?) -> some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: Radius.card, style: .continuous).fill(Palette.secondary)
-            if let spec = motionSpec {
+        if let spec = motionSpec {
+            ZStack {
+                RoundedRectangle(cornerRadius: Radius.card, style: .continuous).fill(Palette.secondary)
                 ExerciseMotionHero(spec: spec).padding(16)
-            } else if let url = exercise.image_url.flatMap(URL.init(string:)) {
-                CachedAsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { Color.clear }
-                    .clipped()
-            } else {
-                Image(systemName: "dumbbell").font(.inter(.title)).foregroundStyle(Palette.muted)
             }
+            .frame(maxWidth: .infinity)
+            .frame(height: 160)
+            .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            .accessibilityHidden(true)
+        } else if focused {
+            // Solo en modo «ejercicio a ejercicio»: la miniatura no aparece en la cabecera.
+            ZStack {
+                RoundedRectangle(cornerRadius: Radius.card, style: .continuous).fill(Palette.secondary)
+                if let url = exercise.image_url.flatMap(URL.init(string:)) {
+                    CachedAsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { Color.clear }
+                        .clipped()
+                } else {
+                    Image(systemName: "dumbbell").font(.inter(.title)).foregroundStyle(Palette.muted)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 160)
+            .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            .accessibilityHidden(true)
         }
-        .frame(maxWidth: .infinity)
-        .frame(height: 160)
-        .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-        .accessibilityHidden(true)
+        // En vista de lista sin glifo: no se muestra nada — la miniatura de la cabecera ya identifica el ejercicio.
     }
 
     private var indexBadge: some View {
@@ -1232,7 +1245,7 @@ struct NumberField: View {
     }
 }
 
-/// Miniatura de ejercicio de la sesión: misma apariencia que `ExerciseThumb` (TrainView), pero
+/// Miniatura de ejercicio de la sesión: misma apariencia que `ExerciseThumb` (TrainView.swift), pero
 /// decodificando a tamaño de miniatura en vez de los ~2700 px de `CachedAsyncImage`. Con 6-8
 /// tarjetas abiertas eso eran cientos de MB de decodificado y tirones al abrir la sesión.
 private struct WorkoutThumb: View {

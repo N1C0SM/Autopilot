@@ -125,16 +125,7 @@ struct ProgressScreen: View {
     // MARK: Fuerza
 
     private var strength: some View {
-        // Como la web (`WorkoutProgress`): una sola columna a todo el ancho, hero arriba y
-        // «Por ejercicio» debajo (también en escritorio; antes iban en dos columnas de 320).
-        // Rediseño (maqueta de ChatGPT): «Tu fuerza» con el ejercicio principal arriba y «Tu constancia» debajo.
         VStack(alignment: .leading, spacing: 16) {
-            if !(model.detailsLoaded && model.history.isEmpty) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Tu fuerza").font(.apTitle2)
-                    Text("Evolución de tus principales ejercicios.").font(.apSubhead).foregroundStyle(Palette.muted)
-                }
-            }
             strengthExercises
             if model.strengthLoaded && !(model.detailsLoaded && model.history.isEmpty) {
                 Text("Tu constancia").font(.apTitle2).padding(.top, 8)
@@ -164,12 +155,17 @@ struct ProgressScreen: View {
     @ViewBuilder private var strengthExercises: some View {
         if model.detailsLoaded {
             if !model.history.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Tu fuerza").font(.apTitle2)
+                    Text("Evolución de tus principales ejercicios.")
+                        .font(.apSubhead).foregroundStyle(Palette.muted)
+                }
                 ExerciseProgressSection(history: model.history, images: model.exerciseImages, names: model.exerciseNames)
             } else {
-                // Cuenta recién creada: misma portada que Físico y Récords, con foto real y el camino a Entrenar.
-                progressHero(photo: Self.brandPullupPhoto, eyebrow: "TU FUERZA", title: "Tu progreso empieza con tu primer entreno",
-                             message: "Marca tus series al entrenar y aquí verás tus kilos, tu racha y tus récords.",
-                             perks: Self.strengthPerks, button: "Empezar a entrenar") { onNavigate(.home) }
+                // Cuenta recién creada: portada con foto real y el camino a Entrenar.
+                progressHero(photo: Self.brandPullupPhoto, eyebrow: "TU FUERZA", title: "Empieza a documentar tu progreso",
+                             message: "Registra tus entrenamientos y observa cómo evoluciona tu fuerza con el tiempo.",
+                             perks: Self.strengthPerks, button: "Registrar tu primer entrenamiento") { onNavigate(.home) }
             }
         } else if let error = model.detailsError {
             ProgressRetryCard(title: "No hemos podido cargar «Por ejercicio»", message: error) {
@@ -351,11 +347,61 @@ struct ProgressScreen: View {
                      perks: Self.physiquePerks, button: "Hacer mi primer scan") { tab = 3 }
     }
 
-    /// Sin récords: misma portada que Físico, con lo que guarda Récords y el camino a Entrenar (como `PRsList` de la web).
+    /// Sin récords: portada con foto real y el camino a Entrenar.
     private var recordsEmpty: some View {
-        progressHero(photo: Self.brandDumbbellsPhoto, eyebrow: "TUS RÉCORDS", title: "Tu primer récord está a un entreno",
-                     message: "Cada vez que registras una serie con peso, guardamos tu mejor marca de ese ejercicio.",
-                     perks: Self.recordPerks, button: "Ir a entrenar") { onNavigate(.home) }
+        recordsHeroEmpty
+    }
+
+    /// Portada de Récords vacío: foto real, eyebrow trofeo, título y perks con texto enriquecido.
+    private var recordsHeroEmpty: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Color.clear.frame(height: 208)
+                .overlay {
+                    CachedAsyncImage(url: URL(string: Self.brandPullupPhoto)) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
+                }
+                .clipped()
+                .overlay { LinearGradient(colors: [.black.opacity(0.1), .black.opacity(0.45), Palette.card], startPoint: .top, endPoint: .bottom) }
+                .overlay(alignment: .bottomLeading) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Label("TUS RÉCORDS", systemImage: "trophy")
+                            .font(.apCaption.weight(.semibold)).tracking(1.6).foregroundStyle(Palette.gold)
+                        Text("Empieza a conseguir\ntus primeras marcas")
+                            .font(.inter(size: 26, weight: .bold)).foregroundStyle(.white)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .accessibilityAddTraits(.isHeader)
+                    }
+                    .padding(.horizontal, 20).padding(.bottom, 12)
+                }
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Registra tus mejores resultados y sigue tu evolución en cada ejercicio.")
+                    .font(.apSubhead).foregroundStyle(Palette.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+                // Perk 1
+                Label {
+                    Text("Tu 1RM estimado").font(.apSubhead)
+                } icon: {
+                    Image(systemName: "arrow.up.right").foregroundStyle(Palette.gold)
+                }
+                // Perk 2
+                Label {
+                    (Text("Nuevas marcas y ") + Text("progresión").bold()).font(.apSubhead)
+                } icon: {
+                    Image(systemName: "chart.bar.fill").foregroundStyle(Palette.gold)
+                }
+                // Perk 3
+                Label {
+                    (Text("Récords personales ") + Text("por ejercicio").bold()).font(.apSubhead)
+                } icon: {
+                    Image(systemName: "trophy").foregroundStyle(Palette.gold)
+                }
+                Button("Registrar mi primer récord") { Haptics.tap(); onNavigate(.home) }
+                    .buttonStyle(.pill).padding(.top, 8)
+            }
+            .padding(.horizontal, 20).padding(.top, 8).padding(.bottom, 20)
+        }
+        .background(Palette.card)
+        .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous).strokeBorder(Palette.gold.opacity(0.15), lineWidth: 1))
     }
 
     /// Portada de una sección vacía de Progreso: foto real, titular, lo que tendrá aquí (todo real) y una acción.
@@ -406,11 +452,11 @@ struct ProgressScreen: View {
         Perk(symbol: "calendar", text: "Tus fotos ordenadas por mes"),
         Perk(symbol: "lock", text: "Privadas: solo las ves tú"),
     ]
-    /// Lo que tendrá Fuerza: todo real (gráfica por ejercicio, racha semanal y récords).
+    /// Lo que tendrá Fuerza: evolución de marcas, volumen y objetivos por ejercicio.
     private static let strengthPerks = [
-        Perk(symbol: "chart.line.uptrend.xyaxis", text: "Tu fuerza en cada ejercicio"),
-        Perk(symbol: "flame", text: "Tu racha de semanas entrenando"),
-        Perk(symbol: "trophy", text: "Tus récords personales"),
+        Perk(symbol: "chart.bar.fill", text: "Evolución de tus marcas"),
+        Perk(symbol: "arrow.up.and.down", text: "Volumen y repeticiones"),
+        Perk(symbol: "scope", text: "Objetivos por ejercicio"),
     ]
     /// Lo que guarda Récords: la mejor marca de cada ejercicio, los nuevos del mes y su fecha.
     private static let recordPerks = [
@@ -1799,6 +1845,7 @@ struct ExerciseProgressSection: View {
                 } label: { header(name, entries) }
                 .menuStyle(.button).buttonStyle(.plain)
                 chart(name, entries)
+                statsRow(entries)
             }
             .padding(16)
             .background(Palette.card, in: card)
@@ -1842,12 +1889,51 @@ struct ExerciseProgressSection: View {
     /// Subida en kg en verde (chip de la maqueta); nada si no ha subido.
     @ViewBuilder private func gainChip(_ gain: Double?) -> some View {
         if let gain {
-            Label("+\(r(gain)) kg", systemImage: "chart.line.uptrend.xyaxis")
-                .font(.inter(size: 12, weight: .semibold).monospacedDigit())
-                .foregroundStyle(Palette.success)
-                .padding(.horizontal, 8).padding(.vertical, 4)
-                .background(Palette.success.opacity(0.15), in: Capsule())
+            Label("+\(r(gain)) kg", systemImage: "arrow.up")
+                .font(.inter(size: 12, weight: .bold).monospacedDigit())
+                .foregroundStyle(Palette.gold)
+                .padding(.horizontal, 10).padding(.vertical, 5)
+                .background(Palette.gold.opacity(0.18), in: Capsule())
                 .fixedSize()
+        }
+    }
+
+    /// Fila inferior de la tarjeta: 1RM estimado y objetivo próximo, separados por un divisor.
+    @ViewBuilder private func statsRow(_ entries: [ExerciseEntry]) -> some View {
+        let best1rm = entries.compactMap(\.best1Rm).max()
+        if let e1rm = best1rm {
+            // Objetivo: siguiente múltiplo de 5 por encima del 1RM actual (mínimo +2.5 kg).
+            let rawGoal = (e1rm / 5).rounded(.up) * 5
+            let goal = rawGoal > e1rm ? rawGoal : rawGoal + 5
+            let divider = Color.white.opacity(0.08)
+            HStack(spacing: 0) {
+                // 1RM estimado
+                HStack(spacing: 8) {
+                    Image(systemName: "chart.bar").font(.system(size: 16, weight: .medium)).foregroundStyle(Palette.gold)
+                        .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("1RM estimado").font(.apFootnote).foregroundStyle(Palette.muted)
+                        Text("\(r(e1rm)) kg").font(.inter(.title3).weight(.bold)).monospacedDigit()
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                divider.frame(width: 1).padding(.vertical, 4)
+                // Objetivo próximo
+                HStack(spacing: 8) {
+                    Image(systemName: "scope").font(.system(size: 16, weight: .medium)).foregroundStyle(Palette.gold)
+                        .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Objetivo").font(.apFootnote).foregroundStyle(Palette.muted)
+                        Text("\(r(goal)) kg").font(.inter(.title3).weight(.bold)).monospacedDigit()
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.leading, 16)
+                Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold)).foregroundStyle(Palette.muted)
+                    .accessibilityHidden(true)
+            }
+            .padding(.top, 4)
+            .overlay(alignment: .top) { divider.frame(height: 1) }
         }
     }
 
@@ -1883,7 +1969,12 @@ struct ExerciseProgressSection: View {
                     HStack(spacing: 10) {
                         Text(label).font(.inter(size: 26, weight: .bold).monospacedDigit()).foregroundStyle(Palette.foreground)
                             .lineLimit(1).minimumScaleFactor(0.7)
-                        gainChip(best.gain)
+                        if let gain = best.gain {
+                            HStack(spacing: 6) {
+                                gainChip(gain)
+                                Text("vs. último registro").font(.apFootnote).foregroundStyle(Palette.muted)
+                            }
+                        }
                     }
                 } else {
                     // Sin peso no hay marca que enseñar: se dice cuántas sesiones lleva, sin guiones.

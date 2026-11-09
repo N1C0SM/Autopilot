@@ -231,7 +231,6 @@ extension AppSection {
     var phosphor: String {
         switch self {
         case .home: "ph-house"
-        case .train: "ph-barbell"
         case .nutrition: "ph-fork-knife"
         case .progress: "ph-chart-line-up"
         default: "ph-house"
@@ -240,7 +239,6 @@ extension AppSection {
     func tabSymbol(active: Bool) -> String {
         switch self {
         case .home: active ? "house.fill" : "house"
-        case .train: "dumbbell.fill"
         case .nutrition: "fork.knife"
         case .progress: "chart.line.uptrend.xyaxis"
         default: symbol
