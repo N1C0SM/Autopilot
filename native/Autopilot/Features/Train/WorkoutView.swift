@@ -562,59 +562,68 @@ struct SessionExerciseCard: View {
         metaChip(icon: "clock", text: "Descanso \(exercise.rest)")
     }
 
+    /// Cabecera de la tarjeta: miniatura, nombre, chips y acciones.
+    /// Extraída del body para que el compilador no falle por complejidad.
+    private var cardHeader: some View {
+        HStack(spacing: 12) {
+            if !focused {
+                WorkoutThumb(url: exercise.image_url, completed: allDone)
+                    .overlay(alignment: .topLeading) { indexBadge }
+            }
+            exerciseInfo
+            Spacer(minLength: 0)
+            if allDone {
+                Image(systemName: "checkmark").font(.inter(size: 18, weight: .bold)).foregroundStyle(Palette.gold)
+                    .frame(width: 36, height: 44)
+                    .scaleEffect(justCompleted && !reduceMotion ? 1.25 : 1)
+                    .animation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.45), value: justCompleted)
+                    .accessibilityLabel("ejercicio completado")
+            } else {
+                ExerciseSwapMenu(workout: workout, exercise: exercise)
+            }
+            Button { technique = true } label: { Image(systemName: "info.circle").font(.inter(size: 19)) }
+                .buttonStyle(.plain)
+                .foregroundStyle(Palette.muted)
+                .frame(width: 44, height: 44)
+                .accessibilityLabel("Técnica: \(exercise.name)")
+            if !focused {
+                Button {
+                    Haptics.selection()
+                    withAnimation(reduceMotion ? nil : .snappy) { workout.toggleCollapsed(index) }
+                } label: {
+                    Image(systemName: "chevron.down").font(.inter(size: 15, weight: .semibold))
+                        .rotationEffect(.degrees(isOpen ? 180 : 0))
+                }
+                .buttonStyle(.plain).foregroundStyle(Palette.muted).frame(width: 32, height: 44)
+                .accessibilityLabel(isOpen ? "Plegar \(exercise.name)" : "Desplegar \(exercise.name)")
+            }
+        }
+    }
+
+    private var exerciseInfo: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(workout.swaps[exercise.name] ?? exercise.name)
+                .font(.apHeadline)
+                .lineLimit(2)
+                .foregroundStyle(allDone ? Palette.muted : Palette.foreground)
+            if workout.swaps[exercise.name] != nil {
+                Text("En lugar de \(exercise.name)").font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(1)
+            }
+            FlowRow(spacing: 6) {
+                metaChip(icon: "clock", text: "Descanso \(exercise.rest)")
+                metaChip(icon: "dumbbell", text: "\(exercise.series) × \(exercise.reps)")
+                if let pos = workout.supersetPosition(of: exercise.name) {
+                    metaChip(icon: "link", text: "Superset \(pos.letter)")
+                        .foregroundStyle(Palette.gold)
+                }
+            }
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 12) {
-                    if !focused {
-                        WorkoutThumb(url: exercise.image_url, completed: allDone)
-                            .overlay(alignment: .topLeading) { indexBadge }
-                    }
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text(workout.swaps[exercise.name] ?? exercise.name)
-                            .font(.apHeadline)
-                            .lineLimit(2)
-                            .foregroundStyle(allDone ? Palette.muted : Palette.foreground)
-                        if workout.swaps[exercise.name] != nil {
-                            Text("En lugar de \(exercise.name)").font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(1)
-                        }
-                        // Chips como en Hevy: descanso y prescripción, legibles de un vistazo.
-                        FlowRow(spacing: 6) {
-                            metaChip(icon: "clock", text: "Descanso \(exercise.rest)")
-                            metaChip(icon: "dumbbell", text: "\(exercise.series) × \(exercise.reps)")
-                            if let pos = workout.supersetPosition(of: exercise.name) {
-                                metaChip(icon: "link", text: "Superset \(pos.letter)")
-                                    .foregroundStyle(Palette.gold)
-                            }
-                        }
-                    }
-                    Spacer(minLength: 0)
-                    if allDone {
-                        Image(systemName: "checkmark").font(.inter(size: 18, weight: .bold)).foregroundStyle(Palette.gold)
-                            .frame(width: 36, height: 44)
-                            .scaleEffect(justCompleted && !reduceMotion ? 1.25 : 1)
-                            .animation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.45), value: justCompleted)
-                            .accessibilityLabel("ejercicio completado")
-                    } else {
-                        ExerciseSwapMenu(workout: workout, exercise: exercise)
-                    }
-                    Button { technique = true } label: { Image(systemName: "info.circle").font(.inter(size: 19)) }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(Palette.muted)
-                        .frame(width: 44, height: 44)
-                        .accessibilityLabel("Técnica: \(exercise.name)")
-                    if !focused {
-                        Button {
-                            Haptics.selection()
-                            withAnimation(reduceMotion ? nil : .snappy) { workout.toggleCollapsed(index) }
-                        } label: {
-                            Image(systemName: "chevron.down").font(.inter(size: 15, weight: .semibold))
-                                .rotationEffect(.degrees(isOpen ? 180 : 0))
-                        }
-                        .buttonStyle(.plain).foregroundStyle(Palette.muted).frame(width: 32, height: 44)
-                        .accessibilityLabel(isOpen ? "Plegar \(exercise.name)" : "Desplegar \(exercise.name)")
-                    }
-                }
-            .padding(.leading, 12).padding(.trailing, 8).frame(minHeight: 68)
+            cardHeader
+                .padding(.leading, 12).padding(.trailing, 8).frame(minHeight: 68)
 
             // Siempre desplegado: cero fricción para anotar (nada de tocar dos veces).
             if isOpen {
