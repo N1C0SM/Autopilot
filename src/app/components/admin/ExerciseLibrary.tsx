@@ -1,6 +1,6 @@
 import { errorMessage, functionErrorMessage } from "@/shared/lib/runtimeValues";
 import { getExerciseTrackingConfig, TRACKING_MODES } from "@/shared/lib/exerciseTrackingConfig";
-import { useState, useEffect, useMemo, useRef, type ReactNode } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, type ReactNode } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -22,7 +22,7 @@ import {
 } from "@/shared/components/ui/alert-dialog";
 import { toast } from "sonner";
 import {
-  Check, Dumbbell, Image as ImageIcon, ImageOff, Play, RefreshCw, AlertTriangle, Search, Video, VideoOff, X,
+  Check, Dumbbell, Image as ImageIcon, ImageOff, Play, RefreshCw, AlertTriangle, Search, Video, VideoOff, X, Trash2, CheckSquare, Square,
   type LucideIcon,
 } from "lucide-react";
 import type { Exercise } from "@/shared/types/training";
@@ -166,6 +166,47 @@ const MediaStatus = ({ tone, icon: Icon, label }: { tone: MediaTone; icon: Lucid
     {label}
   </span>
 );
+
+/** Miniatura de fila con vídeo-como-GIF en hover. Si hay video_url (mp4 de site-assets),
+ *  se reproduce en loop silencioso al pasar el ratón o al montar en móvil. */
+const ExerciseThumbWithGif = ({ image, video, name }: { image: string | null | undefined; video: string | null | undefined; name: string }) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const isHostedVideo = video && (video.includes("site-assets") || video.endsWith(".mp4") || video.endsWith(".webm"));
+
+  return (
+    <div
+      className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-secondary"
+      onMouseEnter={() => { if (videoRef.current) void videoRef.current.play(); }}
+      onMouseLeave={() => { if (videoRef.current) { videoRef.current.pause(); videoRef.current.currentTime = 0; } }}
+      aria-hidden="true"
+    >
+      {isHostedVideo ? (
+        <>
+          {image && (
+            <img src={image} alt={name} className="absolute inset-0 h-full w-full object-cover" />
+          )}
+          <video
+            ref={videoRef}
+            src={video}
+            muted
+            loop
+            playsInline
+            preload="none"
+            className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-200 [&[data-playing]]:opacity-100"
+            onPlay={(e) => e.currentTarget.setAttribute("data-playing", "")}
+            onPause={(e) => e.currentTarget.removeAttribute("data-playing")}
+          />
+        </>
+      ) : image ? (
+        <img src={image} alt={name} className="h-full w-full object-cover" />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+          <Dumbbell className="h-5 w-5" strokeWidth={1.5} />
+        </div>
+      )}
+    </div>
+  );
+};
 
 /** Clasificación y estado de medios de un ejercicio, para el subtítulo de su fila. */
 const ExerciseMeta = ({ exercise: ex }: { exercise: ExerciseRow }) => {
@@ -701,6 +742,13 @@ const ExerciseLibrary = () => {
   const [filterType, setFilterType] = useState<string | null>(null);
   const [mediaFilter, setMediaFilter] = useState<MediaFilter>("all");
 
+  // Selección múltiple para borrado masivo
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [selectMode, setSelectMode] = useState(false);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkDeleteAll, setBulkDeleteAll] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
   // Cola de generación: cancelación limpia y espera interrumpible entre sondeos.
   const cancelRef = useRef(false);
   const sleepRef = useRef<{ id: number; resolve: () => void } | null>(null);
@@ -1020,6 +1068,39 @@ const ExerciseLibrary = () => {
     toast.success("Ejercicio eliminado");
   };
 
+  /** Eliminación masiva: borra los seleccionados o todos los filtrados en lotes de 50. */
+  const bulkDeleteExercises = async (ids: string[]) => {
+    setBulkDeleting(true);
+    let deleted = 0;
+    let errors = 0;
+    try {
+      // Lotes de 50 para no saturar PostgREST
+      for (let i = 0; i < ids.length; i += 50) {
+        const chunk = ids.slice(i, i + 50);
+        const targets = exercises.filter((e) => chunk.includes(e.id));
+        const { error } = await supabase.from("exercises").delete().in("id", chunk);
+        if (error) { errors += chunk.length; continue; }
+        deleted += chunk.length;
+        setExercises((e) => e.filter((ex) => !chunk.includes(ex.id)));
+        // Limpieza de medios en paralelo (no bloquea el flujo si falla)
+        const orphanPaths = targets.flatMap((t) => [
+          siteAssetPath(t.image_url, "exercise-images/"),
+          siteAssetPath(t.video_url, "exercise-videos/"),
+        ]).filter((p): p is string => Boolean(p));
+        if (orphanPaths.length > 0) {
+          void supabase.storage.from("site-assets").remove(orphanPaths);
+        }
+      }
+    } finally {
+      setBulkDeleting(false);
+      setBulkDeleteOpen(false);
+      setSelected(new Set());
+      setSelectMode(false);
+      if (errors > 0) toast.error(`${deleted} eliminados, ${errors} con error`);
+      else toast.success(`${deleted} ejercicio${deleted !== 1 ? "s" : ""} eliminado${deleted !== 1 ? "s" : ""}`);
+    }
+  };
+
   const openEditor = (exercise: ExerciseRow) => {
     setEditingExercise(exercise);
     setDialogOpen(true);
@@ -1038,19 +1119,78 @@ const ExerciseLibrary = () => {
         <p className="type-subhead text-muted-foreground">
           {fetched ? `${filtered.length} de ${exercises.length} ejercicios` : null}
         </p>
-        {!mediaBatch && (
+        <div className="flex items-center gap-2">
+          {/* Modo selección */}
           <Button
             type="button"
-            variant="plain"
+            variant={selectMode ? "secondary" : "plain"}
             size="sm"
-            className="-mr-3 h-11 px-3"
-            disabled={pendingQueue.length === 0 || !mediaColumnsReady}
-            onClick={() => { void hapticTap(); setMediaBatchOpen(true); }}
+            className="h-11 px-3"
+            onClick={() => {
+              void hapticTap();
+              if (selectMode) { setSelectMode(false); setSelected(new Set()); }
+              else setSelectMode(true);
+            }}
           >
-            Generar pendientes ({pendingQueue.length})
+            {selectMode ? <><X className="mr-1.5 h-4 w-4" /> Cancelar</> : <><CheckSquare className="mr-1.5 h-4 w-4" /> Seleccionar</>}
           </Button>
-        )}
+          {!mediaBatch && (
+            <Button
+              type="button"
+              variant="plain"
+              size="sm"
+              className="h-11 px-3"
+              disabled={pendingQueue.length === 0 || !mediaColumnsReady}
+              onClick={() => { void hapticTap(); setMediaBatchOpen(true); }}
+            >
+              Generar pendientes ({pendingQueue.length})
+            </Button>
+          )}
+        </div>
       </div>
+
+      {/* Barra flotante de selección */}
+      {selectMode && (
+        <div className="sticky top-0 z-20 flex flex-wrap items-center gap-2 rounded-[16px] bg-card px-4 py-3 shadow-lg">
+          <button
+            type="button"
+            className="flex items-center gap-1.5 type-subhead font-medium text-muted-foreground"
+            onClick={() => {
+              void hapticSelection();
+              if (selected.size === filtered.length) setSelected(new Set());
+              else setSelected(new Set(filtered.map((e) => e.id)));
+            }}
+          >
+            {selected.size === filtered.length && filtered.length > 0
+              ? <CheckSquare className="h-4 w-4 text-primary" />
+              : <Square className="h-4 w-4" />}
+            {selected.size === 0 ? "Seleccionar todos" : `${selected.size} seleccionado${selected.size !== 1 ? "s" : ""}`}
+          </button>
+          <div className="ml-auto flex items-center gap-2">
+            {selected.size > 0 && (
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                className="h-9"
+                onClick={() => { void hapticTap(); setBulkDeleteAll(false); setBulkDeleteOpen(true); }}
+              >
+                <Trash2 className="mr-1.5 h-4 w-4" />
+                Eliminar {selected.size}
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="plain"
+              size="sm"
+              className="h-9 text-destructive"
+              onClick={() => { void hapticTap(); setBulkDeleteAll(true); setBulkDeleteOpen(true); }}
+            >
+              Eliminar todos ({filtered.length})
+            </Button>
+          </div>
+        </div>
+      )}
 
       {mediaBatch && (
         <div className="space-y-2">
@@ -1178,36 +1318,85 @@ const ExerciseLibrary = () => {
             <ListRow
               key={ex.id}
               leading={
-                <WithImageFallback image={ex.image_url}>
-                  {(image) => <ExerciseThumb image={image} video={ex.video_url} name={ex.name} size="md" />}
-                </WithImageFallback>
+                <div className="relative flex items-center gap-2">
+                  {selectMode && (
+                    <button
+                      type="button"
+                      aria-label={selected.has(ex.id) ? `Deseleccionar ${ex.name}` : `Seleccionar ${ex.name}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void hapticSelection();
+                        setSelected((prev) => {
+                          const next = new Set(prev);
+                          next.has(ex.id) ? next.delete(ex.id) : next.add(ex.id);
+                          return next;
+                        });
+                      }}
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+                    >
+                      {selected.has(ex.id)
+                        ? <CheckSquare className="h-5 w-5 text-primary" />
+                        : <Square className="h-5 w-5 text-muted-foreground" />}
+                    </button>
+                  )}
+                  <WithImageFallback image={ex.image_url}>
+                    {(image) => <ExerciseThumbWithGif image={image} video={ex.video_url} name={ex.name} />}
+                  </WithImageFallback>
+                </div>
               }
               title={ex.name}
               subtitle={<ExerciseMeta exercise={ex} />}
               trailing={
-                ex.video_url || ex.image_url ? (
+                <div className="flex items-center gap-0">
+                  {(ex.video_url || ex.image_url) && (
+                    <button
+                      type="button"
+                      aria-label={`Ver el vídeo de ${ex.name}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void hapticTap();
+                        setPreview({
+                          name: ex.name,
+                          image: ex.image_url,
+                          video: ex.video_url,
+                          pattern: ex.movement_pattern,
+                          stimulus: ex.stimulus_type,
+                          load: ex.load_level,
+                          detail: [ex.muscle_group, ex.exercise_type].filter(Boolean).join(" · ") || null,
+                        });
+                      }}
+                      className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground active:opacity-60"
+                    >
+                      <Play className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden="true" />
+                    </button>
+                  )}
                   <button
                     type="button"
-                    aria-label={`Ver el vídeo de ${ex.name}`}
-                    onClick={() => {
+                    aria-label={`Eliminar ${ex.name}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
                       void hapticTap();
-                      setPreview({
-                        name: ex.name,
-                        image: ex.image_url,
-                        video: ex.video_url,
-                        pattern: ex.movement_pattern,
-                        stimulus: ex.stimulus_type,
-                        load: ex.load_level,
-                        detail: [ex.muscle_group, ex.exercise_type].filter(Boolean).join(" · ") || null,
-                      });
+                      setDeleteTarget({ id: ex.id, name: ex.name });
+                      setDeleteOpen(true);
                     }}
-                    className="-mr-3 flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground active:opacity-60"
+                    className="-mr-2 flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground hover:text-destructive active:opacity-60"
                   >
-                    <Play className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden="true" />
+                    <Trash2 className="h-[17px] w-[17px]" strokeWidth={2} aria-hidden="true" />
                   </button>
-                ) : undefined
+                </div>
               }
-              onClick={() => openEditor(ex)}
+              onClick={() => {
+                if (selectMode) {
+                  void hapticSelection();
+                  setSelected((prev) => {
+                    const next = new Set(prev);
+                    next.has(ex.id) ? next.delete(ex.id) : next.add(ex.id);
+                    return next;
+                  });
+                } else {
+                  openEditor(ex);
+                }
+              }}
             />
           ))}
         </ListGroup>
@@ -1274,6 +1463,38 @@ const ExerciseLibrary = () => {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction destructive onClick={() => { if (deleteTarget) void deleteExercise(deleteTarget.id); }}>
               Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Borrado masivo */}
+      <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {bulkDeleteAll
+                ? `Eliminar ${filtered.length} ejercicio${filtered.length !== 1 ? "s" : ""}`
+                : `Eliminar ${selected.size} ejercicio${selected.size !== 1 ? "s" : ""}`}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {bulkDeleteAll
+                ? `Se eliminarán los ${filtered.length} ejercicios visibles con los filtros actuales, incluidos sus medios. Esta acción no se puede deshacer.`
+                : `Se eliminarán los ${selected.size} ejercicios seleccionados, incluidos sus medios. Esta acción no se puede deshacer.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              destructive
+              disabled={bulkDeleting}
+              onClick={(e) => {
+                e.preventDefault();
+                const ids = bulkDeleteAll ? filtered.map((ex) => ex.id) : Array.from(selected);
+                void bulkDeleteExercises(ids);
+              }}
+            >
+              {bulkDeleting ? "Eliminando…" : "Eliminar"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
