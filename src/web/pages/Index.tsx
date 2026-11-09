@@ -7,7 +7,7 @@ import { track } from "@/shared/lib/analytics";
 import { type PlanKey } from "@/shared/config/tiers";
 import { usePlanAvailability } from "@/shared/lib/planCatalog";
 import { LANDING_META, landingDescription, landingFaqs } from "@/shared/lib/publicCopy";
-import { LandingHero, LandingExperience, LandingProblem, LandingWhy, LandingPlans, LandingFinal } from "@/web/components/LandingSections";
+import { LandingHero, LandingExperience, LandingProblem, LandingOrigin, LandingWhy, LandingPlans, LandingFinal } from "@/web/components/LandingSections";
 import { hapticTap } from "@/shared/lib/native";
 
 
@@ -115,6 +115,7 @@ export default function Index() {
     <LandingHero ctaRef={heroCtaRef} />
     <LandingExperience />
     <LandingProblem />
+    <LandingOrigin />
     <LandingWhy />
     <LandingPlans onSelect={selectPlan} innerRef={pricingRef} />
     <LandingFinal innerRef={finalCtaRef} />

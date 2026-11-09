@@ -173,6 +173,33 @@ export function LandingProblem() {
   </section>;
 }
 
+/** Historia real del origen: calistenia en casa, gym a los 14, apps que obligaban a elegir. */
+export function LandingOrigin() {
+  const chapters = [
+    { k: "En casa", t: "Una barra de dominadas y unas anillas.", s: "Todo empezó con calistenia en casa, sin gimnasio ni plan: barra, anillas y ganas de mejorar." },
+    { k: "A los 14", t: "El gimnasio.", s: "Me apunté al gym y durante mucho tiempo estuve centrado en él, sin dejar nunca la calistenia." },
+    { k: "El problema", t: "Las apps me obligaban a elegir.", s: "Unas solo entendían de discos y máquinas; otras, solo de calistenia. Ninguna juntaba las dos cosas que hacía." },
+    { k: "La solución", t: "Me lo programé.", s: "Siempre me ha gustado emprender y los ordenadores. Así que monté Autopilot: tracker de gym y calistenia, nutrición y un scan del cuerpo para que todo sea medible." },
+  ];
+  return <section aria-labelledby="origin-t" className="border-t border-border px-5 py-14 sm:px-8 sm:py-20">
+    <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">
+      <div>
+        <Kicker>La historia</Kicker>
+        <h2 id="origin-t" className="mt-3 text-[30px] font-bold leading-[1.1] tracking-[-0.02em] sm:text-[40px]">No quería elegir entre <span className="text-primary">calistenia</span> y gimnasio.</h2>
+        <p className="mt-5 max-w-[440px] text-[16px] leading-[24px] text-foreground/80">Soy Nicolás. Autopilot nace de entrenar las dos cosas durante años y no encontrar una app que las entendiera juntas.</p>
+      </div>
+      <ol className="relative space-y-8 border-l border-border pl-6">
+        {chapters.map((c) => <li key={c.k} className="relative">
+          <span aria-hidden="true" className="absolute -left-[29px] top-1.5 h-2 w-2 rounded-full bg-primary" />
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-foreground/60">{c.k}</p>
+          <p className="mt-1.5 text-[19px] font-semibold leading-[1.25]">{c.t}</p>
+          <p className="mt-1.5 max-w-[520px] text-[15px] leading-[22px] text-foreground/80">{c.s}</p>
+        </li>)}
+      </ol>
+    </div>
+  </section>;
+}
+
 export function LandingWhy() {
   const items = [
     { icon: Target, t: "Plan a tu medida", s: "Según tu nivel, objetivo y tiempo." },
