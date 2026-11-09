@@ -263,8 +263,8 @@ private enum Quiz {
     static let appearances = [Option(v: "system", l: "Según el sistema", d: "Sigue el modo del dispositivo", icon: "iphone"),
                              Option(v: "light", l: "Claro", d: "Fondo claro siempre", icon: "sun.max"),
                              Option(v: "dark", l: "Oscuro", d: "Fondo oscuro siempre", icon: "moon")]
-    static let workoutLayouts = [Option(v: "rows", l: "En filas", d: "Una tarjeta debajo de otra", icon: "list.bullet"),
-                                Option(v: "columns", l: "En columnas", d: "Tarjetas en rejilla", icon: "square.grid.2x2")]
+    static let workoutLayouts = [Option(v: "rows", l: "Una columna", d: "Un ejercicio a lo ancho, en cada fila.", icon: "list.bullet.rectangle"),
+                                Option(v: "columns", l: "Dos columnas", d: "Dos ejercicios lado a lado, en cada fila.", icon: "rectangle.split.2x1")]
     static let week = [Day(v: 1, s: "L", l: "Lunes"), Day(v: 2, s: "M", l: "Martes"), Day(v: 3, s: "X", l: "Miércoles"),
                        Day(v: 4, s: "J", l: "Jueves"), Day(v: 5, s: "V", l: "Viernes"), Day(v: 6, s: "S", l: "Sábado"),
                        Day(v: 0, s: "D", l: "Domingo")]
@@ -286,6 +286,7 @@ struct OnboardingQuizView: View {
     @State private var c = OnboardingDraft.load() ?? OnboardingDraft()
     @State private var step = OnboardingDraft.load().map { d in !d.validStep0 ? 0 : d.days.count < 2 ? 1 : 2 } ?? 0
     @State private var accept = OnboardingDraft.pendingEmail != nil
+    @State private var showValidation = false
     @State private var creatingAccount = OnboardingDraft.pendingEmail != nil
     @AppStorage("appearance") private var appearance = "system"
     @AppStorage("workout-layout") private var workoutLayout = "rows"
@@ -298,6 +299,21 @@ struct OnboardingQuizView: View {
          t("Así queda con tus respuestas. Crea tu cuenta para guardar tu plan completo.", "Así queda vuestro plan. Crea tu cuenta para guardarlo.")]
     }
     private var valid: [Bool] { [c.validStep0, c.days.count >= 2, accept] }
+    private var validationMessage: String? {
+        guard showValidation else { return nil }
+        switch step {
+        case 0:
+            var missing: [String] = []
+            if c.goal.isEmpty { missing.append("Elige un objetivo") }
+            if c.focus.isEmpty { missing.append("Indica dónde entrenas") }
+            if c.duo && !(c.partnerEmail.contains("@") && c.partnerEmail.contains(".")) { missing.append("Añade un email válido de tu pareja") }
+            return missing.isEmpty ? nil : "\(missing.joined(separator: ". "))."
+        case 1:
+            return c.days.count < 2 ? "Selecciona al menos 2 días para continuar." : nil
+        default:
+            return accept ? nil : "Marca la casilla de términos y condiciones para guardar tu plan."
+        }
+    }
 
     var body: some View {
         Group {
@@ -338,13 +354,31 @@ struct OnboardingQuizView: View {
             }
             .scrollDismissesKeyboard(.interactively)
             Group {
+                if let validationMessage {
+                    Text(validationMessage).font(.apFootnote).foregroundStyle(Palette.destructive)
+                        .frame(maxWidth: .infinity, alignment: .center).multilineTextAlignment(.center)
+                        .padding(.horizontal, 12).padding(.bottom, 8)
+                        .accessibilityAddTraits(.updatesFrequently)
+                }
                 if step < titles.count - 1 {
-                    Button("Continuar") { Haptics.tap(); c.save(); step += 1 }.buttonStyle(.pill).disabled(!valid[step])
+                    Button("Continuar") {
+                        Haptics.tap()
+                        guard valid[step] else { showValidation = true; return }
+                        showValidation = false
+                        c.save()
+                        step += 1
+                    }.buttonStyle(.pill)
                 } else {
-                    Button { Haptics.signature(); c.save(); withAnimation { creatingAccount = true } } label: {
+                    Button {
+                        Haptics.signature()
+                        guard accept else { showValidation = true; return }
+                        showValidation = false
+                        c.save()
+                        withAnimation { creatingAccount = true }
+                    } label: {
                         HStack(spacing: 8) { Text("Guardar mi plan gratis"); Image(systemName: "arrow.right").accessibilityHidden(true) }
                     }
-                    .buttonStyle(.pill).disabled(!accept)
+                    .buttonStyle(.pill)
                 }
             }
             .frame(maxWidth: 560).padding(.horizontal, 16).padding(.vertical, 12)
@@ -387,7 +421,7 @@ struct OnboardingQuizView: View {
                 c.appearance = $0
                 appearance = $0
             }
-            choices("Disposición de los ejercicios", Quiz.workoutLayouts, c.workoutLayout) {
+            choices("¿Cómo quieres ver los ejercicios?", Quiz.workoutLayouts, c.workoutLayout, iconTiles: true) {
                 c.workoutLayout = $0
                 workoutLayout = $0
             }
@@ -485,15 +519,23 @@ struct OnboardingQuizView: View {
     }
 
     /// Cada opción en su tarjeta (maqueta de ChatGPT): icono, texto y círculo; la elegida con borde dorado.
-    private func choices(_ header: String?, _ options: [Quiz.Option], _ value: String, columns: Bool = false, _ set: @escaping (String) -> Void) -> some View {
+    private func choices(_ header: String?, _ options: [Quiz.Option], _ value: String, columns: Bool = false, iconTiles: Bool = false, _ set: @escaping (String) -> Void) -> some View {
         let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
         let cards = ForEach(options) { o in
             let on = o.v == value
             Button { Haptics.selection(); set(o.v) } label: {
                 HStack(spacing: 12) {
                     if let icon = o.icon {
-                        Image(systemName: icon).font(.system(size: 18)).foregroundStyle(on ? Palette.gold : Palette.muted)
-                            .frame(width: 22).accessibilityHidden(true)
+                        if iconTiles {
+                            Image(systemName: icon).font(.system(size: 21, weight: .semibold))
+                                .foregroundStyle(on ? Palette.gold : Palette.muted)
+                                .frame(width: 44, height: 44)
+                                .background(on ? Palette.gold.opacity(0.15) : Palette.secondary, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                .accessibilityHidden(true)
+                        } else {
+                            Image(systemName: icon).font(.system(size: 18)).foregroundStyle(on ? Palette.gold : Palette.muted)
+                                .frame(width: 22).accessibilityHidden(true)
+                        }
                     }
                     VStack(alignment: .leading, spacing: 2) {
                         Text(o.l).font(.apHeadline).lineLimit(2).minimumScaleFactor(0.85)

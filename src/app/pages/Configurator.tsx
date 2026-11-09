@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { toast } from "sonner";
 import { useTheme } from "next-themes";
-import { ArrowRight, CalendarDays, Check, Dumbbell, Flame, Grid2X2, HeartPulse, List, Moon, RefreshCw, Smartphone, Sun, Target, User, Users, type LucideIcon } from "lucide-react";
+import { ArrowRight, CalendarDays, Check, Columns2, Dumbbell, Flame, HeartPulse, Moon, RefreshCw, Rows3, Smartphone, Sun, Target, User, Users, type LucideIcon } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Checkbox } from "@/shared/components/ui/checkbox";
@@ -102,11 +102,12 @@ const PhotoChoices = ({ header, options, value, onChange }: {
   </section>
 );
 
-const Choices = ({ header, options, value, onChange, columns = false, stackOnMobile = false }: {
+const Choices = ({ header, options, value, onChange, columns = false, stackOnMobile = false, iconTiles = false }: {
   header?: string; options: Option[]; value: string | number; onChange: (v: string | number) => void;
   /** Dos opciones lado a lado (Individual / En pareja), como la maqueta. */
   columns?: boolean;
   stackOnMobile?: boolean;
+  iconTiles?: boolean;
 }) => (
   <section>
     {header ? <h2 className="px-1 pb-2.5 type-headline">{header}</h2> : null}
@@ -122,7 +123,13 @@ const Choices = ({ header, options, value, onChange, columns = false, stackOnMob
               "flex min-h-[56px] sm:min-h-[60px] w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition-[transform,background-color,border-color] duration-150 active:scale-[0.985]",
               on ? "border-primary bg-primary/[0.08]" : "border-border bg-card",
             )}>
-            {Icon ? <Icon aria-hidden="true" className={cn("h-5 w-5 shrink-0", on ? "text-primary" : "text-muted-foreground")} strokeWidth={1.9} /> : null}
+            {Icon ? iconTiles ? (
+              <span aria-hidden="true" className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-chip", on ? "bg-primary/15 text-primary" : "bg-secondary text-muted-foreground")}>
+                <Icon className="h-6 w-6" strokeWidth={2} />
+              </span>
+            ) : (
+              <Icon aria-hidden="true" className={cn("h-5 w-5 shrink-0", on ? "text-primary" : "text-muted-foreground")} strokeWidth={1.9} />
+            ) : null}
             <span className="min-w-0 flex-1">
               <span className="block type-headline sm:text-[18px]">{o.l}</span>
               {o.d ? <span className="mt-0.5 block type-subhead sm:text-[15px] text-muted-foreground">{o.d}</span> : null}
@@ -171,6 +178,7 @@ const Configurator = () => {
   const [c, setC] = useState<Cfg>(initial);
   const [accept, setAccept] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showValidation, setShowValidation] = useState(false);
   const [restoredDraft, setRestoredDraft] = useState(false);
   const set = <K extends keyof Cfg>(k: K, v: Cfg[K]) => setC((p) => ({ ...p, [k]: v }));
 
@@ -208,6 +216,7 @@ const Configurator = () => {
     clearConfiguratorDraft();
     setC(initial);
     setAccept(false);
+    setShowValidation(false);
     setStep(0);
     setRestoredDraft(false);
   };
@@ -217,6 +226,18 @@ const Configurator = () => {
     c.days.length >= 2,
     accept,
   ];
+  const validationMessage = (() => {
+    if (!showValidation) return null;
+    if (step === 0) {
+      const missing = [];
+      if (!c.goal) missing.push("Elige un objetivo");
+      if (!c.focus) missing.push("Indica dónde entrenas");
+      if (c.mode === "pareja" && !/\S+@\S+\.\S+/.test(c.partner_email)) missing.push("Añade un email válido de tu pareja");
+      return missing.length ? `${missing.join(". ")}.` : null;
+    }
+    if (step === 1) return c.days.length < 2 ? "Selecciona al menos 2 días para continuar." : null;
+    return accept ? null : "Marca la casilla de términos y condiciones para guardar tu plan.";
+  })();
 
   /**
    * El toast genérico ocultaba la causa real del fallo del upsert. Además de
@@ -269,6 +290,7 @@ const Configurator = () => {
   };
 
   const save = async () => {
+    if (!accept) { setShowValidation(true); return; }
     if (!user) {
       saveConfiguratorDraft(c);
       track("onboarding_complete", { paid: false, anonymous: true });
@@ -340,12 +362,23 @@ const Configurator = () => {
 
   const footer = (
     <div className="pb-2">
+      {validationMessage ? <p role="alert" className="mb-2 rounded-card bg-background px-3 py-2 text-center type-footnote text-destructive">{validationMessage}</p> : null}
       {step < last ? (
-        <Button variant="hero" size="lg" className="w-full" onClick={() => { void hapticTap(); setStep((s) => s + 1); }} disabled={!valid[step]}>
+        <Button variant="hero" size="lg" className="w-full" onClick={() => {
+          void hapticTap();
+          if (!valid[step]) { setShowValidation(true); return; }
+          setShowValidation(false);
+          setStep((s) => s + 1);
+        }}>
           Continuar
         </Button>
       ) : (
-        <Button variant="hero" size="lg" className="w-full" onClick={() => { void hapticImpact(); void save(); }} disabled={!accept || saving}>
+        <Button variant="hero" size="lg" className="w-full" onClick={() => {
+          void hapticImpact();
+          if (!accept) { setShowValidation(true); return; }
+          setShowValidation(false);
+          void save();
+        }} disabled={saving}>
           {saving && <Spinner size="sm" className="mr-2 text-primary-foreground" label="Guardando" />}
           {user ? "Guardar mi plan" : "Guardar mi plan gratis"}
           {!saving && <ArrowRight className="ml-1 h-5 w-5" aria-hidden="true" />}
@@ -408,9 +441,9 @@ const Configurator = () => {
               set("appearance", appearance);
               setTheme(appearance);
             }} />
-            <Choices header="Disposición de los ejercicios" columns stackOnMobile options={[
-              { v: "rows", l: "En filas", d: "Una tarjeta debajo de otra", icon: List },
-              { v: "columns", l: "En columnas", d: "Tarjetas en rejilla", icon: Grid2X2 },
+            <Choices header="¿Cómo quieres ver los ejercicios?" columns stackOnMobile iconTiles options={[
+              { v: "rows", l: "Una columna", d: "Un ejercicio a lo ancho, en cada fila.", icon: Rows3 },
+              { v: "columns", l: "Dos columnas", d: "Dos ejercicios lado a lado, en cada fila.", icon: Columns2 },
             ]} value={c.workoutLayout} onChange={(v) => set("workoutLayout", v === "columns" ? "columns" : "rows")} />
             {/* Resumen en filas con icono y lo que incluye el plan (diseño ChatGPT). */}
             <section className="overflow-hidden rounded-card bg-card animate-fade-in" aria-label={`Días de entreno: ${dayNames}`}>
