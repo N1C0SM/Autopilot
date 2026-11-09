@@ -8,7 +8,7 @@ import { track } from "@/shared/lib/analytics";
 import { type PlanKey } from "@/shared/config/tiers";
 import { usePlanAvailability } from "@/shared/lib/planCatalog";
 import { LANDING_META, landingDescription, landingFaqs } from "@/shared/lib/publicCopy";
-import { LandingHero, LandingExperience, LandingProblem, LandingOrigin, LandingWhy, LandingPlans, LandingFinal } from "@/web/components/LandingSections";
+import { LandingHero, LandingExperience, LandingProblem, LandingOrigin, LandingWhy, LandingPlans, LandingSteps, LandingFaq, LandingFinal } from "@/web/components/LandingSections";
 import { hapticTap } from "@/shared/lib/native";
 
 
@@ -117,8 +117,10 @@ export default function Index() {
     <LandingExperience />
     <LandingProblem />
     <LandingOrigin />
+    <LandingSteps />
     <LandingWhy />
     <LandingPlans onSelect={selectPlan} innerRef={pricingRef} />
+    <LandingFaq faqs={faqs.slice(0, 4)} />
     <LandingFinal innerRef={finalCtaRef} />
 
     {/* CTA fija en móvil cuando el quiz del hero ya no se ve */}

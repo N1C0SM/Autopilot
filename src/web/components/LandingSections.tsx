@@ -142,20 +142,21 @@ export function LandingExperience() {
     });
     return () => { alive = false; };
   }, []);
-  // Sin los tres enlaces de tienda (iPhone, Android y Mac) la sección no se muestra.
-  if (!links || !storeLinksComplete(links)) return null;
+  // La app se ve siempre; los botones de tienda solo con los tres enlaces (iPhone, Android y Mac).
+  const stores = !!links && storeLinksComplete(links);
   return <section aria-labelledby="exp-t" className="px-5 pb-0 pt-8 sm:px-8">
     <div className="mx-auto grid max-w-6xl items-end gap-10 lg:grid-cols-[1fr_1fr]">
       <div className="pb-6">
-        <Kicker>La experiencia</Kicker>
-        <h2 id="exp-t" className="mt-3 text-[30px] font-bold leading-[1.15] tracking-[-0.015em] sm:text-[36px]">Todo tu progreso,<br />en todos tus dispositivos.</h2>
-        <p className="mt-4 max-w-[400px] text-[16px] leading-[22px] text-foreground/85">Entrena, planifica tu nutrición y sigue tu evolución donde quieras. Una experiencia fluida, sincronizada y pensada para ti.</p>
-        <div className="mt-6 flex flex-wrap gap-3">
+        <Kicker>La app por dentro</Kicker>
+        <h2 id="exp-t" className="mt-3 text-[30px] font-bold leading-[1.15] tracking-[-0.015em] sm:text-[36px]">Tu entreno de hoy,<br />en el móvil y en el ordenador.</h2>
+        <p className="mt-4 max-w-[400px] text-[16px] leading-[22px] text-foreground/85">Así se ve Autopilot: qué toca entrenar, qué toca comer y cómo vas. Mismo sistema en el móvil y en la web, sincronizado.</p>
+        {!stores && <AppLink to="/onboarding" onClick={cta("experience")} className={`${pillLine} mt-6`}>Probarla gratis <ArrowRight className="h-4 w-4" /></AppLink>}
+        {stores && links && <><div className="mt-6 flex flex-wrap gap-3">
           <StoreButton href={links.ios.trim()} small="Descargar en" big="App Store"><Apple className="h-6 w-6 fill-current" /></StoreButton>
           <StoreButton href={links.android.trim()} small="DISPONIBLE EN" big="Google Play"><Play className="h-5 w-5 fill-primary text-primary" /></StoreButton>
           <StoreButton href={links.mac.trim()} small="Disponible en" big="Mac"><Monitor className="h-6 w-6" /></StoreButton>
         </div>
-        <p className="mt-5 flex flex-wrap items-center gap-2 text-[13px] text-foreground/85"><Smartphone className="h-4 w-4" />iPhone · <Smartphone className="h-4 w-4" />Android · <Monitor className="h-4 w-4" />Mac</p>
+        <p className="mt-5 flex flex-wrap items-center gap-2 text-[13px] text-foreground/85"><Smartphone className="h-4 w-4" />iPhone · <Smartphone className="h-4 w-4" />Android · <Monitor className="h-4 w-4" />Mac</p></>}
       </div>
       <DevicesMockup />
     </div>
@@ -222,6 +223,48 @@ export function LandingWhy() {
       <ul className="mt-6 grid gap-5 border-y border-border py-5 sm:grid-cols-3 sm:divide-x sm:divide-border">
         {trust.map(({ icon: I, t, s }) => <li key={t} className="flex items-center gap-3 sm:justify-center sm:px-4"><I className="h-7 w-7 shrink-0 text-primary" strokeWidth={1.5} /><div className="leading-tight"><p className="text-[14px] font-semibold">{t}</p><p className="text-[12px] text-foreground/80">{s}</p></div></li>)}
       </ul>
+    </div>
+  </section>;
+}
+
+/** Cómo funciona en 3 pasos: lo que la app hace de verdad, sin promesas. */
+export function LandingSteps() {
+  const steps = [
+    { n: "01", t: "Tu perfil en 2 minutos", s: "Objetivo, días y material: gimnasio completo, mancuernas o calistenia en casa." },
+    { n: "02", t: "Tu sistema al instante", s: "Rutina híbrida calculada para ti. En Plus, además, calorías y macros." },
+    { n: "03", t: "Entrena y apunta", s: "Registras kilos y repeticiones. En Plus, Autopilot calcula la carga de la siguiente sesión." },
+  ];
+  return <section aria-labelledby="steps-t" className="border-t border-border px-5 py-14 sm:px-8 sm:py-20">
+    <div className="mx-auto max-w-6xl">
+      <Kicker>Cómo funciona</Kicker>
+      <h2 id="steps-t" className="mt-3 max-w-[560px] text-[30px] font-bold leading-[1.1] tracking-[-0.02em] sm:text-[40px]">Tres pasos. Ninguno es rellenar un Excel.</h2>
+      <ol className="mt-10 grid gap-8 md:grid-cols-3 md:gap-0 md:divide-x md:divide-border">
+        {steps.map((s) => <li key={s.n} className="md:px-8 md:first:pl-0">
+          <p className="text-[13px] font-semibold tabular-nums text-primary">{s.n}</p>
+          <p className="mt-2 text-[19px] font-semibold leading-[1.25]">{s.t}</p>
+          <p className="mt-1.5 max-w-[320px] text-[15px] leading-[22px] text-foreground/80">{s.s}</p>
+        </li>)}
+      </ol>
+    </div>
+  </section>;
+}
+
+/** Dudas que frenan el registro, con las mismas respuestas que /preguntas-frecuentes. */
+export function LandingFaq({ faqs }: { faqs: { q: string; a: string }[] }) {
+  if (!faqs.length) return null;
+  return <section aria-labelledby="faq-t" className="border-t border-border px-5 py-14 sm:px-8 sm:py-20">
+    <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">
+      <div>
+        <Kicker>Dudas</Kicker>
+        <h2 id="faq-t" className="mt-3 text-[30px] font-bold leading-[1.1] tracking-[-0.02em] sm:text-[36px]">Sin letra pequeña.</h2>
+        <p className="mt-4"><Link to="/preguntas-frecuentes" className="text-[14px] font-medium text-primary active:opacity-60">Ver todas las preguntas</Link></p>
+      </div>
+      <div className="divide-y divide-border border-y border-border">
+        {faqs.map((f) => <details key={f.q} className="group py-5">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-[17px] font-semibold [&::-webkit-details-marker]:hidden">{f.q}<span aria-hidden="true" className="text-[20px] font-normal text-foreground/60 transition-transform group-open:rotate-45">+</span></summary>
+          <p className="mt-3 max-w-[600px] text-[15px] leading-[22px] text-foreground/80">{f.a}</p>
+        </details>)}
+      </div>
     </div>
   </section>;
 }
