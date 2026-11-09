@@ -197,6 +197,32 @@ describe("regenerate meals", () => {
 });
 
 describe("meal rows", () => {
+  it("keeps Plus meal rows compact and omits weighed ingredient details and per-meal macros", () => {
+    const { container } = render(
+      <MealsList
+        meals={[{
+          name: "Comida",
+          description: "Pollo con arroz y verduras",
+          ingredients: [{ food: "Arroz integral", grams: 80 }, { food: "Pechuga de pollo", grams: 150 }],
+          protein: 42,
+          carbs: 55,
+          fats: 14,
+        }]}
+        macros={{ protein: 140, carbs: 220, fats: 65 }}
+      />,
+    );
+
+    const meal = screen.getByRole("button", { name: /Comida/ });
+    expect(meal.className).toContain("min-h-[60px]");
+    expect(meal.querySelector(".line-clamp-1")).toHaveTextContent("Pollo con arroz y verduras");
+    expect(meal).toHaveTextContent("2025 kcal");
+    expect(meal).not.toHaveTextContent("Arroz integral");
+    expect(meal).not.toHaveTextContent("80 g");
+    expect(meal).not.toHaveTextContent("Proteína");
+    expect(meal.querySelector("img")).toBeNull();
+    expect(container.querySelectorAll("button")).toHaveLength(2);
+  });
+
   it("remounts the row when the dish changes so it cannot inherit the old photo", () => {
     localStorage.setItem("autopilot.aiCovers.v1", JSON.stringify({ "m:plato a": OLD_PHOTO, "m:plato b": NEW_PHOTO }));
     const { container, rerender } = render(

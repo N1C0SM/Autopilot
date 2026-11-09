@@ -170,9 +170,31 @@ struct OnboardingDraft: Codable, Equatable {
     var minutes = 55
     var structure = "coach"
     var weight = ""
+    var appearance = "system"
+    var workoutLayout = "rows"
 
     private static let key = "onboarding-draft"
     private static let emailKey = "onboarding-pending-email"
+
+    private enum CodingKeys: String, CodingKey {
+        case mode, partnerEmail, goal, focus, days, minutes, structure, weight, appearance, workoutLayout
+    }
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        mode = try values.decodeIfPresent(String.self, forKey: .mode) ?? "individual"
+        partnerEmail = try values.decodeIfPresent(String.self, forKey: .partnerEmail) ?? ""
+        goal = try values.decodeIfPresent(String.self, forKey: .goal) ?? ""
+        focus = try values.decodeIfPresent(String.self, forKey: .focus) ?? ""
+        days = try values.decodeIfPresent([Int].self, forKey: .days) ?? []
+        minutes = try values.decodeIfPresent(Int.self, forKey: .minutes) ?? 55
+        structure = try values.decodeIfPresent(String.self, forKey: .structure) ?? "coach"
+        weight = try values.decodeIfPresent(String.self, forKey: .weight) ?? ""
+        appearance = try values.decodeIfPresent(String.self, forKey: .appearance) ?? "system"
+        workoutLayout = try values.decodeIfPresent(String.self, forKey: .workoutLayout) ?? "rows"
+    }
 
     static func load() -> OnboardingDraft? {
         UserDefaults.standard.data(forKey: key).flatMap { try? JSONDecoder().decode(OnboardingDraft.self, from: $0) }
@@ -214,6 +236,8 @@ struct OnboardingDraft: Codable, Equatable {
                                                  training_days: days, session_minutes: minutes, structure: structure,
                                                  training_mode: mode, partner_email: duo ? partnerEmail : nil))
         try await Backend.client.from("onboarding").upsert(row, onConflict: "user_id").execute()
+        UserDefaults.standard.set(appearance, forKey: "appearance")
+        UserDefaults.standard.set(workoutLayout, forKey: "workout-layout")
         try? await Backend.client.from("user_consents")
             .insert(["terms", "privacy", "health_data"].map { Consent(user_id: userId, consent_type: $0) }).execute()
         try? await Backend.client.from("profiles").update(["plan_status": "plan_pending"]).eq("user_id", value: userId).execute()
@@ -236,6 +260,11 @@ private enum Quiz {
     static let durations = [Option(v: "40", l: "30–45 min"), Option(v: "55", l: "45–60 min"), Option(v: "75", l: "60–90 min")]
     static let structures = [Option(v: "full_body", l: "Full Body"), Option(v: "torso_pierna", l: "Torso / Pierna"),
                              Option(v: "ppl", l: "Empuje / Tirón / Pierna"), Option(v: "coach", l: "No lo sé, que Autopilot elija")]
+    static let appearances = [Option(v: "system", l: "Según el sistema", d: "Sigue el modo del dispositivo", icon: "iphone"),
+                             Option(v: "light", l: "Claro", d: "Fondo claro siempre", icon: "sun.max"),
+                             Option(v: "dark", l: "Oscuro", d: "Fondo oscuro siempre", icon: "moon")]
+    static let workoutLayouts = [Option(v: "rows", l: "En filas", d: "Una tarjeta debajo de otra", icon: "list.bullet"),
+                                Option(v: "columns", l: "En columnas", d: "Tarjetas en rejilla", icon: "square.grid.2x2")]
     static let week = [Day(v: 1, s: "L", l: "Lunes"), Day(v: 2, s: "M", l: "Martes"), Day(v: 3, s: "X", l: "Miércoles"),
                        Day(v: 4, s: "J", l: "Jueves"), Day(v: 5, s: "V", l: "Viernes"), Day(v: 6, s: "S", l: "Sábado"),
                        Day(v: 0, s: "D", l: "Domingo")]
@@ -258,6 +287,8 @@ struct OnboardingQuizView: View {
     @State private var step = OnboardingDraft.load().map { d in !d.validStep0 ? 0 : d.days.count < 2 ? 1 : 2 } ?? 0
     @State private var accept = OnboardingDraft.pendingEmail != nil
     @State private var creatingAccount = OnboardingDraft.pendingEmail != nil
+    @AppStorage("appearance") private var appearance = "system"
+    @AppStorage("workout-layout") private var workoutLayout = "rows"
 
     private func t(_ solo: String, _ pair: String) -> String { c.duo ? pair : solo }
     private var titles: [String] { [t("¿Qué quieres conseguir?", "¿Qué queréis conseguir?"), t("Tu semana", "Vuestra semana juntos"), t("Tu plan Autopilot", "Vuestro plan conjunto")] }
@@ -269,10 +300,16 @@ struct OnboardingQuizView: View {
     private var valid: [Bool] { [c.validStep0, c.days.count >= 2, accept] }
 
     var body: some View {
-        if creatingAccount {
-            CreateAccountView(draft: c) { withAnimation { creatingAccount = false } }
-        } else {
-            quiz
+        Group {
+            if creatingAccount {
+                CreateAccountView(draft: c) { withAnimation { creatingAccount = false } }
+            } else {
+                quiz
+            }
+        }
+        .onAppear {
+            appearance = c.appearance
+            workoutLayout = c.workoutLayout
         }
     }
 
@@ -346,6 +383,14 @@ struct OnboardingQuizView: View {
             choices("Estructura", Quiz.structures, c.structure) { c.structure = $0 }
             group("Tu peso en kg (opcional)") { PillField(label: "Tu peso en kg", text: $c.weight).decimalKeyboard() }
         default:
+            choices("Apariencia", Quiz.appearances, c.appearance) {
+                c.appearance = $0
+                appearance = $0
+            }
+            choices("Disposición de los ejercicios", Quiz.workoutLayouts, c.workoutLayout) {
+                c.workoutLayout = $0
+                workoutLayout = $0
+            }
             summary
             PlanPreviewView(focus: c.focus, goal: c.goal, weight: c.weightValue, days: c.days.count)
             HStack(alignment: .top, spacing: 12) {

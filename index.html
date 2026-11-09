@@ -9,9 +9,19 @@
     <link rel="alternate" type="text/plain" title="LLMs.txt" href="/llms.txt" />
     <meta name="author" content="Nicolás San Marcos" />
     <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1" />
+    <script>
+      (function () {
+        if (window.location.hostname.toLowerCase() !== "app.autopilotplan.com") return;
+        var robots = document.querySelector('meta[name="robots"]');
+        if (robots) robots.setAttribute("content", "noindex,nofollow");
+        var manifest = document.createElement("link");
+        manifest.rel = "manifest";
+        manifest.href = "/manifest.webmanifest";
+        document.head.appendChild(manifest);
+      })();
+    </script>
     <link rel="icon" href="/favicon.ico" type="image/x-icon" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="theme-color" content="#000000" />
     <meta name="color-scheme" content="dark" />
     <meta name="mobile-web-app-capable" content="yes" />

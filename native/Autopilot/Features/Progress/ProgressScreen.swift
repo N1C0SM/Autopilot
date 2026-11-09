@@ -55,59 +55,89 @@ struct ProgressScreen: View {
     }
 
     var body: some View {
-        ScrollView {
+        if session.userId == nil {
             VStack(alignment: .leading, spacing: 16) {
-                // Subtítulo de la maqueta bajo el título grande; en Mac la barra ya lleva su pista.
-                if !isWide {
-                    Text("Evolución de tu fuerza, tu físico y tus récords.").font(.apSubhead).foregroundStyle(Palette.muted)
-                }
-                SegmentedPill(options: ["Fuerza", "Físico", "Récords", "Scan"], selection: $tab, gold: true)
-                switch tab {
-                case 0: strength
-                case 1: physique
-                case 2: records
-                default: EmptyView()
-                }
-                // «Scan» se monta la primera vez que se abre y queda oculto (0 pt, sin toques) en
-                // el resto de pestañas: así conserva la foto elegida, el análisis y el estado.
-                if scanMounted || tab == 3 {
-                    ScanView(onScanned: { model.invalidatePhotos() })
-                        // En escritorio el formulario no se estira: se acota y se centra (web: max-w-md).
-                        .frame(maxWidth: isWide ? 560 : .infinity)
-                        .frame(minHeight: tab == 3 ? 400 : 0)
-                        .frame(height: tab == 3 ? nil : 0)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .clipped()
-                        .opacity(tab == 3 ? 1 : 0)
-                        .allowsHitTesting(tab == 3)
-                        .accessibilityHidden(tab != 3)
+                Text("Tu progreso")
+                    .font(.apTitle1)
+                    .padding(.top, 8)
+
+                Card(padding: 20) {
+                    HStack(alignment: .top, spacing: 12) {
+                        Image(systemName: "person.crop.circle.badge.exclamationmark")
+                            .font(.system(size: 22, weight: .semibold))
+                            .foregroundStyle(Palette.gold)
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Inicia sesión para ver tu progreso")
+                                .font(.apTitle3)
+                                .accessibilityAddTraits(.isHeader)
+                            Text("Tus entrenamientos y fotos se restaurarán en cuanto vuelvas a entrar.")
+                                .font(.apSubhead)
+                                .foregroundStyle(Palette.muted)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
                 }
             }
-            .padding(.horizontal, horizontalPadding).padding(.top, 8).padding(.bottom, isWide ? 16 : 96)
+            .padding(.horizontal, horizontalPadding)
+            .padding(.top, 8)
+            .padding(.bottom, isWide ? 16 : 96)
             .frame(maxWidth: .infinity)
-        }
-        .screenBackground()
-        .refreshable {
-            // El gesto espera la descarga (el indicador debe durar lo que tarda) y renueva también
-            // las fotos si estamos en «Físico».
-            await model.load(userId: session.userId, force: true)
-            if tab == 1 { await model.loadPhotos(userId: session.userId, force: true) }
-        }
-        // `task(id:)` reinicia la carga al cambiar de cuenta y no repite el trabajo al volver a la pestaña:
-        // si hay caché, se pinta al instante y el refresco va en segundo plano.
-        .task(id: session.userId) { await model.load(userId: session.userId) }
-        .onChange(of: tab) { _, newValue in
-            // El cambio de pestaña no lanza cargas: los datos ya están en el snapshot y «Físico»
-            // se precarga en segundo plano. Solo se reintenta si esa precarga falló.
-            if newValue == 3 { scanMounted = true }
-            if newValue == 1, !model.photosLoaded {
-                Task { await model.loadPhotos(userId: session.userId) }
+            .screenBackground()
+        } else {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    // Subtítulo de la maqueta bajo el título grande; en Mac la barra ya lleva su pista.
+                    if !isWide {
+                        Text("Evolución de tu fuerza, tu físico y tus récords.").font(.apSubhead).foregroundStyle(Palette.muted)
+                    }
+                    SegmentedPill(options: ["Fuerza", "Físico", "Récords", "Scan"], selection: $tab, gold: true)
+                    switch tab {
+                    case 0: strength
+                    case 1: physique
+                    case 2: records
+                    default: EmptyView()
+                    }
+                    // «Scan» se monta la primera vez que se abre y queda oculto (0 pt, sin toques) en
+                    // el resto de pestañas: así conserva la foto elegida, el análisis y el estado.
+                    if scanMounted || tab == 3 {
+                        ScanView(onScanned: { model.invalidatePhotos() })
+                            // En escritorio el formulario no se estira: se acota y se centra (web: max-w-md).
+                            .frame(maxWidth: isWide ? 560 : .infinity)
+                            .frame(minHeight: tab == 3 ? 400 : 0)
+                            .frame(height: tab == 3 ? nil : 0)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .clipped()
+                            .opacity(tab == 3 ? 1 : 0)
+                            .allowsHitTesting(tab == 3)
+                            .accessibilityHidden(tab != 3)
+                    }
+                }
+                .padding(.horizontal, horizontalPadding).padding(.top, 8).padding(.bottom, isWide ? 16 : 96)
+                .frame(maxWidth: .infinity)
             }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .refreshSection)) { _ in
-            Task {
+            .screenBackground()
+            .refreshable {
+                // El gesto espera la descarga (el indicador debe durar lo que tarda) y renueva también
+                // las fotos si estamos en «Físico».
                 await model.load(userId: session.userId, force: true)
                 if tab == 1 { await model.loadPhotos(userId: session.userId, force: true) }
+            }
+            // `task(id:)` reinicia la carga al cambiar de cuenta y no repite el trabajo al volver a la pestaña:
+            // si hay caché, se pinta al instante y el refresco va en segundo plano.
+            .task(id: session.userId) { await model.load(userId: session.userId) }
+            .onChange(of: tab) { _, newValue in
+                // El cambio de pestaña no lanza cargas: los datos ya están en el snapshot y «Físico»
+                // se precarga en segundo plano. Solo se reintenta si esa precarga falló.
+                if newValue == 3 { scanMounted = true }
+                if newValue == 1, !model.photosLoaded {
+                    Task { await model.loadPhotos(userId: session.userId) }
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .refreshSection)) { _ in
+                Task {
+                    await model.load(userId: session.userId, force: true)
+                    if tab == 1 { await model.loadPhotos(userId: session.userId, force: true) }
+                }
             }
         }
     }
@@ -1164,7 +1194,15 @@ final class ProgressModel: ObservableObject {
 
     /// Carga inicial o al volver a la pestaña. Con caché pinta al instante; el refresco va aparte.
     func load(userId: UUID?, force: Bool = false) async {
-        guard let userId else { return }
+        guard let userId else {
+            apply { shot in
+                shot.strengthError = "Inicia sesión para ver tu progreso."
+                shot.detailsError = "Inicia sesión para ver tu progreso."
+                shot.recordsError = "Inicia sesión para ver tu progreso."
+                shot.photosError = "Inicia sesión para ver tu progreso."
+            }
+            return
+        }
         prepare(userId: userId)
         let gen = generation
 
@@ -1196,7 +1234,10 @@ final class ProgressModel: ObservableObject {
     /// la pantalla (y de nuevo al abrir «Físico» si la precarga falló), para que el cambio de pestaña
     /// no dispare ninguna carga.
     func loadPhotos(userId: UUID?, force: Bool = false) async {
-        guard let userId else { return }
+        guard let userId else {
+            apply { $0.photosError = "Inicia sesión para ver tus fotos de progreso." }
+            return
+        }
         prepare(userId: userId)
         let gen = generation
 
@@ -1310,7 +1351,13 @@ final class ProgressModel: ObservableObject {
         guard let logs else {
             // Sin conexión: no se publican ceros (parecería «no has entrenado»). Si ya había datos
             // en pantalla se quedan; si no, se explica el fallo con un botón para reintentar.
-            if snapshot.strengthAt == nil { apply { $0.strengthError = Self.offlineMessage } }
+            apply { shot in
+                if shot.strengthAt == nil { shot.strengthError = Self.offlineMessage }
+                if shot.detailsAt == nil {
+                    shot.detailsError = Self.offlineMessage
+                    shot.recordsError = Self.offlineMessage
+                }
+            }
             return
         }
 

@@ -3,7 +3,8 @@ import { clearConfiguratorDraft, readConfiguratorDraft, saveConfiguratorDraft } 
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowRight, CalendarDays, Check, Dumbbell, Flame, HeartPulse, RefreshCw, Target, User, Users, type LucideIcon } from "lucide-react";
+import { useTheme } from "next-themes";
+import { ArrowRight, CalendarDays, Check, Dumbbell, Flame, Grid2X2, HeartPulse, List, Moon, RefreshCw, Smartphone, Sun, Target, User, Users, type LucideIcon } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Checkbox } from "@/shared/components/ui/checkbox";
@@ -19,6 +20,7 @@ import Screen from "@/shared/components/native/Screen";
 import PageHead from "@/web/components/PageHead";
 import PlanPreview from "@/app/components/PlanPreview";
 import { BRAND_PHOTOS } from "@/shared/lib/brandPhotos";
+import { setWorkoutLayout, type WorkoutLayout } from "@/shared/lib/workoutPreferences";
 
 const DOW = [
   { v: 1, s: "L", l: "Lunes" }, { v: 2, s: "M", l: "Martes" }, { v: 3, s: "X", l: "Miércoles" },
@@ -51,10 +53,12 @@ const TIMES = Array.from({ length: 32 }, (_, i) => {
 type Cfg = {
   mode: string; partner_email: string; goal: string; focus: string; days: number[]; minutes: number; structure: string;
   meals: number; avoid: string; likes: string[]; dislikes: string[]; cooking: string; weight: string; checkin_dow: number; checkin_time: string; style: string;
+  appearance: "system" | "light" | "dark"; workoutLayout: WorkoutLayout;
 };
 const initial: Cfg = {
   mode: "individual", partner_email: "", goal: "", focus: "", days: [], minutes: 55, structure: "coach",
   meals: 3, avoid: "", likes: [], dislikes: [], cooking: "normal", weight: "", checkin_dow: 0, checkin_time: "19:30", style: "flexible",
+  appearance: "system", workoutLayout: "rows",
 };
 
 const label = (arr: { v: string | number; l: string }[], v: string | number) => arr.find((x) => x.v === v)?.l ?? "—";
@@ -98,15 +102,16 @@ const PhotoChoices = ({ header, options, value, onChange }: {
   </section>
 );
 
-const Choices = ({ header, options, value, onChange, columns = false }: {
+const Choices = ({ header, options, value, onChange, columns = false, stackOnMobile = false }: {
   header?: string; options: Option[]; value: string | number; onChange: (v: string | number) => void;
   /** Dos opciones lado a lado (Individual / En pareja), como la maqueta. */
   columns?: boolean;
+  stackOnMobile?: boolean;
 }) => (
   <section>
     {header ? <h2 className="px-1 pb-2.5 type-headline">{header}</h2> : null}
     {/* Cada opción en su tarjeta: icono, texto y círculo de selección; la elegida con borde dorado. */}
-    <div className={columns ? "grid grid-cols-2 gap-2.5" : "space-y-2.5"}>
+    <div className={columns ? stackOnMobile ? "grid grid-cols-1 gap-2.5 sm:grid-cols-2" : "grid grid-cols-2 gap-2.5" : "space-y-2.5"}>
       {options.map((o) => {
         const on = o.v === value;
         const Icon = o.icon;
@@ -160,6 +165,7 @@ const Field = ({ header, children }: { header: string; children: React.ReactNode
 
 const Configurator = () => {
   const { user, signOut } = useAuth();
+  const { setTheme } = useTheme();
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [c, setC] = useState<Cfg>(initial);
@@ -172,12 +178,18 @@ const Configurator = () => {
     const draft = readConfiguratorDraft<Partial<Cfg>>();
     if (!draft) return;
     const merged: Cfg = { ...initial, ...draft.data };
+    if (merged.appearance !== "system" && merged.appearance !== "light" && merged.appearance !== "dark") merged.appearance = initial.appearance;
+    if (merged.workoutLayout !== "rows" && merged.workoutLayout !== "columns") merged.workoutLayout = initial.workoutLayout;
     // Si el borrador no tiene lo imprescindible (versión antigua o incompleto),
     // no saltamos al último paso: se empieza por el primero que falte.
     setC(merged);
     setStep(draftResumeStep(merged));
     setRestoredDraft(true);
   }, []);
+
+  useEffect(() => {
+    setTheme(c.appearance);
+  }, [c.appearance, setTheme]);
 
   // Tras verificar el correo con el cuestionario ya completo (`?guardar=1`),
   // no se reenseña el último paso: se guarda y se entra directo al plan.
@@ -287,6 +299,7 @@ const Configurator = () => {
       },
     }, { onConflict: "user_id" });
     if (error) { setSaving(false); void reportSaveError(error); return; }
+    setWorkoutLayout(user.id, c.workoutLayout);
     clearConfiguratorDraft();
     try {
       await Promise.all([
@@ -386,6 +399,19 @@ const Configurator = () => {
 
         {step === 2 && (
           <>
+            <Choices header="Apariencia" columns stackOnMobile options={[
+              { v: "system", l: "Según el sistema", d: "Sigue el modo del dispositivo", icon: Smartphone },
+              { v: "light", l: "Claro", d: "Fondo claro siempre", icon: Sun },
+              { v: "dark", l: "Oscuro", d: "Fondo oscuro siempre", icon: Moon },
+            ]} value={c.appearance} onChange={(v) => {
+              const appearance = v === "light" || v === "dark" ? v : "system";
+              set("appearance", appearance);
+              setTheme(appearance);
+            }} />
+            <Choices header="Disposición de los ejercicios" columns stackOnMobile options={[
+              { v: "rows", l: "En filas", d: "Una tarjeta debajo de otra", icon: List },
+              { v: "columns", l: "En columnas", d: "Tarjetas en rejilla", icon: Grid2X2 },
+            ]} value={c.workoutLayout} onChange={(v) => set("workoutLayout", v === "columns" ? "columns" : "rows")} />
             {/* Resumen en filas con icono y lo que incluye el plan (diseño ChatGPT). */}
             <section className="overflow-hidden rounded-card bg-card animate-fade-in" aria-label={`Días de entreno: ${dayNames}`}>
               {[

@@ -22,7 +22,7 @@ import type { MacroTargets } from "@/shared/lib/nutrition";
 import { nutritionMacroError } from "@/shared/lib/nutritionValidation";
 import { useMealPhoto } from "@/shared/hooks/useSessionCover";
 import { BRAND_PHOTOS } from "@/shared/lib/brandPhotos";
-import { mealIngredients, mealMacros, sumMacros, type PlanMeal } from "@/shared/lib/mealMacros";
+import { mealMacros, sumMacros, type PlanMeal } from "@/shared/lib/mealMacros";
 import MealsPlusCard from "@/app/components/dashboard/MealsPlusCard";
 import NutritionSetup from "@/app/components/dashboard/NutritionSetup";
 
@@ -34,7 +34,7 @@ const MealPhoto = ({ dish, dim }: { dish: string; dim: boolean }) => {
   const src = useMealPhoto(dish);
   if (!src) return null;
   return <span aria-hidden="true" className="shrink-0 py-2">
-    <span className={cn("relative block h-14 w-14 overflow-hidden rounded-media bg-secondary transition-opacity", dim && "opacity-50")}>
+    <span className={cn("relative block h-10 w-10 overflow-hidden rounded-[14px] bg-secondary transition-opacity", dim && "opacity-50")}>
       <img src={src} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover animate-in fade-in duration-500" />
     </span>
   </span>;
@@ -328,7 +328,6 @@ const MealsList = ({ meals, macros, onOpenProfile, userId, onMealsGenerated }: P
           {meals.map((meal, i) => {
             const isDone = done.has(meal.name);
             const own = perMeal[i];
-            const ingredients = mealIngredients(meal);
             return (
               <button
                 // Key por comida, no por índice: al regenerar el plan la fila se remonta
@@ -337,7 +336,7 @@ const MealsList = ({ meals, macros, onOpenProfile, userId, onMealsGenerated }: P
                 type="button"
                 onClick={() => toggle(meal.name)}
                 aria-pressed={isDone}
-                className="group/row flex min-h-[44px] w-full items-center gap-3 px-4 text-left transition-colors duration-150 active:bg-accent focus-visible:bg-accent focus-visible:outline-none"
+                className="group/row flex min-h-[60px] w-full items-center gap-3 px-3 text-left transition-colors duration-150 active:bg-accent focus-visible:bg-accent focus-visible:outline-none"
               >
                 <span
                   aria-hidden="true"
@@ -349,10 +348,10 @@ const MealsList = ({ meals, macros, onOpenProfile, userId, onMealsGenerated }: P
                   {isDone && <Check className="h-3.5 w-3.5 text-primary-foreground" strokeWidth={3} />}
                 </span>
                 {/* El separador nace donde empieza el texto, como en ListRow. */}
-                <span className="block min-w-0 flex-1 py-3 group-[:not(:last-child)]/row:sep-b">
+                <span className="block min-w-0 flex-1 py-2.5 group-[:not(:last-child)]/row:sep-b">
                   <span
                     className={cn(
-                      "block type-headline transition-colors duration-150",
+                      "block truncate type-subhead font-semibold transition-colors duration-150",
                       isDone ? "text-muted-foreground" : "text-foreground",
                     )}
                   >
@@ -360,31 +359,20 @@ const MealsList = ({ meals, macros, onOpenProfile, userId, onMealsGenerated }: P
                   </span>
                   <span
                     className={cn(
-                      "mt-0.5 line-clamp-2 block type-subhead transition-colors duration-150",
+                      "mt-0.5 line-clamp-1 block type-footnote transition-colors duration-150",
                       isDone ? "text-muted-foreground/60" : "text-muted-foreground",
                     )}
                   >
                     {meal.description}
                   </span>
-                  {ingredients.length > 0 && (
-                    // Peso de cada ingrediente para pesarlo en báscula.
-                    <span className={cn("mt-1.5 block type-footnote transition-colors duration-150", isDone ? "text-muted-foreground/60" : "text-foreground/80")}>
-                      {ingredients.map((item, n) => (
-                        <span key={n} className="flex justify-between gap-3 py-px">
-                          <span className="min-w-0">{item.food}</span>
-                          <span className="shrink-0 tabular-nums">{item.amount}</span>
-                        </span>
-                      ))}
-                    </span>
-                  )}
                   {own && (
                     <span
                       className={cn(
-                        "mt-1 block type-footnote tabular-nums transition-colors duration-150",
-                        isDone ? "text-muted-foreground/60" : "text-muted-foreground",
+                        "mt-1 block type-footnote font-medium tabular-nums transition-colors duration-150",
+                        isDone ? "text-muted-foreground/60" : "text-primary",
                       )}
                     >
-                      {fmt(own.kcal)} kcal · P {own.protein} g · C {own.carbs} g · G {own.fats} g
+                      {fmt(own.kcal)} kcal
                     </span>
                   )}
                 </span>

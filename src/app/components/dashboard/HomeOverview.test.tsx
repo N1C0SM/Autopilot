@@ -57,7 +57,7 @@ describe("dashboard home overview", () => {
     expect(mocks.hapticTap).toHaveBeenCalledTimes(2);
   });
 
-  it("matches the mobile app home order without adding a separate routines section", () => {
+  it("matches the iPhone app home order and reserves the weekly summary for wide layouts", () => {
     render(
       <HomeOverview
         dayPlans={[{
@@ -74,29 +74,28 @@ describe("dashboard home overview", () => {
       />,
     );
 
-    expect(screen.queryByRole("region", { name: "Tus rutinas" })).not.toBeInTheDocument();
     const mainAction = screen.getByRole("button", { name: "Ver la sesión Upper A · Pecho, espalda y hombros" });
-    const homeRows = screen.getByRole("button", { name: /Tu progreso/ }).closest("[data-home-rows]");
+    const routines = screen.getByRole("region", { name: "Tu programa" });
     const weekPlan = screen.getByRole("region", { name: /Esta semana:/ });
     const nutrition = screen.getByRole("button", { name: /Nutrición/ });
     expect(mainAction).toBeVisible();
-    expect(homeRows).toBeVisible();
-    expect(weekPlan).toBeVisible();
-    expect(nutrition).toBeVisible();
-    expect(mainAction.compareDocumentPosition(homeRows!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(homeRows!.compareDocumentPosition(weekPlan) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(weekPlan.compareDocumentPosition(nutrition) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(routines).toBeVisible();
+    expect(routines.className).toContain("lg:hidden");
+    expect(mainAction.compareDocumentPosition(routines) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(weekPlan.className).toContain("hidden");
+    expect(weekPlan.className).toContain("lg:block");
+    expect(nutrition.parentElement?.className).toContain("hidden");
+    expect(nutrition.parentElement?.className).toContain("lg:block");
+    expect(screen.queryByRole("button", { name: /Tu progreso/ })).not.toBeInTheDocument();
   });
 
-  it("keeps progress and nutrition visible on Home before a routine exists", () => {
-    const onNavigate = vi.fn();
+  it("shows the native-style empty state without routine rows when no routine exists", () => {
     const onPrepareRoutine = vi.fn();
     render(
       <HomeOverview
         dayPlans={[]}
         hasPlan={false}
         nutrition={false}
-        onNavigate={onNavigate}
         onPrepareRoutine={onPrepareRoutine}
       />,
     );
@@ -104,14 +103,8 @@ describe("dashboard home overview", () => {
     expect(screen.getByText("Prepara tu rutina inicial gratis")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Preparar mi rutina gratis" }));
     expect(onPrepareRoutine).toHaveBeenCalledOnce();
-    const progress = screen.getByRole("button", { name: /Tu progreso/ });
-    const nutrition = screen.getByRole("button", { name: /Nutrición/ });
-    expect(progress).toBeVisible();
-    expect(nutrition).toBeVisible();
-    fireEvent.click(progress);
-    expect(onNavigate).toHaveBeenCalledWith("progress");
-    fireEvent.click(nutrition);
-    expect(onNavigate).toHaveBeenLastCalledWith("nutrition");
+    expect(screen.queryByRole("region", { name: "Tu programa" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Tu progreso/ })).not.toBeInTheDocument();
   });
 
   it("proposes the next pending session whatever the weekday, with one mark per session", () => {
@@ -180,7 +173,7 @@ describe("dashboard home overview", () => {
     expect(images[0]).toHaveAttribute("aria-hidden", "true");
   });
 
-  it("shows the weekly progress and nutrition cards while keeping paid nutrition reachable", () => {
+  it("keeps weekly progress and nutrition reachable in the wide app layout", () => {
     const onNavigate = vi.fn();
     render(
       <HomeOverview
@@ -196,23 +189,17 @@ describe("dashboard home overview", () => {
       />,
     );
 
-        expect(screen.getByText("Plan de nutrición")).toBeVisible();
+    expect(screen.getByText("Plan de nutrición")).toBeVisible();
     const nutritionCard = screen.getByRole("button", { name: /Nutrición/ });
-    const progressCard = screen.getByRole("button", { name: /Tu progreso/ });
     expect(nutritionCard).toBeVisible();
-    expect(progressCard).toBeVisible();
-    // «Tu progreso» y «Tu plan» van juntos, después de la acción principal.
-    expect(progressCard.closest("[data-home-rows]")).toBe(screen.getByRole("button", { name: /Tu plan/ }).closest("[data-home-rows]"));
+    expect(nutritionCard.parentElement?.className).toContain("lg:block");
     const startButton = screen.getByRole("button", { name: /Ver la sesión Entrenamiento de fuerza/ });
     expect(startButton).toBeVisible();
     const allButtons = screen.getAllByRole("button");
     expect(allButtons.indexOf(startButton)).toBeLessThan(allButtons.indexOf(nutritionCard));
-    expect(allButtons.indexOf(startButton)).toBeLessThan(allButtons.indexOf(progressCard));
     fireEvent.click(nutritionCard);
     expect(onNavigate).toHaveBeenLastCalledWith("nutrition");
-    fireEvent.click(progressCard);
-    expect(onNavigate).toHaveBeenLastCalledWith("progress");
-    expect(mocks.hapticTap).toHaveBeenCalledTimes(2);
+    expect(mocks.hapticTap).toHaveBeenCalledOnce();
   });
 
   it("rests only when the whole week is done and still opens training", () => {

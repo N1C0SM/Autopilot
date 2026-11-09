@@ -192,6 +192,13 @@ final class AccountStore: ObservableObject {
             remember(session)
             return .ok
         } catch {
+            // La sesión ya guardada vale aunque no haya red: la app puede abrirse con la caché local.
+            if Self.isNetworkError(error), !target.requirePassword,
+               let cached = try? await Backend.client.auth.session,
+               cached.user.id.uuidString.lowercased() == id {
+                remember(cached)
+                return .ok
+            }
             // Solo un fallo real de red es "sin conexión"; cualquier otro rechazo pide volver a entrar.
             if Self.isNetworkError(error) { return .offline }
             markExpired(id)
@@ -208,6 +215,12 @@ final class AccountStore: ObservableObject {
             remember(session)
             return .ok
         } catch {
+            if Self.isNetworkError(error), !target.requirePassword,
+               let cached = try? await Backend.client.auth.session,
+               cached.user.id.uuidString.lowercased() == id {
+                remember(cached)
+                return .ok
+            }
             if Self.isNetworkError(error) { return .offline }
             return .wrong
         }

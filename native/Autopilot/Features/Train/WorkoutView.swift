@@ -47,6 +47,7 @@ struct WorkoutView: View {
     @State private var motionMeta: [String: (pattern: String?, stimulus: String?, load: String?)] = [:]
     /// Vista elegida en «···» o en Ajustes: lista de toda la sesión (por defecto) o ejercicio a ejercicio.
     @AppStorage("workout-view") private var workoutView = "list"
+    @AppStorage("workout-layout") private var workoutLayout = "rows"
     private var focusMode: Bool { workoutView == "focus" }
     /// RPE, bajadas, calentamiento y fallo: ocultos por defecto para que anotar sea serie, kg y reps.
     @AppStorage("workout-advanced") private var advanced = false
@@ -100,6 +101,21 @@ struct WorkoutView: View {
 
     private var addingExerciseChoice: some View {
         ExercisePickerView(existing: Set(workout.exercises.map(\.name))) { workout.addExercises($0) }
+    }
+
+    @ViewBuilder private var exerciseCards: some View {
+        let exercises = Array(workout.exercises.enumerated())
+        if workoutLayout == "columns" {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 340), spacing: 12)], spacing: 12) {
+                ForEach(exercises, id: \.element.id) { i, ex in
+                    SessionExerciseCard(workout: workout, exercise: ex, index: i, userId: userId)
+                }
+            }
+        } else {
+            ForEach(exercises, id: \.element.id) { i, ex in
+                SessionExerciseCard(workout: workout, exercise: ex, index: i, userId: userId)
+            }
+        }
     }
 
     private var discardChoice: some View {
@@ -338,9 +354,7 @@ struct WorkoutView: View {
                 .onAppear { workout.openExercises.insert(currentIdx) }
                 .id(ex.id)
         } else {
-            ForEach(Array(workout.exercises.enumerated()), id: \.element.id) { i, ex in
-                SessionExerciseCard(workout: workout, exercise: ex, index: i, userId: userId)
-            }
+            exerciseCards
             if !focusMode {
                 Button { Haptics.selection(); addingExercise = true } label: {
                     HStack(spacing: 14) {

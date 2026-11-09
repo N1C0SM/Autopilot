@@ -5,7 +5,7 @@ import { Toaster } from "@/shared/components/ui/toaster";
 import { Toaster as Sonner } from "@/shared/components/ui/sonner";
 import { TooltipProvider } from "@/shared/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AuthProvider } from "@/shared/contexts/AuthContext";
 import { ProtectedRoute } from "@/shared/components/ProtectedRoute";
 const ForTrainers = lazy(() => import("@/web/pages/ForTrainers"));
@@ -54,6 +54,7 @@ import { useAuth } from "@/shared/contexts/AuthContext";
 import { Spinner } from "@/shared/components/ui/spinner";
 import { isNativeApp } from "@/shared/lib/platform";
 import { hideSplashScreen } from "@/shared/lib/native";
+import { getDomainRedirect, isAppHostname } from "@/shared/lib/appDomain";
 
 const NativeSplashSync = () => {
   const { loading } = useAuth();
@@ -102,6 +103,81 @@ const RouteFallback = () => (
   </div>
 );
 
+const DomainRoutes = () => {
+  const location = useLocation();
+  const redirect = getDomainRedirect({
+    hostname: window.location.hostname,
+    pathname: location.pathname,
+    search: location.search,
+    hash: location.hash,
+  }, isNativeApp());
+
+  useEffect(() => {
+    if (redirect) window.location.replace(redirect);
+  }, [redirect]);
+
+  if (redirect) {
+    return (
+      <>
+        <Helmet><meta name="robots" content="noindex,nofollow" /></Helmet>
+        <RouteFallback />
+      </>
+    );
+  }
+
+  return (
+    <>
+      {isAppHostname(window.location.hostname) && <Helmet><meta name="robots" content="noindex,nofollow" /></Helmet>}
+      <Suspense fallback={<RouteFallback />}>
+        <Routes>
+          <Route path="/" element={<RootRoute />} />
+          <Route path="/planes" element={<PublicInfo page="plans" />} />
+          <Route path="/como-funciona" element={<PublicInfo page="how" />} />
+          <Route path="/equipo" element={<PublicInfo page="team" />} />
+          <Route path="/preguntas-frecuentes" element={<PublicInfo page="faq" />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route path="/para-entrenadores" element={<ForTrainers />} />
+          <Route path="/invitacion/:token" element={<AcceptInvitation />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/scan" element={<Scan />} />
+          <Route path="/scan/user/:userId" element={<ProtectedRoute><Scan /></ProtectedRoute>} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
+          <Route path="/payment-success" element={<PaymentSuccess />} />
+          <Route path="/descarga-libro" element={<BookDownload />} />
+          <Route path="/d/:token" element={<SharedBook />} />
+
+          <Route path="/onboarding-choice" element={<OnboardingChoice />} />
+          <Route path="/onboarding" element={<Onboarding />} />
+          <Route path="/dashboard" element={<DashboardRedirect />} />
+          <Route path="/dashboard/user/:userId" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><NoIndex><Settings /></NoIndex></ProtectedRoute>} />
+          <Route path="/my-schedule" element={<ProtectedRoute><MySchedule /></ProtectedRoute>} />
+          <Route path="/admin" element={<ProtectedRoute><NoIndex><Admin /></NoIndex></ProtectedRoute>} />
+          <Route path="/drive" element={<NoIndex><Drive /></NoIndex>} />
+          <Route path="/admin/email-preview/:templateKey" element={<ProtectedRoute><EmailPreview /></ProtectedRoute>} />
+          <Route path="/trainer" element={<ProtectedRoute><NoIndex><Trainer /></NoIndex></ProtectedRoute>} />
+          <Route path="/unsubscribe" element={<NoIndex><Unsubscribe /></NoIndex>} />
+          <Route path="/legal" element={<Navigate to="/legal/terminos" replace />} />
+          <Route path="/legal/:slug" element={<Legal />} />
+          <Route path="/blog" element={<Blog />} />
+          <Route path="/blog/:slug" element={<BlogPost />} />
+          <Route path="/impersonate/callback" element={<ImpersonateCallback />} />
+          <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
+          <Route path="/connect" element={<Connect />} />
+          <Route path="/recursos" element={<Recursos />} />
+          <Route path="/app" element={<AppDownload />} />
+          <Route path="/descargar" element={<AppDownload />} />
+          <Route path="/recomendaciones" element={<Navigate to="/recursos" replace />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Suspense>
+    </>
+  );
+};
+
 const App = () => (
   <ErrorBoundary>
   <QueryClientProvider client={queryClient}>
@@ -117,52 +193,7 @@ const App = () => (
           <WhoIsTraining />
           <ImpersonationBanner />
           <OfflineBanner />
-          <Suspense fallback={<RouteFallback />}>
-            <Routes>
-            <Route path="/" element={<RootRoute />} />
-            <Route path="/planes" element={<PublicInfo page="plans" />} />
-            <Route path="/como-funciona" element={<PublicInfo page="how" />} />
-            <Route path="/equipo" element={<PublicInfo page="team" />} />
-            <Route path="/preguntas-frecuentes" element={<PublicInfo page="faq" />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/verify-email" element={<VerifyEmail />} />
-            <Route path="/para-entrenadores" element={<ForTrainers />} />
-            <Route path="/invitacion/:token" element={<AcceptInvitation />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/scan" element={<Scan />} />
-            <Route path="/scan/user/:userId" element={<ProtectedRoute><Scan /></ProtectedRoute>} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/auth/callback" element={<AuthCallback />} />
-            <Route path="/payment-success" element={<PaymentSuccess />} />
-            <Route path="/descarga-libro" element={<BookDownload />} />
-            <Route path="/d/:token" element={<SharedBook />} />
-
-            <Route path="/onboarding-choice" element={<OnboardingChoice />} />
-            <Route path="/onboarding" element={<Onboarding />} />
-            <Route path="/dashboard" element={<DashboardRedirect />} />
-            <Route path="/dashboard/user/:userId" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/settings" element={<ProtectedRoute><NoIndex><Settings /></NoIndex></ProtectedRoute>} />
-            <Route path="/my-schedule" element={<ProtectedRoute><MySchedule /></ProtectedRoute>} />
-            <Route path="/admin" element={<ProtectedRoute><NoIndex><Admin /></NoIndex></ProtectedRoute>} />
-            <Route path="/drive" element={<NoIndex><Drive /></NoIndex>} />
-            <Route path="/admin/email-preview/:templateKey" element={<ProtectedRoute><EmailPreview /></ProtectedRoute>} />
-            <Route path="/trainer" element={<ProtectedRoute><NoIndex><Trainer /></NoIndex></ProtectedRoute>} />
-            <Route path="/unsubscribe" element={<NoIndex><Unsubscribe /></NoIndex>} />
-            <Route path="/legal" element={<Navigate to="/legal/terminos" replace />} />
-            <Route path="/legal/:slug" element={<Legal />} />
-            <Route path="/blog" element={<Blog />} />
-            <Route path="/blog/:slug" element={<BlogPost />} />
-            <Route path="/impersonate/callback" element={<ImpersonateCallback />} />
-            <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
-            <Route path="/connect" element={<Connect />} />
-            <Route path="/recursos" element={<Recursos />} />
-            <Route path="/app" element={<AppDownload />} />
-            <Route path="/descargar" element={<AppDownload />} />
-            <Route path="/recomendaciones" element={<Navigate to="/recursos" replace />} />
-            <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
+          <DomainRoutes />
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>

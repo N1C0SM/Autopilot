@@ -20,9 +20,9 @@ import RPEDialog from "@/app/components/dashboard/RPEDialog";
 import { ExerciseThumb, isDirectFile } from "@/app/components/ExerciseMedia";
 import ExerciseFocus from "@/app/components/ExerciseFocus";
 import { useExerciseMetadata } from "@/shared/hooks/useExerciseMetadata";
-import { getWorkoutAdvanced, getWorkoutRestPreference, getWorkoutView, setWorkoutAdvanced, setWorkoutView, WORKOUT_VIEW_EVENT } from "@/shared/lib/workoutPreferences";
+import { getWorkoutAdvanced, getWorkoutLayout, getWorkoutRestPreference, getWorkoutView, setWorkoutAdvanced, setWorkoutView, WORKOUT_VIEW_EVENT, type WorkoutLayout } from "@/shared/lib/workoutPreferences";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu";
-import { readActiveWorkout, saveActiveWorkout, clearActiveWorkout, clearPendingOfflineSeries, remainingRestSeconds, playRestBeep } from "@/shared/lib/activeWorkout";
+import { readActiveWorkout, saveActiveWorkout, clearActiveWorkout, clearPendingOfflineSeries, remainingRestSeconds, playRestBeep, formatElapsed } from "@/shared/lib/activeWorkout";
 import { getProgressionSuggestion } from "@/shared/lib/workoutProgression";
 import { parsePositiveWeight } from "@/shared/lib/weight";
 import { WorkoutSummary } from "@/app/components/dashboard/WorkoutSummary";
@@ -120,6 +120,7 @@ function focusSetField(e: { currentTarget: HTMLInputElement }) {
 const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resume = false, onAutoStartConsumed, onExit, onCancel, onSessionModeChange }: Props) => {
   const [resumeDraft] = useState(() => resume ? readActiveWorkout(userId) : null);
   const [workoutView, setWorkoutViewState] = useState(() => getWorkoutView(userId));
+  const [workoutLayout, setWorkoutLayoutState] = useState<WorkoutLayout>(() => getWorkoutLayout(userId));
   const [advanced, setAdvancedState] = useState(() => getWorkoutAdvanced(userId));
   // En la lista todos los ejercicios nacen abiertos; se guardan solo los que el usuario pliega.
   const [closedExercises, setClosedExercises] = useState<number[]>([]);
@@ -127,7 +128,11 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
     window.matchMedia("(prefers-reduced-motion: reduce)").matches
   );
   useEffect(() => {
-    const refresh = () => { setWorkoutViewState(getWorkoutView(userId)); setAdvancedState(getWorkoutAdvanced(userId)); };
+    const refresh = () => {
+      setWorkoutViewState(getWorkoutView(userId));
+      setWorkoutLayoutState(getWorkoutLayout(userId));
+      setAdvancedState(getWorkoutAdvanced(userId));
+    };
     window.addEventListener(WORKOUT_VIEW_EVENT, refresh);
     return () => window.removeEventListener(WORKOUT_VIEW_EVENT, refresh);
   }, [userId]);
@@ -152,12 +157,29 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
   const [restTimer, setRestTimerState] = useState<number | null>(null);
   const [restEndsAt, setRestEndsAt] = useState<number | null>(null);
   const [sessionStartedAt, setSessionStartedAt] = useState<number | null>(null);
+  const [sessionElapsedMs, setSessionElapsedMs] = useState(0);
   // Pausa: marca absoluta; al reanudar, inicio y descanso se desplazan lo que duró.
   const [pausedAt, setPausedAt] = useState<number | null>(null);
+  const [completionReady, setCompletionReady] = useState(false);
+  const [started, setStarted] = useState(false);
+  const [workoutCompleted, setWorkoutCompleted] = useState(false);
   const setRestTimer = (seconds: number | null) => {
     setRestEndsAt(seconds === null ? null : Date.now() + seconds * 1000);
     setRestTimerState(seconds);
   };
+  const pauseWorkout = useCallback(() => {
+    if (!started || pausedAt !== null || workoutCompleted) return;
+    setPausedAt(Date.now());
+  }, [pausedAt, started, workoutCompleted]);
+  const resumeWorkout = useCallback(() => {
+    if (!started || pausedAt === null || sessionStartedAt === null) return;
+    const pauseDuration = Date.now() - pausedAt;
+    setSessionStartedAt((current) => (current === null ? null : current + pauseDuration));
+    setPausedAt(null);
+    if (restEndsAt !== null) {
+      setRestEndsAt((current) => (current === null ? null : current + pauseDuration));
+    }
+  }, [pausedAt, restEndsAt, sessionStartedAt, started]);
   const [restTarget, setRestTarget] = useState(0);
   const [rpeOpen, setRpeOpen] = useState(false);
   const [technique, setTechnique] = useState<{
@@ -182,9 +204,6 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
   const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
   const saveAttemptRef = useRef(0);
   const saveTimeoutRef = useRef<number | null>(null);
-  const [completionReady, setCompletionReady] = useState(false);
-  const [started, setStarted] = useState(false);
-  const [workoutCompleted, setWorkoutCompleted] = useState(false);
   const [showCompletionSummary, setShowCompletionSummary] = useState(false);
   const [swaps, setSwaps] = useState<Record<string, string>>({});
   const [sessionRpe, setSessionRpe] = useState<number | null>(null);
@@ -510,7 +529,20 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
       setSessionStartedAt(draft?.date === selectedDate && typeof draft.startedAt === "number" ? draft.startedAt : Date.now());
     }
   }, [started, workoutCompleted, sessionStartedAt, userId, selectedDate]);
-  useEffect(() => { if (!started) { setSessionStartedAt(null); setPausedAt(null); } }, [started]);
+  useEffect(() => {
+    if (!started || workoutCompleted || sessionStartedAt === null) return;
+    const sync = () => setSessionElapsedMs(pausedAt !== null ? pausedAt - sessionStartedAt : Math.max(0, Date.now() - sessionStartedAt));
+    sync();
+    const interval = window.setInterval(sync, 250);
+    document.addEventListener("visibilitychange", sync);
+    window.addEventListener("pageshow", sync);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", sync);
+      window.removeEventListener("pageshow", sync);
+    };
+  }, [started, workoutCompleted, pausedAt, sessionStartedAt]);
+  useEffect(() => { if (!started) { setSessionStartedAt(null); setPausedAt(null); setSessionElapsedMs(0); } }, [started]);
   useEffect(() => {
     if (!started || !logsReady || workoutCompleted || activePlan?.type !== "gimnasio") return;
     const saved = saveActiveWorkout({ version: 1, userId, date: selectedDate, plan: activePlan,
@@ -1161,6 +1193,9 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
   const focusMode = started && workoutView === "focus" && expandedExercise !== null;
   // Lista de toda la sesión: título grande en el contenido y el pequeño de la barra, oculto.
   const listMode = started && !focusMode;
+  const exerciseListClass = started && !focusMode
+    ? workoutLayout === "columns" ? "grid grid-cols-1 gap-3 md:grid-cols-2" : "flex flex-col gap-3"
+    : focusMode ? "" : "overflow-hidden rounded-media bg-card";
   const paused = started && pausedAt !== null;
   const currentExerciseIndex = (activePlan?.exercises || []).findIndex((exercise) => {
     const sets = exerciseLogs[exercise.name] || [];
@@ -1253,7 +1288,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                   onClick={() => { void hapticTap(); void finishWorkout(); }}
                   disabled={saving || completedSets === 0}
                   className="ml-1 inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 type-subhead font-bold text-primary-foreground transition-opacity active:opacity-80 disabled:opacity-40 [touch-action:manipulation]"
-                  aria-label="Finalizar entrenamiento"
+                  aria-label="Finalizar"
                 >
                   {saving ? <Spinner size="sm" className="text-primary-foreground" label="Guardando" /> : "Finalizar"}
                 </button>
@@ -1540,7 +1575,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
             <header className="px-1 pb-4">
               <p className={`flex items-center gap-1.5 type-footnote font-medium ${paused ? "text-muted-foreground" : "text-primary"}`}>
                 {paused ? <Pause className="h-4 w-4" aria-hidden="true" /> : <Dumbbell className="h-4 w-4" aria-hidden="true" />}
-                {paused ? "Entrenamiento en pausa" : "Entrenamiento en curso"}
+                {paused ? "En pausa" : "Entrenamiento en curso"}
               </p>
               <h1 className="mt-1 line-clamp-2 text-[30px] font-bold leading-tight tracking-tight">
                 {activePlan?.routine_name?.trim() || trainingTitle || "Entrenamiento"}
@@ -1550,14 +1585,20 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
               </p>
               <div className="mt-3 flex items-center gap-3">
                 <Progress value={progressPercent} aria-valuenow={Math.round(progressPercent)} aria-label="Avance de la sesión" className="h-1.5 flex-1 [&>div]:bg-primary" />
-                <span className="shrink-0 type-footnote tabular-nums text-muted-foreground">{completedExercises}/{currentPlan.exercises?.length ?? 0} ejercicios</span>
+                <span aria-label="Tiempo de sesión" className="shrink-0 type-footnote tabular-nums text-muted-foreground">{formatElapsed(sessionElapsedMs)}</span>
+              </div>
+              <div className="mt-3 flex items-center gap-2">
+                <Button type="button" className="min-h-11 flex-1" variant={paused ? "default" : "secondary"} onClick={() => { void hapticTap(); if (paused) { resumeWorkout(); } else { pauseWorkout(); } }}>
+                  {paused ? "Reanudar" : "Pausar"}
+                </Button>
+                <span className="type-footnote tabular-nums text-muted-foreground">{completedExercises}/{currentPlan.exercises?.length ?? 0} ejercicios</span>
               </div>
             </header>
           )}
           {!focusMode && !started && (currentPlan.exercises?.length ?? 0) > 0 && (
             <h3 className="px-4 pb-1.5 type-group-header">Ejercicios</h3>
           )}
-          <div className={`${started && !focusMode ? "space-y-3" : focusMode ? "" : "overflow-hidden rounded-media bg-card"} ${paused ? "pointer-events-none opacity-40 transition-opacity" : ""}`} aria-disabled={paused || undefined}>
+          <div className={`${exerciseListClass} ${paused ? "pointer-events-none opacity-40 transition-opacity" : ""}`} aria-disabled={paused || undefined}>
           {(currentPlan.exercises || []).map((ex, i) => {
             const isExpanded = workoutView === "list" ? !closedExercises.includes(i) : expandedExercise === i;
             if (focusMode && expandedExercise !== i) return null;

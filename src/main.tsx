@@ -1,5 +1,6 @@
 import { createRoot } from "react-dom/client";
 import { HelmetProvider } from "react-helmet-async";
+import { ThemeProvider } from "next-themes";
 import App from "./App.tsx";
 import "@fontsource-variable/inter/opsz.css";
 import "./index.css";
@@ -16,7 +17,9 @@ initPlatformClasses();
 initNative();
 
 createRoot(document.getElementById("root")!).render(
-  <HelmetProvider>
-    <App />
-  </HelmetProvider>
+  <ThemeProvider attribute="class" defaultTheme="system" enableSystem storageKey="autopilot-appearance">
+    <HelmetProvider>
+      <App />
+    </HelmetProvider>
+  </ThemeProvider>
 );

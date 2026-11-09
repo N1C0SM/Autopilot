@@ -1,8 +1,10 @@
 export const DEFAULT_REST_SECONDS = 60;
 export const REST_PRESETS = [45, 60, 90, 120, 180] as const;
 export type WorkoutView = "list" | "focus";
+export type WorkoutLayout = "rows" | "columns";
 export const WORKOUT_VIEW_EVENT = "autopilot:workout-view-changed";
 const viewKey = (userId: string) => `autopilot:workout-view:${userId}`;
+const layoutKey = (userId: string) => `autopilot:workout-layout:${userId}`;
 /** La sesión entera en lista por defecto (como la app); ejercicio a ejercicio, solo si se elige. */
 export function getWorkoutView(userId: string): WorkoutView {
   try { return localStorage.getItem(viewKey(userId)) === "focus" ? "focus" : "list"; }
@@ -12,6 +14,16 @@ export function setWorkoutView(userId: string, view: WorkoutView) {
   try { localStorage.setItem(viewKey(userId), view); } catch { /* storage unavailable */ }
   window.dispatchEvent(new Event(WORKOUT_VIEW_EVENT));
   return view;
+}
+
+export function getWorkoutLayout(userId: string): WorkoutLayout {
+  try { return localStorage.getItem(layoutKey(userId)) === "columns" ? "columns" : "rows"; }
+  catch { return "rows"; }
+}
+export function setWorkoutLayout(userId: string, layout: WorkoutLayout) {
+  try { localStorage.setItem(layoutKey(userId), layout); } catch { /* storage unavailable */ }
+  window.dispatchEvent(new Event(WORKOUT_VIEW_EVENT));
+  return layout;
 }
 
 const advancedKey = (userId: string) => `autopilot:workout-advanced:${userId}`;

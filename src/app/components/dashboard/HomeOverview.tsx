@@ -1,6 +1,6 @@
 import { readMealsDone as readMealsDoneFor } from "@/shared/lib/mealsDone";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { Flame as Apple, Flame, BarChart3, Check, ChevronRight, Clock, Dumbbell, Layers, LockKeyhole } from "lucide-react";
+import { Flame as Apple, Flame, Check, ChevronRight, Clock, Dumbbell, LockKeyhole } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { EmptyState } from "@/shared/components/ui/empty-state";
 import { supabase } from "@/shared/integrations/supabase/client";
@@ -294,17 +294,20 @@ const HomeOverview = ({
     : meals.length
       ? macroError ? "Objetivos por revisar" : null
       : calorieLabel && macroError ? "Objetivos por revisar" : null;
-
-  // Widget «Último récord»: la mejor marca más reciente del usuario.
-  const [lastPr, setLastPr] = useState<{ exercise_name: string; weight: number; reps: number; achieved_at: string } | null>(null);
-  useEffect(() => {
-    if (!userId) return;
-    let cancelled = false;
-    void supabase.from("personal_records").select("exercise_name, weight, reps, achieved_at")
-      .eq("user_id", userId).order("achieved_at", { ascending: false }).limit(1)
-      .then(({ data }) => { if (!cancelled) setLastPr(data?.[0] ?? null); });
-    return () => { cancelled = true; };
-  }, [userId]);
+  const routineSubtitle = (plan: DayPlan) => {
+    if (plan.muscle_focus) return plan.muscle_focus;
+    const titleParts = planTitle(plan).split(" · ");
+    if (titleParts.length > 1) return titleParts.slice(1).join(" · ");
+    if (plan.type === "actividad") return [plan.intensity, plan.duration].filter(Boolean).join(" · ") || "Sesión de actividad";
+    const count = plan.exercises?.length ?? 0;
+    return count ? `${count} ${count === 1 ? "ejercicio" : "ejercicios"}` : "Sesión de entrenamiento";
+  };
+  const routinePhoto = (plan: DayPlan) => {
+    const first = plan.exercises?.[0];
+    if (!first) return plan.cover_url ?? null;
+    const metadata = exerciseMetadata.byId[first.exercise_id] || exerciseMetadata.byName[first.name];
+    return plan.cover_url || metadata?.image_url || first.image_url || null;
+  };
 
   const readMealsDone = useCallback(() => {
     setCompletedMeals(new Set(readMealsDoneFor(userId)));
@@ -341,9 +344,9 @@ const HomeOverview = ({
   const sessionFocus = String(sessionTitle).includes(" · ") ? String(sessionTitle).split(" · ").slice(1).join(" · ") : "";
 
   return (
-    <div className="flex w-full flex-col pb-4 lg:grid lg:grid-cols-[minmax(0,1.55fr)_minmax(300px,1fr)] lg:items-start lg:gap-x-10 xl:gap-x-14">
+    <div className="flex w-full flex-col gap-5 pb-4">
       {/* Cabecera del rediseño (ChatGPT): «Hoy» grande y el saludo en gris */}
-      <header className="lg:col-span-2">
+      <header>
         <h2 data-nav-title className="type-large-title leading-tight text-foreground sm:text-[44px] sm:leading-[48px]">Hoy</h2>
         <p className="mt-1 type-subhead text-muted-foreground">
           {firstName ? `Hola, ${firstName}.` : "Hola."}{" "}
@@ -360,7 +363,7 @@ const HomeOverview = ({
       </header>
 
       {/* Siguiente sesión de la rutina: la que toca hoy, sea el día que sea */}
-      <section className="mt-6 lg:col-start-1 lg:row-start-2 lg:mt-8" aria-label="Tu siguiente sesión">
+      <section aria-label="Tu siguiente sesión">
         {!hasPlan ? (
           <div className="rounded-[22px] bg-card p-4">
             <EmptyState
@@ -399,21 +402,21 @@ const HomeOverview = ({
               void hapticTap();
               openSessionPreview(todayPlan);
             }}
-            className="group relative flex min-h-[156px] w-full overflow-hidden rounded-[22px] border border-border bg-card text-left transition-transform duration-150 active:scale-[0.985] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="group relative flex min-h-[156px] w-full overflow-hidden rounded-[22px] bg-card text-left transition-transform duration-150 active:scale-[0.985] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:min-h-0 lg:flex-col lg:rounded-[28px]"
             aria-label={`Ver la sesión ${sessionTitle}`}
           >
             {/* Rediseño (ChatGPT): texto a la izquierda, foto a la derecha fundida con la tarjeta y chevron dorado. */}
             {dayPhoto && (
-              <span aria-hidden="true" className="absolute inset-y-0 right-0 w-[55%] overflow-hidden bg-secondary">
+              <span aria-hidden="true" className="absolute inset-y-0 right-0 w-[55%] overflow-hidden bg-secondary lg:relative lg:inset-auto lg:block lg:h-[340px] lg:w-full">
                 <img key={dayPhoto} src={dayPhoto} alt="" decoding="async" className="h-full w-full object-cover object-[50%_30%]" />
-                <span className="absolute inset-0 bg-gradient-to-r from-card via-card/55 to-transparent" />
+                <span className="absolute inset-0 bg-gradient-to-r from-card via-card/55 to-transparent lg:bg-gradient-to-b lg:from-transparent lg:to-black/55" />
               </span>
             )}
-            <span className={cn("relative flex min-w-0 flex-1 flex-col p-[18px]", dayPhoto ? "pr-32" : "pr-16")}>
-              <span className="type-footnote text-muted-foreground">
+            <span className={cn("relative flex min-w-0 flex-1 flex-col p-[18px] lg:flex-none lg:p-6", dayPhoto ? "pr-32 lg:pr-6" : "pr-16")}>
+              <span className="type-footnote text-muted-foreground lg:font-semibold lg:uppercase lg:tracking-wide lg:text-primary">
                 {`${todayPlan?.type === "actividad" ? "Siguiente actividad" : "Siguiente sesión"} · ${todayPlanNumber} de ${sessions.length}`}
               </span>
-              <span className="mt-1.5 line-clamp-2 text-[22px] font-bold leading-7 tracking-[-0.02em]">{sessionName}</span>
+              <span className="mt-1.5 line-clamp-2 text-[22px] font-bold leading-7 tracking-[-0.02em] lg:text-[32px] lg:leading-tight">{sessionName}</span>
               {sessionFocus && <span className="mt-0.5 line-clamp-2 type-subhead text-muted-foreground">{sessionFocus}</span>}
               {sessionDetail.length > 0 && (
                 <span className="mt-auto flex items-center gap-1.5 pt-3.5 type-footnote tabular-nums text-muted-foreground">
@@ -425,8 +428,9 @@ const HomeOverview = ({
                   </span>
                 </span>
               )}
+              <span className="mt-5 hidden type-subhead font-semibold text-primary lg:block">Ver la sesión</span>
             </span>
-            <span aria-hidden="true" className="absolute bottom-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-primary/20 text-primary transition-opacity group-active:opacity-80">
+            <span aria-hidden="true" className="absolute bottom-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-primary/20 text-primary transition-opacity group-active:opacity-80 lg:hidden">
               <ChevronRight className="h-5 w-5" strokeWidth={2.5} />
             </span>
           </button>
@@ -456,7 +460,7 @@ const HomeOverview = ({
           </button>
         ) : (
           // Semana completa (o plan sin sesiones): la misma tarjeta que la sesión, con foto real fundida a la derecha y sin dibujos (como `RestCard` en la app).
-          <div className="relative overflow-hidden rounded-[22px] border border-border bg-card p-[18px]">
+          <div className="relative overflow-hidden rounded-[22px] bg-card p-[18px]">
             <img src={BRAND_PHOTOS.gym} alt="" aria-hidden="true" decoding="async" className="absolute inset-y-0 right-0 h-full w-[210px] object-cover object-[50%_35%] opacity-80" />
             <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-r from-card via-card/80 to-card/10" />
             <div className="relative">
@@ -485,30 +489,36 @@ const HomeOverview = ({
         )}
       </section>
 
-      {/* Rediseño (ChatGPT): «Tu progreso» y «Tu plan» en tarjetas con icono dorado y chevron */}
-      <ul data-home-rows className="mt-3 space-y-3 lg:col-start-2 lg:row-start-2 lg:mt-8">
-        <li>
-          <HomeRow
-            icon={<BarChart3 className="h-[22px] w-[22px]" strokeWidth={1.75} />}
-            title="Tu progreso"
-            detail={lastPr
-                ? `${lastPr.exercise_name} · ${lastPr.weight.toLocaleString("es-ES")} kg × ${lastPr.reps}`
-                : "Sigue tu evolución semana a semana."}
-            onClick={() => onNavigate("progress")}
-          />
-        </li>
-        <li>
-          <HomeRow
-            icon={<Layers className="h-[22px] w-[22px]" strokeWidth={1.75} />}
-            title="Tu plan"
-            detail="Revisa y ajusta tu plan de entrenamiento."
-            onClick={() => onNavigate("training")}
-          />
-        </li>
-      </ul>
+      {sessions.length > 0 && (
+        <section className="lg:hidden" aria-label="Tu programa" data-home-routines>
+          <div className="mb-2 flex items-baseline justify-between">
+            <h3 className="type-title3">Tu programa</h3>
+            <span className="type-footnote text-muted-foreground">{sessions.length} {sessions.length === 1 ? "sesión" : "sesiones"}</span>
+          </div>
+          <div className="overflow-hidden rounded-[22px] bg-card">
+            {sessions.map((plan, index) => (
+              <button
+                key={plan.day}
+                type="button"
+                onClick={() => openSessionPreview(plan)}
+                className="relative flex min-h-[76px] w-full items-center gap-3.5 px-3.5 py-2.5 text-left transition-colors active:bg-accent focus-visible:bg-accent focus-visible:outline-none"
+                aria-label={`Ver sesión ${planTitle(plan)}`}
+              >
+                <ExerciseThumb image={routinePhoto(plan)} name={planTitle(plan)} size="md" />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate type-headline">{planTitle(plan).split(" · ")[0]}</span>
+                  <span className="mt-0.5 block truncate type-footnote text-muted-foreground">{routineSubtitle(plan)}</span>
+                </span>
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                {index < sessions.length - 1 && <span aria-hidden="true" className="absolute bottom-0 left-[70px] right-3.5 h-px bg-border/60" />}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
-      {/* Semana compacta: una marca por sesión de la rutina, sin días de la semana */}
-      <section className="mt-3 rounded-[22px] border border-border bg-card p-4 lg:col-start-2 lg:row-start-3 lg:mt-4 lg:p-5" aria-label={`Esta semana: ${sessionCount} de ${sessions.length} sesiones`}>
+      {/* El diseño ancho de la app nativa muestra el resumen semanal y nutrición. */}
+      <section className="hidden rounded-[22px] bg-card p-4 lg:block" aria-label={`Esta semana: ${sessionCount} de ${sessions.length} sesiones`}>
         <div className="flex items-center justify-between">
           <p className="type-headline text-foreground">Esta semana</p>
           <button
@@ -544,8 +554,7 @@ const HomeOverview = ({
         )}
       </section>
 
-      {/* Nutrición en su tarjeta: kcal del día o, sin plan, la insignia Plus */}
-      <div className="mt-3 lg:col-start-1 lg:row-start-3 lg:mt-4">
+      <div className="hidden lg:block">
         <HomeRow
           icon={nutrition ? <Apple className="h-[22px] w-[22px]" strokeWidth={1.75} /> : <LockKeyhole className="h-5 w-5" strokeWidth={1.75} />}
           locked={!nutrition}
@@ -616,7 +625,7 @@ const HomeRow = ({ icon, title, detail, value, locked = false, onClick }: { icon
   <button
     type="button"
     onClick={() => { void hapticTap(); onClick(); }}
-    className="flex min-h-[72px] w-full items-center gap-3.5 rounded-[22px] border border-border bg-card px-[18px] py-4 text-left transition-transform duration-150 active:scale-[0.985] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    className="flex min-h-[72px] w-full items-center gap-3.5 rounded-[22px] bg-card px-[18px] py-4 text-left transition-transform duration-150 active:scale-[0.985] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
   >
     <span className="min-w-0 flex-1">
       <span className="block truncate type-headline text-foreground">{title}</span>

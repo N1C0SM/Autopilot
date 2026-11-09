@@ -17,10 +17,12 @@ html, body, #root {
   overscroll-behavior-y: none;
 }
 
-/* The app is dark-only: tell the system so native form controls, pickers, the
-   keyboard accessory and scroll indicators render dark too. */
+/* Keep native form controls aligned with the selected appearance. */
 :root {
   color-scheme: dark;
+}
+:root.light {
+  color-scheme: light;
 }
 
 /* Running inside the native shell (`html.native` is set by initPlatformClasses):
@@ -286,6 +288,38 @@ body.keyboard-open main {
     --shadow-glow: 0 0 0 1px hsl(41 68% 58% / 0.35);
     --shadow-card: none;
     --shadow-premium: 0 0 0 1px hsl(41 58% 54% / 0.3);
+  }
+
+  :root.light {
+    --background: 0 0% 97%;
+    --foreground: 240 6% 8%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 6% 8%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 6% 8%;
+    --primary: 41 70% 34%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 5% 92%;
+    --secondary-foreground: 240 6% 8%;
+    --muted: 240 5% 92%;
+    --muted-foreground: 240 4% 38%;
+    --accent: 240 5% 88%;
+    --accent-foreground: 240 6% 8%;
+    --destructive: 3 72% 45%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 135 64% 34%;
+    --success-foreground: 0 0% 100%;
+    --border: 240 4% 82%;
+    --input: 240 4% 82%;
+    --ring: 41 70% 34%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 240 6% 8%;
+    --sidebar-primary: 41 70% 34%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 5% 92%;
+    --sidebar-accent-foreground: 240 6% 8%;
+    --sidebar-border: 240 4% 82%;
+    --sidebar-ring: 41 70% 34%;
   }
 }
 

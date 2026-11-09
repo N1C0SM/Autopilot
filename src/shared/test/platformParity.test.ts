@@ -71,20 +71,24 @@ describe("paridad web ↔ apps nativas", () => {
     expect(app).toMatch(/group\.addTask \{ \(dish, await AiCover\.ownMeal\(dish\)\) \}/);
   });
 
-  it("Nutrición: cada comida con sus macros, que suman el objetivo y se suman al marcarlas, en la web y en la app", () => {
+  it("Nutrición web: comidas compactas y los cálculos de macros intactos en ambas plataformas", () => {
     const web = read("src/app/components/dashboard/MealsList.tsx");
     const app = read("native/Autopilot/Features/Other/OtherViews.swift");
     const note = "Al marcar una comida se suman sus macros del plan. Es una estimación: no se pesa lo que comes.";
     expect(web).toContain(note);
     expect(app).toContain(note);
-    expect(web).toMatch(/kcal · P \{own\.protein\} g · C \{own\.carbs\} g · G \{own\.fats\} g/);
-    expect(app).toMatch(/kcal · P \\\(own\.protein\) g · C \\\(own\.carbs\) g · G \\\(own\.fats\) g/);
+    const webRow = web.slice(web.indexOf("<div className=\"space-y-3\">"), web.indexOf("Regenerar comidas"));
+    const appRow = app.slice(app.indexOf("private func mealRow"), app.indexOf("private func toggle", app.indexOf("private func mealRow")));
+    expect(webRow).toMatch(/min-h-\[60px\]/);
+    expect(webRow).toMatch(/line-clamp-1/);
+    expect(webRow).not.toContain("mealIngredients");
+    expect(webRow).not.toMatch(/own\.(protein|carbs|fats)/);
+    // Esta petición solo compacta la web: la fila nativa mantiene su diseño actual.
+    expect(appRow).toContain("let weighed = meal.weighed");
+    expect(appRow).toMatch(/own\.protein/);
     // El reparto exacto vive en mealMacros.ts y la app lo replica.
     expect(web).toMatch(/mealMacros\(meals, \{ kcal, protein: p, carbs: c, fats: f \}\)/);
     expect(app).toMatch(/static func splitExact\(_ total: Double, _ weights: \[Double\]\) -> \[Int\]/);
-    // Ingredientes con su peso para pesarlos, en las dos.
-    expect(web).toMatch(/const ingredients = mealIngredients\(meal\);/);
-    expect(app).toMatch(/let weighed = meal\.weighed/);
   });
 
   it("Nutrición: una sola columna (resumen arriba, comidas debajo) también en Mac, como la web", () => {

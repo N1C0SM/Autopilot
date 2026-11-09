@@ -39,6 +39,7 @@ struct AccountView: View {
     @State private var nutritionPrefs = ""
     @State private var allergies = ""
     @State private var workoutView = UserDefaults.standard.string(forKey: "workout-view") ?? "list"
+    @State private var workoutLayout = UserDefaults.standard.string(forKey: "workout-layout") ?? "rows"
     @AppStorage("appearance") private var appearance: String = "system"
     @State private var photo: PhotosPickerItem?
     @State private var exportDoc: JSONDoc?
@@ -145,7 +146,7 @@ struct AccountView: View {
             hubRow("person.2", "Cuentas en este dispositivo", "Cambia de cuenta sin cerrar sesión", to: .cuentas)
         }
         group("Preferencias") {
-            hubRow("dumbbell", "Tu forma de entrenar", "Vista del entreno y descanso entre series", to: .entreno)
+            hubRow("dumbbell", "Tu forma de entrenar", "Vista, disposición y descanso del entreno", to: .entreno)
             hubRow("key", "Contraseña", "Cambia tu contraseña", to: .contrasena)
         }
         group("Apariencia") {
@@ -242,12 +243,19 @@ struct AccountView: View {
 
     @ViewBuilder private var trainingSection: some View {
 
-                group("Tu forma de entrenar", footer: "Elige cuánto quieres descansar al marcar una serie. El temporizador se inicia solo durante tu entreno.") {
+                group("Tu forma de entrenar", footer: "Elige cuánto quieres descansar al marcar una serie. El temporizador se inicia solo durante tu entreno. La disposición cambia cómo se organizan las tarjetas, no la vista «Ejercicio a ejercicio».") {
                     VStack(alignment: .leading, spacing: 10) {
                         Text("Vista del entrenamiento").font(.apBody)
                         SegmentedPill(options: ["Lista vertical", "Ejercicio a ejercicio"], selection: Binding(
                             get: { workoutView == "focus" ? 1 : 0 },
                             set: { workoutView = $0 == 1 ? "focus" : "list"; UserDefaults.standard.set(workoutView, forKey: "workout-view") }))
+                    }
+                    .padding(.vertical, 6)
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Disposición de los ejercicios").font(.apBody)
+                        SegmentedPill(options: ["En filas", "En columnas"], selection: Binding(
+                            get: { workoutLayout == "columns" ? 1 : 0 },
+                            set: { workoutLayout = $0 == 1 ? "columns" : "rows"; UserDefaults.standard.set(workoutLayout, forKey: "workout-layout") }))
                     }
                     .padding(.vertical, 6)
                     VStack(alignment: .leading, spacing: 10) {

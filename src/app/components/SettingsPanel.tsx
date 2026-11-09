@@ -3,6 +3,7 @@ import { FOOD_AVOID, FOOD_LIKES, readLikes, splitList, toggleInList, writeLikes 
 import AccountSwitcher from "@/app/components/AccountSwitcher";
 import { errorMessage } from "@/shared/lib/runtimeValues";
 import { useState, useEffect, useRef, type ReactNode } from "react";
+import { useTheme } from "next-themes";
 import { Switch } from "@/shared/components/ui/switch";
 import { useAuth } from "@/shared/contexts/AuthContext";
 import { supabase } from "@/shared/integrations/supabase/client";
@@ -20,14 +21,14 @@ const ENABLE_CALENDAR = false;
 
 import {
   User, Crown, ExternalLink, Calendar, CalendarClock, Check, Unplug, Link2, RefreshCw,
-  Download, FileText, ChevronLeft, Dumbbell, KeyRound, LogOut, ShieldCheck, Target, Users,
+  Download, FileText, ChevronLeft, Dumbbell, KeyRound, LogOut, Moon, ShieldCheck, Target, Users,
 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
 import { MONTHLY_PRICE_EUR, DEFAULT_YEARLY_PRICE_EUR } from "@/shared/config/pricing";
-import { getWorkoutRestSeconds, REST_PRESETS, setWorkoutRestSeconds, getWorkoutView, setWorkoutView, type WorkoutView } from "@/shared/lib/workoutPreferences";
+import { getWorkoutLayout, getWorkoutRestSeconds, REST_PRESETS, setWorkoutLayout, setWorkoutRestSeconds, getWorkoutView, setWorkoutView, type WorkoutLayout, type WorkoutView } from "@/shared/lib/workoutPreferences";
 import { getConsumerPlan, type ConsumerPlan } from "@/shared/lib/entitlements";
 import { TIERS } from "@/shared/config/tiers";
 import { getAvailabilityDayCount, getAvailabilityHours } from "@/shared/lib/availability";
@@ -96,6 +97,7 @@ const OptionRow = ({ label, selected, focusable, onSelect }: { label: string; se
 
 const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "training" | "full") => void; adminMode?: boolean } = {}) => {
   const plans = usePlanAvailability();
+  const { theme, setTheme } = useTheme();
   const campaign = useFreeCampaign();
   const hideForAdmin = adminMode ? " hidden" : "";
   // Índice de Ajustes: cada fila abre su sección sola, con «Ajustes» para volver. Antes bajaba
@@ -181,6 +183,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
   const [gcalLoading, setGcalLoading] = useState(false);
   const [restSeconds, setRestSeconds] = useState(60);
   const [workoutView, setWorkoutViewState] = useState<WorkoutView>("list");
+  const [workoutLayout, setWorkoutLayoutState] = useState<WorkoutLayout>("rows");
 
   useEffect(() => {
     if (!user) return;
@@ -226,6 +229,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
       }
       setRestSeconds(getWorkoutRestSeconds(user.id));
       setWorkoutViewState(getWorkoutView(user.id));
+      setWorkoutLayoutState(getWorkoutLayout(user.id));
       setLoading(false);
 
       // Fetch current plan (monthly/yearly) from check-subscription + yearly price
@@ -729,6 +733,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
             ] },
             { title: "Preferencias", rows: [
               { id: "ajustes-entreno", icon: Dumbbell, title: "Tu forma de entrenar", subtitle: "Vista del entreno y descanso entre series", show: true },
+              { id: "ajustes-apariencia", icon: Moon, title: "Apariencia", subtitle: "Modo oscuro o del sistema", show: true },
               { id: "ajustes-contrasena", icon: KeyRound, title: "Contraseña", subtitle: "Cambia tu contraseña", show: true },
             ] },
             { title: "Privacidad y legal", rows: [
@@ -965,12 +970,33 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
         </div>
       )}
 
+      <ListGroup
+        id="ajustes-apariencia"
+        className={`order-3 scroll-mt-20${hideForAdmin}${only("ajustes-apariencia")}`}
+        header="Apariencia"
+      >
+        <div className="px-4 py-3">
+          <p className="mb-2 type-body">Modo de color</p>
+          <Tabs value={theme === "light" || theme === "dark" ? theme : "system"} onValueChange={(value) => {
+            if (value !== "system" && value !== "light" && value !== "dark") return;
+            void hapticSelection();
+            setTheme(value);
+          }}>
+            <TabsList className="w-full" aria-label="Apariencia">
+              <TabsTrigger value="system" className="flex-1" aria-controls={undefined}>Sistema</TabsTrigger>
+              <TabsTrigger value="dark" className="flex-1" aria-controls={undefined}>Oscuro</TabsTrigger>
+              <TabsTrigger value="light" className="flex-1" aria-controls={undefined}>Claro</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+      </ListGroup>
+
       {/* Workout preferences */}
       <ListGroup
         id="ajustes-entreno"
-        className={`order-3 scroll-mt-20${hideForAdmin}${only("ajustes-entreno")}`}
+        className={`order-4 scroll-mt-20${hideForAdmin}${only("ajustes-entreno")}`}
         header="Tu forma de entrenar"
-        footer="Elige cuánto quieres descansar al marcar una serie. El temporizador se inicia solo durante tu entreno. Puedes cambiarlo cuando quieras. El descanso específico de cada ejercicio sigue apareciendo en tu plan."
+        footer="Elige cuánto quieres descansar al marcar una serie. El temporizador se inicia solo durante tu entreno. Puedes cambiarlo cuando quieras. El descanso específico de cada ejercicio sigue apareciendo en tu plan. La disposición cambia cómo se organizan las tarjetas, no la vista «Ejercicio a ejercicio»."
       >
         <div className="px-4 py-3 sep-b">
           <p className="mb-2 type-body">Vista del entrenamiento</p>
@@ -982,6 +1008,19 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
             <TabsList className="w-full" aria-label="Vista del entrenamiento">
               <TabsTrigger value="list" className="flex-1" aria-controls={undefined}>Lista vertical</TabsTrigger>
               <TabsTrigger value="focus" className="flex-1" aria-controls={undefined}>Ejercicio a ejercicio</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+        <div className="px-4 py-3 sep-b">
+          <p className="mb-2 type-body">Disposición de los ejercicios</p>
+          <Tabs value={workoutLayout} onValueChange={(value) => {
+            if (!user || (value !== "rows" && value !== "columns")) return;
+            void hapticSelection();
+            setWorkoutLayoutState(setWorkoutLayout(user.id, value));
+          }}>
+            <TabsList className="w-full" aria-label="Disposición de los ejercicios">
+              <TabsTrigger value="rows" className="flex-1" aria-controls={undefined}>En filas</TabsTrigger>
+              <TabsTrigger value="columns" className="flex-1" aria-controls={undefined}>En columnas</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
@@ -1032,7 +1071,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
       </ListGroup>
 
       {/* Password */}
-      <div id="ajustes-contrasena" className={`order-4 scroll-mt-20${only("ajustes-contrasena")}`}>
+      <div id="ajustes-contrasena" className={`order-5 scroll-mt-20${only("ajustes-contrasena")}`}>
         <ListGroup header="Cambiar contraseña">
           <FieldRow label="Nueva" htmlFor="settings-new-password">
             <Input
@@ -1069,7 +1108,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
       </div>
 
       {/* Subscription */}
-      {(!campaign || consumerPlan !== "free") && <div id="ajustes-plan" className={`order-5 scroll-mt-20 space-y-3${hideForAdmin}${only("ajustes-plan")}`}>
+      {(!campaign || consumerPlan !== "free") && <div id="ajustes-plan" className={`order-6 scroll-mt-20 space-y-3${hideForAdmin}${only("ajustes-plan")}`}>
         <ListGroup header="Suscripción" footer={subscriptionFooter}>
           <ListRow
             icon={<Crown className={hasPaidAccess ? undefined : "text-muted-foreground"} />}
@@ -1141,7 +1180,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
 
       {/* Calendar */}
       {ENABLE_CALENDAR && <ListGroup
-        className={`order-6${hideForAdmin}${only("ajustes-entreno")}`}
+        className={`order-7${hideForAdmin}${only("ajustes-entreno")}`}
         header={
           <span className="inline-flex items-center gap-2">
             Google Calendar
@@ -1187,7 +1226,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
       </ListGroup>}
 
       {/* Privacy & Data (RGPD) */}
-      <div id="ajustes-privacidad" className={`order-7 flex scroll-mt-20 flex-col gap-6${hideForAdmin}${only("ajustes-privacidad", "ajustes-legal")}`}>
+      <div id="ajustes-privacidad"       className={`order-8 flex scroll-mt-20 flex-col gap-6${hideForAdmin}${only("ajustes-privacidad", "ajustes-legal")}`}>
         <ListGroup
           className={only("ajustes-privacidad").trim()}
           header="Privacidad y mis datos"
@@ -1217,12 +1256,12 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
       </div>
 
       {/* Cuentas en este dispositivo (solo apps nativas) */}
-      <div id="ajustes-cuentas" className={`order-8${only("ajustes-cuentas")}`}>
+      <div id="ajustes-cuentas" className={`order-9${only("ajustes-cuentas")}`}>
         <AccountSwitcher currentId={user.id} />
       </div>
 
       {/* Sign out */}
-      <ListGroup className={`order-8${onHub}`} header="Sesión" footer="Cierra tu sesión en este dispositivo.">
+      <ListGroup className={`order-9${onHub}`} header="Sesión" footer="Cierra tu sesión en este dispositivo.">
         <ListRow
           icon={<LogOut className="text-destructive" />}
           title="Cerrar sesión"
@@ -1232,7 +1271,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
       </ListGroup>
 
       {/* Delete account */}
-      <div className={`order-9${hideForAdmin}${onHub}`}>
+      <div className={`order-10${hideForAdmin}${onHub}`}>
         <ListGroup>
           <ListRow
             title="Eliminar cuenta"

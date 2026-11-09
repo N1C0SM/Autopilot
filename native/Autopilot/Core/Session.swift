@@ -64,7 +64,16 @@ final class SessionModel: ObservableObject {
         case .ok:
             await switched()
             return true
-        case .offline, .expired, .wrong:
+        case .offline:
+            if let cached = try? await Backend.client.auth.session,
+               cached.user.id.uuidString.lowercased() == def.id {
+                self.session = cached
+                accounts.remember(cached)
+                await switched()
+                return true
+            }
+            return false
+        case .expired, .wrong:
             return false
         }
     }
@@ -115,6 +124,17 @@ final class SessionModel: ObservableObject {
 
     enum LoginError: Error { case invalid, unconfirmed, rateLimited, offline }
 
+    private func fallbackCachedSession(for identifier: String) async -> Session? {
+        let cleaned = identifier.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard let cached = try? await Backend.client.auth.session else { return nil }
+        let email = cached.user.email?.lowercased() ?? ""
+        let id = cached.user.id.uuidString.lowercased()
+        let cachedAccount = accounts.accounts.first { $0.id == id }
+        guard cachedAccount?.requirePassword != true else { return nil }
+        let matches = cleaned == email || cleaned == id || cachedAccount?.email.lowercased() == cleaned
+        return matches ? cached : nil
+    }
+
     /// Correo o nombre de usuario. El usuario se resuelve en el servidor
     /// (`login-identifier`), que nunca devuelve el correo que hay detrás.
     func signIn(identifier: String, password: String, lockAccount: Bool?) async throws {
@@ -133,6 +153,12 @@ final class SessionModel: ObservableObject {
             accounts.remember(session)
             addingAccount = false
         } catch {
+            if AccountStore.isNetworkError(error), let cached = await fallbackCachedSession(for: cleaned) {
+                self.session = cached
+                accounts.remember(cached)
+                addingAccount = false
+                return
+            }
             if AccountStore.isNetworkError(error) { throw LoginError.offline }
             let text = String(describing: error)
             if text.contains("not confirmed") || text.contains("email_not_confirmed") { throw LoginError.unconfirmed }
@@ -167,4 +193,3 @@ final class SessionModel: ObservableObject {
         showPicker = false
     }
 }
-
