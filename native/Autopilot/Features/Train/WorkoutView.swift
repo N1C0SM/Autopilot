@@ -522,16 +522,21 @@ struct SessionExerciseCard: View {
             .frame(height: 160)
             .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             .accessibilityHidden(true)
-        } else if focused {
+        } else if focused, let url = exercise.image_url.flatMap(URL.init(string:)) {
             // Solo en modo «ejercicio a ejercicio»: la miniatura no aparece en la cabecera.
             ZStack {
                 RoundedRectangle(cornerRadius: Radius.card, style: .continuous).fill(Palette.secondary)
-                if let url = exercise.image_url.flatMap(URL.init(string:)) {
-                    CachedAsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { Color.clear }
-                        .clipped()
-                } else {
-                    Image(systemName: "dumbbell").font(.inter(.title)).foregroundStyle(Palette.muted)
-                }
+                CachedAsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { Color.clear }
+                    .clipped()
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 160)
+            .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            .accessibilityHidden(true)
+        } else if focused {
+            ZStack {
+                RoundedRectangle(cornerRadius: Radius.card, style: .continuous).fill(Palette.secondary)
+                Image(systemName: "dumbbell").font(.inter(.title)).foregroundStyle(Palette.muted)
             }
             .frame(maxWidth: .infinity)
             .frame(height: 160)
