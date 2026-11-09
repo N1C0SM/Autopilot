@@ -4,14 +4,15 @@ import SwiftUI
 struct AutopilotApp: App {
     @StateObject private var session = SessionModel()
     @StateObject private var accounts = AccountStore.shared
+    @AppStorage("appearance") private var appearance: String = "system"
 
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environmentObject(session)
                 .environmentObject(accounts)
-                .preferredColorScheme(.dark)
                 .tint(Palette.gold)
+                .preferredColorScheme(appearance == "light" ? .light : appearance == "dark" ? .dark : nil)
                 .toggleStyle(TrailingSwitchStyle())
                 .task {
                     InterFont.register()

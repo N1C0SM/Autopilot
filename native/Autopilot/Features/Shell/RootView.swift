@@ -109,6 +109,15 @@ struct RootView: View {
         #endif
     }
 
+    /// Solo QA: `-previewNutrition` muestra Nutrición con datos de muestra, sin cuenta.
+    private var previewingNutrition: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.arguments.contains("-previewNutrition")
+        #else
+        false
+        #endif
+    }
+
     /// Solo QA: `-previewWorkout` abre la sesión con datos de muestra sin cuenta, para
     /// capturas del simulador. Siempre `false` en Release (la vista ni se compila).
     private var previewingWorkout: Bool {
@@ -124,6 +133,10 @@ struct RootView: View {
             if previewingHome {
                 #if DEBUG
                 HomeView(onNavigate: { _ in })
+                #endif
+            } else if previewingNutrition {
+                #if DEBUG
+                NutritionView()
                 #endif
             } else if !session.ready {
                 // Arranque con la firma de marca: la misma «A» del splash, con el rayo latiendo.

@@ -5,6 +5,13 @@ import UIKit
 import AppKit
 #endif
 
+private struct ExerciseMetaRow: Decodable {
+    let name: String
+    let movement_pattern: String?
+    let stimulus_type: String?
+    let load_level: String?
+}
+
 /// Campo enfocado en la sesión: identifica el input activo para la barra del teclado.
 struct WorkoutField: Hashable {
     enum Kind { case weight, reps }
@@ -36,6 +43,8 @@ struct WorkoutView: View {
     /// y permite centrar la serie sin que el teclado la tape.
     @FocusState private var focus: WorkoutField?
     @State private var addingExercise = false
+    /// Metadatos del ejercicio (patrón/estímulo/carga) para el glifo de movimiento.
+    @State private var motionMeta: [String: (pattern: String?, stimulus: String?, load: String?)] = [:]
     /// Vista elegida en «···» o en Ajustes: lista de toda la sesión (por defecto) o ejercicio a ejercicio.
     @AppStorage("workout-view") private var workoutView = "list"
     private var focusMode: Bool { workoutView == "focus" }
@@ -45,6 +54,96 @@ struct WorkoutView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     private var progress: Double { workout.totalSets > 0 ? Double(workout.doneSets) / Double(workout.totalSets) : 0 }
+
+    private func loadMotionMeta() async {
+        let ids = workout.exercises.map(\.exercise_id).filter { !$0.isEmpty }
+        let names = workout.exercises.map(\.name)
+        var result: [String: (pattern: String?, stimulus: String?, load: String?)] = [:]
+        if !ids.isEmpty {
+            if let rows: [ExerciseMetaRow] = try? await Backend.client.from("exercises")
+                .select("name,movement_pattern,stimulus_type,load_level")
+                .in("id", values: ids).execute().value {
+                for r in rows { result[r.name] = (r.movement_pattern, r.stimulus_type, r.load_level) }
+            }
+        }
+        if !names.isEmpty {
+            if let rows: [ExerciseMetaRow] = try? await Backend.client.from("exercises")
+                .select("name,movement_pattern,stimulus_type,load_level")
+                .in("name", values: names).execute().value {
+                for r in rows { result[r.name] = (r.movement_pattern, r.stimulus_type, r.load_level) }
+            }
+        }
+        motionMeta = result
+    }
+
+    private func handleScenePhase(_ phase: ScenePhase) {
+        if phase != .active { workout.persistNow() }
+    }
+
+    private func handleFinishWorkout(_ n: Notification) { finish() }
+    private func handleSkipRest(_ n: Notification) { workout.skipRest() }
+    private func handleRestPlus(_ n: Notification) { workout.adjustRest(by: 30) }
+    private func handleRestMinus(_ n: Notification) { workout.adjustRest(by: -30) }
+
+    private var sessionScrollView: some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 12) {
+                sessionContent
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+            .padding(.bottom, 24)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .scrollDismissesKeyboard(.interactively)
+    }
+
+    private var addingExerciseChoice: some View {
+        ExercisePickerView(existing: Set(workout.exercises.map(\.name))) { workout.addExercises($0) }
+    }
+
+    private var discardChoice: some View {
+        ChoiceSheet(title: "¿Descartar entrenamiento?",
+                    message: "Se borrarán las series de esta sesión y no contará como hecha. Podrás empezarla de nuevo cuando quieras.",
+                    primary: "Descartar entrenamiento", destructive: true) {
+            discardOpen = false
+            workout.skipRest()
+            workout.discard()
+            onClose(false)
+        } onCancel: { discardOpen = false }
+    }
+
+    private var progressLine: some View {
+        GeometryReader { geo in
+            Rectangle().fill(Palette.gold).frame(width: geo.size.width * progress, height: 2)
+        }
+        .frame(height: 2)
+        .accessibilityLabel("Progreso de la sesión")
+        .accessibilityValue(String(Int(progress * 100)) + " %")
+    }
+
+    private var finishIncompleteMessage: String {
+        "Te quedan " + String(workout.totalSets - workout.doneSets) + " series. Puedes terminarlo igualmente o seguir entrenando."
+    }
+
+    private func handleFinishIncompleteDismiss() {
+        if pendingRPE { pendingRPE = false; rpeOpen = true }
+    }
+
+    private func handleRpeDismiss() {
+        if pendingSummary { pendingSummary = false; summaryOpen = true }
+    }
+
+    private func handleSummaryDismiss() { onClose(true) }
+
+    private var finishIncompleteChoice: some View {
+        ChoiceSheet(title: "¿Terminar con series pendientes?",
+                    message: finishIncompleteMessage,
+                    primary: "Terminar y guardar", destructive: false) {
+            pendingRPE = true
+            finishIncompleteOpen = false
+        } onCancel: { finishIncompleteOpen = false }
+    }
     private var sessionTitle: String {
         workout.draft.day.routine_name?.trimmingCharacters(in: .whitespaces).nilIfEmpty ?? workout.draft.day.title
     }
@@ -57,24 +156,16 @@ struct WorkoutView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 12) {
-                    sessionContent
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 12)
-                .padding(.bottom, 24)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .scrollDismissesKeyboard(.interactively)
+            sessionScrollView
             footer
-                .animation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.82), value: workout.draft.restEndsAt)
         }
         .screenBackground()
         .task {
             // Calienta las miniaturas de la sesión: al hacer scroll ya están.
             let urls = workout.exercises.compactMap(\.image_url).compactMap(URL.init(string:))
             ImageCache.shared.prefetch(urls, maxSide: 140)
+            // Metadatos del ejercicio (patrón/estímulo/carga) para el glifo de movimiento.
+            await loadMotionMeta()
         }
         .navigationTitle(workout.draft.day.routine_name?.trimmingCharacters(in: .whitespaces).nilIfEmpty ?? workout.draft.day.title)
         #if os(iOS)
@@ -82,61 +173,20 @@ struct WorkoutView: View {
         .navigationBarBackButtonHidden()
         #endif
         .toolbar { workoutToolbar }
-        .overlay(alignment: .top) {
-            GeometryReader { geo in
-                let w = geo.size.width * progress
-                Rectangle().fill(Palette.gold).frame(width: w, height: 2)
-            }
-            .frame(height: 2)
-            .accessibilityLabel("Progreso de la sesión")
-            .accessibilityValue("\(Int(progress * 100)) %")
-        }
+        .overlay(alignment: .top) { progressLine }
         // Hojas que suben desde abajo, como los Drawer de la web (y siempre con «Seguir entrenando»).
-        .sheet(isPresented: $discardOpen) {
-            ChoiceSheet(title: "¿Descartar entrenamiento?",
-                        message: "Se borrarán las series de esta sesión y no contará como hecha. Podrás empezarla de nuevo cuando quieras.",
-                        primary: "Descartar entrenamiento", destructive: true) {
-                discardOpen = false
-                // Primero el descanso (persiste) y después descartar: así ningún guardado
-                // diferido resucita el borrador que acabamos de borrar.
-                workout.skipRest()
-                workout.discard()
-                onClose(false)
-            } onCancel: { discardOpen = false }
+        .sheet(isPresented: $discardOpen) { discardChoice }
+        .sheet(isPresented: $finishIncompleteOpen, onDismiss: handleFinishIncompleteDismiss) {
+            finishIncompleteChoice
         }
-        .sheet(isPresented: $finishIncompleteOpen, onDismiss: {
-            if pendingRPE { pendingRPE = false; rpeOpen = true }
-        }) {
-            ChoiceSheet(title: "¿Terminar con series pendientes?",
-                        message: "Te quedan \(workout.totalSets - workout.doneSets) series. Puedes terminarlo igualmente o seguir entrenando.",
-                        primary: "Terminar y guardar", destructive: false) {
-                pendingRPE = true
-                finishIncompleteOpen = false
-            } onCancel: { finishIncompleteOpen = false }
-        }
-        .sheet(isPresented: $rpeOpen, onDismiss: {
-            if pendingSummary { pendingSummary = false; summaryOpen = true }
-        }) { rpeSheet }
-        .sheet(isPresented: $summaryOpen, onDismiss: { onClose(true) }) { summarySheet }
-        .sheet(isPresented: $addingExercise) {
-            ExercisePickerView(existing: Set(workout.exercises.map(\.name))) { workout.addExercises($0) }
-        }
-        .onChange(of: scenePhase) { _, phase in
-            // El borrador se guarda con retardo: al salir de la app se fuerza la escritura.
-            if phase != .active { workout.persistNow() }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .finishWorkout)) { _ in
-            finish()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .skipRest)) { _ in
-            workout.skipRest()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .restPlus)) { _ in
-            workout.adjustRest(by: 30)
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .restMinus)) { _ in
-            workout.adjustRest(by: -30)
-        }
+        .sheet(isPresented: $rpeOpen, onDismiss: handleRpeDismiss) { rpeSheet }
+        .sheet(isPresented: $summaryOpen, onDismiss: handleSummaryDismiss) { summarySheet }
+        .sheet(isPresented: $addingExercise) { addingExerciseChoice }
+        .onChange(of: scenePhase) { _, phase in handleScenePhase(phase) }
+        .onReceive(NotificationCenter.default.publisher(for: .finishWorkout), perform: handleFinishWorkout)
+        .onReceive(NotificationCenter.default.publisher(for: .skipRest), perform: handleSkipRest)
+        .onReceive(NotificationCenter.default.publisher(for: .restPlus), perform: handleRestPlus)
+        .onReceive(NotificationCenter.default.publisher(for: .restMinus), perform: handleRestMinus)
     }
 
     private func elapsed(_ now: Date) -> String {
@@ -283,7 +333,7 @@ struct WorkoutView: View {
         if focusMode { sessionStats } else { listHeader }
         let currentIdx = min(workout.draft.currentExercise, max(workout.exercises.count - 1, 0))
         if focusMode, let ex = workout.exercises[safe: currentIdx] {
-            FocusViewer(workout: workout, index: currentIdx)
+            FocusViewer(workout: workout, index: currentIdx, onAdd: { Haptics.selection(); addingExercise = true })
             SessionExerciseCard(workout: workout, exercise: ex, index: currentIdx, userId: userId, focused: true)
                 .onAppear { workout.openExercises.insert(currentIdx) }
                 .id(ex.id)
@@ -293,11 +343,22 @@ struct WorkoutView: View {
             }
             if !focusMode {
                 Button { Haptics.selection(); addingExercise = true } label: {
-                    Label("Añadir ejercicio a esta sesión", systemImage: "plus")
-                        .font(.apBody.weight(.medium))
-                        .foregroundStyle(Palette.foreground)
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                        .background(Palette.secondary, in: Capsule())
+                    HStack(spacing: 14) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Palette.secondary)
+                            Image(systemName: "plus").font(.system(size: 22, weight: .semibold)).foregroundStyle(Palette.gold)
+                        }
+                        .frame(width: 64, height: 64)
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        Text("Añadir ejercicio a esta sesión")
+                            .font(.apBody.weight(.medium))
+                            .foregroundStyle(Palette.foreground)
+                        Spacer()
+                    }
+                    .padding(.leading, 12).padding(.trailing, 16).padding(.vertical, 12)
+                    .frame(maxWidth: .infinity, minHeight: 88, alignment: .leading)
+                    .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).strokeBorder(Palette.foreground.opacity(0.08), lineWidth: 1))
                 }
                 .buttonStyle(.plain)
                 .disabled(workout.isPaused)
@@ -496,6 +557,7 @@ struct SessionExerciseCard: View {
     @State private var justCompleted = false
     @State private var swapSheet = false
     @State private var swapOptions: [String] = []
+    @State private var motionMeta: (pattern: String?, stimulus: String?, load: String?)? = nil
 
     private func metaChip(icon: String, text: String) -> some View {
         HStack(spacing: 4) {
@@ -509,41 +571,17 @@ struct SessionExerciseCard: View {
         .accessibilityElement(children: .combine)
     }
 
-    /// Visual del ejercicio dentro de la tarjeta desplegada.
-    /// En modo focus: glifo animado si hay spec, foto si no. En modo lista: solo el glifo si hay
-    /// spec (la foto ya está en la miniatura de la cabecera; no se repite).
-    @ViewBuilder private func exerciseVisual(motionSpec: ExerciseMotion.Spec?) -> some View {
-        if let spec = motionSpec {
-            ZStack {
-                RoundedRectangle(cornerRadius: Radius.card, style: .continuous).fill(Palette.secondary)
-                ExerciseMotionHero(spec: spec).padding(16)
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: 160)
-            .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-            .accessibilityHidden(true)
-        } else if focused, let url = exercise.image_url.flatMap(URL.init(string:)) {
-            // Solo en modo «ejercicio a ejercicio»: la miniatura no aparece en la cabecera.
-            ZStack {
-                RoundedRectangle(cornerRadius: Radius.card, style: .continuous).fill(Palette.secondary)
-                CachedAsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { Color.clear }
-                    .clipped()
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: 160)
-            .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-            .accessibilityHidden(true)
-        } else if focused {
-            ZStack {
-                RoundedRectangle(cornerRadius: Radius.card, style: .continuous).fill(Palette.secondary)
-                Image(systemName: "dumbbell").font(.inter(.title)).foregroundStyle(Palette.muted)
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: 160)
-            .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-            .accessibilityHidden(true)
+    /// Glifo animado del ejercicio dentro de la tarjeta (como Symmetry). La foto ya está en el
+    /// carrusel de «ejercicio a ejercicio», así que aquí no se repite ninguna imagen.
+    @ViewBuilder private func exerciseVisual(spec: ExerciseMotion.Spec) -> some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: Radius.card, style: .continuous).fill(Palette.secondary)
+            ExerciseMotionHero(spec: spec).padding(16)
         }
-        // En vista de lista sin glifo: no se muestra nada — la miniatura de la cabecera ya identifica el ejercicio.
+        .frame(maxWidth: .infinity)
+        .frame(height: 160)
+        .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .accessibilityHidden(true)
     }
 
     private var indexBadge: some View {
@@ -627,16 +665,17 @@ struct SessionExerciseCard: View {
 
             // Siempre desplegado: cero fricción para anotar (nada de tocar dos veces).
             if isOpen {
+                let meta = motionMeta
                 let motionSpec = ExerciseMotion.spec(
                     name: exercise.name,
-                    pattern: exercise.movement_pattern,
-                    stimulus: exercise.stimulus,
-                    load: exercise.load
+                    pattern: meta?.pattern,
+                    stimulus: meta?.stimulus,
+                    load: meta?.load
                 )
                 VStack(spacing: 6) {
-                    // Visual animado del ejercicio (como Symmetry): glifo de movimiento en bucle
-                    // o foto si no hay spec. Siempre visible mientras haces las series.
-                    exerciseVisual(motionSpec: motionSpec)
+                    // En «ejercicio a ejercicio» la foto ya está en el carrusel de arriba: aquí solo
+                    // el glifo de movimiento (Autopilot), nunca otra copia de la foto.
+                    if focused, let motionSpec { exerciseVisual(spec: motionSpec) }
 
                     HStack(spacing: 8) {
                         Text("Serie").frame(width: 24)
@@ -715,6 +754,22 @@ struct SessionExerciseCard: View {
         .accessibilityHint("Mantén pulsado para cambiar el ejercicio o hacer un superset")
         .sheet(isPresented: $technique) { TechniqueSheet(exercise: exercise) }
         .sheet(isPresented: $swapSheet) { swapSheetContent }
+        .task { await loadMotionMeta() }
+    }
+
+    private func loadMotionMeta() async {
+        if let rows: [ExerciseMetaRow] = try? await Backend.client.from("exercises")
+            .select("name,movement_pattern,stimulus_type,load_level")
+            .eq("name", value: exercise.name).execute().value,
+           let r = rows.first {
+            motionMeta = (r.movement_pattern, r.stimulus_type, r.load_level)
+        } else if !exercise.exercise_id.isEmpty,
+                  let rows: [ExerciseMetaRow] = try? await Backend.client.from("exercises")
+            .select("name,movement_pattern,stimulus_type,load_level")
+            .eq("id", value: exercise.exercise_id).execute().value,
+                  let r = rows.first {
+            motionMeta = (r.movement_pattern, r.stimulus_type, r.load_level)
+        }
     }
 
     private func openSwapSheet() async {
@@ -807,62 +862,134 @@ struct ChoiceSheet: View {
 struct FocusViewer: View {
     @ObservedObject var workout: ActiveWorkout
     let index: Int
+    var onAdd: () -> Void = {}
     @ObservedObject private var loops = ExerciseLoops.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Página visible del carrusel. Se sincroniza en los dos sentidos con el ejercicio actual.
+    @State private var page: Int?
 
     private func go(_ i: Int) {
-        guard workout.exercises.indices.contains(i) else { return }
+        guard workout.exercises.indices.contains(i), i != workout.draft.currentExercise else { return }
         workout.draft.currentExercise = i
         workout.openExercises.insert(i)
         workout.persist()
-        Haptics.tap()
+        Haptics.selection()
     }
 
     var body: some View {
         let ex = workout.exercises[index]
         VStack(spacing: 8) {
-            // Carrusel arriba y el movimiento en grande debajo: se ve en qué ejercicio estás.
+            // Selector de ejercicios y «Añadir» en línea con el carrusel: miniaturas cuadradas de
+            // cada ejercicio (la foto grande de abajo es la del ejercicio activo).
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
-                    ForEach(Array(workout.exercises.enumerated()), id: \.element.id) { i, item in
+                    ForEach(workout.exercises.indices, id: \.self) { i in
+                        let item = workout.exercises[i]
                         let sets = workout.draft.logs[item.name] ?? []
                         let done = !sets.isEmpty && sets.allSatisfy(\.done)
                         Button { go(i) } label: {
-                            WorkoutThumb(url: item.image_url, completed: done)
+                            WorkoutThumb(url: item.image_url, completed: done, size: 52)
                                 .padding(2)
-                                .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(i == index ? Palette.gold : .clear, lineWidth: 2))
-                                .opacity(i == index ? 1 : 0.6)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                        .strokeBorder(i == index ? Palette.gold : .clear, lineWidth: 2)
+                                )
+                                .opacity(i == index ? 1 : 0.65)
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("\(i + 1). \(workout.swaps[item.name] ?? item.name)\(done ? " · hecho" : "")")
                         .accessibilityAddTraits(i == index ? .isSelected : [])
                     }
+                    Button { onAdd() } label: {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Palette.secondary)
+                            Image(systemName: "plus").font(.system(size: 20, weight: .semibold)).foregroundStyle(Palette.gold)
+                        }
+                        .frame(width: 52, height: 52)
+                        .padding(2)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(workout.isPaused)
+                    .accessibilityLabel("Añadir ejercicio a esta sesión")
                 }
+                .padding(.vertical, 2)
             }
-            // La foto rellena un hueco fijo (overlay): no empuja el ancho de la pantalla. 220 pt deja
-            // ver las series debajo sin hacer scroll.
-            Palette.card
-                .frame(maxWidth: .infinity).frame(height: 220)
-                .overlay {
-                    if let i = ex.image_url, let u = URL(string: i) {
-                        CachedAsyncImage(url: u) { $0.resizable().scaledToFill() } placeholder: { BrandLoader() }
-                    } else {
-                        Image(systemName: "dumbbell").font(.inter(.title)).foregroundStyle(Palette.muted)
+
+            // Carrusel paginado nativo: al deslizar, la página sigue al dedo y encaja sola
+            // (sin gestos que esperan al final del arrastre). Una foto por ejercicio.
+            ScrollView(.horizontal) {
+                LazyHStack(spacing: 0) {
+                    ForEach(Array(workout.exercises.enumerated()), id: \.element.id) { i, item in
+                        photoPage(item)
+                            .containerRelativeFrame(.horizontal)
+                            .id(i)
                     }
                 }
-                // El movimiento en bucle corto encima de la foto (que hace de portada mientras carga),
-                // como en la web; con «Reducir movimiento», solo la foto.
-                .overlay {
-                    if !reduceMotion, let v = loops.urls[ex.name] { LoopingVideo(url: v) }
+                .scrollTargetLayout()
+            }
+            .scrollIndicators(.hidden)
+            .scrollTargetBehavior(.paging)
+            .scrollPosition(id: $page)
+            .frame(height: 220)
+            .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            .overlay {
+                // El movimiento en bucle corto encima de la foto (que hace de portada mientras
+                // carga), como en la web; con «Reducir movimiento», solo la foto.
+                if !reduceMotion, let v = loops.urls[ex.name] {
+                    LoopingVideo(url: v).allowsHitTesting(false)
                 }
-                .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-            .gesture(DragGesture(minimumDistance: 30).onEnded { v in
-                if v.translation.width < -60 { go(index + 1) } else if v.translation.width > 60 { go(index - 1) }
-            })
+            }
+            .overlay(alignment: .bottomTrailing) {
+                Text("\(index + 1) / \(workout.exercises.count)")
+                    .font(.apCaption.weight(.semibold).monospacedDigit())
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 10).padding(.vertical, 5)
+                    .background(.black.opacity(0.45), in: Capsule())
+                    .padding(10)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+            .onAppear { if page == nil { page = index } }
+            // Deslizar cambia de ejercicio sin rehacer la vista entera: solo la tarjeta de abajo.
+            .onChange(of: page) { _, new in
+                guard let new, new != index else { return }
+                go(new)
+            }
+            // Tocar un número (o el ajuste de VoiceOver) mueve el carrusel con una animación corta.
+            .onChange(of: index) { _, new in
+                guard page != new else { return }
+                withAnimation(reduceMotion ? nil : .snappy) { page = new }
+            }
+            .accessibilityElement(children: .ignore)
             .accessibilityLabel("\(ex.name). Desliza para cambiar de ejercicio")
-            .task { await loops.load(workout.exercises.map(\.name)) }
-            .accessibilityAdjustableAction { dir in
-                switch dir { case .increment: go(index + 1); case .decrement: go(index - 1); default: break }
+            .accessibilityAdjustableAction { direction in
+                switch direction {
+                case .increment: go(index + 1)
+                case .decrement: go(index - 1)
+                default: break
+                }
+            }
+            .task(id: index) {
+                // Las fotos vecinas ya están decodificadas: el deslizamiento no espera a la red.
+                let urls = [-1, 0, 1].compactMap { offset -> URL? in
+                    guard workout.exercises.indices.contains(index + offset) else { return nil }
+                    return workout.exercises[index + offset].image_url.flatMap(URL.init(string:))
+                }
+                ImageCache.shared.prefetch(urls, maxSide: 900)
+            }
+        }
+        .task { await loops.load(workout.exercises.map(\.name)) }
+    }
+
+    /// Una página del carrusel: la foto del ejercicio, o su icono mientras no hay foto.
+    @ViewBuilder private func photoPage(_ item: GymExercise) -> some View {
+        ZStack {
+            Palette.card
+            if let url = item.image_url.flatMap(URL.init(string:)) {
+                CachedAsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
+                    .clipped()
+            } else {
+                Image(systemName: "dumbbell").font(.inter(.title)).foregroundStyle(Palette.muted)
             }
         }
     }

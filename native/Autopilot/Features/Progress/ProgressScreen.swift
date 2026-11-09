@@ -28,16 +28,14 @@ struct ProgressScreen: View {
     @State private var scanMounted = false
     /// Ancho del contenido, medido con una preferencia (un `GeometryReader` envolviendo el scroll
     /// rompería el tamaño del contenido).
-    @State private var contentWidth: CGFloat = 0
+
 
     // MARK: Disposición responsive (iPhone igual que siempre · iPad/Mac a todo el ancho)
 
     /// Escritorio (iPad horizontal/Mac): la web ocupa todo el ancho (`<main>` sin `max-w`).
     /// En iPhone (ancho compacto) siempre es `false`: la disposición actual queda intacta.
     private var isWide: Bool {
-        guard sizeClass != .compact else { return false }
-        // Antes de medir (primer fotograma) se asume escritorio: Mac/iPad no parpadean al abrir.
-        return contentWidth == 0 || contentWidth >= 700
+        sizeClass != .compact
     }
 
     /// En Mac el lienzo y su padding los pone `SectionView` (web: `<main>` con `lg:p-10`); así no
@@ -52,7 +50,7 @@ struct ProgressScreen: View {
 
     /// Rejilla de fotos como la web: 3 columnas en iPhone, 4 en `md` y 6 en `lg`.
     private var photoColumns: [GridItem] {
-        let count = isWide ? (contentWidth >= 944 ? 6 : 4) : 3
+        let count = isWide ? 4 : 3
         return Array(repeating: GridItem(.flexible(), spacing: 8), count: count)
     }
 
@@ -86,16 +84,8 @@ struct ProgressScreen: View {
                 }
             }
             .padding(.horizontal, horizontalPadding).padding(.top, 8).padding(.bottom, isWide ? 16 : 96)
-            // La web va a todo el ancho (solo la barra de pestañas está acotada, y ya lo hace
-            // `SegmentedPill`): sin tope de 800 ni centrado.
-            .background {
-                GeometryReader { geo in
-                    Color.clear.preference(key: ProgressContentWidthKey.self, value: geo.size.width)
-                }
-            }
             .frame(maxWidth: .infinity)
         }
-        .onPreferenceChange(ProgressContentWidthKey.self) { contentWidth = $0 }
         .screenBackground()
         .refreshable {
             // El gesto espera la descarga (el indicador debe durar lo que tarda) y renueva también
@@ -250,7 +240,7 @@ struct ProgressScreen: View {
         .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
-                .strokeBorder(Color.white.opacity(0.08), lineWidth: 1)
+                .strokeBorder(Palette.foreground.opacity(0.08), lineWidth: 1)
         )
     }
 
@@ -490,7 +480,7 @@ struct ProgressScreen: View {
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).strokeBorder(Color.white.opacity(0.08), lineWidth: 1))
+            .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).strokeBorder(Palette.foreground.opacity(0.08), lineWidth: 1))
         }
     }
 
@@ -1049,10 +1039,10 @@ struct PhotoScanInfo {
 /// Estado de la pantalla. Todo lo que se publica ya viene calculado y formateado: la vista no hace trabajo.
 @MainActor
 final class ProgressModel: ObservableObject {
-    struct Week { let label: String; let kg: Double }
-    struct Weight { let date: Date; let kg: Double }
+    struct Week: Codable { let label: String; let kg: Double }
+    struct Weight: Codable { let date: Date; let kg: Double }
 
-    struct Record {
+    struct Record: Codable {
         let name: String; let weight: Double; let reps: Int; let e1rm: Double
         /// Fecha y cifras ya formateadas al cargar: la lista de récords no formatea al redibujar.
         let dateText: String
@@ -1064,7 +1054,7 @@ final class ProgressModel: ObservableObject {
         var shortDateText: String = ""
     }
 
-    struct Photo: Identifiable, Hashable {
+    struct Photo: Identifiable, Hashable, Codable {
         let id: String; let url: URL?; let takenAt: String
         let date: Date?
         /// Ángulo de la foto (`front`/`back`), deducido de `note` como en la web.
@@ -1079,17 +1069,17 @@ final class ProgressModel: ObservableObject {
     }
 
     /// Fotos agrupadas por mes, en el mismo orden en que llegan del servidor (más recientes primero).
-    struct PhotoGroup: Identifiable {
+    struct PhotoGroup: Identifiable, Codable {
         let month: String
         var photos: [Photo]
         var id: String { month }
     }
 
-    struct ExerciseStat { let name: String; let sessions: Int; let bestVolume: Double }
+    struct ExerciseStat: Codable { let name: String; let sessions: Int; let bestVolume: Double }
 
     /// Todo lo que pinta la pantalla, ya calculado. Un único `@Published` → un solo redibujado por fase
     /// (antes cada propiedad publicaba por su cuenta y la vista se rehacía varias veces por carga).
-    struct Snapshot {
+    struct Snapshot: Codable {
         var weekly: [Week] = []
         var maxWeekly: Double = 1
         var kg4w = 0
@@ -1233,6 +1223,7 @@ final class ProgressModel: ObservableObject {
             shot.photosAt = Date()
             shot.photosError = nil
         }
+        persist(userId)
         // Las miniaturas de la primera pantalla de la rejilla ya quedan en memoria.
         prefetchPhotoThumbnails(built.photos)
     }
@@ -1261,7 +1252,19 @@ final class ProgressModel: ObservableObject {
         loadTask?.cancel()
         loadTask = nil
         photosFetching = false
-        snapshot = Self.cache[userId] ?? Snapshot()
+        // Memoria → disco → vacío. Así Progreso también abre sin conexión con lo último que se
+        // descargó (antes solo vivía en memoria y sin red se quedaba en el aviso de error).
+        snapshot = Self.cache[userId] ?? Snapshots.load(Snapshot.self, Self.cacheKey(userId)) ?? Snapshot()
+    }
+
+    /// Copia de la pantalla para abrir sin red. Se guarda tras cada fase y no bloquea la UI.
+    private nonisolated static func cacheKey(_ id: UUID) -> String { "progress|\(id.uuidString.lowercased())" }
+
+    private func persist(_ userId: UUID) {
+        let shot = snapshot
+        Task.detached(priority: .utility) {
+            Snapshots.save(shot, Self.cacheKey(userId))
+        }
     }
 
     private func startBackgroundRefresh(userId: UUID, gen: Int) {
@@ -1321,6 +1324,7 @@ final class ProgressModel: ObservableObject {
             shot.strengthAt = startedAt
             shot.strengthError = nil
         }
+        persist(userId)
 
         // ── Fase 2 · «Por ejercicio», Récords y peso corporal: también en paralelo ──
         async let allFetch = Self.allLogs(userId: userId)
@@ -1367,6 +1371,7 @@ final class ProgressModel: ObservableObject {
             shot.detailsError = nil
             shot.recordsError = nil
         }
+        persist(userId)
 
         // Con Fuerza y Récords ya publicados se prepara «Físico» en segundo plano.
         if snapshot.photosAt == nil { startPhotoPrefetch(userId: userId) }
@@ -1803,7 +1808,7 @@ private enum ProgressCompute {
 
 // MARK: - Gráfica «Por ejercicio»
 
-struct ExerciseEntry: Hashable {
+struct ExerciseEntry: Hashable, Codable {
     let date: Date; let label: String; var volumeKg: Double; var reps: Int; var loadedSets: Int; var best1Rm: Double?
     /// Mejor serie del día (por 1RM estimado), como `bestSetLabel` de la web: kg y reps.
     var bestKg: Double? = nil
@@ -1849,7 +1854,7 @@ struct ExerciseProgressSection: View {
             }
             .padding(16)
             .background(Palette.card, in: card)
-            .overlay(card.strokeBorder(Color.white.opacity(0.08), lineWidth: 1))
+            .overlay(card.strokeBorder(Palette.foreground.opacity(0.08), lineWidth: 1))
             ForEach(shownOthers, id: \.self) { other in otherRow(other) }
             if others.count > 3 {
                 Button {
@@ -1905,7 +1910,7 @@ struct ExerciseProgressSection: View {
             // Objetivo: siguiente múltiplo de 5 por encima del 1RM actual (mínimo +2.5 kg).
             let rawGoal = (e1rm / 5).rounded(.up) * 5
             let goal = rawGoal > e1rm ? rawGoal : rawGoal + 5
-            let divider = Color.white.opacity(0.08)
+            let divider = Palette.foreground.opacity(0.08)
             HStack(spacing: 0) {
                 // 1RM estimado
                 HStack(spacing: 8) {
@@ -2009,7 +2014,7 @@ struct ExerciseProgressSection: View {
             .padding(.leading, 12).padding(.trailing, 16).padding(.vertical, 12)
             .frame(maxWidth: .infinity, minHeight: 72)
             .background(Palette.card, in: card)
-            .overlay(card.strokeBorder(Color.white.opacity(0.08), lineWidth: 1))
+            .overlay(card.strokeBorder(Palette.foreground.opacity(0.08), lineWidth: 1))
             .contentShape(card)
         }
         .buttonStyle(.plain)

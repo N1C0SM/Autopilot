@@ -8,29 +8,34 @@ import AppKit
 /// Lenguaje de diseño de Autopilot (.claude/design): negro, dorado contenido,
 /// tarjetas sin borde de 22/28 pt, botones y campos en píldora, cifras grandes redondeadas.
 enum Palette {
-    /// --background 30 6% 4%
-    static let background = Color(red: 0.042, green: 0.040, blue: 0.038)
-    /// --foreground 0 0% 100%
-    static let foreground = Color.white
-    /// --card 240 5% 7% (#111113, gris frío como la web y la landing)
-    static let card = Color(red: 0.067, green: 0.067, blue: 0.074)
-    /// --secondary 240 5% 16%
-    static let secondary = Color(red: 0.152, green: 0.152, blue: 0.168)
-    /// Texto secundario. Contraste medido (WCAG): 7,9:1 sobre `card`, 8,3:1 sobre el fondo y
-    /// 6,2:1 sobre `secondary`, así que ya cumple AA/AAA para texto normal; no hace falta
-    /// subir la luminosidad. Los grises con opacidad solo se usan en adornos (chevrones, iconos).
-    /// --muted-foreground 240 4% 67%
-    static let muted = Color(red: 0.657, green: 0.657, blue: 0.683)
-    /// Dorado de marca #D8B25E — idéntico a hsl(41 61% 61%) del token --primary de la web y la landing.
-    static let gold = Color(red: 0.847, green: 0.698, blue: 0.369)
+    /// Color dinámico: oscuro en dark mode, claro en light mode.
+    private static func dynamic(dark: (CGFloat, CGFloat, CGFloat), light: (CGFloat, CGFloat, CGFloat)) -> Color {
+        Color(UIColor { trait in
+            let (r, g, b) = trait.userInterfaceStyle == .dark ? dark : light
+            return UIColor(red: r, green: g, blue: b, alpha: 1)
+        })
+    }
+
+    /// --background
+    static let background = dynamic(dark: (0.042, 0.040, 0.038), light: (0.98, 0.98, 0.99))
+    /// --foreground
+    static let foreground = dynamic(dark: (1, 1, 1), light: (0.06, 0.06, 0.07))
+    /// --card
+    static let card = dynamic(dark: (0.067, 0.067, 0.074), light: (1, 1, 1))
+    /// --secondary
+    static let secondary = dynamic(dark: (0.152, 0.152, 0.168), light: (0.93, 0.93, 0.95))
+    /// --muted-foreground
+    static let muted = dynamic(dark: (0.657, 0.657, 0.683), light: (0.42, 0.42, 0.46))
+    /// Dorado de marca
+    static let gold = dynamic(dark: (0.847, 0.698, 0.369), light: (0.72, 0.56, 0.22))
     static let destructive = Color(red: 1.0, green: 0.271, blue: 0.227)
-    /// --success 135 64% 50%
+    /// --success
     static let success = Color(red: 0.18, green: 0.82, blue: 0.34)
-    static let separator = Color(red: 0.144, green: 0.144, blue: 0.156)
-    /// --accent 240 5% 21% (segmentado activo, pulsado)
-    static let accent = Color(red: 0.199, green: 0.199, blue: 0.221)
-    /// --border 240 4% 15%
-    static let border = Color(red: 0.144, green: 0.144, blue: 0.156)
+    static let separator = dynamic(dark: (0.144, 0.144, 0.156), light: (0.88, 0.88, 0.90))
+    /// --accent
+    static let accent = dynamic(dark: (0.199, 0.199, 0.221), light: (0.88, 0.88, 0.90))
+    /// --border
+    static let border = dynamic(dark: (0.144, 0.144, 0.156), light: (0.88, 0.88, 0.90))
 }
 
 enum Radius {
@@ -104,7 +109,7 @@ struct Card<Content: View>: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(padding)
             .background(Palette.card, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).strokeBorder(Color.white.opacity(0.08), lineWidth: 1))
+            .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).strokeBorder(Palette.foreground.opacity(0.08), lineWidth: 1))
     }
 }
 

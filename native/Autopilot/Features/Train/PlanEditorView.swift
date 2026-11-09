@@ -209,44 +209,139 @@ private struct ExerciseEditRow: View {
     }
 }
 
+/// Fila del buscador de ejercicios (misma forma en disco y en memoria).
+struct ExercisePickerRow: Codable, Identifiable, Hashable {
+    let id: String
+    let name: String
+    let muscle_group: String?
+    let image_url: String?
+}
+
+/// Catálogo del buscador: memoria → disco → red, compartido por toda la app. Se calienta al
+/// abrir la app para que «Añadir ejercicio» aparezca lleno al instante, sin rueda.
+enum ExerciseCatalogStore {
+    private static let key = "exercise-picker-catalog"
+    private static let lock = NSLock()
+    private static var memory: [ExercisePickerRow]?
+    private static var warmed = false
+    private static var warming = false
+
+    static var cached: [ExercisePickerRow] {
+        lock.lock(); defer { lock.unlock() }
+        if let memory { return memory }
+        let rows = Snapshots.load([ExercisePickerRow].self, key) ?? []
+        memory = rows
+        return rows
+    }
+
+    static func store(_ rows: [ExercisePickerRow]) {
+        lock.lock(); memory = rows; lock.unlock()
+        Snapshots.save(rows, key)
+    }
+
+    /// Descarga el catálogo una vez por arranque. Sin red se queda la copia del disco.
+    static func warm() async {
+        lock.lock()
+        let skip = warmed || warming
+        if !skip { warming = true }
+        lock.unlock()
+        guard !skip else { return }
+        defer { lock.lock(); warming = false; lock.unlock() }
+        if let rows: [ExercisePickerRow] = try? await Backend.client.from("exercises")
+            .select("id,name,muscle_group,image_url").order("name").limit(200).execute().value,
+           !rows.isEmpty {
+            store(rows)
+            lock.lock(); warmed = true; lock.unlock()
+        }
+    }
+}
+
 /// Buscador de la biblioteca de ejercicios (`ExercisePicker.tsx`): selección múltiple y «Añadir».
 struct ExercisePickerView: View {
     @Environment(\.dismiss) private var dismiss
     let existing: Set<String>
     var onPick: ([GymExercise]) -> Void
 
-    private struct Row: Decodable, Identifiable { let id: String; let name: String; let muscle_group: String?; let image_url: String? }
-    @State private var rows: [Row] = []
+    private typealias Row = ExercisePickerRow
+    /// Arranca ya con la copia del teléfono: la lista aparece al instante y la red solo la afina.
+    @State private var rows: [Row] = ExerciseCatalogStore.cached
     @State private var query = ""
     @State private var selected: [String] = []
     @State private var group: String?
-    private var groups: [String] { Array(Set(rows.compactMap(\.muscle_group))).sorted() }
+    /// Grupos musculares del catálogo: se guardan al cargar sin filtros para que los chips no
+    /// desaparezcan mientras se busca.
+    @State private var groups: [String] = Array(Set(ExerciseCatalogStore.cached.compactMap(\.muscle_group))).sorted()
+    @State private var loading = true
+    @State private var failed = false
+    /// Última lista completa descargada. Vive en el teléfono para que el buscador siga
+    /// funcionando en el gimnasio sin cobertura (y al abrir en frío sin red).
+    @State private var catalog: [Row] = ExerciseCatalogStore.cached
+    @State private var offline = false
 
-    private var filtered: [Row] {
-        let fold: (String) -> String = { $0.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current) }
-        let q = fold(query.trimmingCharacters(in: .whitespaces))
-        return rows.filter { row in
-            guard !existing.contains(row.name) else { return false }
-            if let group, row.muscle_group != group { return false }
-            if q.isEmpty { return true }
-            let name: String = fold(row.name)
-            let group: String = fold(row.muscle_group ?? "")
-            return name.contains(q) || group.contains(q)
-        }
-    }
+    /// Se busca en el servidor (no en memoria): la biblioteca es grande y traerla entera dejaba
+    /// la pantalla en blanco. Los resultados llegan por nombre y músculo, con un límite sano.
+    private var searchKey: String { "\(query)|#\(group ?? "")" }
+
+    private var filtered: [Row] { rows.filter { !existing.contains($0.name) } }
 
     var body: some View {
         NavigationStack {
             List {
-                Section {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 6) {
-                            chip("Todos", active: group == nil) { group = nil }
-                            ForEach(groups, id: \.self) { g in chip(g, active: group == g) { group = g } }
+                if offline {
+                    Label("Sin conexión: mostrando la última lista descargada.", systemImage: "wifi.slash")
+                        .font(.apFootnote)
+                        .foregroundStyle(Palette.muted)
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                }
+                if !groups.isEmpty {
+                    Section {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 6) {
+                                chip("Todos", active: group == nil) { group = nil }
+                                ForEach(groups, id: \.self) { g in chip(g, active: group == g) { group = g } }
+                            }
                         }
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets())
                     }
+                }
+                if failed {
+                    VStack(spacing: 12) {
+                        Image(systemName: "wifi.exclamationmark").font(.system(size: 26))
+                            .foregroundStyle(Palette.gold)
+                        Text("No hemos podido cargar los ejercicios").font(.apHeadline)
+                            .multilineTextAlignment(.center)
+                        Text("Revisa tu conexión y vuelve a intentarlo.").font(.apFootnote)
+                            .foregroundStyle(Palette.muted).multilineTextAlignment(.center)
+                        Button("Reintentar") { Task { await load() } }
+                            .buttonStyle(.pillSecondary)
+                            .padding(.top, 4)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 40)
                     .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets())
+                    .listRowSeparator(.hidden)
+                } else if loading && rows.isEmpty {
+                    HStack(spacing: 10) {
+                        ProgressView().tint(Palette.gold)
+                        Text("Cargando ejercicios…").font(.apFootnote).foregroundStyle(Palette.muted)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 32)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                } else if filtered.isEmpty {
+                    VStack(spacing: 8) {
+                        Text(query.isEmpty ? "No quedan ejercicios por añadir" : "Sin resultados para «\(query)»")
+                            .font(.apHeadline).multilineTextAlignment(.center)
+                        Text(query.isEmpty ? "Quita algún filtro o busca otro músculo." : "Prueba con otro nombre o músculo.")
+                            .font(.apFootnote).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 40)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                 }
                 ForEach(filtered) { row in
                 Button {
@@ -273,7 +368,6 @@ struct ExercisePickerView: View {
             .scrollContentBackground(.hidden)
             .screenBackground()
             .searchable(text: $query, prompt: "Buscar ejercicio o músculo")
-            .overlay { if rows.isEmpty { BrandLoader() } }
             .navigationTitle("Añadir ejercicios")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
@@ -286,8 +380,93 @@ struct ExercisePickerView: View {
                 }
             }
         }
-        .task {
-            rows = (try? await Backend.client.from("exercises").select("id,name,muscle_group,image_url").order("name").execute().value) ?? []
+        // Se pinta al momento con la copia del teléfono (sin rueda al abrir ni al escribir) y,
+        // en paralelo, se pide al servidor: su respuesta solo afina la lista cuando llega.
+        .task(id: searchKey) {
+            let text = query.trimmingCharacters(in: .whitespaces)
+            if !catalog.isEmpty {
+                let local = localMatches(text, group: group)
+                if local != rows { rows = local }
+            } else {
+                await ExerciseCatalogStore.warm()
+                if catalog.isEmpty { catalog = ExerciseCatalogStore.cached }
+                if !catalog.isEmpty {
+                    let local = localMatches(text, group: group)
+                    if local != rows { rows = local }
+                    if groups.isEmpty { groups = Array(Set(catalog.compactMap(\.muscle_group))).sorted() }
+                }
+            }
+            // Espera corta al escribir (y cancela la búsqueda anterior): una sola petición por pausa.
+            if !text.isEmpty || group != nil { try? await Task.sleep(for: .milliseconds(300)) }
+            guard !Task.isCancelled else { return }
+            await load()
+        }
+    }
+
+    /// Petición al servidor con los filtros actuales (nombre/músculo y grupo).
+    private func fetch(text: String, group: String?) async throws -> [Row] {
+        var request = Backend.client.from("exercises").select("id,name,muscle_group,image_url")
+        if !text.isEmpty {
+            // Búsqueda sin acentos ni mayúsculas: «biceps» encuentra «Bíceps».
+            let clean = text.replacingOccurrences(of: "%", with: "").replacingOccurrences(of: ",", with: " ")
+            request = request.or("name.ilike.%\(clean)%,muscle_group.ilike.%\(clean)%")
+        }
+        if let group { request = request.eq("muscle_group", value: group) }
+        return try await request.order("name").limit(200).execute().value
+    }
+
+    private func load() async {
+        loading = true
+        failed = false
+        defer { loading = false }
+        let text = query.trimmingCharacters(in: .whitespaces)
+        do {
+            var result: [Row]
+            do {
+                result = try await fetch(text: text, group: group)
+            } catch {
+                guard !Task.isCancelled else { return }
+                // Un reintento corto: al abrir en frío el primer intento puede adelantarse al
+                // refresco de la sesión o a que el móvil recupere cobertura.
+                try? await Task.sleep(for: .milliseconds(700))
+                guard !Task.isCancelled else { return }
+                result = try await fetch(text: text, group: group)
+            }
+            guard !Task.isCancelled else { return }
+            rows = result
+            offline = false
+            if text.isEmpty, group == nil {
+                // El catálogo completo queda en el teléfono: sin red se busca en esta copia.
+                catalog = result
+                ExerciseCatalogStore.store(result)
+                let list = Array(Set(result.compactMap(\.muscle_group))).sorted()
+                if !list.isEmpty { groups = list }
+            }
+        } catch {
+            guard !Task.isCancelled else { return }
+            if !catalog.isEmpty {
+                // Sin conexión: se filtra la copia local por nombre y músculo.
+                rows = localMatches(text, group: group)
+                if groups.isEmpty {
+                    groups = Array(Set(catalog.compactMap(\.muscle_group))).sorted()
+                }
+                offline = true
+            } else if rows.isEmpty {
+                failed = true
+            }
+        }
+    }
+
+    /// Búsqueda en la copia del teléfono, sin acentos ni mayúsculas (igual que `ilike`).
+    private func localMatches(_ text: String, group: String?) -> [Row] {
+        func key(_ value: String) -> String {
+            value.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+        }
+        let needle = key(text)
+        return catalog.filter { row in
+            if let group, row.muscle_group != group { return false }
+            guard !needle.isEmpty else { return true }
+            return key(row.name).contains(needle) || key(row.muscle_group ?? "").contains(needle)
         }
     }
 

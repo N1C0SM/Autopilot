@@ -171,7 +171,20 @@ struct WhoIsTrainingView: View {
         defer { busy = false }
         switch await accounts.signIn(account.id, password: password) {
         case .ok: Haptics.success(); asking = nil; await session.switched()
-        case .offline: wrong = false; message = "Sin conexión."; asking = nil
+        case .offline:
+            // Sin red no se puede comprobar la contraseña. Si es la cuenta que ya está abierta en
+            // este dispositivo, no se deja a la persona fuera de su propio entrenamiento: la
+            // sesión guardada sigue sirviendo y los datos descargados están en el teléfono.
+            if account.id == session.userIdString {
+                Haptics.success()
+                asking = nil
+                session.showPicker = false
+                A11y.announce("Sin conexión. Entras en la cuenta guardada.")
+            } else {
+                wrong = false
+                message = "Sin conexión. Elige la cuenta que ya está abierta o vuelve a intentarlo con internet."
+                asking = nil
+            }
         default:
             wrong = true
             Haptics.error()

@@ -486,7 +486,6 @@
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Para guardar tus entrenamientos y gasto calórico completados en Apple Salud.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Para elegir fotos de progreso y del escáner.";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UIUserInterfaceStyle = Dark;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -570,7 +569,6 @@
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Para elegir fotos de progreso y del escáner.";
 				INFOPLIST_KEY_UILaunchScreen = "{UIImageName = LaunchLogo; UIColorName = LaunchBackground; UIImageRespectsSafeAreaInsets = YES;}";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UIUserInterfaceStyle = Dark;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0;
@@ -644,7 +642,6 @@
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Para elegir fotos de progreso y del escáner.";
 				INFOPLIST_KEY_UILaunchScreen = "{UIImageName = LaunchLogo; UIColorName = LaunchBackground; UIImageRespectsSafeAreaInsets = YES;}";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UIUserInterfaceStyle = Dark;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0;
@@ -676,7 +673,6 @@
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Para guardar tus entrenamientos y gasto calórico completados en Apple Salud.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Para elegir fotos de progreso y del escáner.";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UIUserInterfaceStyle = Dark;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -726,8 +722,6 @@
 				kind = upToNextMajorVersion;
 				minimumVersion = 2.20.0;
 			};
-			traits = (
-			);
 		};
 /* End XCRemoteSwiftPackageReference section */
 

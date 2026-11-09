@@ -25,7 +25,15 @@ enum Backend {
         return productionKey
     }()
 
-    static let client = SupabaseClient(supabaseURL: url, supabaseKey: publishableKey)
+    /// La sesión guardada se entrega al instante, aunque el token esté caducado: la app abre con
+    /// los datos ya descargados (offline primero) y el refresco ocurre por detrás al haber red.
+    /// Sin esto, el SDK intentaba refrescar antes de abrir y, sin internet, dejaba al usuario en
+    /// la pantalla de acceso, donde es imposible entrar sin conexión.
+    static let client = SupabaseClient(
+        supabaseURL: url,
+        supabaseKey: publishableKey,
+        options: .init(auth: .init(emitLocalSessionAsInitialSession: true))
+    )
 
     #if DEBUG
     private static func arg(_ name: String) -> String? {

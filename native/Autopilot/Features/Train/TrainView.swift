@@ -1,5 +1,6 @@
 import SwiftUI
 import Supabase
+import PhotosUI
 
 extension ActiveWorkout: Identifiable { nonisolated var id: ObjectIdentifier { ObjectIdentifier(self) } }
 
@@ -137,7 +138,7 @@ struct RoutineListView: View {
     /// Cabecera de la rutina (modo, Ejercicios, Editar): va arriba, como en la web.
     var routineBar: AnyView? = nil
     /// Guarda el nombre y el icono de una sesión; false si no se pudo.
-    var onPersonalize: ((String, String, String?) async -> Bool)? = nil
+    var onPersonalize: ((String, String, String?, String?) async -> Bool)? = nil
     var onOpen: (String) -> Void
     @State private var expanded: String?
     /// Sesión que se está personalizando (nombre e icono).
@@ -177,8 +178,8 @@ struct RoutineListView: View {
         }
         .sheet(item: $detail) { TechniqueSheet(exercise: $0).presentationBackground(Palette.card) }
         .sheet(item: $personalizing) { plan in
-            SessionIdentitySheet(plan: plan, number: (sessions.firstIndex { $0.day == plan.day } ?? 0) + 1) { name, icon in
-                await onPersonalize?(plan.day, name, icon) ?? false
+            SessionIdentitySheet(plan: plan, number: (sessions.firstIndex { $0.day == plan.day } ?? 0) + 1) { name, icon, image in
+                await onPersonalize?(plan.day, name, icon, image) ?? false
             }
             .presentationBackground(Palette.card)
         }
@@ -240,7 +241,7 @@ struct RoutineListView: View {
             .padding(.leading, 12).padding(.trailing, 16).padding(.vertical, 12)
             .frame(maxWidth: .infinity, minHeight: 88, alignment: .leading)
             .background(Palette.card, in: shape)
-            .overlay(shape.strokeBorder(isExpanded ? Palette.gold.opacity(0.6) : Color.white.opacity(0.08), lineWidth: 1))
+            .overlay(shape.strokeBorder(isExpanded ? Palette.gold.opacity(0.6) : Palette.foreground.opacity(0.08), lineWidth: 1))
             .contentShape(shape)
         }
         .buttonStyle(.plain)
@@ -268,6 +269,15 @@ struct RoutineListView: View {
                 .frame(width: 64, height: 64)
                 .background(Palette.secondary, in: shape)
                 .accessibilityHidden(true)
+        } else if let cover = plan.cover_url, !cover.isEmpty, let u = URL(string: cover) {
+            CachedAsyncImage(url: u, maxSide: 300) {
+                $0.resizable().scaledToFill()
+            } placeholder: {
+                Palette.secondary
+            }
+            .frame(width: 64, height: 64)
+            .clipShape(shape)
+            .accessibilityHidden(true)
         } else if plan.isGym {
             let source = (plan.exercises ?? []).compactMap(\.image_url).first { !$0.isEmpty } ?? Self.brandGymPhoto
             CachedAsyncImage(url: URL(string: source), maxSide: 300) {
@@ -451,19 +461,22 @@ struct RoutineListView: View {
 struct SessionIdentitySheet: View {
     let plan: DayPlan
     let number: Int
-    let onSave: (String, String?) async -> Bool
+    let onSave: (String, String?, String?) async -> Bool
     @Environment(\.dismiss) private var dismiss
     @State private var name: String
     @State private var icon: String?
+    @State private var photoItem: PhotosPickerItem?
+    @State private var customImage: String?
     @State private var saving = false
     @State private var failed = false
 
-    init(plan: DayPlan, number: Int, onSave: @escaping (String, String?) async -> Bool) {
+    init(plan: DayPlan, number: Int, onSave: @escaping (String, String?, String?) async -> Bool) {
         self.plan = plan
         self.number = number
         self.onSave = onSave
         _name = State(initialValue: plan.routine_name ?? "")
         _icon = State(initialValue: SessionIdentity.clean(plan.session_icon))
+        _customImage = State(initialValue: plan.cover_url)
     }
 
     private var suggestedName: String { SessionIdentity.suggestedName(plan) }
@@ -508,6 +521,27 @@ struct SessionIdentitySheet: View {
                     }
                 }
 
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Imagen de portada").font(.apSubhead.weight(.semibold))
+                    PhotosPicker(selection: $photoItem, matching: .images) {
+                        HStack {
+                            if let customImage, let url = URL(string: customImage), url.isFileURL, let img = UIImage(contentsOfFile: url.path) {
+                                Image(uiImage: img).resizable().scaledToFill().frame(width: 48, height: 48).clipShape(RoundedRectangle(cornerRadius: 12))
+                            } else if let customImage, !customImage.isEmpty {
+                                Text("Imagen elegida").font(.apBody)
+                            } else {
+                                Label("Elegir foto de la galería", systemImage: "photo")
+                            }
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .background(Palette.secondary, in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .onChange(of: photoItem) { _, item in
+                        Task { await savePickedImage(item) }
+                    }
+                }
+
                 if failed {
                     Text("No se pudo guardar. Inténtalo de nuevo.").font(.apFootnote).foregroundStyle(Palette.destructive)
                         .accessibilityAddTraits(.updatesFrequently)
@@ -517,7 +551,7 @@ struct SessionIdentitySheet: View {
                     Task {
                         saving = true
                         failed = false
-                        let ok = await onSave(name, icon)
+                        let ok = await onSave(name, icon, customImage)
                         saving = false
                         if ok { dismiss() } else { failed = true; A11y.announce("No se pudo guardar") }
                     }
@@ -531,6 +565,15 @@ struct SessionIdentitySheet: View {
         #if os(macOS)
         .frame(minWidth: 420, minHeight: 560)
         #endif
+    }
+
+    private func savePickedImage(_ item: PhotosPickerItem?) async {
+        guard let item else { return }
+        guard let data = try? await item.loadTransferable(type: Data.self) else { return }
+        let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let url = dir.appendingPathComponent("session-cover-\(plan.day).jpg")
+        try? data.write(to: url)
+        await MainActor.run { customImage = url.absoluteString }
     }
 
     /// Una opción del icono: `nil` es la foto de la sesión (o la llama de la actividad).

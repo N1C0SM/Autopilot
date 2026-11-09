@@ -459,7 +459,7 @@ struct OnboardingQuizView: View {
                 }
                 .padding(.horizontal, 16).padding(.vertical, 12).frame(minHeight: 56)
                 .background(on ? Palette.gold.opacity(0.08) : Palette.card, in: shape)
-                .overlay(shape.strokeBorder(on ? Palette.gold : Color.white.opacity(0.08), lineWidth: 1))
+                .overlay(shape.strokeBorder(on ? Palette.gold : Palette.foreground.opacity(0.08), lineWidth: 1))
                 .contentShape(shape)
             }
             .buttonStyle(.plain)

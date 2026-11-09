@@ -212,7 +212,7 @@ struct ScanView: View {
             } else {
                 // Tarjeta lisa como el resto (sin borde discontinuo ni silueta dibujada, que parecían de juguete).
                 RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
-                    .strokeBorder(Color.white.opacity(0.08), lineWidth: 1)
+                    .strokeBorder(Palette.foreground.opacity(0.08), lineWidth: 1)
                 // Todo centrado: cámara, título y pista.
                 VStack(spacing: 8) {
                     Image(systemName: "camera.fill")
@@ -793,7 +793,7 @@ struct ScanResultView: View {
                 .padding(.horizontal, 16).padding(.vertical, 12)
                 .frame(minHeight: 56)
                 .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).strokeBorder(Color.white.opacity(0.08), lineWidth: 1))
+                .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).strokeBorder(Palette.foreground.opacity(0.08), lineWidth: 1))
             }
             Text("Incluido en Plus").font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.gold).padding(.top, 6)
         }

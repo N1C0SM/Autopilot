@@ -66,6 +66,25 @@ final class ActiveWorkout: ObservableObject {
 
     var exercises: [GymExercise] { draft.day.exercises ?? [] }
 
+    /// Añade ejercicios extra a la sesión en curso (como «Añadir ejercicio» en la web).
+    func addExercises(_ entries: [GymExercise]) {
+        let existing = Set(exercises.map(\.name))
+        let fresh = entries.filter { !existing.contains($0.name) }
+        guard !fresh.isEmpty else { return }
+        var exs = draft.day.exercises ?? []
+        exs.append(contentsOf: fresh)
+        draft.day.exercises = exs
+        for ex in fresh {
+            let last = previous[ex.name]?.filter { $0.isWarmup != true && $0.done } ?? []
+            draft.logs[ex.name] = (0..<max(ex.series, 1)).map { i in
+                let prev = i < last.count ? last[i] : last.last
+                return SetLog(reps: prev?.reps ?? ex.repsTarget, weight: prev?.weight ?? ex.weight, done: false, isWarmup: nil)
+            }
+        }
+        objectWillChange.send()
+        persistNow()
+    }
+
     // Contadores con bucles directos: se leen en el pie y en la barra (que se redibuja cada
     // segundo con el cronómetro) y antes creaban arrays intermedios en cada lectura.
     var doneSets: Int {

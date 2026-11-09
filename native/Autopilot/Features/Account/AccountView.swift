@@ -39,6 +39,7 @@ struct AccountView: View {
     @State private var nutritionPrefs = ""
     @State private var allergies = ""
     @State private var workoutView = UserDefaults.standard.string(forKey: "workout-view") ?? "list"
+    @AppStorage("appearance") private var appearance: String = "system"
     @State private var photo: PhotosPickerItem?
     @State private var exportDoc: JSONDoc?
     @State private var confirmDelete = false
@@ -146,6 +147,20 @@ struct AccountView: View {
         group("Preferencias") {
             hubRow("dumbbell", "Tu forma de entrenar", "Vista del entreno y descanso entre series", to: .entreno)
             hubRow("key", "Contraseña", "Cambia tu contraseña", to: .contrasena)
+        }
+        group("Apariencia") {
+            HStack {
+                Text("Modo").font(.apBody)
+                Spacer()
+                Picker("Apariencia", selection: $appearance) {
+                    Text("Sistema").tag("system")
+                    Text("Claro").tag("light")
+                    Text("Oscuro").tag("dark")
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 220)
+            }
+            .padding(.horizontal, 16).padding(.vertical, 12)
         }
         group("Privacidad y legal") {
             hubRow("checkmark.shield", "Privacidad y mis datos", "Exporta tus datos y política de privacidad", to: .privacidad)
@@ -600,9 +615,7 @@ struct AccountView: View {
     }
 
     private func uploadAvatar(_ p: PhotosPickerItem?) async {
-        // Sin foto nueva no hay nada que hacer (al cancelar el selector llega `nil`).
         guard let p else { return }
-        // Se limpia la selección para poder volver a elegir la misma foto (si la subida falló).
         defer { photo = nil }
         guard let id = session.userId, let data = try? await p.loadTransferable(type: Data.self),
               let img = PlatformImage(data: data), let jpg = img.jpegData(maxSide: 800) else {
@@ -610,14 +623,49 @@ struct AccountView: View {
         }
         let path = "\(id.uuidString.lowercased())/avatar.jpg"
         do {
-            try await Backend.client.storage.from("avatars").upload(path, data: jpg, options: FileOptions(contentType: "image/jpeg", upsert: true))
-            let url = try Backend.client.storage.from("avatars").getPublicURL(path: path).absoluteString + "?t=\(Int(Date().timeIntervalSince1970))"
-            try await Backend.client.from("profiles").update(["avatar_url": url]).eq("user_id", value: id).execute()
+            let uploadURL = Backend.url.appendingPathComponent("storage/v1/object/avatars/\(path)")
+            var req = URLRequest(url: uploadURL)
+            req.httpMethod = "POST"
+            req.setValue("image/jpeg", forHTTPHeaderField: "Content-Type")
+            req.setValue(Backend.publishableKey, forHTTPHeaderField: "apikey")
+            if let token = try? await Backend.client.auth.session.accessToken {
+                req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            }
+            req.setValue("true", forHTTPHeaderField: "x-upsert")
+            let (data, response) = try await URLSession.shared.upload(for: req, from: jpg)
+            let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+            guard (200..<300).contains(status) else {
+                let msg = String(data: data, encoding: .utf8) ?? "HTTP \(status)"
+                throw NSError(domain: "avatar-upload", code: status, userInfo: [NSLocalizedDescriptionKey: "upload: \(msg)"])
+            }
+            let url = Backend.url.appendingPathComponent("storage/v1/object/public/avatars/\(path)").absoluteString + "?t=\(Int(Date().timeIntervalSince1970))"
+            var updateComponents = URLComponents(url: Backend.url.appendingPathComponent("rest/v1/profiles"), resolvingAgainstBaseURL: false)!
+            updateComponents.queryItems = [URLQueryItem(name: "user_id", value: "eq.\(id.uuidString.lowercased())")]
+            let updateURL = updateComponents.url!
+            var ureq = URLRequest(url: updateURL)
+            ureq.httpMethod = "PATCH"
+            ureq.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            ureq.setValue(Backend.publishableKey, forHTTPHeaderField: "apikey")
+            if let token = try? await Backend.client.auth.session.accessToken {
+                ureq.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            }
+            ureq.setValue("return=minimal", forHTTPHeaderField: "Prefer")
+            let body = try JSONSerialization.data(withJSONObject: ["avatar_url": url])
+            ureq.httpBody = body
+            let (udata, uresponse) = try await URLSession.shared.data(for: ureq)
+            let ustatus = (uresponse as? HTTPURLResponse)?.statusCode ?? 0
+            guard (200..<300).contains(ustatus) else {
+                let msg = String(data: udata, encoding: .utf8) ?? "HTTP \(ustatus)"
+                throw NSError(domain: "avatar-profile", code: ustatus, userInfo: [NSLocalizedDescriptionKey: "profile: \(msg)"])
+            }
             avatar = url
-            // La cuenta guardada en el dispositivo también cambia de foto (cabecera y picker).
             accounts.updateProfile(id: id.uuidString.lowercased(), avatar: url)
             Haptics.success(); show("Foto actualizada")
-        } catch { Haptics.error(); show("No se pudo subir la foto") }
+        } catch let e {
+            Haptics.error()
+            print("AVATAR UPLOAD ERROR: \(e)")
+            show("No se pudo subir la foto: \(e.localizedDescription)")
+        }
     }
 
     private func exportData() async {

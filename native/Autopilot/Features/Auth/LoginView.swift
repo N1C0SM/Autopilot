@@ -141,7 +141,7 @@ struct LoginView: View {
             error = "Demasiados intentos. Espera un minuto."
             Haptics.error()
         } catch SessionModel.LoginError.offline {
-            error = "Sin conexión. Inténtalo de nuevo cuando vuelvas a tener internet."
+            error = "Sin conexión. Entrar necesita internet; tus rutinas y comidas ya descargadas siguen en el teléfono y se abren al entrar. Vuelve a intentarlo cuando tengas red."
             Haptics.error()
         } catch {
             self.error = "Usuario o contraseña incorrectos."

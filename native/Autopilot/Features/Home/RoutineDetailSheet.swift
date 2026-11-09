@@ -66,7 +66,7 @@ struct RoutineDetailSheet: View {
                             }
                             .frame(width: 88, height: 88)
                             .background(Palette.secondary, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Color.white.opacity(0.08), lineWidth: 1))
+                            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Palette.foreground.opacity(0.08), lineWidth: 1))
                             .overlay(alignment: .bottomTrailing) {
                                 Image(systemName: "camera.fill").font(.system(size: 11, weight: .bold)).foregroundStyle(Palette.background)
                                     .padding(5).background(Palette.gold, in: Circle()).offset(x: 4, y: 4)

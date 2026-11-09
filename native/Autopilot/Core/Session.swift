@@ -3,7 +3,7 @@ import Supabase
 
 /// Rol y plan de la cuenta activa. El rol (usuario/entrenador/admin) y el plan
 /// (free/plus/coach) van por separado, como en la web.
-enum Role { case user, trainer, admin }
+enum Role: String { case user, trainer, admin }
 
 @MainActor
 final class SessionModel: ObservableObject {
@@ -25,7 +25,7 @@ final class SessionModel: ObservableObject {
             switch event {
             case .initialSession:
                 self.session = session
-                if let session { accounts.remember(session); await loadRole() }
+                if let session { accounts.remember(session) }
                 let currentLocked = accounts.accounts.contains { $0.id == userIdString && $0.requirePassword }
                 // Se entra directo con la última cuenta usada; cambiar de cuenta: mantener el avatar.
                 // Solo una cuenta protegida pide pasar por «¿Quién entrena?».
@@ -36,7 +36,11 @@ final class SessionModel: ObservableObject {
                 #endif
                 // Cuenta predeterminada: si está disponible se entra directo en ella.
                 if await openDefaultIfNeeded() { showPicker = false }
+                // El rol guardado pinta la app correcta al instante; la comprobación real sigue
+                // en segundo plano para no retrasar el arranque con dos RPC.
+                if let id = userId { applyCachedRole(for: id) }
                 ready = true
+                if session != nil { await loadRole() }
             case .signedIn, .tokenRefreshed, .userUpdated:
                 self.session = session
                 if let session { accounts.remember(session); await loadRole() }
@@ -65,6 +69,20 @@ final class SessionModel: ObservableObject {
         }
     }
 
+    /// Rol recordado en el dispositivo (misma cuenta, mismo rol): evita esperar a la red al abrir.
+    private static func roleKey(_ id: UUID) -> String { "account-role.\(id.uuidString.lowercased())" }
+
+    private func applyCachedRole(for id: UUID) {
+        guard let raw = UserDefaults.standard.string(forKey: Self.roleKey(id)),
+              let cached = Role(rawValue: raw) else { return }
+        role = cached
+    }
+
+    private func setRole(_ new: Role, for id: UUID) {
+        role = new
+        UserDefaults.standard.set(new.rawValue, forKey: Self.roleKey(id))
+    }
+
     private func loadRole() async {
         guard let id = userId else {
             role = .user
@@ -82,17 +100,17 @@ final class SessionModel: ObservableObject {
         #if DEBUG
         // QA visual del panel de Admin sin cuenta admin en el dispositivo.
         if ProcessInfo.processInfo.arguments.contains("-forceAdmin") {
-            role = .admin
+            setRole(.admin, for: id)
             return
         }
         #endif
         if isAdmin {
-            role = .admin
+            setRole(.admin, for: id)
             return
         }
         let isTrainer = await has("trainer")
         guard userId == id else { return }
-        role = isTrainer ? .trainer : .user
+        setRole(isTrainer ? .trainer : .user, for: id)
     }
 
     enum LoginError: Error { case invalid, unconfirmed, rateLimited, offline }

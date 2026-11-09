@@ -70,8 +70,9 @@ struct HomeView: View {
     private var iPhoneHeader: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("Hoy").font(.apLargeTitle).tracking(-0.7).accessibilityAddTraits(.isHeader)
-            Text([greeting, stateLine].filter { !$0.isEmpty }.joined(separator: " "))
+            Text(greeting.isEmpty ? "Tu entrenamiento de hoy." : "\(greeting) Tu entrenamiento de hoy.")
                 .font(.apSubhead).foregroundStyle(Palette.muted)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -205,81 +206,92 @@ struct HomeView: View {
         }
     }
 
-    /// Tus rutinas, cada una con sus ejercicios y un botón para empezar (como Hevy).
+    /// «Tu programa»: una fila por sesión con su miniatura, su foco muscular y su chevron.
+    /// Es la lista de la maqueta (limpia y visual); el detalle con ejercicios se abre al tocar.
     private var routinesList: some View {
         let sessions = snapshot?.scheduled ?? []
         guard !sessions.isEmpty else { return AnyView(EmptyView()) }
-        return AnyView(VStack(alignment: .leading, spacing: 10) {
-            Text("Tus rutinas").font(.apHeadline)
-                .accessibilityAddTraits(.isHeader)
-            ForEach(sessions, id: \.day) { plan in
-                VStack(alignment: .leading, spacing: 10) {
+        let card = RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+        return AnyView(VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Tu programa").font(.apTitle3)
+                    .accessibilityAddTraits(.isHeader)
+                Spacer(minLength: 8)
+                Text("\(sessions.count) \(sessions.count == 1 ? "sesión" : "sesiones")")
+                    .font(.apFootnote).foregroundStyle(Palette.muted)
+            }
+            VStack(spacing: 0) {
+                ForEach(Array(sessions.enumerated()), id: \.element.day) { index, plan in
                     Button {
                         Haptics.selection()
                         editingDay = plan
                     } label: {
-                        HStack(alignment: .top, spacing: 12) {
-                            ZStack {
-                                if let url = plan.cover_url, let u = URL(string: url) {
-                                    CachedAsyncImage(url: u) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
-                                } else if let icon = plan.session_icon, !icon.isEmpty, !icon.hasPrefix("http") {
-                                    Image(systemName: icon).font(.inter(size: 20, weight: .semibold)).foregroundStyle(Palette.gold)
-                                } else {
-                                    Image(systemName: "dumbbell").font(.inter(size: 20, weight: .semibold)).foregroundStyle(Palette.muted)
-                                }
-                            }
-                            .frame(width: 52, height: 52)
-                            .background(Palette.secondary, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-
-                            VStack(alignment: .leading, spacing: 8) {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(plan.title).font(.apHeadline).lineLimit(2)
-                                    if let focus = plan.muscle_focus, !focus.isEmpty {
-                                        Text(focus).font(.apCaption).foregroundStyle(Palette.muted).lineLimit(1)
-                                    }
-                                }
-                                if let exercises = plan.exercises, !exercises.isEmpty {
-                                    VStack(alignment: .leading, spacing: 3) {
-                                        ForEach(exercises.prefix(4), id: \.name) { ex in
-                                            HStack(spacing: 6) {
-                                                Circle().fill(Palette.gold.opacity(0.6)).frame(width: 4, height: 4)
-                                                Text(ex.name).font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(1)
-                                                Spacer(minLength: 0)
-                                                Text("\(ex.series)×\(ex.reps)").font(.apCaption.monospacedDigit()).foregroundStyle(Palette.muted)
-                                            }
-                                        }
-                                        if exercises.count > 4 {
-                                            Text("+ \(exercises.count - 4) más").font(.apCaption).foregroundStyle(Palette.muted)
-                                        }
-                                    }
-                                }
+                        HStack(spacing: 14) {
+                            routineThumb(plan)
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(plan.title.components(separatedBy: " · ")[0])
+                                    .font(.apHeadline).foregroundStyle(Palette.foreground)
+                                    .lineLimit(1)
+                                Text(programSubtitle(plan))
+                                    .font(.apFootnote).foregroundStyle(Palette.muted)
+                                    .lineLimit(1)
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
-
                             Image(systemName: "chevron.right")
-                                .font(.system(size: 12, weight: .semibold))
+                                .font(.system(size: 13, weight: .semibold))
                                 .foregroundStyle(Palette.muted)
                                 .accessibilityHidden(true)
                         }
+                        .padding(.horizontal, 14).padding(.vertical, 10)
+                        .frame(maxWidth: .infinity, minHeight: 76, alignment: .leading)
+                        .contentShape(Rectangle())
+                        .overlay(alignment: .bottom) {
+                            if index < sessions.count - 1 {
+                                Rectangle().fill(Palette.foreground.opacity(0.06)).frame(height: 1)
+                                    .padding(.leading, 84)
+                            }
+                        }
                     }
                     .buttonStyle(.plain)
-
-                    Button {
-                        Haptics.tap()
-                        Task { await startRoutine(plan) }
-                    } label: {
-                        Text("Empezar")
-                            .font(.apHeadline)
-                            .foregroundStyle(Palette.background)
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                            .background(Palette.gold, in: Capsule())
-                    }
-                    .buttonStyle(.plain)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityHint("Abre la sesión para ver y editar sus ejercicios")
                 }
-                .padding(16)
-                .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             }
+            .background(Palette.card, in: card)
+            .overlay(card.strokeBorder(Palette.foreground.opacity(0.08), lineWidth: 1))
         })
+    }
+
+    /// Miniatura de una sesión del programa: portada (foto propia o IA) y, sin ella, la foto de su
+    /// primer ejercicio; como último recurso, su icono sobre el fondo de marca.
+    @ViewBuilder private func routineThumb(_ plan: DayPlan) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
+        let firstPhoto = (plan.exercises ?? []).compactMap { $0.image_url }.first.flatMap(URL.init(string:))
+        ZStack {
+            Palette.secondary
+            if let cover = plan.cover_url, let url = URL(string: cover) {
+                CachedAsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
+            } else if let firstPhoto {
+                CachedAsyncImage(url: firstPhoto) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
+            } else if let icon = SessionIdentity.clean(plan.session_icon) {
+                Image(systemName: icon).font(.inter(size: 22, weight: .semibold)).foregroundStyle(Palette.gold)
+            } else {
+                Image(systemName: "dumbbell").font(.inter(size: 22, weight: .semibold)).foregroundStyle(Palette.gold)
+            }
+        }
+        .frame(width: 56, height: 56)
+        .clipShape(shape)
+        .overlay(shape.strokeBorder(Palette.foreground.opacity(0.08), lineWidth: 1))
+        .accessibilityHidden(true)
+    }
+
+    /// Línea gris de cada sesión: su foco muscular o, sin él, el resumen de ejercicios.
+    private func programSubtitle(_ plan: DayPlan) -> String {
+        if let focus = plan.muscle_focus, !focus.isEmpty { return focus }
+        let parts = plan.title.components(separatedBy: " · ")
+        if parts.count > 1 { return parts.dropFirst().joined(separator: " · ") }
+        let detail = detail(plan)
+        return detail.isEmpty ? "Sesión de entrenamiento" : detail
     }
 
 
@@ -325,7 +337,7 @@ struct HomeView: View {
             .padding(.horizontal, 18).padding(.vertical, 16)
             .frame(maxWidth: .infinity, minHeight: 72)
             .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).strokeBorder(Color.white.opacity(0.08), lineWidth: 1))
+            .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).strokeBorder(Palette.foreground.opacity(0.08), lineWidth: 1))
         }
         .buttonStyle(.pressableCard)
         .accessibilityElement(children: .combine)
@@ -626,81 +638,123 @@ struct HomeView: View {
     /// Cada bloque mide lo mismo que el texto real al que sustituye (eyebrow, título, detalle,
     /// resumen y acción), así el salto es cero y la pantalla no «baila».
     private var todaySkeleton: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            RoundedRectangle(cornerRadius: 4, style: .continuous).fill(Palette.secondary).frame(width: 132, height: 13)
-            RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Palette.secondary).frame(width: 196, height: 26).padding(.top, 8)
-            RoundedRectangle(cornerRadius: 4, style: .continuous).fill(Palette.secondary).frame(width: 150, height: 16).padding(.top, 6)
-            Spacer(minLength: 14)
-            RoundedRectangle(cornerRadius: 4, style: .continuous).fill(Palette.secondary).frame(width: 160, height: 14)
+        let shape = RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
+        return VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 0) {
+                RoundedRectangle(cornerRadius: 4, style: .continuous).fill(Palette.secondary).frame(width: 132, height: 12)
+                RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Palette.secondary).frame(width: 196, height: 26).padding(.top, 10)
+                RoundedRectangle(cornerRadius: 4, style: .continuous).fill(Palette.secondary).frame(width: 210, height: 15).padding(.top, 8)
+                RoundedRectangle(cornerRadius: 4, style: .continuous).fill(Palette.secondary).frame(width: 150, height: 13).padding(.top, 20)
+            }
+            .padding(20)
+            .frame(maxWidth: .infinity, minHeight: 172, alignment: .topLeading)
+            RoundedRectangle(cornerRadius: 26, style: .continuous).fill(Palette.secondary)
+                .frame(height: 52).padding(.horizontal, 16).padding(.bottom, 16)
         }
-        .padding(18)
-        .frame(maxWidth: .infinity, minHeight: Self.cardMinHeight, alignment: .topLeading)
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .background(Palette.card)
+        .clipShape(shape)
+        .overlay(shape.strokeBorder(Palette.foreground.opacity(0.08), lineWidth: 1))
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Cargando tu sesión de hoy")
         .accessibilityAddTraits(.updatesFrequently)
     }
 
-    /// Sesión de hoy (rediseño de ChatGPT): texto a la izquierda, foto a la derecha fundida con la
-    /// tarjeta y un chevron dorado. Se toca y abre el detalle en la hoja.
+    /// Sesión de hoy: tarjeta visual con la foto de la sesión fundida a la derecha, la duración
+    /// estimada, el número de ejercicios y un botón dorado «Entrenar» a un solo toque.
     private func startCard(_ plan: DayPlan) -> some View {
         let parts = plan.title.components(separatedBy: " · ")
-        let summary = detail(plan)
+        let subtitle = parts.count > 1 ? parts.dropFirst().joined(separator: " · ") : (plan.muscle_focus ?? "")
         let cover = plan.isGym ? todayCover : nil
-        return Button { openSheet() } label: {
+        let exerciseCount = plan.exercises?.count ?? 0
+        let minutes = estimatedMinutes(plan)
+        let shape = RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
+        return VStack(alignment: .leading, spacing: 0) {
+            Button { Haptics.tap(); openSheet() } label: {
             VStack(alignment: .leading, spacing: 0) {
-                Text(sessionLabel(plan))
-                    .font(.apFootnote).foregroundStyle(Palette.muted)
-                Text(parts[0]).font(.inter(size: 22, weight: .bold)).tracking(-0.4)
-                    .lineLimit(2).fixedSize(horizontal: false, vertical: true).padding(.top, 6)
-                if parts.count > 1 {
-                    Text(parts.dropFirst().joined(separator: " · ")).font(.apSubhead).foregroundStyle(Palette.muted)
-                        .lineLimit(2).fixedSize(horizontal: false, vertical: true).padding(.top, 2)
+                Text("ENTRENAMIENTO DE HOY")
+                    .font(.apCaption.weight(.bold)).tracking(1.6)
+                    .foregroundStyle(Palette.gold)
+                Text(parts[0])
+                    .font(.inter(size: 26, weight: .bold)).tracking(-0.5)
+                    .lineLimit(2).minimumScaleFactor(0.8)
+                    .fixedSize(horizontal: false, vertical: true).padding(.top, 8)
+                if !subtitle.isEmpty {
+                    Text(subtitle)
+                        .font(.apSubhead).foregroundStyle(Palette.muted)
+                        .lineLimit(2).fixedSize(horizontal: false, vertical: true).padding(.top, 4)
                 }
-                Spacer(minLength: 14)
-                if !summary.isEmpty {
-                    HStack(spacing: 6) {
-                        Image(systemName: "dumbbell").font(.system(size: 13)).accessibilityHidden(true)
-                        Text(summary).monospacedDigit()
+                if exerciseCount > 0 || minutes != nil {
+                    HStack(spacing: 18) {
+                        if let minutes {
+                            Label("~ \(minutes) min", systemImage: "clock")
+                        }
+                        if exerciseCount > 0 {
+                            Label("\(exerciseCount) \(exerciseCount == 1 ? "ejercicio" : "ejercicios")", systemImage: "dumbbell")
+                        }
                     }
-                    .font(.apFootnote).foregroundStyle(Palette.muted)
+                    .font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted)
+                    .labelStyle(.titleAndIcon)
+                    .padding(.top, 16)
                 }
             }
-            .padding(18)
-            .padding(.trailing, cover == nil ? 56 : 120)
-            .frame(maxWidth: .infinity, minHeight: 156, alignment: .topLeading)
+            .padding(20)
+            .padding(.trailing, cover == nil ? 0 : 96)
+            .frame(maxWidth: .infinity, minHeight: 172, alignment: .topLeading)
             .background(alignment: .trailing) {
                 if let cover {
                     CachedAsyncImage(url: cover) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
-                        .frame(width: 210).frame(maxHeight: .infinity).clipped()
-                        .overlay { LinearGradient(colors: [Palette.card, Palette.card.opacity(0.55), .clear], startPoint: .leading, endPoint: .trailing) }
+                        .frame(width: 230).frame(maxHeight: .infinity).clipped()
+                        .overlay {
+                            LinearGradient(colors: [Palette.card, Palette.card.opacity(0.7), Palette.card.opacity(0.12)],
+                                           startPoint: .leading, endPoint: .trailing)
+                        }
+                        .allowsHitTesting(false)
                         .accessibilityHidden(true)
                 }
             }
-            .overlay(alignment: .bottomTrailing) {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 15, weight: .bold)).foregroundStyle(Palette.gold)
-                    .frame(width: 36, height: 36)
-                    .background(Palette.gold.opacity(0.2), in: Circle())
-                    .padding(16)
-                    .accessibilityHidden(true)
+            .contentShape(Rectangle())
             }
-            .background(Palette.card)
-            .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).strokeBorder(Color.white.opacity(0.08), lineWidth: 1))
+            .buttonStyle(.plain)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel([plan.title, subtitle, minutes.map { "unos \($0) minutos" } ?? "",
+                                 exerciseCount > 0 ? "\(exerciseCount) ejercicios" : ""].filter { !$0.isEmpty }.joined(separator: ". "))
+            .accessibilityHint("Abre el detalle de la sesión de hoy")
+
+            Button {
+                Haptics.tap()
+                Task { await startRoutine(plan) }
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "play.fill").font(.system(size: 15, weight: .bold))
+                    Text("Entrenar").font(.apHeadline)
+                }
+                .foregroundStyle(Palette.background)
+                .frame(maxWidth: .infinity, minHeight: 52)
+                .background(Palette.gold, in: Capsule())
+            }
+            .buttonStyle(.pressableCard)
+            .padding(.horizontal, 16).padding(.bottom, 16)
+            .accessibilityLabel("Empezar a entrenar ahora")
         }
-        .buttonStyle(.pressableCard)
-        .accessibilityLabel([plan.title, summary, "Abrir el detalle de la sesión"].filter { !$0.isEmpty }.joined(separator: ". "))
-        .accessibilityHint("Abre el detalle de la sesión de hoy")
-        .accessibilityAddTraits(.isButton)
-        // Gesto nativo: mantener pulsada la tarjeta ofrece atajos sin quitar el toque principal.
+        .background(Palette.card)
+        .clipShape(shape)
+        .overlay(shape.strokeBorder(Palette.foreground.opacity(0.08), lineWidth: 1))
         .contextMenu {
             Button { openSheet() } label: { Label("Ver el detalle", systemImage: "list.bullet.rectangle") }
             Button { Haptics.selection(); editingDay = plan } label: { Label("Editar sesión", systemImage: "pencil") }
         }
     }
 
-    // MARK: Hoja con el detalle de la sesión (estilo Hevy, con nuestra identidad)
+    /// Duración estimada de la sesión: cada serie ocupa su descanso + ~45 s de trabajo.
+    private func estimatedMinutes(_ plan: DayPlan) -> Int? {
+        let exercises = plan.exercises ?? []
+        guard !exercises.isEmpty else { return nil }
+        let seconds = exercises.reduce(0.0) { total, exercise in
+            let rest = Double(exercise.rest.split(whereSeparator: { !$0.isNumber }).compactMap { Int($0) }.first ?? 60)
+            return total + Double(max(exercise.series, 1)) * (rest + 45)
+        }
+        return max(10, Int((seconds / 60).rounded(.up)))
+    }
 
     @ViewBuilder private var sheetView: some View {
         if let s = snapshot {
