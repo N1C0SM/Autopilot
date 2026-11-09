@@ -15,7 +15,7 @@ import { authRedirect } from "@/shared/lib/authRedirect";
 export async function signInWithApple(next = "/dashboard"): Promise<{ error: Error | null }> {
   if (!Capacitor.isNativePlatform()) {
     const result = await lovable.auth.signInWithOAuth("apple", {
-      redirect_uri: `${window.location.origin}${next}`,
+      redirect_uri: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
     });
     return { error: (result.error as Error) ?? null };
   }
@@ -48,7 +48,7 @@ export async function signInWithApple(next = "/dashboard"): Promise<{ error: Err
 export async function signInWithGoogle(next = "/dashboard"): Promise<{ error: Error | null }> {
   try {
     const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: `${window.location.origin}${next}`,
+      redirect_uri: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
     });
     return { error: (result.error as Error) ?? null };
   } catch (e) {

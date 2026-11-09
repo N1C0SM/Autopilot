@@ -1,3 +1,4 @@
+import { AppLink } from "@/shared/ui/AppLink";
 import { forwardRef } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/shared/components/ui/button";
@@ -11,7 +12,7 @@ const FinalCta = forwardRef<HTMLDivElement, { source: string }>(({ source }, ref
     <h2 className="type-display"><ScrollWords text="Empieza a entrenar con" accent="Autopilot" /></h2>
     <p className="mt-4 type-body text-muted-foreground md:text-[21px]">Gratis y sin tarjeta.</p>
     <Button variant="hero" size="lg" asChild className="mt-8 w-full max-w-sm sm:w-auto sm:px-12">
-      <Link to="/onboarding" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source }); }}>Crear mi rutina gratis</Link>
+      <AppLink to="/onboarding" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source }); }}>Crear mi rutina gratis</AppLink>
     </Button>
   </div>);
 FinalCta.displayName = "FinalCta";

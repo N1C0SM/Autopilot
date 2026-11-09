@@ -1,3 +1,4 @@
+import { AppLink } from "@/shared/ui/AppLink";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { Helmet } from "react-helmet-async";
@@ -122,7 +123,7 @@ export default function Index() {
 
     {/* CTA fija en móvil cuando el quiz del hero ya no se ve */}
     {showSticky && !finalVisible && !ownCtaInView && <div className="fixed inset-x-0 bottom-0 z-40 bg-background/90 px-4 pb-[max(env(safe-area-inset-bottom),12px)] pt-3 backdrop-blur sm:hidden animate-in slide-in-from-bottom-full duration-300">
-      <Button variant="hero" size="lg" asChild className="w-full"><Link to="/onboarding" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source: "sticky" }); }}>Empezar gratis</Link></Button>
+      <Button variant="hero" size="lg" asChild className="w-full"><AppLink to="/onboarding" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source: "sticky" }); }}>Empezar gratis</AppLink></Button>
     </div>}
   </PublicLayout>;
 }

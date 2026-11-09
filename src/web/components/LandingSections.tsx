@@ -1,3 +1,4 @@
+import { AppLink } from "@/shared/ui/AppLink";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { storeLinksComplete, type StoreLinks } from "@/shared/lib/storeLinks";
@@ -40,7 +41,7 @@ export function LandingHero({ ctaRef }: { ctaRef: React.Ref<HTMLDivElement> }) {
         <h1 className="mt-4 text-[40px] font-bold leading-[1.05] tracking-[-0.025em] sm:text-[52px]">Convierte la disciplina <span className="block">en <span className="text-primary">resultados.</span></span></h1>
         <p className="mt-5 text-[17px] leading-[24px] text-foreground/90 sm:text-[18px]">Tu sistema de entrenamiento, nutrición y progreso.<br className="hidden sm:block" /> Simple, personal y basado en datos.</p>
         <div ref={ctaRef} className="mt-7 flex flex-col gap-3 sm:flex-row sm:gap-4">
-          <Link to="/onboarding" onClick={cta("hero")} className={pillGold}>Empezar gratis <ArrowRight className="h-4 w-4" /></Link>
+          <AppLink to="/onboarding" onClick={cta("hero")} className={pillGold}>Empezar gratis <ArrowRight className="h-4 w-4" /></AppLink>
           <Link to="/como-funciona#demo" onClick={() => { void hapticTap(); track("plan_preview_view", { source: "hero" }); }} className={`${pillLine} sm:min-w-[152px]`}><Play className="h-4 w-4 fill-current" />Ver demo</Link>
         </div>
         <ul className="mt-6 flex flex-wrap gap-x-7 gap-y-2 text-[13px] text-foreground/85">
@@ -260,7 +261,7 @@ export function LandingFinal({ innerRef }: { innerRef: React.Ref<HTMLDivElement>
       <p className="text-[12px] font-bold uppercase tracking-[0.3em] text-foreground/90">Autopilot</p>
       <h2 id="final-t" className="mt-3 text-[32px] font-bold leading-[1.1] tracking-[-0.015em] sm:text-[40px]">No es un reto. Es un sistema.<br />Empieza hoy.</h2>
       <p className="mt-3 text-[16px] text-foreground/90">Únete gratis y da el primer paso hacia tu mejor versión.</p>
-      <Link to="/onboarding" onClick={cta("final")} className={`${pillGold} mt-6 px-9`}>Empezar gratis <ArrowRight className="h-4 w-4" /></Link>
+      <AppLink to="/onboarding" onClick={cta("final")} className={`${pillGold} mt-6 px-9`}>Empezar gratis <ArrowRight className="h-4 w-4" /></AppLink>
     </div>
   </section>;
 }

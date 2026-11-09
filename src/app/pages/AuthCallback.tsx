@@ -70,7 +70,12 @@ const AuthCallback = () => {
       // Red de seguridad: si `detectSessionInUrl` ya montó la sesión al cargar
       // la página, no importa el formato exacto del enlace, entramos igual.
       if (!error) {
-        const { data: { session } } = await supabase.auth.getSession();
+        let { data: { session } } = await supabase.auth.getSession();
+        // Vuelta de Google/Apple: la sesión puede tardar un instante en guardarse.
+        for (let i = 0; !session && !accessToken && !tokenHash && !code && i < 15; i++) {
+          await new Promise((r) => setTimeout(r, 200));
+          ({ data: { session } } = await supabase.auth.getSession());
+        }
         if (!session && !accessToken && !tokenHash && !code) {
           error = new Error("El enlace de verificación no es válido o está incompleto.");
         }

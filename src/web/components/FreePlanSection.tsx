@@ -1,3 +1,4 @@
+import { AppLink } from "@/shared/ui/AppLink";
 import { Link } from "react-router-dom";
 import { Check } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
@@ -19,7 +20,7 @@ export default function FreePlanSection() {
       <p className="mt-2 text-[clamp(96px,18vw,168px)] font-bold leading-[0.9] tracking-tighter tabular-nums">0<span className="text-primary"> €</span></p>
       <p className="mt-4 type-body text-muted-foreground">Sin tarjeta. Sin caducidad. Web y móvil.</p>
       <Button variant="hero" size="lg" asChild className="mt-8 w-full sm:w-auto sm:px-10">
-        <Link to="/onboarding" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source: "free_plan" }); }}>Crear mi rutina gratis</Link>
+        <AppLink to="/onboarding" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source: "free_plan" }); }}>Crear mi rutina gratis</AppLink>
       </Button>
     </div>
     <div>
