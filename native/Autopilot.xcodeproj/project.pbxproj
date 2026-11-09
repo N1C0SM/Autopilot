@@ -72,7 +72,7 @@
 		18372D90ACEF551F883409B3 /* ExerciseMotion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseMotion.swift; sourceTree = "<group>"; };
 		18F52B91A212936EB6B6D716 /* AdminBlog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminBlog.swift; sourceTree = "<group>"; };
 		1BF4A6FB7014FD1B1927D2F6 /* AdminAcquisition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminAcquisition.swift; sourceTree = "<group>"; };
-		1E2CBD0297E5F8BCF017644D /* Autopilot.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Autopilot.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		1E2CBD0297E5F8BCF017644D /* Autopilot.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Autopilot.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2087F6E61B3A0D2AD7B75E7A /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		215885F8A59B676130290EEB /* AdminViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminViews.swift; sourceTree = "<group>"; };
 		2ABEA2EE0F4882F9B05D3C21 /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
@@ -479,6 +479,14 @@
 				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES;
 				"ENABLE_OUTGOING_NETWORK_CONNECTIONS[sdk=macosx*]" = YES;
 				"ENABLE_USER_SELECTED_FILES[sdk=macosx*]" = readwrite;
+				INFOPLIST_KEY_CFBundleDisplayName = Autopilot;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Para hacer las fotos de progreso y del escáner.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Para leer tu peso corporal y calibrar automáticamente tu progreso y requerimientos nutricionales.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Para guardar tus entrenamientos y gasto calórico completados en Apple Salud.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Para elegir fotos de progreso y del escáner.";
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIUserInterfaceStyle = Dark;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -661,6 +669,14 @@
 				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES;
 				"ENABLE_OUTGOING_NETWORK_CONNECTIONS[sdk=macosx*]" = YES;
 				"ENABLE_USER_SELECTED_FILES[sdk=macosx*]" = readwrite;
+				INFOPLIST_KEY_CFBundleDisplayName = Autopilot;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Para hacer las fotos de progreso y del escáner.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Para leer tu peso corporal y calibrar automáticamente tu progreso y requerimientos nutricionales.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Para guardar tus entrenamientos y gasto calórico completados en Apple Salud.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Para elegir fotos de progreso y del escáner.";
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIUserInterfaceStyle = Dark;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
