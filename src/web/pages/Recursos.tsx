@@ -48,6 +48,18 @@ const RowThumb = ({ src, alt, fallback: Fallback }: { src?: string | null; alt: 
   );
 };
 
+const CardImage = ({ src, alt, fallback: Fallback }: { src?: string | null; alt: string; fallback: typeof Newspaper }) => {
+  const [failed, setFailed] = useState(false);
+  if (src && !failed) {
+    return <img src={src} alt={alt} loading="lazy" onError={() => setFailed(true)} className="aspect-[16/10] w-full bg-secondary object-cover transition-transform duration-500 group-hover:scale-[1.02]" />;
+  }
+  return (
+    <span aria-hidden className="flex aspect-[16/10] w-full items-center justify-center bg-secondary">
+      <Fallback className="h-7 w-7 text-muted-foreground" strokeWidth={1.5} />
+    </span>
+  );
+};
+
 const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
   const plans = usePlanAvailability();
   const { user, signOut } = useAuth();
@@ -174,12 +186,15 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
         {/* Embebida, el título grande lo pinta la pantalla anfitriona: aquí solo va la descripción. */}
         <header className={embedded ? undefined : "mx-auto max-w-3xl pb-4 pt-10 text-center animate-in fade-in duration-1000 motion-reduce:animate-none md:pt-14"}>
           {embedded ? null : (
-            <h1 className="type-display">
-              Todo lo que <span className="text-primary">complementa</span> tu plan
-            </h1>
+            <>
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">Academia · Manual de campo</p>
+              <h1 className="mt-4 type-display">
+                Lo que aprendí entre la barra y las pesas.
+              </h1>
+            </>
           )}
           <p className={embedded ? "max-w-xl type-subhead text-muted-foreground" : "mx-auto mt-5 max-w-xl type-body text-muted-foreground md:text-[21px] md:leading-[28px]"}>
-            Guías, material recomendado y los últimos artículos del equipo.
+            Guías directas, el material que de verdad uso y artículos para entrenar gimnasio y calistenia sin elegir.
           </p>
         </header>
 
@@ -234,24 +249,34 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
 
         {hasRecos && (
           <section>
-            <h2 className={embedded ? "type-title2 mb-3" : "type-display-sm mb-5"}><ScrollWords text="Lo que sí funciona" /></h2>
-            <ListGroup>
-              {recos.map((r, i) => (
-                <ListRow
-                  key={r.id || i}
-                  leading={<RowThumb src={r.image_url} alt={r.title} fallback={ShoppingBag} />}
-                  title={<span className="line-clamp-2">{r.title}</span>}
-                  subtitle={
-                    <>
-                      {r.badge && <span className="block truncate type-footnote text-muted-foreground">{sentenceCase(r.badge)}</span>}
-                      <span className="line-clamp-2">{previewIntro(r.description)}</span>
-                    </>
-                  }
-                  chevron
-                  onClick={() => setPreviewReco(r)}
-                />
-              ))}
-            </ListGroup>
+            <h2 className={embedded ? "type-title2 mb-3" : "type-display-sm mb-5"}><ScrollWords text="Material que sí uso" /></h2>
+            {embedded ? (
+              <ListGroup>
+                {recos.map((r, i) => (
+                  <ListRow
+                    key={r.id || i}
+                    leading={<RowThumb src={r.image_url} alt={r.title} fallback={ShoppingBag} />}
+                    title={<span className="line-clamp-2">{r.title}</span>}
+                    subtitle={<span className="line-clamp-2">{previewIntro(r.description)}</span>}
+                    chevron
+                    onClick={() => setPreviewReco(r)}
+                  />
+                ))}
+              </ListGroup>
+            ) : (
+              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {recos.map((r, i) => (
+                  <button key={r.id || i} type="button" onClick={() => { void hapticTap(); setPreviewReco(r); }} className="group overflow-hidden rounded-[22px] bg-card text-left transition-transform duration-150 active:scale-[0.98]">
+                    <CardImage src={r.image_url} alt={r.title} fallback={ShoppingBag} />
+                    <div className="p-5">
+                      {r.badge && <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-primary">{sentenceCase(r.badge)}</p>}
+                      <h3 className="mt-1 line-clamp-2 type-headline">{r.title}</h3>
+                      <p className="mt-2 line-clamp-3 type-subhead text-muted-foreground">{previewIntro(r.description)}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
             <ItemPreviewModal item={previewReco} variant={RECOMMENDATION_VARIANT} onClose={() => setPreviewReco(null)} />
           </section>
         )}
@@ -259,23 +284,37 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
         {hasPosts && (
           <section>
             <div className="mb-3 flex items-baseline justify-between gap-4">
-              <h2 className={embedded ? "type-title2" : "type-display-sm"}><ScrollWords text="Últimos artículos" /></h2>
+              <h2 className={embedded ? "type-title2" : "type-display-sm"}><ScrollWords text="Artículos técnicos" /></h2>
               <Link to="/blog" onClick={() => void hapticTap()} className="flex min-h-[44px] items-center type-body text-primary transition-opacity active:opacity-60">
                 Ver todos
               </Link>
             </div>
-            <ListGroup>
-              {posts.map((p) => (
-                <ListRow
-                  key={p.slug}
-                  to={`/blog/${p.slug}`}
-                  leading={<RowThumb src={p.cover_url} alt={p.title} fallback={Newspaper} />}
-                  title={<span className="line-clamp-2">{p.title}</span>}
-                  subtitle={p.excerpt ? <span className="line-clamp-2">{p.excerpt}</span> : undefined}
-                  chevron
-                />
-              ))}
-            </ListGroup>
+            {embedded ? (
+              <ListGroup>
+                {posts.map((p) => (
+                  <ListRow
+                    key={p.slug}
+                    to={`/blog/${p.slug}`}
+                    leading={<RowThumb src={p.cover_url} alt={p.title} fallback={Newspaper} />}
+                    title={<span className="line-clamp-2">{p.title}</span>}
+                    subtitle={p.excerpt ? <span className="line-clamp-2">{p.excerpt}</span> : undefined}
+                    chevron
+                  />
+                ))}
+              </ListGroup>
+            ) : (
+              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {posts.map((p) => (
+                  <Link key={p.slug} to={`/blog/${p.slug}`} onClick={() => void hapticTap()} className="group overflow-hidden rounded-[22px] bg-card transition-transform duration-150 active:scale-[0.98]">
+                    <CardImage src={p.cover_url} alt={p.title} fallback={Newspaper} />
+                    <div className="p-5">
+                      <h3 className="line-clamp-2 type-headline">{p.title}</h3>
+                      {p.excerpt && <p className="mt-2 line-clamp-3 type-subhead text-muted-foreground">{p.excerpt}</p>}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
           </section>
         )}
 
