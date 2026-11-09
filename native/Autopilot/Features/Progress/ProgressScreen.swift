@@ -1180,6 +1180,12 @@ final class ProgressModel: ObservableObject {
         // Solo si también llegaron «Por ejercicio» y Récords: si no, se quedarían en esqueleto.
         if let at = snapshot.strengthAt, snapshot.detailsAt != nil, Date().timeIntervalSince(at) < 20 { return }
         // Con datos en pantalla el refresco no bloquea la vista ni muestra esqueletos.
+        // Si hay un loadTask vivo pero los datos no llegaron todavía, se cancela y relanza:
+        // puede que esa tarea quedara colgada por un isStale que no limpió loadTask.
+        if snapshot.strengthAt == nil || snapshot.detailsAt == nil {
+            loadTask?.cancel()
+            loadTask = nil
+        }
         startBackgroundRefresh(userId: userId, gen: gen)
         // «Físico» se prepara en segundo plano (filas, firmas y primeras miniaturas): cambiar a esa
         // pestaña no dispara ninguna carga.
@@ -1272,7 +1278,7 @@ final class ProgressModel: ObservableObject {
         loadTask = Task { [weak self] in
             guard let self else { return }
             await self.refresh(userId: userId, gen: gen)
-            if self.generation == gen { self.loadTask = nil }
+            self.loadTask = nil   // siempre, aunque isStale cortó la carga
         }
     }
 
