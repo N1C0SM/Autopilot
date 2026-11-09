@@ -1,3 +1,4 @@
+import { AppLink } from "@/shared/ui/AppLink";
 import PublicLayout from "@/web/components/PublicLayout";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
@@ -226,9 +227,9 @@ const BlogPost = () => {
           <div className="mt-16 p-6 sm:p-8 bg-card border border-border rounded-card text-center">
             <h3 className="type-title1 mb-3">Pon esto en práctica</h3>
             <p className="type-subhead text-muted-foreground mb-5 max-w-md mx-auto">Crea tu rutina gratis y registra tus entrenamientos. Sin tarjeta.</p>
-            <Link to="/onboarding" className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-primary text-primary-foreground font-semibold type-subhead hover:opacity-90 transition-opacity">
+            <AppLink to="/onboarding" className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-primary text-primary-foreground font-semibold type-subhead hover:opacity-90 transition-opacity">
               Crear mi rutina gratis →
-            </Link>
+            </AppLink>
           </div>
         </article>
 

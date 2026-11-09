@@ -1,6 +1,7 @@
 import WhoIsTraining from "@/shared/components/native/WhoIsTraining";
 import Index from "@/web/pages/Index";
 import { Suspense, lazy, useEffect } from "react";
+import { APP_ORIGIN, isMainHost, isPrivatePath } from "@/shared/lib/appHost";
 import { Toaster } from "@/shared/components/ui/toaster";
 import { Toaster as Sonner } from "@/shared/components/ui/sonner";
 import { TooltipProvider } from "@/shared/components/ui/tooltip";
@@ -66,6 +67,11 @@ const NativeSplashSync = () => {
 };
 
 // app.autopilotplan.com opens the web app directly; the main domain keeps the landing.
+// En el dominio principal, las páginas privadas se abren en app.autopilotplan.com.
+if (typeof window !== "undefined" && !isNativeApp() && isMainHost(window.location.hostname) && isPrivatePath(window.location.pathname)) {
+  const { pathname, search, hash } = window.location;
+  window.location.replace(`${APP_ORIGIN}${pathname}${search}${hash}`);
+}
 const isAppHost = () => typeof window !== "undefined" && window.location.hostname.startsWith("app.");
 const RootRoute = () => (isNativeApp() ? <Welcome /> : isAppHost() ? <DashboardRedirect /> : <Index />);
 
