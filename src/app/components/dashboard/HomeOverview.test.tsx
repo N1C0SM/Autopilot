@@ -96,6 +96,7 @@ describe("dashboard home overview", () => {
         dayPlans={[]}
         hasPlan={false}
         nutrition={false}
+        onNavigate={vi.fn()}
         onPrepareRoutine={onPrepareRoutine}
       />,
     );
