@@ -44,6 +44,9 @@ struct AccountView: View {
     @State private var photo: PhotosPickerItem?
     @State private var exportDoc: JSONDoc?
     @State private var confirmDelete = false
+    /// Acceso con Google vinculado (Ajustes → Contraseña) y número total de accesos.
+    @State private var googleIdentity: UserIdentity?
+    @State private var identityCount = 0
     @State private var subTier: String?
     /// Cuenta a la que se está cambiando (spinner) y cuenta que pide contraseña.
     @State private var switching: String?
@@ -147,7 +150,7 @@ struct AccountView: View {
         }
         group("Preferencias") {
             hubRow("dumbbell", "Tu forma de entrenar", "Vista, disposición y descanso del entreno", to: .entreno)
-            hubRow("key", "Contraseña", "Cambia tu contraseña", to: .contrasena)
+            hubRow("key", "Contraseña", "Contraseña y cuentas vinculadas", to: .contrasena)
         }
         group("Apariencia") {
             HStack {
@@ -291,7 +294,30 @@ struct AccountView: View {
                     fieldRow("Confirmar") { SecureField("Repite la contraseña", text: $confirmPassword).multilineTextAlignment(.trailing).textFieldStyle(.plain) }
                     actionRow("Cambiar contraseña", disabled: newPassword.count < 6 || newPassword != confirmPassword) { await changePassword() }
                 }
+                if googleIdentity != nil {
+                    group("Cuentas vinculadas", footer: "Desconectar quita ese acceso; sigues entrando con tu correo y contraseña.") {
+                        actionRow("Desconectar de Google") { await unlinkGoogle() }
+                    }
+                }
+                Color.clear.frame(height: 0).task { await loadIdentities() }
 
+    }
+
+    private func loadIdentities() async {
+        guard let ids = try? await Backend.client.auth.userIdentities() else { return }
+        identityCount = ids.count
+        googleIdentity = ids.first { $0.provider == "google" }
+    }
+
+    private func unlinkGoogle() async {
+        guard let identity = googleIdentity else { return }
+        // Nunca dejar la cuenta sin acceso (misma regla que `canUnlink` en la web).
+        guard identityCount > 1 else { Haptics.error(); show("Crea una contraseña antes de desconectar Google"); return }
+        do {
+            try await Backend.client.auth.unlinkIdentity(identity)
+            await loadIdentities()
+            Haptics.success(); show("Google desconectado")
+        } catch { Haptics.error(); show("No se pudo desconectar Google") }
     }
 
     @ViewBuilder private var planSection: some View {

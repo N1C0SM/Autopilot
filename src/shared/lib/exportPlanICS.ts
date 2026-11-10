@@ -101,7 +101,7 @@ export function buildICS(dayPlans: DayPlan[], opts: ICSOptions): string {
     const { title, description } = describePlan(plan);
     // UID estable: NO incluye el tipo, para que cambiar un día de gimnasio a
     // actividad actualice el mismo evento en vez de dejar el viejo colgado.
-    const uid = `${plan.day.toLowerCase()}-autopilot@lovable.app`;
+    const uid = `${plan.day.toLowerCase()}-autopilot@autopilotplan.com`;
 
     lines.push("BEGIN:VEVENT");
     lines.push(`UID:${uid}`);

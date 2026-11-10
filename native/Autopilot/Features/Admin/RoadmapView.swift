@@ -89,12 +89,12 @@ struct RoadmapView: View {
         .sheet(item: $aiHelp) { item in
             VStack(alignment: .leading, spacing: 14) {
                 Text("Implementar con ayuda de IA").font(.apTitle2)
-                Text("La IA puede ayudarte a desarrollar esta tarea en Lovable. Algunas partes pueden requerir servicios externos o pruebas reales; el Roadmap no cambia ni publica la aplicación automáticamente.")
+                Text("La IA puede ayudarte a desarrollar esta tarea. Algunas partes pueden requerir servicios externos o pruebas reales; el Roadmap no cambia ni publica la aplicación automáticamente.")
                     .font(.apSubhead).foregroundStyle(Palette.muted)
                 Text(item.title).font(.apHeadline)
                 Text(aiRequest(item)).font(.apFootnote).textSelection(.enabled)
                     .adminFieldBox(radius: 14)
-                Button("Copiar petición") { copy(aiRequest(item)); show("Petición copiada para Lovable"); aiHelp = nil }.buttonStyle(.pill)
+                Button("Copiar petición") { copy(aiRequest(item)); show("Petición copiada"); aiHelp = nil }.buttonStyle(.pill)
             }
             .padding(24).frame(minWidth: 420).screenBackground()
         }

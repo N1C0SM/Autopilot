@@ -53,7 +53,7 @@ interface Recommendation {
 const uid = () => Math.random().toString(36).slice(2, 10);
 
 const AI_KEYS = [
-  { key: "OPENAI_API_KEY", label: "OpenAI (ChatGPT)", desc: "Imágenes, blog, libros y el resto de la IA con tu cuenta de OpenAI. Los vídeos usan siempre la IA de Lovable.", placeholder: "sk-..." },
+  { key: "OPENAI_API_KEY", label: "OpenAI (ChatGPT)", desc: "Imágenes, blog, libros y el resto de la IA con tu cuenta de OpenAI. Los vídeos usan siempre la IA de Autopilot.", placeholder: "sk-..." },
   { key: "ANTHROPIC_API_KEY", label: "Claude (Anthropic)", desc: "Segunda opción para el texto si OpenAI se queda sin saldo.", placeholder: "sk-ant-..." },
   { key: "DEEPSEEK_API_KEY", label: "DeepSeek", desc: "Solo texto (planes, blog, chat, clasificación), mucho más barato. No genera imágenes ni vídeos: para eso sigue haciendo falta OpenAI.", placeholder: "sk-..." },
 ] as const;
@@ -63,13 +63,13 @@ const TEXT_PROVIDERS = [
   { id: "openai", label: "OpenAI", desc: "Texto e imágenes" },
   { id: "anthropic", label: "Claude", desc: "Solo texto" },
   { id: "deepseek", label: "DeepSeek", desc: "Solo texto, muy barato" },
-  { id: "lovable", label: "Lovable", desc: "Incluida, sin clave" },
+  { id: "lovable", label: "Autopilot AI", desc: "Incluida, sin clave" },
 ] as const;
 
 const IMAGE_ENGINES = [
   { id: "auto", label: "Automático", desc: "Sigue el orden del motor de texto (se salta las que no hacen imágenes)." },
-  { id: "openai", label: "OpenAI", desc: "Siempre tu cuenta de OpenAI; si falla, Lovable de respaldo." },
-  { id: "lovable", label: "Lovable", desc: "Siempre los créditos de Lovable." },
+  { id: "openai", label: "OpenAI", desc: "Siempre tu cuenta de OpenAI; si falla, Autopilot AI de respaldo." },
+  { id: "lovable", label: "Autopilot AI", desc: "Siempre los créditos de Autopilot AI." },
 ] as const;
 
 const URL_INPUT = { inputMode: "url", autoCapitalize: "none", autoCorrect: "off", spellCheck: false } as const;
@@ -510,13 +510,13 @@ const SiteContentEditor = () => {
       {/* Claves de IA */}
       <Section
         title="Claves de IA"
-        description="Toda la IA (vídeos e imágenes de ejercicios, blog, ordenar libros, precios, comidas, sugerencias del chat…) puede funcionar con la IA de Lovable o con tu clave de OpenAI."
+        description="Toda la IA (vídeos e imágenes de ejercicios, blog, ordenar libros, precios, comidas, sugerencias del chat…) puede funcionar con la IA de Autopilot o con tu clave de OpenAI."
       >
         <div className="space-y-6">
           {/* Motor de texto: orden libre + activación */}
           <ListGroup
             header="Motor de texto"
-            footer="Planes, blog, comidas, chat y clasificación. Se prueba en este orden y, si uno falla o no tiene saldo, se pasa al siguiente. Apaga los que no quieras usar (deja solo uno para usar «solo esa IA»). Claude y DeepSeek solo hacen texto: las imágenes van a OpenAI o Lovable, y los vídeos siempre a Lovable. Si un proveedor no tiene clave puesta, se salta solo."
+            footer="Planes, blog, comidas, chat y clasificación. Se prueba en este orden y, si uno falla o no tiene saldo, se pasa al siguiente. Apaga los que no quieras usar (deja solo uno para usar «solo esa IA»). Claude y DeepSeek solo hacen texto: las imágenes van a OpenAI o Autopilot AI, y los vídeos siempre a Autopilot AI. Si un proveedor no tiene clave puesta, se salta solo."
           >
             {textDisplay.map((id, i) => {
               const p = TEXT_PROVIDERS.find((t) => t.id === id)!;

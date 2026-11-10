@@ -1,6 +1,7 @@
 import { ChipGroup } from "@/shared/components/ui/chip-group";
 import { FOOD_AVOID, FOOD_LIKES, readLikes, splitList, toggleInList, writeLikes } from "@/shared/lib/foodPrefs";
 import AccountSwitcher from "@/app/components/AccountSwitcher";
+import LinkedAccounts from "@/app/components/settings/LinkedAccounts";
 import { errorMessage } from "@/shared/lib/runtimeValues";
 import { useState, useEffect, useRef, type ReactNode } from "react";
 import { useTheme } from "next-themes";
@@ -740,7 +741,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
             { title: "Preferencias", rows: [
               { id: "ajustes-entreno", icon: Dumbbell, title: "Tu forma de entrenar", subtitle: "Vista del entreno y descanso entre series", show: true },
               { id: "ajustes-apariencia", icon: Moon, title: "Apariencia", subtitle: "Modo oscuro o del sistema", show: true },
-              { id: "ajustes-contrasena", icon: KeyRound, title: "Contraseña", subtitle: "Cambia tu contraseña", show: true },
+              { id: "ajustes-contrasena", icon: KeyRound, title: "Contraseña", subtitle: "Contraseña y cuentas vinculadas", show: true },
             ] },
             { title: "Privacidad y legal", rows: [
               { id: "ajustes-privacidad", icon: ShieldCheck, title: "Privacidad y mis datos", subtitle: "Exporta tus datos y política de privacidad", show: true },
@@ -1077,7 +1078,8 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
       </ListGroup>
 
       {/* Password */}
-      <div id="ajustes-contrasena" className={`order-5 scroll-mt-20${only("ajustes-contrasena")}`}>
+      <div id="ajustes-contrasena" className={`order-5 scroll-mt-20 space-y-6${only("ajustes-contrasena")}`}>
+        <LinkedAccounts />
         <ListGroup header="Cambiar contraseña">
           <FieldRow label="Nueva" htmlFor="settings-new-password">
             <Input
