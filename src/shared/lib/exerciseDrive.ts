@@ -248,3 +248,45 @@ export const onDriveFileUploaded = async (row: { id: string; title: string; fold
   await assignDriveFileToExercise(drivePath, id);
   return id;
 };
+
+/** Pure: nombre de ejercicio a partir del archivo ("press-banca_inclinado.gif" → "press banca inclinado"). */
+export const exerciseNameFromFile = (fileName: string) =>
+  fileName.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ").replace(/\s+/g, " ").trim();
+
+const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+
+export type BulkResult = { linked: string[]; unmatched: string[]; failed: string[] };
+
+/**
+ * Carga masiva: cada archivo se empareja con el ejercicio del mismo nombre, se limpia el fondo,
+ * se guarda en Ejercicios / Calistenia|Gimnasio / músculo y queda como su imagen en la biblioteca.
+ * Los que no coinciden con ningún ejercicio van a «Ejercicios / Sin asignar» (no se crean ejercicios).
+ */
+export const bulkImportExerciseFiles = async (files: File[], onProgress?: (done: number, total: number) => void): Promise<BulkResult> => {
+  const { data, error } = await supabase.from("exercises").select("id, name, exercise_type, muscle_group");
+  if (error) throw error;
+  const byName = new Map((data || []).map((e: SyncableExercise) => [norm(e.name), e]));
+  const res: BulkResult = { linked: [], unmatched: [], failed: [] };
+  let done = 0;
+  for (const file of files) {
+    const name = exerciseNameFromFile(file.name);
+    try {
+      const ex = byName.get(norm(name));
+      if (!ex) {
+        const folderId = await ensureFolderPath([EXERCISE_ROOT, "Sin asignar"]);
+        await uploadExerciseFile(file, folderId, name);
+        res.unmatched.push(name);
+      } else {
+        const folderId = await ensureFolderPath(exerciseFolderPath(ex.exercise_type, ex.muscle_group));
+        const url = await uploadExerciseFile(file, folderId, ex.name);
+        await supabase.from("library_books").update({ folder: `file-unlinked-${ex.id}-${Date.now()}` }).eq("folder", `exercise-${ex.id}`);
+        await supabase.from("library_books").update({ folder: `exercise-${ex.id}` }).eq("parent_id", folderId).eq("title", ex.name).like("folder", "file-%").not("folder", "like", "file-unlinked-%");
+        const { error: upErr } = await supabase.from("exercises").update({ image_url: url }).eq("id", ex.id);
+        if (upErr) throw upErr;
+        res.linked.push(ex.name);
+      }
+    } catch (e) { console.warn("Bulk import failed for", file.name, e); res.failed.push(name); }
+    onProgress?.(++done, files.length);
+  }
+  return res;
+};

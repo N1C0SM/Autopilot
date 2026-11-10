@@ -1,6 +1,6 @@
 import { errorMessage } from "@/shared/lib/runtimeValues";
 import { useEffect, useRef, useState } from "react";
-import { assignDriveFileToExercise, ensureBaseExerciseFolders, onDriveDeleted, onDriveFileUploaded, onDriveRenamed, syncLibraryToDrive } from "@/shared/lib/exerciseDrive";
+import { bulkImportExerciseFiles, assignDriveFileToExercise, ensureBaseExerciseFolders, onDriveDeleted, onDriveFileUploaded, onDriveRenamed, syncLibraryToDrive } from "@/shared/lib/exerciseDrive";
 import { MUSCLE_GROUPS } from "@/shared/types/training";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { Button } from "@/shared/components/ui/button";
@@ -1044,6 +1044,30 @@ const LibraryDrive = () => {
                   <DropdownMenuItem onClick={() => create("file")}>
                     <FileIcon className="mr-2 h-4 w-4" /> Archivo (imagen, vídeo, PDF…)
                   </DropdownMenuItem>
+                  {inExerciseTree(parentId) && (
+                    <DropdownMenuItem asChild onSelect={(e) => e.preventDefault()}>
+                      <label className="cursor-pointer">
+                        <input
+                          type="file"
+                          multiple
+                          accept="image/*,.apng"
+                          className="hidden"
+                          onChange={async (e) => {
+                            const files = Array.from(e.target.files || []);
+                            e.currentTarget.value = "";
+                            if (!files.length) return;
+                            const id = toast.loading(`Procesando 0/${files.length}…`);
+                            try {
+                              const r = await bulkImportExerciseFiles(files, (d, t) => toast.loading(`Procesando ${d}/${t}…`, { id }));
+                              toast.success(`${r.linked.length} vinculados a su ejercicio${r.unmatched.length ? ` · ${r.unmatched.length} sin ejercicio (en «Sin asignar»)` : ""}${r.failed.length ? ` · ${r.failed.length} fallidos` : ""}`, { id, duration: 8000 });
+                              await load();
+                            } catch (err) { toast.error(errorMessage(err), { id }); }
+                          }}
+                        />
+                        <Upload className="mr-2 h-4 w-4" /> Carga masiva de ejercicios (ordena sola)
+                      </label>
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </>

@@ -5,13 +5,27 @@
  * GIF y APNG animados se convierten en APNG transparente fotograma a fotograma.
  */
 
-/** Pure: pone alfa 0 al fondo casi blanco conectado con el borde. Modifica `data`. */
-export const clearWhiteBackground = (data: Uint8ClampedArray | Uint8Array, w: number, h: number, threshold = 235) => {
+/** Cuánto "blanco de fondo" tiene un píxel: 0 = color del atleta, 1 = fondo puro. */
+const whiteness = (r: number, g: number, b: number) => {
+  const min = Math.min(r, g, b), max = Math.max(r, g, b);
+  if (max - min > 40) return 0; // con color: es del atleta
+  return Math.max(0, Math.min(1, (min - 170) / 70));
+};
+
+/**
+ * Pure: vuelve transparente el fondo claro conectado con el borde y deja un contorno
+ * limpio: tolera el tramado de los GIF, suaviza el borde y descontamina el halo blanco.
+ * Modifica `data`.
+ */
+export const clearWhiteBackground = (data: Uint8ClampedArray | Uint8Array, w: number, h: number, threshold = 215) => {
+  const n = w * h;
   const isBg = (i: number) => {
     const p = i * 4;
-    return data[p + 3] === 0 || (data[p] >= threshold && data[p + 1] >= threshold && data[p + 2] >= threshold);
+    if (data[p + 3] === 0) return true;
+    const r = data[p], g = data[p + 1], b = data[p + 2];
+    return Math.min(r, g, b) >= threshold && Math.max(r, g, b) - Math.min(r, g, b) <= 30;
   };
-  const seen = new Uint8Array(w * h);
+  const seen = new Uint8Array(n);
   const stack: number[] = [];
   const push = (i: number) => { if (!seen[i] && isBg(i)) { seen[i] = 1; stack.push(i); } };
   for (let x = 0; x < w; x++) { push(x); push((h - 1) * w + x); }
@@ -26,15 +40,28 @@ export const clearWhiteBackground = (data: Uint8ClampedArray | Uint8Array, w: nu
     if (y > 0) push(i - w);
     if (y < h - 1) push(i + w);
   }
-  // Borde suave: los píxeles claros que tocan el fondo quedan semitransparentes.
-  for (let i = 0; i < w * h; i++) {
-    if (seen[i]) continue;
-    const x = i % w, y = (i / w) | 0;
-    const near = (x > 0 && seen[i - 1]) || (x < w - 1 && seen[i + 1]) || (y > 0 && seen[i - w]) || (y < h - 1 && seen[i + w]);
-    if (!near) continue;
+  // Anillo de 1 px al fondo para el borde suave.
+  const dist = new Uint8Array(n).fill(9);
+  for (let i = 0; i < n; i++) if (seen[i]) dist[i] = 0;
+  for (let pass = 1; pass <= 1; pass++) {
+    for (let i = 0; i < n; i++) {
+      if (dist[i] !== 9) continue;
+      const x = i % w, y = (i / w) | 0;
+      const near = (x > 0 && dist[i - 1] === pass - 1) || (x < w - 1 && dist[i + 1] === pass - 1) || (y > 0 && dist[i - w] === pass - 1) || (y < h - 1 && dist[i + w] === pass - 1);
+      if (near) dist[i] = pass;
+    }
+  }
+  for (let i = 0; i < n; i++) {
+    const d = dist[i];
+    if (d === 0 || d === 9) continue;
     const p = i * 4;
-    const light = Math.min(data[p], data[p + 1], data[p + 2]);
-    if (light > 180) data[p + 3] = Math.round(data[p + 3] * (255 - light) / 75);
+    const wh = whiteness(data[p], data[p + 1], data[p + 2]) * (d === 1 ? 1 : 0.6);
+    let a = 1 - wh;
+    if (d === 1 && wh > 0) a = Math.min(a, 0.85); // antialias en el borde claro
+    if (a <= 0.04) { data[p + 3] = 0; continue; }
+    // Quita el blanco mezclado del color (sin halo claro sobre fondo oscuro).
+    for (let c = 0; c < 3; c++) data[p + c] = Math.max(0, Math.min(255, Math.round((data[p + c] - (1 - a) * 255) / a)));
+    data[p + 3] = Math.round(data[p + 3] * a);
   }
   return cleared;
 };

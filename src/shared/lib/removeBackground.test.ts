@@ -21,3 +21,11 @@ describe("clearWhiteBackground", () => {
     expect(a[(2 * 5 + 2) * 4 + 3]).toBe(255);
   });
 });
+
+describe("borde limpio", () => {
+  it("el gris claro del tramado junto al fondo también desaparece", () => {
+    const a = px(5, 5, (x, y) => (x === 2 && y === 2 ? [30, 30, 30, 255] : x === 1 && y === 2 ? [222, 222, 222, 255] : [255, 255, 255, 255]));
+    clearWhiteBackground(a, 5, 5);
+    expect(a[(2 * 5 + 1) * 4 + 3]).toBe(0);
+  });
+});
