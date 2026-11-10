@@ -9,6 +9,8 @@ export function fastImage(url: string, px: number): string;
 export function fastImage(url: string | null | undefined, px: number): string | null | undefined;
 export function fastImage(url: string | null | undefined, px: number) {
   if (!url || !url.includes(".supabase.co/")) return url;
+  // Las animaciones (APNG/GIF) se sirven tal cual: el render las congelaría en el primer fotograma.
+  if (/\.(apng|gif)(\?|$)/i.test(url)) return url;
   const [base] = url.split("?");
   const path = base.includes(OBJECT) ? base.split(OBJECT)[1] : base.includes(RENDER) ? base.split(RENDER)[1] : null;
   if (!path) return url;

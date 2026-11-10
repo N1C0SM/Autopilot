@@ -1,3 +1,4 @@
+import { ensureFolderPath, exerciseFolderPath, listExerciseFolders, listExerciseImages, publishDriveFile, uploadExerciseFile, type DriveExerciseFile, type DriveFolderOption } from "@/shared/lib/exerciseDrive";
 import { errorMessage, functionErrorMessage } from "@/shared/lib/runtimeValues";
 import { getExerciseTrackingConfig, TRACKING_MODES } from "@/shared/lib/exerciseTrackingConfig";
 import { useState, useEffect, useMemo, useRef, useCallback, type ReactNode } from "react";
@@ -333,16 +334,43 @@ const ExerciseFormDialog = ({
     }
   };
 
+  // Carpeta del Drive donde se guarda lo que se sube aquí ("auto" = Ejercicios/Tipo/Músculo).
+  const [driveFolder, setDriveFolder] = useState("auto");
+  const [driveFolders, setDriveFolders] = useState<DriveFolderOption[]>([]);
+  const [driveFiles, setDriveFiles] = useState<DriveExerciseFile[] | null>(null);
+  const [drivePicking, setDrivePicking] = useState<string | null>(null);
+  useEffect(() => {
+    if (open) listExerciseFolders().then(setDriveFolders).catch(() => setDriveFolders([]));
+    else setDriveFiles(null);
+  }, [open]);
+  const autoFolderLabel = exerciseFolderPath(form.exercise_type, form.muscle_group).join(" / ");
+
+  const openDrivePicker = async () => {
+    setDriveFiles([]);
+    try { setDriveFiles(await listExerciseImages()); }
+    catch { toast.error("No se pudo leer el Drive"); setDriveFiles(null); }
+  };
+  const pickFromDrive = async (f: DriveExerciseFile) => {
+    setDrivePicking(f.id);
+    try {
+      set("image_url", await publishDriveFile(f.file_path));
+      setDriveFiles(null);
+      toast.success("Imagen elegida del Drive. Guarda el ejercicio para aplicarla.");
+    } catch (e: unknown) {
+      toast.error(errorMessage(e) || "No se pudo usar ese archivo");
+    } finally { setDrivePicking(null); }
+  };
+
   const uploadImage = async (file: File) => {
     setImgUploading(true);
     try {
-      const ext = file.name.split(".").pop() ||"jpg";
-      const path =`exercise-images/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-      const { error } = await supabase.storage.from("site-assets").upload(path, file, { upsert: true });
-      if (error) throw error;
-      const { data } = supabase.storage.from("site-assets").getPublicUrl(path);
-      set("image_url", data.publicUrl);
-      toast.success("Imagen subida");
+      const folderId = driveFolder === "auto"
+        ? await ensureFolderPath(exerciseFolderPath(form.exercise_type, form.muscle_group))
+        : driveFolder;
+      const title = form.name?.trim() || file.name.replace(/\.[^.]+$/, "");
+      set("image_url", await uploadExerciseFile(file, folderId, title));
+      listExerciseFolders().then(setDriveFolders).catch(() => undefined);
+      toast.success("Imagen subida y guardada en el Drive");
     } catch (e: unknown) {
       toast.error(errorMessage(e) ||"Error al subir la imagen");
     }
@@ -580,7 +608,7 @@ const ExerciseFormDialog = ({
               <input
                 ref={imageInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/*,.apng"
                 className="hidden"
                 disabled={imgUploading}
                 onChange={(e) => {
@@ -589,7 +617,23 @@ const ExerciseFormDialog = ({
                   e.target.value = "";
                 }}
               />
+              <div className="space-y-1.5 px-4">
+                <label htmlFor="exercise-drive-folder" className="block type-footnote text-muted-foreground">Guardar en la carpeta del Drive</label>
+                <select
+                  id="exercise-drive-folder"
+                  value={driveFolder}
+                  onChange={(e) => setDriveFolder(e.target.value)}
+                  className="h-11 w-full rounded-full bg-secondary px-4 type-body text-foreground"
+                >
+                  <option value="auto">Automática: {autoFolderLabel}</option>
+                  {driveFolders.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
+                </select>
+              </div>
               <ListGroup inset>
+                <ListRow
+                  title={<span className="text-primary">Elegir del Drive</span>}
+                  onClick={openDrivePicker}
+                />
                 <ListRow
                   title={<span className="text-primary">{form.image_url ? "Cambiar imagen" : "Subir imagen"}</span>}
                   trailing={imgUploading ? <Spinner size="sm" /> : undefined}
@@ -608,6 +652,36 @@ const ExerciseFormDialog = ({
                   <ListRow title="Quitar imagen" destructive onClick={() => set("image_url", null)} />
                 ) : null}
               </ListGroup>
+              {driveFiles && (
+                <div className="space-y-2 px-4">
+                  <div className="flex items-center justify-between">
+                    <p className="type-subhead">Imágenes en Drive · Ejercicios</p>
+                    <button type="button" className="type-footnote text-muted-foreground" onClick={() => setDriveFiles(null)}>Cerrar</button>
+                  </div>
+                  {driveFiles.length === 0 ? (
+                    <p className="type-footnote text-muted-foreground">No hay imágenes todavía en la carpeta Ejercicios.</p>
+                  ) : (
+                    <ul className="max-h-64 space-y-1 overflow-y-auto">
+                      {driveFiles.map((f) => (
+                        <li key={f.id}>
+                          <button
+                            type="button"
+                            disabled={drivePicking !== null}
+                            onClick={() => pickFromDrive(f)}
+                            className="flex min-h-[44px] w-full items-center justify-between gap-3 rounded-2xl bg-secondary px-4 py-2 text-left active:opacity-60"
+                          >
+                            <span className="min-w-0">
+                              <span className="block truncate type-body">{f.title}</span>
+                              <span className="block truncate type-footnote text-muted-foreground">{f.folder}</span>
+                            </span>
+                            {drivePicking === f.id ? <Spinner size="sm" /> : null}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
             </div>
           </section>
 

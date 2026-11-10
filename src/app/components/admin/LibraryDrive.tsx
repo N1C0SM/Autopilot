@@ -1,5 +1,6 @@
 import { errorMessage } from "@/shared/lib/runtimeValues";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { assignDriveFileToExercise, ensureBaseExerciseFolders } from "@/shared/lib/exerciseDrive";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -55,7 +56,7 @@ const MAX_UPLOAD_BYTES = 500 * 1024 * 1024;
 
 const extOf = (name: string) => (name.match(/\.([a-z0-9]{1,8})$/i)?.[1] || "").toLowerCase();
 
-const IMAGE_EXT = ["jpg", "jpeg", "png", "webp", "gif", "avif", "heic", "heif", "bmp", "svg"];
+const IMAGE_EXT = ["jpg", "jpeg", "png", "apng", "webp", "gif", "avif", "heic", "heif", "bmp", "svg"];
 const VIDEO_EXT = ["mp4", "mov", "m4v", "webm", "ogv", "avi", "mkv"];
 const AUDIO_EXT = ["mp3", "m4a", "wav", "aac", "ogg", "flac"];
 
@@ -185,6 +186,30 @@ const LibraryDrive = () => {
   const { ask: askText, dialog: promptDialog } = useTextPrompt();
 
   const parentId = path.length ? path[path.length - 1].id : null;
+  const seededRef = useRef(false);
+  const [exerciseOptions, setExerciseOptions] = useState<{ id: string; name: string }[]>([]);
+  const [assignTo, setAssignTo] = useState("");
+  useEffect(() => {
+    supabase.from("exercises").select("id, name").order("name").then(({ data }) => setExerciseOptions((data as { id: string; name: string }[]) || []));
+  }, []);
+  const inExerciseTree = (id: string | null | undefined) => {
+    let cur = books.find((b) => b.id === id);
+    while (cur) {
+      if (!cur.parent_id) return cur.is_folder && cur.title.trim().toLowerCase() === "ejercicios";
+      cur = books.find((b) => b.id === cur!.parent_id);
+    }
+    return false;
+  };
+  const assignToExercise = async (b: Book) => {
+    if (!b.file_path || !assignTo) return;
+    setBusy(b.id);
+    try {
+      await assignDriveFileToExercise(b.file_path, assignTo);
+      toast.success("Imagen asignada al ejercicio");
+    } catch (e) {
+      toast.error(errorMessage(e) || "No se pudo asignar");
+    } finally { setBusy(null); }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -194,7 +219,15 @@ const LibraryDrive = () => {
       .order("is_folder", { ascending: false })
       .order("sort_order", { ascending: true });
     if (error) toast.error("No se pudo cargar tu biblioteca");
-    setBooks((data as Book[]) || []);
+    const rows = (data as Book[]) || [];
+    // Estructura fija de ejercicios: Ejercicios → Calistenia / Gimnasio.
+    const root = rows.find((r) => r.is_folder && !r.parent_id && r.title.trim().toLowerCase() === "ejercicios");
+    const hasBase = root && ["calistenia", "gimnasio"].every((n) => rows.some((r) => r.is_folder && r.parent_id === root.id && r.title.trim().toLowerCase() === n));
+    if (!error && !hasBase && !seededRef.current) {
+      seededRef.current = true;
+      try { await ensureBaseExerciseFolders(); return load(); } catch (e) { console.warn("Could not create exercise folders", e); }
+    }
+    setBooks(rows);
     setLoading(false);
   };
 
@@ -378,7 +411,7 @@ const LibraryDrive = () => {
       const finalPath = kind === "cover" ? `library-covers/${path}` : path;
       const { error } = await supabase.storage.from(bucket).upload(finalPath, uploadFile, {
         upsert: false,
-        contentType: uploadFile.type || (kind === "cover" ? "image/webp" : "application/octet-stream"),
+        contentType: ext === "apng" ? "image/apng" : uploadFile.type || (kind === "cover" ? "image/webp" : "application/octet-stream"),
       });
       if (error) throw error;
       const old = kind === "cover" ? b.cover_path : b.file_path;
@@ -743,6 +776,24 @@ const LibraryDrive = () => {
 
         {(isFile || isVideo) && (
           <div className="sm:max-w-md">{fileSection}</div>
+        )}
+
+        {isFile && fileKind === "image" && open.file_path && inExerciseTree(open.parent_id) && (
+          <div className="space-y-2 sm:max-w-md">
+            <Label htmlFor="drive-assign" className="block text-muted-foreground">Usar en un ejercicio de la biblioteca</Label>
+            <select
+              id="drive-assign"
+              value={assignTo}
+              onChange={(e) => setAssignTo(e.target.value)}
+              className="h-11 w-full rounded-full bg-secondary px-4 type-body text-foreground"
+            >
+              <option value="">Elegir ejercicio…</option>
+              {exerciseOptions.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+            </select>
+            <Button type="button" className="rounded-full" disabled={!assignTo || busy === open.id} onClick={() => assignToExercise(open)}>
+              {busy === open.id ? "Asignando…" : "Asignar al ejercicio"}
+            </Button>
+          </div>
         )}
 
         <div className="space-y-4">
