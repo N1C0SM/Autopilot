@@ -29,3 +29,11 @@ describe("borde limpio", () => {
     expect(a[(2 * 5 + 1) * 4 + 3]).toBe(0);
   });
 });
+
+import { upscaleFactor } from "./removeBackground";
+describe("ampliación de GIF pequeños", () => {
+  it("un GIF de 180 px se amplía x3 a 540 px; uno grande no se toca", () => {
+    expect(upscaleFactor(180, 180)).toBe(3);
+    expect(upscaleFactor(1200, 671)).toBe(1);
+  });
+});
