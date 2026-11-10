@@ -1,4 +1,4 @@
-import { ensureFolderPath, exerciseFolderPath, listExerciseFolders, listExerciseImages, publishDriveFile, uploadExerciseFile, type DriveExerciseFile, type DriveFolderOption } from "@/shared/lib/exerciseDrive";
+import { syncLibraryToDrive, ensureFolderPath, exerciseFolderPath, listExerciseFolders, listExerciseImages, publishDriveFile, uploadExerciseFile, type DriveExerciseFile, type DriveFolderOption } from "@/shared/lib/exerciseDrive";
 import { errorMessage, functionErrorMessage } from "@/shared/lib/runtimeValues";
 import { getExerciseTrackingConfig, TRACKING_MODES } from "@/shared/lib/exerciseTrackingConfig";
 import { useState, useEffect, useMemo, useRef, useCallback, type ReactNode } from "react";
@@ -1118,8 +1118,14 @@ const ExerciseLibrary = () => {
     setDialogOpen(false);
     setEditingExercise(null);
     fetchExercises();
+    if (payload.image_url) {
+      const { data: saved } = await supabase.from("exercises").select("id, name, exercise_type, muscle_group, image_url").eq("name", payload.name).limit(1);
+      if (saved?.length) void syncLibraryToDrive(saved as never).catch((e) => console.warn("Drive sync", e));
+    }
     setLoading(false);
   };
+
+  const [driveSyncing, setDriveSyncing] = useState(false);
 
   const deleteExercise = async (id: string) => {
     const target = exercises.find((exercise) => exercise.id === id);
@@ -1301,6 +1307,24 @@ const ExerciseLibrary = () => {
         onClick={() => { void hapticTap(); setEditingExercise(null); setDialogOpen(true); }}
       >
         Nuevo ejercicio
+      </Button>
+
+      <Button
+        type="button"
+        variant="outline"
+        size="lg"
+        className="w-full md:w-auto"
+        disabled={driveSyncing}
+        onClick={async () => {
+          setDriveSyncing(true);
+          try {
+            const r = await syncLibraryToDrive(exercises, ALL_MUSCLE_GROUPS);
+            toast.success(`Drive sincronizado: ${r.copied} copiados, ${r.moved} movidos${r.failed ? `, ${r.failed} con error` : ""}`);
+          } catch { toast.error("No se pudo sincronizar con el Drive"); }
+          setDriveSyncing(false);
+        }}
+      >
+        {driveSyncing ? "Sincronizando…" : "Sincronizar con Drive"}
       </Button>
 
       <div className="relative">

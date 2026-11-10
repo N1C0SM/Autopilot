@@ -137,3 +137,54 @@ export const assignDriveFileToExercise = async (drivePath: string, exerciseId: s
   if (error) throw error;
   return url;
 };
+
+export type SyncableExercise = { id: string; name: string; exercise_type?: string | null; muscle_group?: string | null; image_url?: string | null };
+
+/** Pure: carpeta destino de cada ejercicio (Ejercicios / Calistenia|Gimnasio / músculo). */
+export const plannedDriveLayout = (exercises: SyncableExercise[]) =>
+  exercises.map((e) => ({ id: e.id, path: exerciseFolderPath(e.exercise_type, e.muscle_group) }));
+
+/**
+ * Refleja la biblioteca en el Drive: crea Calistenia/Gimnasio con cada músculo,
+ * copia la imagen de cada ejercicio a su carpeta y mueve las que cambiaron de tipo o músculo.
+ * Cada archivo se identifica por `folder = exercise-<id>`, así no se duplica.
+ */
+export const syncLibraryToDrive = async (exercises: SyncableExercise[], muscles: readonly string[] = []) => {
+  for (const type of ["Calistenia", "Gimnasio"]) for (const m of muscles) await ensureFolderPath([EXERCISE_ROOT, type, m]);
+  const { data, error } = await supabase.from("library_books").select("id, parent_id, folder, file_path").like("folder", "exercise-%");
+  if (error) throw error;
+  const existing = new Map((data || []).map((r: { id: string; parent_id: string | null; folder: string; file_path: string | null }) => [r.folder, r]));
+  const folderCache = new Map<string, string>();
+  let copied = 0, moved = 0, failed = 0;
+  for (const ex of exercises) {
+    if (!ex.image_url) continue;
+    const path = exerciseFolderPath(ex.exercise_type, ex.muscle_group);
+    const key = path.join("/");
+    try {
+      if (!folderCache.has(key)) folderCache.set(key, await ensureFolderPath(path));
+      const folderId = folderCache.get(key)!;
+      const row = existing.get(`exercise-${ex.id}`);
+      if (row) {
+        if (row.parent_id !== folderId) {
+          await supabase.from("library_books").update({ parent_id: folderId, title: ex.name }).eq("id", row.id);
+          moved++;
+        }
+        continue;
+      }
+      const res = await fetch(ex.image_url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const ext = extOf(new URL(ex.image_url).pathname) || "png";
+      const drivePath = `ejercicios/${slug(ex.name)}-${ex.id.slice(0, 8)}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("library").upload(drivePath, blob, { upsert: true, contentType: ext === "apng" ? "image/apng" : blob.type || "image/png" });
+      if (upErr) throw upErr;
+      const { error: insErr } = await supabase.from("library_books").insert({
+        title: ex.name, folder: `exercise-${ex.id}`, kind: "file", is_folder: false, is_pack: false,
+        parent_id: folderId, file_path: drivePath, published: false, sort_order: 0,
+      });
+      if (insErr) throw insErr;
+      copied++;
+    } catch (e) { console.warn("Drive sync failed for", ex.name, e); failed++; }
+  }
+  return { copied, moved, failed };
+};
