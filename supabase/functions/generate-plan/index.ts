@@ -988,8 +988,13 @@ serve(async (req) => {
       supabase.from("physique_analysis").select("body_composition, created_at").eq("user_id", targetUserId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
     ]);
 
-    const onb = onbResult.data;
-    if (onbResult.error || !onb) throw new Error("Onboarding data not found");
+    // Sin cuestionario completo, perfil equilibrado de respaldo: nunca dejar al usuario sin rutina.
+    const onb = onbResult.data ?? {
+      user_id: targetUserId, weight: null, gender: null, goal: "general_health", specific_goal: "",
+      sports: "", availability: { days: 3, training_days: [1, 3, 5] }, intensity_level: 5, equipment_type: "Mixto",
+      primary_focus: "mixto", nutrition_preferences: "", allergies: "",
+    };
+    if (!onbResult.data) console.log(`[GENERATE-PLAN] No onboarding for ${targetUserId}; using fallback profile`);
 
     // Extract scan data if available (PRIORITIZE SCAN FOR WEIGHT ESTIMATION)
     const scanData = scanResult.data?.body_composition 
