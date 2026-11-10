@@ -62,7 +62,7 @@ export const isIOSNative = (): boolean => {
  * Cuando el CEO contrate Apple Developer y QA confirme el flujo
  * funcional, cambiar a `true` (o leer un env flag).
  */
-export const appleSignInEnabled = (): boolean => false;
+export const appleSignInEnabled = (): boolean => !isNativeApp() && !isMacApp();
 
 /** True dentro de la app nativa de macOS (macos/), que se identifica en el user agent. */
 export const isMacApp = (): boolean => {
