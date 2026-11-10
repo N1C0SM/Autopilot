@@ -1,6 +1,7 @@
 import { errorMessage } from "@/shared/lib/runtimeValues";
 import { useEffect, useRef, useState } from "react";
-import { assignDriveFileToExercise, ensureBaseExerciseFolders } from "@/shared/lib/exerciseDrive";
+import { assignDriveFileToExercise, ensureBaseExerciseFolders, onDriveDeleted, onDriveFileUploaded, onDriveRenamed, syncLibraryToDrive } from "@/shared/lib/exerciseDrive";
+import { MUSCLE_GROUPS } from "@/shared/types/training";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -319,7 +320,7 @@ const LibraryDrive = () => {
       .eq("id", b.id);
     setBusy(null);
     if (error) toast.error("No se pudo guardar");
-    else toast.success("Guardado");
+    else { toast.success("Guardado"); void onDriveRenamed(b.folder, b.title).catch(() => undefined); }
   };
 
   const rename = async (b: Book) => {
@@ -328,6 +329,7 @@ const LibraryDrive = () => {
     const { error } = await supabase.from("library_books").update({ title }).eq("id", b.id);
     if (error) { toast.error("No se pudo renombrar"); return; }
     patch(b.id, { title });
+    void onDriveRenamed(b.folder, title).catch(() => undefined);
   };
 
   /** Un elemento y todo lo que cuelga de él (las subcarpetas se borran en cascada). */
@@ -364,6 +366,7 @@ const LibraryDrive = () => {
       return false;
     }
     setBooks((arr) => arr.filter((b) => !all.includes(b.id)));
+    void onDriveDeleted(targets.map((t) => t.folder)).catch(() => undefined);
     setOpenId(null);
     setSelected([]);
     setSelecting(false);
@@ -433,6 +436,10 @@ const LibraryDrive = () => {
         if (removeError) console.warn("New file saved, but old file could not be removed", removeError);
       }
       patch(b.id, { [col]: value } as Partial<Book>);
+      if (kind === "file") {
+        const linked = await onDriveFileUploaded(b, value).catch(() => null);
+        if (linked) toast.success("Imagen vinculada a su ejercicio de la biblioteca");
+      }
       if (kind === "cover") setCovers((c) => ({ ...c, [b.id]: value }));
       toast.success(kind === "cover" ? "Portada reemplazada" : "Archivo subido correctamente");
     } catch (err: unknown) {
@@ -993,6 +1000,19 @@ const LibraryDrive = () => {
             </Button>
           ) : (
             <>
+              {path[0]?.title.trim().toLowerCase() === "ejercicios" && (
+                <Button variant="plain" disabled={busy === "sync"} onClick={async () => {
+                  void hapticTap(); setBusy("sync");
+                  try {
+                    const { data } = await supabase.from("exercises").select("id, name, exercise_type, muscle_group, image_url");
+                    const r = await syncLibraryToDrive((data || []) as never, [...MUSCLE_GROUPS, "Otro"]);
+                    toast.success(`Sincronizado: ${r.copied} copiados, ${r.moved} actualizados${r.failed ? `, ${r.failed} con error` : ""}`);
+                    await load();
+                  } catch { toast.error("No se pudo sincronizar"); } finally { setBusy(null); }
+                }}>
+                  {busy === "sync" ? "Sincronizando…" : "Sincronizar"}
+                </Button>
+              )}
               {items.length > 0 && (
                 <Button variant="plain" onClick={() => { void hapticTap(); setSelected([]); setSelecting(true); }}>
                   Seleccionar

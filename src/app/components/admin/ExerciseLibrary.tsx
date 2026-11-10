@@ -1,4 +1,4 @@
-import { syncLibraryToDrive, ensureFolderPath, exerciseFolderPath, listExerciseFolders, listExerciseImages, publishDriveFile, uploadExerciseFile, type DriveExerciseFile, type DriveFolderOption } from "@/shared/lib/exerciseDrive";
+import { removeExerciseFromDrive, syncLibraryToDrive, ensureFolderPath, exerciseFolderPath, listExerciseFolders, listExerciseImages, publishDriveFile, uploadExerciseFile, type DriveExerciseFile, type DriveFolderOption } from "@/shared/lib/exerciseDrive";
 import { errorMessage, functionErrorMessage } from "@/shared/lib/runtimeValues";
 import { getExerciseTrackingConfig, TRACKING_MODES } from "@/shared/lib/exerciseTrackingConfig";
 import { useState, useEffect, useMemo, useRef, useCallback, type ReactNode } from "react";
@@ -1110,6 +1110,8 @@ const ExerciseLibrary = () => {
 
     if (editingExercise) {
       const { error } = await supabase.from("exercises").update(payload).eq("id", editingExercise.id);
+      // Imagen quitada o cambiada: fuera la copia vieja del Drive (la nueva se copia abajo).
+      if (!error && (editingExercise.image_url || null) !== payload.image_url) await removeExerciseFromDrive([editingExercise.id]).catch(() => undefined);
       if (!error) { toast.success("Ejercicio actualizado"); } else { toast.error("Error al actualizar"); }
     } else {
       const { error } = await supabase.from("exercises").insert(payload);
@@ -1135,6 +1137,7 @@ const ExerciseLibrary = () => {
       return;
     }
     setExercises((e) => e.filter((ex) => ex.id !== id));
+    void removeExerciseFromDrive([id]).catch(() => undefined);
     // Higiene de medios: primero se borra la fila (revoca el acceso) y después
     // los objetos del bucket. Si la limpieza falla, el ejercicio ya no existe.
     const orphanPaths = [
@@ -1161,6 +1164,7 @@ const ExerciseLibrary = () => {
         const { error } = await supabase.from("exercises").delete().in("id", chunk);
         if (error) { errors += chunk.length; continue; }
         deleted += chunk.length;
+        void removeExerciseFromDrive(chunk).catch(() => undefined);
         setExercises((e) => e.filter((ex) => !chunk.includes(ex.id)));
         // Limpieza de medios en paralelo (no bloquea el flujo si falla)
         const orphanPaths = targets.flatMap((t) => [

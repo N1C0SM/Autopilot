@@ -198,3 +198,50 @@ export const syncLibraryToDrive = async (exercises: SyncableExercise[], muscles:
   }
   return { copied, moved, failed };
 };
+
+/* ───────── Sincronización total: cambios en un lado se reflejan en el otro ───────── */
+
+const linkedId = (folder?: string | null) => folder?.startsWith("exercise-") ? folder.slice("exercise-".length) : null;
+
+/** Biblioteca → Drive: quita del Drive el archivo ligado a esos ejercicios. */
+export const removeExerciseFromDrive = async (exerciseIds: string[]) => {
+  if (!exerciseIds.length) return;
+  const folders = exerciseIds.map((id) => `exercise-${id}`);
+  const { data } = await supabase.from("library_books").select("id, file_path").in("folder", folders);
+  const rows = (data || []) as { id: string; file_path: string | null }[];
+  if (!rows.length) return;
+  const paths = rows.map((r) => r.file_path).filter((p): p is string => !!p && !p.startsWith("http"));
+  if (paths.length) await supabase.storage.from("library").remove(paths);
+  await supabase.from("library_books").delete().in("id", rows.map((r) => r.id));
+};
+
+/** Drive → Biblioteca: renombrar el archivo renombra su ejercicio. */
+export const onDriveRenamed = async (folder: string | null | undefined, title: string) => {
+  const id = linkedId(folder);
+  if (id && title.trim()) await supabase.from("exercises").update({ name: title.trim() }).eq("id", id);
+};
+
+/** Drive → Biblioteca: borrar el archivo quita la imagen del ejercicio (el ejercicio y su historial se conservan). */
+export const onDriveDeleted = async (folders: (string | null | undefined)[]) => {
+  const ids = folders.map(linkedId).filter((x): x is string => !!x);
+  if (ids.length) await supabase.from("exercises").update({ image_url: null }).in("id", ids);
+  return ids.length;
+};
+
+/**
+ * Drive → Biblioteca: subir un archivo dentro de «Ejercicios» lo vincula.
+ * Si ya estaba ligado, reemplaza la imagen; si no, busca el ejercicio con el mismo nombre.
+ */
+export const onDriveFileUploaded = async (row: { id: string; title: string; folder: string; parent_id: string | null }, drivePath: string) => {
+  if (!IMAGE.test(drivePath)) return null;
+  const rows = await loadRows();
+  if (!row.parent_id || !exerciseTree(rows).ids.has(row.parent_id)) return null;
+  let id = linkedId(row.folder);
+  if (!id) {
+    const { data } = await supabase.from("exercises").select("id, name").ilike("name", row.title.trim()).limit(1);
+    id = (data?.[0] as { id: string } | undefined)?.id || null;
+  }
+  if (!id) return null;
+  await assignDriveFileToExercise(drivePath, id);
+  return id;
+};
