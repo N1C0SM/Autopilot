@@ -710,7 +710,8 @@ struct SessionExerciseCard: View {
                 VStack(spacing: 6) {
                     // En «ejercicio a ejercicio» la foto ya está en el carrusel de arriba: aquí solo
                     // el glifo de movimiento (Autopilot), nunca otra copia de la foto.
-                    if focused, let motionSpec { exerciseVisual(spec: motionSpec) }
+                    // Sin caja de trayectoria: la foto ya está arriba y las series suben (estilo Hevy).
+                    let _ = motionSpec
 
                     HStack(spacing: 8) {
                         Text("Serie").frame(width: 24)

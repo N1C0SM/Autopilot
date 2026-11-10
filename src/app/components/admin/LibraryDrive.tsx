@@ -407,7 +407,13 @@ const LibraryDrive = () => {
       if (kind === "file" && file.size > MAX_UPLOAD_BYTES) {
         throw new Error(`El archivo supera el límite de ${formatMb(MAX_UPLOAD_BYTES)}`);
       }
-      const uploadFile = kind === "cover" ? await toOptimizedWebp(file) : file;
+      // Imágenes dentro de Ejercicios/: sin fondo blanco (GIF → APNG transparente), igual que en la biblioteca.
+      const exerciseImage = kind === "file" && inExerciseTree(b.parent_id) && file.type.startsWith("image/") || (kind === "file" && inExerciseTree(b.parent_id) && /\.apng$/i.test(file.name));
+      const uploadFile = kind === "cover"
+        ? await toOptimizedWebp(file)
+        : exerciseImage
+          ? await import("@/shared/lib/removeBackground").then((m) => m.removeWhiteBackground(file)).catch(() => file)
+          : file;
       const ext = extOf(uploadFile.name) || (kind === "cover" ? "webp" : "bin");
       const path = `${b.folder}/${kind === "cover" ? "portada" : "archivo"}-${Date.now()}.${ext}`;
       const bucket = kind === "cover" ? "site-assets" : "library";
