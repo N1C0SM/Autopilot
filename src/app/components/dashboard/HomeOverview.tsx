@@ -517,6 +517,19 @@ const HomeOverview = ({
         </section>
       )}
 
+      {/* En móvil, acceso a la rutina semanal: editar, modo libre y ejercicios. */}
+      <button
+        type="button"
+        onClick={() => { void hapticTap(); onNavigate("training"); }}
+        className="flex min-h-14 w-full items-center justify-between rounded-[22px] bg-card px-4 py-3 text-left transition-opacity active:opacity-60 lg:hidden"
+      >
+        <span className="min-w-0">
+          <span className="block type-headline text-foreground">Tu rutina semanal</span>
+          <span className="block type-subhead text-muted-foreground">Editar, modo libre y ejercicios</span>
+        </span>
+        <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={2} aria-hidden="true" />
+      </button>
+
       {/* El diseño ancho de la app nativa muestra el resumen semanal y nutrición. */}
       <section className="hidden rounded-[22px] bg-card p-4 lg:block" aria-label={`Esta semana: ${sessionCount} de ${sessions.length} sesiones`}>
         <div className="flex items-center justify-between">
