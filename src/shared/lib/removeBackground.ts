@@ -91,6 +91,33 @@ export const upscaleRGBA = (src: Uint8ClampedArray | Uint8Array, w: number, h: n
   return { data: out, w: W, h: H };
 };
 
+/**
+ * Pure: come el halo claro que rodea la silueta (el contorno blanco de los GIF).
+ * En cada pasada, los píxeles claros y sin color que tocan lo transparente se vuelven
+ * transparentes o semitransparentes; el blanco encerrado dentro del atleta no se toca.
+ */
+export const erodeLightFringe = (data: Uint8ClampedArray | Uint8Array, w: number, h: number, passes = 3) => {
+  for (let pass = 0; pass < passes; pass++) {
+    const clear = new Uint8Array(w * h);
+    for (let i = 0; i < w * h; i++) clear[i] = data[i * 4 + 3] < 128 ? 1 : 0;
+    for (let i = 0; i < w * h; i++) {
+      const p = i * 4;
+      if (clear[i]) continue;
+      const x = i % w, y = (i / w) | 0;
+      const near = (x > 0 && clear[i - 1]) || (x < w - 1 && clear[i + 1]) || (y > 0 && clear[i - w]) || (y < h - 1 && clear[i + w]);
+      if (!near) continue;
+      const r = data[p], g = data[p + 1], b = data[p + 2];
+      const min = Math.min(r, g, b), max = Math.max(r, g, b);
+      if (max - min > 45 || min < 165) continue;
+      const a = Math.max(0, Math.min(1, (225 - min) / 60));
+      if (a <= 0.1) { data[p + 3] = 0; continue; }
+      const t = 140; // el borde que queda se oscurece hacia el gris del atleta
+      for (let c = 0; c < 3; c++) data[p + c] = Math.min(data[p + c], t + (data[p + c] - t) * a);
+      data[p + 3] = Math.round(data[p + 3] * a);
+    }
+  }
+};
+
 const loadBitmap = (file: Blob) => createImageBitmap(file);
 
 const staticToPng = async (file: Blob): Promise<Blob> => {
@@ -103,6 +130,7 @@ const staticToPng = async (file: Blob): Promise<Blob> => {
   ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height);
   const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
   clearWhiteBackground(img.data, canvas.width, canvas.height);
+  erodeLightFringe(img.data, canvas.width, canvas.height, f + 1);
   ctx.putImageData(img, 0, 0);
   return new Promise((ok, ko) => canvas.toBlob((b) => (b ? ok(b) : ko(new Error("No se pudo procesar la imagen"))), "image/png"));
 };
@@ -125,6 +153,7 @@ const gifToApng = async (file: Blob): Promise<Blob> => {
     }
     const big = upscaleRGBA(canvas, w, h, f);
     clearWhiteBackground(big.data, big.w, big.h);
+    erodeLightFringe(big.data, big.w, big.h, f + 1);
     out.push(big.data.buffer);
     delays.push(Math.max(20, f.delay || 100));
     if (f.disposalType === 2) for (let y = 0; y < height; y++) canvas.fill(0, ((top + y) * w + left) * 4, ((top + y) * w + left + width) * 4);
@@ -139,7 +168,7 @@ const apngToApng = async (file: Blob): Promise<Blob> => {
   const img = UPNG.decode(await file.arrayBuffer());
   const rgba = UPNG.toRGBA8(img);
   const f = upscaleFactor(img.width, img.height);
-  const frames = rgba.map((buf: ArrayBuffer) => { const big = upscaleRGBA(new Uint8Array(buf), img.width, img.height, f); clearWhiteBackground(big.data, big.w, big.h); return big.data.buffer; });
+  const frames = rgba.map((buf: ArrayBuffer) => { const big = upscaleRGBA(new Uint8Array(buf), img.width, img.height, f); clearWhiteBackground(big.data, big.w, big.h); erodeLightFringe(big.data, big.w, big.h, f + 1); return big.data.buffer; });
   const delays = rgba.length > 1 ? img.frames.map((f: { delay: number }) => f.delay || 100) : undefined;
   return new Blob([UPNG.encode(frames, img.width * f, img.height * f, 0, delays)], { type: "image/apng" });
 };

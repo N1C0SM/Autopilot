@@ -32,3 +32,4 @@
 
 - [x] Drive: nombre del archivo = nombre del ejercicio asignado
 - [x] iPhone/Mac: .apng animados en las fichas de ejercicio
+- [x] Quitar el borde blanco del recorte de GIFs de ejercicios
