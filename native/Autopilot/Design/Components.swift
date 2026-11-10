@@ -418,12 +418,24 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
         _imageURL = State(initialValue: cached != nil ? url : nil)
     }
 
+    /// Fotogramas de un .apng/.gif: se reproducen en bucle igual que en la web.
+    @State private var frames: AnimatedFrames?
+
     var body: some View {
         Group {
-            if let image { content(Image(platformImage: image)) } else { placeholder() }
+            if let frames {
+                TimelineView(.animation) { ctx in
+                    content(Image(platformImage: frames.frame(at: ctx.date)))
+                }
+            } else if let image { content(Image(platformImage: image)) } else { placeholder() }
         }
         .task(id: "\(url?.absoluteString ?? "")|\(Int(maxSide))") {
-            guard let url else { image = nil; imageURL = nil; return }
+            guard let url else { image = nil; imageURL = nil; frames = nil; return }
+            if AnimatedFrames.isAnimated(url) {
+                if frames?.url == url { return }
+                frames = await AnimatedFrames.load(url, maxSide: maxSide)
+                if frames != nil { return }
+            } else { frames = nil }
             // Misma URL ya resuelta (normalmente leída de caché): no hay nada que hacer.
             guard imageURL != url else { return }
             // La URL cambió (p. ej. del respaldo a la portada de la IA): se descarta la imagen vieja.
@@ -435,6 +447,62 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
             guard let loaded = await ImageCache.shared.load(url, maxSide: maxSide), !Task.isCancelled else { return }
             image = loaded; imageURL = url
         }
+    }
+}
+
+/// Animación .apng/.gif decodificada a fotogramas (sin pasar por el render de Supabase,
+/// que la congelaría en el primer fotograma). Igual que `isAnimatedImage` en la web.
+final class AnimatedFrames {
+    let url: URL
+    let images: [PlatformImage]
+    let delays: [Double]
+    let total: Double
+    init(url: URL, images: [PlatformImage], delays: [Double]) {
+        self.url = url; self.images = images; self.delays = delays
+        self.total = max(delays.reduce(0, +), 0.01)
+    }
+    private static let cache = NSCache<NSURL, AnimatedFrames>()
+
+    static func isAnimated(_ url: URL) -> Bool { ["apng", "gif"].contains(url.pathExtension.lowercased()) }
+
+    func frame(at date: Date) -> PlatformImage {
+        var t = date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: total)
+        for (i, d) in delays.enumerated() { if t < d { return images[i] }; t -= d }
+        return images[images.count - 1]
+    }
+
+    static func load(_ url: URL, maxSide: CGFloat) async -> AnimatedFrames? {
+        if let hit = cache.object(forKey: url as NSURL) { return hit }
+        guard let (data, _) = try? await URLSession.shared.data(from: url) else { return nil }
+        let result: AnimatedFrames? = await Task.detached(priority: .userInitiated) {
+            guard let src = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
+            let count = CGImageSourceGetCount(src)
+            guard count > 1 else { return nil }
+            let opts: [CFString: Any] = [kCGImageSourceCreateThumbnailFromImageAlways: true,
+                                         kCGImageSourceThumbnailMaxPixelSize: min(maxSide * 3, 900),
+                                         kCGImageSourceCreateThumbnailWithTransform: true]
+            var images: [PlatformImage] = [], delays: [Double] = []
+            for i in 0..<min(count, 240) {
+                guard let cg = CGImageSourceCreateThumbnailAtIndex(src, i, opts as CFDictionary) else { continue }
+                let props = CGImageSourceCopyPropertiesAtIndex(src, i, nil) as? [CFString: Any]
+                let png = props?[kCGImagePropertyPNGDictionary] as? [CFString: Any]
+                let gif = props?[kCGImagePropertyGIFDictionary] as? [CFString: Any]
+                let dict = png ?? gif
+                let delay = (dict?[kCGImagePropertyAPNGUnclampedDelayTime] as? Double)
+                    ?? (dict?[kCGImagePropertyGIFUnclampedDelayTime] as? Double)
+                    ?? (dict?[kCGImagePropertyAPNGDelayTime] as? Double)
+                    ?? (dict?[kCGImagePropertyGIFDelayTime] as? Double) ?? 0.1
+                #if os(iOS)
+                images.append(UIImage(cgImage: cg))
+                #else
+                images.append(NSImage(cgImage: cg, size: .zero))
+                #endif
+                delays.append(delay < 0.02 ? 0.1 : delay)
+            }
+            return images.count > 1 ? AnimatedFrames(url: url, images: images, delays: delays) : nil
+        }.value
+        if let result { cache.setObject(result, forKey: url as NSURL) }
+        return result
     }
 }
 

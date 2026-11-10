@@ -133,8 +133,14 @@ export const publishDriveFile = async (drivePath: string): Promise<string> => {
 
 export const assignDriveFileToExercise = async (drivePath: string, exerciseId: string) => {
   const url = await publishDriveFile(drivePath);
-  const { error } = await supabase.from("exercises").update({ image_url: url }).eq("id", exerciseId);
+  const { data: ex, error } = await supabase.from("exercises").update({ image_url: url }).eq("id", exerciseId).select("name").single();
   if (error) throw error;
+  // El archivo del Drive pasa a llamarse igual que su ejercicio y queda ligado a él.
+  const name = (ex as { name?: string } | null)?.name;
+  if (name) {
+    await supabase.from("library_books").update({ folder: `file-unlinked-${exerciseId}-${Date.now()}` }).eq("folder", `exercise-${exerciseId}`).neq("file_path", drivePath);
+    await supabase.from("library_books").update({ title: name, folder: `exercise-${exerciseId}` }).eq("file_path", drivePath);
+  }
   return url;
 };
 
@@ -151,9 +157,9 @@ export const plannedDriveLayout = (exercises: SyncableExercise[]) =>
  */
 export const syncLibraryToDrive = async (exercises: SyncableExercise[], muscles: readonly string[] = []) => {
   for (const type of ["Calistenia", "Gimnasio"]) for (const m of muscles) await ensureFolderPath([EXERCISE_ROOT, type, m]);
-  const { data, error } = await supabase.from("library_books").select("id, parent_id, folder, file_path").like("folder", "exercise-%");
+  const { data, error } = await supabase.from("library_books").select("id, parent_id, folder, file_path, title").like("folder", "exercise-%");
   if (error) throw error;
-  const existing = new Map((data || []).map((r: { id: string; parent_id: string | null; folder: string; file_path: string | null }) => [r.folder, r]));
+  const existing = new Map((data || []).map((r: { id: string; parent_id: string | null; folder: string; file_path: string | null; title?: string }) => [r.folder, r]));
   const folderCache = new Map<string, string>();
   let copied = 0, moved = 0, failed = 0;
   for (const ex of exercises) {
@@ -167,6 +173,10 @@ export const syncLibraryToDrive = async (exercises: SyncableExercise[], muscles:
       if (row) {
         if (row.parent_id !== folderId) {
           await supabase.from("library_books").update({ parent_id: folderId, title: ex.name }).eq("id", row.id);
+          moved++;
+        } else if (row.title !== ex.name) {
+          // Mismo nombre en Drive y en la biblioteca, siempre.
+          await supabase.from("library_books").update({ title: ex.name }).eq("id", row.id);
           moved++;
         }
         continue;

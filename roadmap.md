@@ -29,3 +29,6 @@
 - [x] Portada idéntica a la referencia (cabecera, hero, dispositivos, problema, por qué, planes, cierre)
 - [x] Paleta carbón cálido + champán en web, iPhone/Mac, imágenes compartidas y correos
 - [ ] Repaso visual pantalla a pantalla de app móvil, web, Mac, compartir y correos
+
+- [x] Drive: nombre del archivo = nombre del ejercicio asignado
+- [x] iPhone/Mac: .apng animados en las fichas de ejercicio
