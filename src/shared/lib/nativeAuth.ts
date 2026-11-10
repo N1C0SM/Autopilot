@@ -3,6 +3,13 @@ import { supabase } from "@/shared/integrations/supabase/client";
 import { lovable } from "@/shared/integrations/lovable";
 import { authRedirect } from "@/shared/lib/authRedirect";
 
+export const OAUTH_NEXT_KEY = "autopilot.oauth_next";
+
+/** La vuelta web entra siempre por `/auth/callback` limpio; el destino viaja aparte. */
+function rememberOAuthNext(next: string) {
+  try { sessionStorage.setItem(OAUTH_NEXT_KEY, next); } catch { /* sin almacenamiento */ }
+}
+
 /**
  * "Continuar con Apple".
  *
@@ -14,8 +21,9 @@ import { authRedirect } from "@/shared/lib/authRedirect";
  */
 export async function signInWithApple(next = "/dashboard"): Promise<{ error: Error | null }> {
   if (!Capacitor.isNativePlatform()) {
+    rememberOAuthNext(next);
     const result = await lovable.auth.signInWithOAuth("apple", {
-      redirect_uri: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+      redirect_uri: `${window.location.origin}/auth/callback`,
     });
     return { error: (result.error as Error) ?? null };
   }
@@ -46,9 +54,10 @@ export async function signInWithApple(next = "/dashboard"): Promise<{ error: Err
  * empaquetadas no lo muestran (`googleSignInEnabled`).
  */
 export async function signInWithGoogle(next = "/dashboard"): Promise<{ error: Error | null }> {
+  rememberOAuthNext(next);
   try {
     const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+      redirect_uri: `${window.location.origin}/auth/callback`,
     });
     return { error: (result.error as Error) ?? null };
   } catch (e) {

@@ -9,6 +9,7 @@ import { AuthHero, AuthSymbol } from "@/app/components/auth/AuthScreenParts";
 import { authSecondaryActionClass } from "@/app/components/auth/authFormHelpers";
 import { hapticNotify, hapticTap } from "@/shared/lib/native";
 import { track } from "@/shared/lib/analytics";
+import { OAUTH_NEXT_KEY } from "@/shared/lib/nativeAuth";
 import { safeNextPath } from "@/shared/lib/signupVerification";
 import { MailCheck, TriangleAlert } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
@@ -47,7 +48,13 @@ const AuthCallback = () => {
       const accessToken = param("access_token");
       const refreshToken = param("refresh_token");
       const type = param("type") || "signup";
-      const next = safeNextPath(param("next"), "/onboarding-choice");
+      let storedNext: string | null = null;
+      try {
+        storedNext = sessionStorage.getItem(OAUTH_NEXT_KEY);
+        sessionStorage.removeItem(OAUTH_NEXT_KEY);
+      } catch { /* sin almacenamiento */ }
+      // Google/Apple dejan su destino guardado; los enlaces de correo lo traen en la URL.
+      const next = safeNextPath(param("next") ?? storedNext, storedNext ? "/dashboard" : "/onboarding-choice");
       const providerError = param("error_description") || param("error");
 
       let error: { message: string } | null = null;
