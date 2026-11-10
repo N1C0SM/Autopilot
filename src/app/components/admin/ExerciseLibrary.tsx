@@ -44,7 +44,7 @@ import CatalogImport from "@/app/components/admin-library/CatalogImport";
  * edge function`exercise-video`; los medios con otra versión (o sin versión) se
  * marcan como"estilo antiguo" y se pueden regenerar.
  */
-const MEDIA_STYLE_VERSION = 2;
+const MEDIA_STYLE_VERSION = 3;
 
 /** Un vídeo con IA tarda 1–3 minutos; damos 10 de margen. */
 const VIDEO_DEADLINE_MS = 10 * 60 * 1000;

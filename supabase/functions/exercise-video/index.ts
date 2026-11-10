@@ -31,7 +31,7 @@ const STYLE = [
  * todos los medios anteriores quedarán marcados como "estilo antiguo" en el
  * admin (coincide con MEDIA_STYLE_VERSION en ExerciseLibrary.tsx).
  */
-const MEDIA_STYLE_VERSION = 2;
+const MEDIA_STYLE_VERSION = 3;
 
 /** Ángulo de cámara estandarizado según el patrón biomecánico. */
 function cameraAngle(name: string, group: string): string {
@@ -233,7 +233,9 @@ Deno.serve(async (req) => {
       // La imagen sale en 3:2 (límite del modelo) pero se muestra en un marco 16:9
       // junto al vídeo: pedimos que el cuerpo quede dentro de la banda central 16:9
       // para que el recorte sea idéntico en toda la biblioteca.
-      const prompt = `Professional exercise technique reference photograph of the exercise "${name}" (${group}). The athlete is captured at the key contracted position of the movement with perfect biomechanical form. Compose for a 16:9 crop: keep the entire athlete and any equipment inside the central 16:9 band of the frame, with only empty floor and background above and below it. ${angle} ${STYLE}`;
+      // Estilo anatómico propio (v3): atleta 3D en grises con el músculo trabajado resaltado,
+      // en alta resolución, sobre fondo carbón liso para integrarse en la app sin recortes.
+      const prompt = `High-resolution 3D anatomical fitness illustration of the exercise "${name}" (${group}). One realistic male athlete rendered as a detailed muscular anatomy figure in light grey and white tones, with fine visible muscle fibers and soft shading. The primary working muscles (${group}) are highlighted in deep red anatomical muscle color; everything else stays neutral grey. Show the key contracted position with perfect biomechanical form, equipment rendered in matte dark grey. ${angle} Solid flat charcoal background (#0A0A0C), no floor texture, no shadows on the background, full body inside the central 16:9 band. Crisp clean edges, studio-quality medical illustration look. No text, no labels, no watermarks, no logos, no extra limbs.`;
       // aiFetch hereda la cadena de proveedores (OpenAI admin -> Claude -> gateway).
       const r = await aiFetch(`${GATEWAY}/v1/images/generations`, {
         method: "POST",
