@@ -109,7 +109,10 @@ const publish = async (file: Blob, ext: string, type: string) => {
 };
 
 /** Sube el archivo al Drive (en la carpeta indicada) y devuelve la URL pública para el ejercicio. */
-export const uploadExerciseFile = async (file: File, folderId: string, title: string): Promise<string> => {
+export const uploadExerciseFile = async (original: File, folderId: string, title: string): Promise<string> => {
+  // Sin fondo blanco: el atleta queda sobre el carbón de la app (GIF → APNG transparente).
+  const { removeWhiteBackground } = await import("./removeBackground");
+  const file = await removeWhiteBackground(original).catch(() => original);
   const ext = extOf(file.name) || "png";
   const type = contentTypeOf(file);
   const drivePath = `ejercicios/${slug(title)}-${Date.now()}.${ext}`;
