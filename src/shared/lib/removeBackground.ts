@@ -142,24 +142,24 @@ const gifToApng = async (file: Blob): Promise<Blob> => {
   const w = gif.lsd.width, h = gif.lsd.height;
   const canvas = new Uint8ClampedArray(w * h * 4);
   const out: ArrayBuffer[] = [], delays: number[] = [];
-  const f = upscaleFactor(w, h);
-  for (const f of frames) {
-    const { left, top, width, height } = f.dims;
-    const before = f.disposalType === 3 ? canvas.slice() : null;
+  const factor = upscaleFactor(w, h);
+  for (const frame of frames) {
+    const { left, top, width, height } = frame.dims;
+    const before = frame.disposalType === 3 ? canvas.slice() : null;
     for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
       const s = (y * width + x) * 4, d = ((top + y) * w + left + x) * 4;
-      if (f.patch[s + 3] === 0) continue;
-      canvas[d] = f.patch[s]; canvas[d + 1] = f.patch[s + 1]; canvas[d + 2] = f.patch[s + 2]; canvas[d + 3] = 255;
+      if (frame.patch[s + 3] === 0) continue;
+      canvas[d] = frame.patch[s]; canvas[d + 1] = frame.patch[s + 1]; canvas[d + 2] = frame.patch[s + 2]; canvas[d + 3] = 255;
     }
-    const big = upscaleRGBA(canvas, w, h, f);
+    const big = upscaleRGBA(canvas, w, h, factor);
     clearWhiteBackground(big.data, big.w, big.h);
-    erodeLightFringe(big.data, big.w, big.h, f + 1);
+    erodeLightFringe(big.data, big.w, big.h, factor + 1);
     out.push(big.data.buffer);
-    delays.push(Math.max(20, f.delay || 100));
-    if (f.disposalType === 2) for (let y = 0; y < height; y++) canvas.fill(0, ((top + y) * w + left) * 4, ((top + y) * w + left + width) * 4);
+    delays.push(Math.max(20, frame.delay || 100));
+    if (frame.disposalType === 2) for (let y = 0; y < height; y++) canvas.fill(0, ((top + y) * w + left) * 4, ((top + y) * w + left + width) * 4);
     else if (before) canvas.set(before);
   }
-  const png = UPNG.encode(out, w * f, h * f, 0, delays);
+  const png = UPNG.encode(out, w * factor, h * factor, 0, delays);
   return new Blob([png], { type: "image/apng" });
 };
 

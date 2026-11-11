@@ -936,7 +936,7 @@ struct FocusViewer: View {
                         let sets = workout.draft.logs[item.name] ?? []
                         let done = !sets.isEmpty && sets.allSatisfy(\.done)
                         Button { go(i) } label: {
-                            WorkoutThumb(url: item.image_url, completed: done, size: 52)
+                            WorkoutThumb(url: loops.images[item.name] ?? item.image_url, completed: done, size: 52)
                                 .padding(2)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -978,7 +978,7 @@ struct FocusViewer: View {
             .scrollIndicators(.hidden)
             .scrollTargetBehavior(.paging)
             .scrollPosition(id: $page)
-            .frame(height: 220)
+            .frame(height: 140)
             .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             .overlay {
                 // El movimiento en bucle corto encima de la foto (que hace de portada mientras
@@ -1033,8 +1033,8 @@ struct FocusViewer: View {
     @ViewBuilder private func photoPage(_ item: GymExercise) -> some View {
         ZStack {
             Palette.card
-            if let url = item.image_url.flatMap(URL.init(string:)) {
-                CachedAsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
+            if let url = (loops.images[item.name] ?? item.image_url).flatMap(URL.init(string:)) {
+                CachedAsyncImage(url: url, maxSide: 540) { $0.resizable().scaledToFit() } placeholder: { Palette.secondary }
                     .clipped()
             } else {
                 Image(systemName: "dumbbell").font(.inter(.title)).foregroundStyle(Palette.muted)

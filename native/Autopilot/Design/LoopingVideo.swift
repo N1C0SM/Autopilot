@@ -12,17 +12,19 @@ import AppKit
 final class ExerciseLoops: ObservableObject {
     static let shared = ExerciseLoops()
     @Published private(set) var urls: [String: URL] = [:]
+    @Published private(set) var images: [String: String] = [:]
     private var asked: Set<String> = []
 
     func load(_ names: [String]) async {
         let missing = Array(Set(names).subtracting(asked))
         guard !missing.isEmpty else { return }
         asked.formUnion(missing)
-        struct R: Decodable { let name: String; let video_url: String? }
+        struct R: Decodable { let name: String; let video_url: String?; let image_url: String? }
         do {
-            let rows: [R] = try await Backend.client.from("exercises").select("name, video_url")
+            let rows: [R] = try await Backend.client.from("exercises").select("name, video_url, image_url")
                 .in("name", values: missing).execute().value
             for r in rows {
+                if let image = r.image_url, !image.isEmpty { images[r.name] = image }
                 guard let s = r.video_url, let u = URL(string: s),
                       ["mp4", "mov", "m4v"].contains(u.pathExtension.lowercased()) else { continue }
                 urls[r.name] = u
@@ -71,7 +73,7 @@ private struct PlayerLayerView: UIViewRepresentable {
     func makeUIView(context: Context) -> Host {
         let v = Host()
         v.isUserInteractionEnabled = false
-        v.playerLayer.videoGravity = .resizeAspectFill
+        v.playerLayer.videoGravity = .resizeAspect
         v.playerLayer.player = player
         return v
     }
@@ -89,7 +91,7 @@ private struct PlayerLayerView: NSViewRepresentable {
     func makeNSView(context: Context) -> Host {
         let v = Host()
         let l = AVPlayerLayer(player: player)
-        l.videoGravity = .resizeAspectFill
+        l.videoGravity = .resizeAspect
         v.layer = l
         v.wantsLayer = true
         return v

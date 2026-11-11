@@ -339,10 +339,10 @@ final class ImageCache {
     }
 
     /// Copia en disco de la miniatura ya reducida: al reabrir la app las fotos salen de aquí,
-    /// no de la red (y ocupa poco: se guarda en JPEG, no el original).
+    /// no de la red. PNG conserva el canal alfa de los ejercicios.
     private static func diskURL(_ url: URL, maxSide: CGFloat) -> URL? {
         guard let base = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else { return nil }
-        let dir = base.appendingPathComponent("images", isDirectory: true)
+        let dir = base.appendingPathComponent("images-alpha-v2", isDirectory: true)
         if !FileManager.default.fileExists(atPath: dir.path) {
             try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         }
@@ -351,7 +351,7 @@ final class ImageCache {
             hash ^= UInt64(byte)
             hash = hash &* 0x0000_0100_0000_01b3
         }
-        return dir.appendingPathComponent("\(String(hash, radix: 16)).jpg")
+        return dir.appendingPathComponent("\(String(hash, radix: 16)).png")
     }
 
     private static func fromDisk(_ url: URL, maxSide: CGFloat) async -> PlatformImage? {
@@ -372,12 +372,12 @@ final class ImageCache {
         guard let file = diskURL(url, maxSide: maxSide) else { return }
         Task.detached(priority: .utility) {
             #if os(iOS)
-            guard let data = image.jpegData(compressionQuality: 0.82) else { return }
+            guard let data = image.pngData() else { return }
             #else
             var rect = CGRect(origin: .zero, size: image.size)
             guard let cg = image.cgImage(forProposedRect: &rect, context: nil, hints: nil) else { return }
             let rep = NSBitmapImageRep(cgImage: cg)
-            guard let data = rep.representation(using: .jpeg, properties: [.compressionFactor: 0.82]) else { return }
+            guard let data = rep.representation(using: .png, properties: [:]) else { return }
             #endif
             try? data.write(to: file, options: .atomic)
         }
@@ -420,12 +420,17 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
 
     /// Fotogramas de un .apng/.gif: se reproducen en bucle igual que en la web.
     @State private var frames: AnimatedFrames?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Group {
             if let frames {
-                TimelineView(.animation) { ctx in
-                    content(Image(platformImage: frames.frame(at: ctx.date)))
+                if reduceMotion, let first = frames.images.first {
+                    content(Image(platformImage: first))
+                } else {
+                    TimelineView(.animation) { ctx in
+                        content(Image(platformImage: frames.frame(at: ctx.date)))
+                    }
                 }
             } else if let image { content(Image(platformImage: image)) } else { placeholder() }
         }

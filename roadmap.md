@@ -1,6 +1,8 @@
 # Roadmap
 
 ## Peticiones actuales
+- [x] Tracker: visor de 140, encuadre completo, caché PNG transparente y crunch APNG (12 fotogramas); 23 pruebas específicas y lectura en Biblioteca verificadas.
+- [ ] Verificar tracker en iPhone/Mac tras recompilar (requiere Xcode/dispositivo); prueba completa web bloqueada por sesión admin sin acceso al tracker. La suite general de paridad reporta 15 fallos fuera de las pruebas específicas.
 - [ ] Aplicar los 29 ejercicios y los siete días de THE 0.1% PROTOCOL a la cuenta indicada y verificar la lectura.
 - [ ] Rematar telemetría de Progreso, botones de Ajustes, estados vacíos y proporciones de escritorio en web e iPhone/Mac.
 - [ ] Priorizar fotos reales en nativo, regenerar Xcode si está disponible y verificar pruebas y capturas sin publicar.
