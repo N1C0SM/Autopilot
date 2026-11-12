@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { ADMIN_NAV_GROUPS } from "@/app/components/admin/adminNav";
@@ -824,6 +824,22 @@ describe("paridad web ↔ apps nativas", () => {
     expect(web).toContain('"get_brand_photos_public"');
     expect(app).toContain('rpc("get_brand_photos_public")');
     expect(read("native/Autopilot/App/AutopilotApp.swift")).toContain("BrandPhotos.shared.refresh(");
+    // Con sesión, la petición del arranque (cancelada al restaurarse la sesión) no puede tragarse la buena,
+    // y mientras no hay URL sale una foto propia, en la web y en la app.
+    expect(app).toMatch(/if !force \{\s*if refreshing \{ return \}/);
+    expect(app).toContain('Bundle.main.url(forResource: "brand-fallback", withExtension: "jpg")');
+    expect(existsSync(resolve(root, "native/Autopilot/Design/brand-fallback.jpg"))).toBe(true);
+    expect(web).toContain('import fallbackPhoto from "@/shared/assets/landing/hero-athlete.jpg"');
+    expect(read("native/Autopilot/Features/Progress/ProgressScreen.swift")).toContain(".task { await BrandPhotos.shared.refresh() }");
+    // Si su ejercicio ya no está, se elige uno parecido con las mismas palabras en la web, la app y la base de datos.
+    const sql = read("drizzle/migrations/0021_brand_photos_by_slot.sql");
+    for (const word of ["dominada", "mancuerna", "goblet", "flexi", "zancada", "press", "sentadilla"]) {
+      expect(web).toContain(`"${word}"`);
+      expect(app).toContain(`"${word}"`);
+      expect(sql).toContain(`%${word}%`);
+    }
+    expect(app).toContain("static let order: [Kind] = [.pullupBar, .dumbbells, .home, .gym]");
+    expect(sql).toMatch(/'pullupBar', 1[\s\S]*'dumbbells', 2[\s\S]*'home', 3[\s\S]*'gym', 4/);
   });
 
   it("Hoy: «Entreno vacío» bajo la sesión y «Editar» en «Tu programa», en la web y en la app", () => {

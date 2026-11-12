@@ -125,6 +125,8 @@ struct ProgressScreen: View {
             // `task(id:)` reinicia la carga al cambiar de cuenta y no repite el trabajo al volver a la pestaña:
             // si hay caché, se pinta al instante y el refresco va en segundo plano.
             .task(id: session.userId) { await model.load(userId: session.userId) }
+            // Red de seguridad: si las fotos de marca aún no han llegado, se vuelven a pedir aquí.
+            .task { await BrandPhotos.shared.refresh() }
             .onChange(of: tab) { _, newValue in
                 // El cambio de pestaña no lanza cargas: los datos ya están en el snapshot y «Físico»
                 // se precarga en segundo plano. Solo se reintenta si esa precarga falló.
