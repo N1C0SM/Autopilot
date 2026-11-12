@@ -6,7 +6,7 @@ import Supabase
 /// biblioteca. Su URL cambia cada vez que el admin regenera la foto o la pasa a WebP, y la anterior
 /// se borra del bucket: con URLs fijas, Progreso, Hoy y la bienvenida se quedaron sin foto. Se piden
 /// por id (`get_brand_photos_public`, también sin sesión) y se recuerdan en el dispositivo; hasta
-/// saberlas, cada vista enseña su fondo de reserva.
+/// saberlas, sale la foto de reserva incluida en la app.
 @Observable
 final class BrandPhotos {
     enum Kind: String, CaseIterable {
@@ -33,16 +33,24 @@ final class BrandPhotos {
         urls = (UserDefaults.standard.dictionary(forKey: Self.storageKey) as? [String: String]) ?? [:]
     }
 
-    /// URL actual como texto ("" hasta saberla). Leerla en `body` repinta la vista cuando llega.
-    static func string(_ kind: Kind) -> String { shared.urls[kind.rawValue] ?? "" }
-    static func url(_ kind: Kind) -> URL? { URL(string: string(kind)) }
+    /// Foto propia incluida en la app (la misma que usa la web de reserva): sale mientras no se sabe
+    /// la URL o si no se puede pedir, para que una portada nunca quede vacía.
+    private static let fallback = Bundle.main.url(forResource: "brand-fallback", withExtension: "jpg")
 
-    /// Pide las URLs actuales: una vez por arranque y, si falta alguna, como mucho cada minuto
-    /// (`force` al cambiar de cuenta, porque con sesión también vale la tabla).
+    /// URL actual como texto. Leerla en `body` repinta la vista cuando llega.
+    static func string(_ kind: Kind) -> String { url(kind)?.absoluteString ?? "" }
+    static func url(_ kind: Kind) -> URL? { shared.urls[kind.rawValue].flatMap(URL.init(string:)) ?? fallback }
+
+    /// Pide las URLs actuales: una vez por arranque y, si falta alguna, como mucho cada minuto.
+    /// `force` (al entrar con una cuenta) pide aunque haya otra petición en curso: la del arranque
+    /// sin sesión se cancela al restaurarse la sesión y antes se tragaba esta, así que las fotos
+    /// no llegaban nunca.
     @MainActor func refresh(force: Bool = false) async {
-        guard !refreshing else { return }
         let complete = Kind.allCases.allSatisfy { urls[$0.rawValue] != nil }
-        if !force, let last = lastAttempt, complete || Date().timeIntervalSince(last) < 60 { return }
+        if !force {
+            if refreshing { return }
+            if let last = lastAttempt, complete || Date().timeIntervalSince(last) < 60 { return }
+        }
         refreshing = true
         lastAttempt = Date()
         defer { refreshing = false }
@@ -55,6 +63,8 @@ final class BrandPhotos {
             .in("id", values: Kind.allCases.map(\.exerciseId)).execute().value {
             rows = found
         }
+        // Cancelada (cambio de cuenta): manda la petición nueva, y esta no cuenta como intento.
+        if Task.isCancelled { lastAttempt = nil; return }
         var next = urls
         for kind in Kind.allCases {
             if let url = rows.first(where: { $0.id.uuidString.lowercased() == kind.exerciseId })?.image_url, !url.isEmpty {
