@@ -75,11 +75,7 @@ struct WelcomeView: View {
 
                 // Logo + nombre
                 HStack(spacing: 14) {
-                    Image("Logo")
-                        .resizable().scaledToFit()
-                        .frame(width: 52, height: 52)
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        .accessibilityHidden(true)
+                    AppIconMark(size: 52)
                     VStack(alignment: .leading, spacing: 1) {
                         Text("AUTOPILOT")
                             .font(.inter(size: 13, weight: .black))
@@ -689,8 +685,8 @@ struct CreateAccountView: View {
                                 .foregroundStyle(Palette.gold).accessibilityHidden(true)
                         } else {
                             // Logo con AUTOPILOT, como en el registro web (`AuthAppMark`)
-                            VStack(spacing: 10) {
-                                BrandMark(size: 44)
+                            VStack(spacing: 14) {
+                                AppIconMark(size: 64)
                                 Text("AUTOPILOT").font(.inter(size: 20, weight: .bold)).tracking(1.3)
                             }
                             .padding(.bottom, 10)

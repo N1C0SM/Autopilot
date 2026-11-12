@@ -263,14 +263,14 @@ describe("paridad web ↔ apps nativas", () => {
   });
 
   it("Rediseño compartido: logo con AUTOPILOT, campos con icono, insignia Plus, semana en círculos y Progreso en dorado, igual en la web y en la app", () => {
-    // Acceso: la «A» con rayo y la palabra AUTOPILOT; campos con icono y ojo en la contraseña.
+    // Acceso: el icono de la app y la palabra AUTOPILOT; campos con icono y ojo en la contraseña.
     const authWeb = read("src/app/components/auth/AuthScreenParts.tsx");
     const loginApp = read("native/Autopilot/Features/Auth/LoginView.swift");
     const signupApp = read("native/Autopilot/Features/Auth/OnboardingView.swift");
-    expect(authWeb).toContain("<BrandMark size={44} />");
+    expect(authWeb).toContain("<AppIconMark size={64} />");
     expect(authWeb).toContain("AUTOPILOT</span>");
     for (const app of [loginApp, signupApp]) {
-      expect(app).toContain("BrandMark(size: 44)");
+      expect(app).toContain("AppIconMark(size: 64)");
       expect(app).toContain('Text("AUTOPILOT")');
     }
     expect(read("src/app/pages/Login.tsx")).toContain("icon={LockKeyhole}");
@@ -472,21 +472,35 @@ describe("paridad web ↔ apps nativas", () => {
     expect(read("src/app/pages/Dashboard.tsx")).toContain("withSessionIdentity(dayPlans, day, identity)");
   });
 
-  it("«¿Quién entrena?» y el icono: misma cabecera que el login y la «A» plana de la marca, en la web y en la app", () => {
+  it("«¿Quién entrena?» y el icono: misma cabecera que el login y el icono con relieve de la marca, en la web y en la app", () => {
     const web = read("src/shared/components/native/WhoIsTraining.tsx");
     const app = read("native/Autopilot/Features/Auth/WhoIsTrainingView.swift");
     for (const text of ["¿Quién entrena?", "Elige tu cuenta. Marca una como predeterminada y entrará sola al abrir la app.", "Añadir cuenta", "Otra persona en este dispositivo", "AUTOPILOT"]) {
       expect(web, text).toContain(text);
       expect(app, text).toContain(text);
     }
-    expect(web).toContain("<BrandMark size={44} />");
-    expect(app).toContain("BrandMark(size: 44)");
+    expect(web).toContain("<AppIconMark size={64} />");
+    expect(app).toContain("AppIconMark(size: 64)");
     expect(web).not.toContain("radial-gradient");
     // Los iconos salen de la misma geometría que `BrandMark`, con el negro y el dorado de la app.
     const icons = read("scripts/gen-icon.mjs");
     expect(icons).toContain('path("BRAND_A")');
     expect(icons).toContain('const GOLD = "#D8B25E"');
     expect(read("native/Autopilot/Assets.xcassets/LaunchBackground.colorset/Contents.json")).toContain('"red":"0.042"');
+    // El icono con relieve de las pantallas sale del mismo generador en los dos lados, con las
+    // esquinas del iPhone; la bienvenida lo usa a 52 y el arranque, en el sitio del splash (110 de 240).
+    const markWeb = read("src/shared/components/ui/app-icon-mark.tsx");
+    const markApp = read("native/Autopilot/Design/Components.swift");
+    expect(markWeb).toContain('from "@/shared/assets/autopilot-logo.png"');
+    expect(markApp).toMatch(/struct AppIconMark: View[\s\S]*?Image\("Logo"\)/);
+    expect(markWeb).toContain("size * 0.2237");
+    expect(markApp).toContain("size * 0.2237");
+    expect(icons).toContain('"src/shared/assets/autopilot-logo.png"');
+    expect(icons).toContain('"native/Autopilot/Assets.xcassets/Logo.imageset/logo.png"');
+    expect(read("src/app/pages/Welcome.tsx")).toContain("<AppIconMark size={52} />");
+    expect(read("native/Autopilot/Features/Auth/OnboardingView.swift")).toContain("AppIconMark(size: 52)");
+    expect(icons).toContain("1024 * 110 / 240");
+    expect(read("native/Autopilot/Features/Shell/RootView.swift")).toContain("AppIconMark(size: 110)");
   });
 
   it("App fluida: pestañas sin fundido, «Empezar» sin esperas fijas y Hoy pintado desde la caché en frío", () => {

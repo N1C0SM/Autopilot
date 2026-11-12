@@ -141,8 +141,9 @@ struct RootView: View {
                 NutritionView()
                 #endif
             } else if !session.ready {
-                // Arranque con la firma de marca: la misma «A» del splash, con el rayo latiendo.
-                BrandMark(size: 72, beat: true)
+                // Arranque: el mismo icono y en el mismo sitio que la pantalla de arranque (LaunchLogo,
+                // 110 pt de 240), así no hay salto entre el splash y la app.
+                AppIconMark(size: 110)
                     .frame(maxWidth: .infinity, maxHeight: .infinity).screenBackground()
                     .accessibilityLabel("Autopilot")
             } else if session.showPicker {

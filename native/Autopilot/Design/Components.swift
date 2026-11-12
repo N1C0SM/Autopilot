@@ -596,6 +596,24 @@ struct BrandMark: View {
     }
 }
 
+/// El icono de la app (cuadro negro con relieve y la «A» dorada, de scripts/gen-icon.mjs) para el
+/// arranque, el acceso, el registro, la bienvenida y «¿Quién entrena?». Esquinas del iPhone (22,37 %)
+/// y sombra suave; igual que `AppIconMark` en la web.
+struct AppIconMark: View {
+    var size: CGFloat = 64
+
+    var body: some View {
+        Image("Logo")
+            .resizable()
+            .interpolation(.high)
+            .scaledToFit()
+            .frame(width: size, height: size)
+            .clipShape(RoundedRectangle(cornerRadius: size * 0.2237, style: .continuous))
+            .shadow(color: .black.opacity(0.6), radius: size * 0.12, y: size * 0.1)
+            .accessibilityHidden(true)
+    }
+}
+
 /// Polígono en coordenadas 0–100 recortado al cuadro 10…90 × 8…88 (igual que el viewBox web).
 private struct BrandShape: Shape {
     let points: [(CGFloat, CGFloat)]

@@ -1,5 +1,5 @@
 import { useState, type ComponentType, type ReactNode } from "react";
-import { BrandMark } from "@/shared/components/ui/brand-mark";
+import { AppIconMark } from "@/shared/components/ui/app-icon-mark";
 import { cn } from "@/shared/lib/utils";
 
 /**
@@ -8,11 +8,11 @@ import { cn } from "@/shared/lib/utils";
  * arriba, campos en una lista agrupada y una sola acción dorada abajo.
  */
 
-/** Logo de la app: la «A» con rayo en dorado y la palabra AUTOPILOT debajo (igual en iPhone y Mac). */
+/** Logo de la app: el icono con relieve y la palabra AUTOPILOT debajo (igual en iPhone y Mac). */
 export const AuthAppMark = ({ className }: { className?: string }) => (
   <div className={cn("mx-auto flex flex-col items-center", className)}>
-    <BrandMark size={44} />
-    <span className="mt-2.5 text-[20px] font-bold leading-none tracking-[0.06em] text-foreground">AUTOPILOT</span>
+    <AppIconMark size={64} />
+    <span className="mt-3.5 text-[20px] font-bold leading-none tracking-[0.06em] text-foreground">AUTOPILOT</span>
   </div>
 );
 

@@ -23,9 +23,9 @@ struct LoginView: View {
         ScrollView {
             VStack(spacing: 28) {
                 VStack(spacing: 14) {
-                    // Logo: la «A» con rayo y AUTOPILOT debajo (igual que `AuthAppMark` en la web)
-                    VStack(spacing: 10) {
-                        BrandMark(size: 44)
+                    // Logo: el icono de la app y AUTOPILOT debajo (igual que `AuthAppMark` en la web)
+                    VStack(spacing: 14) {
+                        AppIconMark(size: 64)
                         Text("AUTOPILOT")
                             .font(.inter(size: 20, weight: .bold))
                             .tracking(1.3)

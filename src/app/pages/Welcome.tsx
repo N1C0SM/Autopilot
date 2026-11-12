@@ -4,7 +4,7 @@ import { useAuth } from "@/shared/contexts/AuthContext";
 import { Helmet } from "react-helmet-async";
 import { hapticTap } from "@/shared/lib/native";
 import { BRAND_PHOTOS, useBrandPhotos } from "@/shared/lib/brandPhotos";
-import { BrandMark } from "@/shared/components/ui/brand-mark";
+import { AppIconMark } from "@/shared/components/ui/app-icon-mark";
 
 const Welcome = () => {
   useBrandPhotos(); // repinta las fotos de marca cuando llega su URL actual
@@ -47,9 +47,7 @@ const Welcome = () => {
 
       <main className="relative mx-auto flex w-full max-w-[420px] flex-1 flex-col justify-end px-6 pb-4">
         <div className="mb-5 flex items-center gap-3.5">
-          <span aria-hidden="true" className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-[14px] bg-black/40">
-            <BrandMark size={38} />
-          </span>
+          <AppIconMark size={52} />
           <div>
             <p className="text-[13px] font-black tracking-[0.18em] text-white">AUTOPILOT</p>
             <p className="mt-0.5 text-[13px] font-medium text-white/50">Entrenamiento adaptativo</p>

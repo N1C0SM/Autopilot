@@ -18,8 +18,8 @@ struct WhoIsTrainingView: View {
             VStack(spacing: 28) {
                 // Misma cabecera que «Hola de nuevo» (LoginView y `WhoIsTraining` en la web).
                 VStack(spacing: 14) {
-                    VStack(spacing: 10) {
-                        BrandMark(size: 44)
+                    VStack(spacing: 14) {
+                        AppIconMark(size: 64)
                         Text("AUTOPILOT").font(.inter(size: 20, weight: .bold)).tracking(1.3)
                     }
                     .padding(.bottom, 10)

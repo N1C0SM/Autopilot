@@ -8,7 +8,7 @@ import { clearAnonScanId } from "@/shared/lib/scanAttribution";
 import { clearPendingScanContext } from "@/shared/lib/pendingScan";
 import { clearConfiguratorDraft } from "@/shared/lib/configuratorDraft";
 import { hapticSelection, hapticTap } from "@/shared/lib/native";
-import { BrandMark } from "@/shared/components/ui/brand-mark";
+import { AppIconMark } from "@/shared/components/ui/app-icon-mark";
 
 const SHOWN = "autopilot.whoIsTraining.shown";
 
@@ -137,10 +137,10 @@ export default function WhoIsTraining() {
     <div role="dialog" aria-modal="true" aria-labelledby="who-title"
       className="fixed inset-0 z-[80] flex flex-col items-center overflow-y-auto bg-background px-5 pb-[max(2rem,var(--safe-bottom))] pt-[max(3.5rem,var(--safe-top))] animate-in fade-in duration-300">
       <div className="my-auto flex w-full max-w-md flex-col items-center">
-      {/* Misma cabecera que «Hola de nuevo»: la «A» con rayo, AUTOPILOT y el título. */}
+      {/* Misma cabecera que «Hola de nuevo»: el icono de la app, AUTOPILOT y el título. */}
       <div className="flex flex-col items-center" aria-label="Autopilot" role="img">
-        <BrandMark size={44} />
-        <span aria-hidden="true" className="mt-2.5 text-[20px] font-bold leading-none tracking-[0.06em] text-foreground">AUTOPILOT</span>
+        <AppIconMark size={64} />
+        <span aria-hidden="true" className="mt-3.5 text-[20px] font-bold leading-none tracking-[0.06em] text-foreground">AUTOPILOT</span>
       </div>
       <h1 id="who-title" className="mt-6 text-center text-[28px] font-bold leading-tight tracking-[-0.02em]">
         {asking ? asking.name : editing ? "Gestionar cuentas" : "¿Quién entrena?"}
