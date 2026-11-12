@@ -56,6 +56,7 @@ const ProgressScan = lazy(() => import("@/app/components/scan/ProgressScan"));
 const PlanEditor = lazy(() => import("@/app/components/dashboard/PlanEditor"));
 const FreeSessionBuilder = lazy(() => import("@/app/components/dashboard/FreeSessionBuilder"));
 const ExerciseLibrarySheet = lazy(() => import("@/app/components/library/ExerciseLibrarySheet"));
+const ExerciseLibraryPage = lazy(() => import("@/app/components/library/ExerciseLibrarySheet").then((m) => ({ default: m.ExerciseLibraryPage })));
 
 const SectionFallback = () => (
   <Skeleton className="min-h-40 w-full rounded-media bg-card" aria-hidden />
@@ -155,12 +156,12 @@ const Dashboard = () => {
   const [searchParams] = useSearchParams();
   const [section, setSectionState] = useState<MobileTab>(() => {
     const fromParam = searchParams.get("section");
-    if (fromParam && ["home", "training", "nutrition", "chat", "progress", "settings", "resources"].includes(fromParam)) {
+    if (fromParam && ["home", "training", "library", "nutrition", "chat", "progress", "settings", "resources"].includes(fromParam)) {
       return fromParam as MobileTab;
     }
     try {
       const saved = sessionStorage.getItem("autopilot_section");
-      if (saved && ["home", "training", "nutrition", "chat", "progress", "settings", "resources"].includes(saved)) return saved as MobileTab;
+      if (saved && ["home", "training", "library", "nutrition", "chat", "progress", "settings", "resources"].includes(saved)) return saved as MobileTab;
     } catch { /* storage no disponible */ }
     return "home";
   });
@@ -203,7 +204,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     const sec = searchParams.get("section");
-    if (sec && ["home", "training", "nutrition", "chat", "progress", "settings", "resources"].includes(sec)) {
+    if (sec && ["home", "training", "library", "nutrition", "chat", "progress", "settings", "resources"].includes(sec)) {
       setSectionState(sec as MobileTab);
     }
     const vw = searchParams.get("view");
@@ -578,6 +579,7 @@ const Dashboard = () => {
   const SECTION_LABELS: Record<MobileTab, string> = {
     home: "Inicio",
     training: "Entrenamiento",
+    library: "Ejercicios",
     nutrition: "Nutrición",
     chat: "Chat",
     settings: "Ajustes",
@@ -588,6 +590,7 @@ const Dashboard = () => {
   const SECTION_HINTS: Record<MobileTab, string> = {
     home: "Tu entreno de hoy y lo que toca comer",
     training: "Tus sesiones en orden, el día que te venga bien",
+    library: "Técnica, músculos y variantes de cada ejercicio",
     nutrition: "Tus macros y comidas del día",
     chat: "Habla con tu entrenador y envía fotos o vídeos",
     progress: "Fotos, peso y evolución semanal",
@@ -599,6 +602,7 @@ const Dashboard = () => {
   const MOBILE_TITLES: Record<MobileTab, string> = {
     home: "Hoy",
     training: "Entrenar",
+    library: "Ejercicios",
     nutrition: "Nutrición",
     chat: "Chat",
     progress: "Progreso",
@@ -606,7 +610,7 @@ const Dashboard = () => {
     resources: "Recursos",
   };
   // En Hoy el título grande es el saludo de HomeOverview: la barra solo muestra "Hoy" al pasarlo.
-  const LARGE_TITLE_TABS: MobileTab[] = ["training", "nutrition", "chat", "progress", "settings", "resources"];
+  const LARGE_TITLE_TABS: MobileTab[] = ["training", "library", "nutrition", "chat", "progress", "settings", "resources"];
   // En el móvil la conversación ocupa justo el alto que queda bajo el título, con el campo de texto a la vista.
   const chatFills = isMobile && consumerPlan === "coach" && coachAssigned;
   // Ayuda de la sección: en escritorio va junto al título de la barra.
@@ -705,6 +709,8 @@ const Dashboard = () => {
               }
               setSection(s as MobileTab);
             }}
+            onEmptyWorkout={() => setFreeOpen(true)}
+            onEditRoutine={() => setEditorOpen(true)}
             onStartWorkout={(day) => {
               setResumeWorkout(false);
               setFreePlans(null);
@@ -785,7 +791,7 @@ const Dashboard = () => {
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
                     {[
-                      { aria: "Modo libre", Icon: Play, on: () => setFreeOpen(true) },
+                      { aria: "Entreno vacío", Icon: Play, on: () => setFreeOpen(true) },
                       { aria: "Ejercicios", Icon: BookOpen, on: () => setLibraryOpen(true) },
                     ].map(({ aria, Icon, on }) => (
                       <button
@@ -859,36 +865,6 @@ const Dashboard = () => {
               )}
             </Suspense>
         </div>
-      )}
-
-      {user && (
-        <Suspense fallback={null}>
-          <PlanEditor
-            open={editorOpen}
-            onOpenChange={setEditorOpen}
-            userId={user.id}
-            dayPlans={dayPlans}
-            onSaved={(p) => { setDayPlans(p); setTrainingView("plan"); }}
-          />
-          <ExerciseLibrarySheet open={libraryOpen} onOpenChange={setLibraryOpen} userId={user.id} />
-          <FreeSessionBuilder
-            open={freeOpen}
-            onOpenChange={setFreeOpen}
-            onStart={(exercises) => {
-              setResumeWorkout(false);
-              const today = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"][(new Date().getDay() + 6) % 7];
-              setFreePlans([
-                ...dayPlans.filter((p) => p.day !== today),
-                { day: today, type: "gimnasio", routine_name: "Entrenamiento libre", muscle_focus: "", exercises },
-              ]);
-              setTrainingDay(today);
-              setFreeOpen(false);
-              setTrainingView("tracker");
-              setAutoStartWorkout(true);
-              setSection("training");
-            }}
-          />
-        </Suspense>
       )}
 
       {/* Un plan de pago incluye nutrición: si aún no hay macros calculados no es un
@@ -1020,11 +996,52 @@ const Dashboard = () => {
       {section === "resources" && (
         <Suspense fallback={<SectionFallback />}><Recursos embedded /></Suspense>
       )}
+
+      {section === "library" && user && (
+        <Suspense fallback={<SectionFallback />}><ExerciseLibraryPage userId={user.id} /></Suspense>
+      )}
+    </>
+  );
+
+  // Hojas compartidas (editor, biblioteca, entreno vacío): una sola vez, no una por pestaña
+  // visitada; antes se abrían duplicadas si se pulsaban desde Hoy tras visitar otras pestañas.
+  const sharedSheets = (
+    <>
+      {user && (
+        <Suspense fallback={null}>
+          <PlanEditor
+            open={editorOpen}
+            onOpenChange={setEditorOpen}
+            userId={user.id}
+            dayPlans={dayPlans}
+            onSaved={(p) => { setDayPlans(p); setTrainingView("plan"); }}
+          />
+          <ExerciseLibrarySheet open={libraryOpen} onOpenChange={setLibraryOpen} userId={user.id} />
+          <FreeSessionBuilder
+            open={freeOpen}
+            onOpenChange={setFreeOpen}
+            onStart={(exercises) => {
+              setResumeWorkout(false);
+              const today = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"][(new Date().getDay() + 6) % 7];
+              setFreePlans([
+                ...dayPlans.filter((p) => p.day !== today),
+                { day: today, type: "gimnasio", routine_name: "Entrenamiento libre", muscle_focus: "", exercises },
+              ]);
+              setTrainingDay(today);
+              setFreeOpen(false);
+              setTrainingView("tracker");
+              setAutoStartWorkout(true);
+              setSection("training");
+            }}
+          />
+        </Suspense>
+      )}
     </>
   );
 
   const pageContent = (
     <>
+      {sharedSheets}
       {visited.map((s) => (
         <div
           key={s}

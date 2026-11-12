@@ -214,20 +214,20 @@ final class ExerciseLibraryModel: ObservableObject {
     }
 
     func load(userId: UUID?) async {
+        // Lo ya descargado se ve al instante, pero cada apertura vuelve a pedir la lista: antes la
+        // caché duraba lo que la app abierta y un ejercicio publicado o con foto nueva no aparecía.
         if items == nil, let cached = Self.cache { items = cached }
-        if Self.cache == nil {
-            do {
-                let rows: [Row]
-                do { rows = try await fetchAll(Self.full, published: true) }
-                // Sin la migración de la biblioteca: mismos ejercicios, filtros por su grupo de siempre.
-                catch { rows = try await fetchAll(Self.base, published: false) }
-                let list = rows.map { $0.toExercise() }
-                Self.cache = list
-                items = list
-                failed = false
-            } catch {
-                failed = items == nil
-            }
+        do {
+            let rows: [Row]
+            do { rows = try await fetchAll(Self.full, published: true) }
+            // Sin la migración de la biblioteca: mismos ejercicios, filtros por su grupo de siempre.
+            catch { rows = try await fetchAll(Self.base, published: false) }
+            let list = rows.map { $0.toExercise() }
+            Self.cache = list
+            items = list
+            failed = false
+        } catch {
+            failed = items == nil
         }
         guard let userId else { return }
         let uid = userId.uuidString.lowercased()
@@ -280,10 +280,14 @@ final class ExerciseLibraryModel: ObservableObject {
 /// Lista con buscador, filtros, recientes, favoritos y grupos musculares.
 struct ExerciseLibraryView: View {
     let userId: UUID?
+    /// Pestaña «Ejercicios» de la barra: sin «Cerrar» y empujando la ficha en la pila de la app.
+    var embedded = false
     @StateObject private var model = ExerciseLibraryModel()
     @State private var filters = LibraryFilters()
     @State private var facet: String?
     @State private var path: [LibraryExercise] = []
+    /// Ficha abierta en modo pestaña (la pila es la de la app, no la propia).
+    @State private var pushed: LibraryExercise?
     @Environment(\.dismiss) private var dismiss
 
     private var items: [LibraryExercise] { model.items ?? [] }
@@ -295,20 +299,37 @@ struct ExerciseLibraryView: View {
     ]
 
     var body: some View {
-        NavigationStack(path: $path) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
-                    searchField
-                    facetRow
-                    if let facet, let options = facets.first(where: { $0.key == facet })?.options {
-                        FlowRow { ForEach(options, id: \.self) { chip($0, facet: facet) } }
-                            .transition(.opacity)
-                    }
-                    content.padding(.top, 4)
+        Group {
+            if embedded {
+                list.navigationDestination(item: $pushed) { e in
+                    LibraryDetailHost(exercise: e, model: model, userId: userId)
                 }
-                .padding(.horizontal, 20).padding(.bottom, 24)
+            } else {
+                sheet
             }
-            .screenBackground()
+        }
+        .task { await model.load(userId: userId) }
+    }
+
+    private var list: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                searchField
+                facetRow
+                if let facet, let options = facets.first(where: { $0.key == facet })?.options {
+                    FlowRow { ForEach(options, id: \.self) { chip($0, facet: facet) } }
+                        .transition(.opacity)
+                }
+                content.padding(.top, 4)
+            }
+            .padding(.horizontal, embedded ? 16 : 20).padding(.bottom, 24)
+        }
+        .screenBackground()
+    }
+
+    private var sheet: some View {
+        NavigationStack(path: $path) {
+            list
             .navigationTitle("Ejercicios")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.large)
@@ -322,7 +343,6 @@ struct ExerciseLibraryView: View {
                 ExerciseDetailView(exercise: e, model: model, userId: userId) { path.append($0) }
             }
         }
-        .task { await model.load(userId: userId) }
     }
 
     private var searchField: some View {
@@ -415,7 +435,7 @@ struct ExerciseLibraryView: View {
     private func open(_ e: LibraryExercise) {
         Haptics.tap()
         model.markViewed(e.id, userId: userId)
-        path.append(e)
+        if embedded { pushed = e } else { path.append(e) }
     }
 
     private var browse: some View {
@@ -478,6 +498,21 @@ struct ExerciseLibraryView: View {
     }
 }
 
+/// Ficha dentro de la pila de la app (pestaña «Ejercicios»): cada variante abre otra encima.
+private struct LibraryDetailHost: View {
+    let exercise: LibraryExercise
+    @ObservedObject var model: ExerciseLibraryModel
+    let userId: UUID?
+    @State private var next: LibraryExercise?
+
+    var body: some View {
+        ExerciseDetailView(exercise: exercise, model: model, userId: userId) { next = $0 }
+            .navigationDestination(item: $next) { e in
+                LibraryDetailHost(exercise: e, model: model, userId: userId)
+            }
+    }
+}
+
 private struct LibrarySectionTitle: View {
     let text: String
     init(_ text: String) { self.text = text }
@@ -496,18 +531,25 @@ private struct ExerciseThumbView: View {
     var height: CGFloat = 48
     var body: some View {
         Group {
-            if let spec = ExerciseMotion.spec(name: name, pattern: pattern, stimulus: stimulus, load: load) {
-                // La huella del ejercicio manda: es la firma de Autopilot, no una foto.
-                ZStack { Palette.secondary; ExerciseMotionGlyph(spec: spec).padding(6) }
-            } else if let url, let u = URL(string: url) {
-                CachedAsyncImage(url: u, maxSide: 200) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
+            // Igual que `ExerciseThumb` en la web: la foto del ejercicio manda y la huella queda
+            // mientras carga, si falla o si no tiene foto.
+            if let url, let u = URL(string: url) {
+                CachedAsyncImage(url: u, maxSide: 200) { $0.resizable().scaledToFill() } placeholder: { fallback }
             } else {
-                ZStack { Palette.secondary; Image("lu-dumbbell").resizable().frame(width: 18, height: 18).foregroundStyle(Palette.muted) }
+                fallback
             }
         }
         .frame(width: width, height: height)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .accessibilityHidden(true)
+    }
+
+    @ViewBuilder private var fallback: some View {
+        if let spec = ExerciseMotion.spec(name: name, pattern: pattern, stimulus: stimulus, load: load) {
+            ZStack { Palette.secondary; ExerciseMotionGlyph(spec: spec).padding(6) }
+        } else {
+            ZStack { Palette.secondary; Image("lu-dumbbell").resizable().frame(width: 18, height: 18).foregroundStyle(Palette.muted) }
+        }
     }
 }
 
@@ -546,7 +588,8 @@ struct ExerciseDetailView: View {
     let userId: UUID?
     let onOpen: (LibraryExercise) -> Void
     @State private var variantIds: [String] = []
-    @State private var showPhoto = false
+    /// Con foto se abre en la foto, como `ExerciseMedia` en la web; «Ritmo» muestra la huella.
+    @State private var showRhythm = false
 
     private var all: [LibraryExercise] { model.items ?? [] }
     private var variants: [LibraryExercise] { variantIds.compactMap { id in all.first { $0.id == id } } }
@@ -614,7 +657,7 @@ struct ExerciseDetailView: View {
             Palette.card
             if let videoURL {
                 LoopingVideo(url: videoURL)
-            } else if let motion, !showPhoto {
+            } else if let motion, exercise.image == nil || showRhythm {
                 ExerciseMotionHero(spec: motion).padding(12)
             } else if let image = exercise.image, let url = URL(string: image) {
                 CachedAsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { Palette.card }
@@ -627,8 +670,8 @@ struct ExerciseDetailView: View {
             // Con foto y huella, se cambia entre las dos con una píldora discreta.
             if motion != nil, exercise.image != nil, videoURL == nil {
                 HStack(spacing: 2) {
-                    heroTab("Ritmo", on: !showPhoto) { showPhoto = false }
-                    heroTab("Foto", on: showPhoto) { showPhoto = true }
+                    heroTab("Ritmo", on: showRhythm) { showRhythm = true }
+                    heroTab("Foto", on: !showRhythm) { showRhythm = false }
                 }
                 .padding(2)
                 .background(Palette.secondary, in: Capsule())

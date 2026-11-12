@@ -23,6 +23,9 @@ struct HomeView: View {
     @State private var activeWorkout: ActiveWorkout? = nil
     /// Rutina desplegada en «Tus rutinas» (ver/editar sin salir de Inicio).
     @State private var expandedRoutine: String? = nil
+    /// Editor de la rutina («Editar» en «Tu programa») y selector del entreno vacío.
+    @State private var planEditorOpen = false
+    @State private var pickingEmpty = false
     /// Confeti de «día completado»: se enciende una sola vez al día (ver `celebrateIfNeeded`).
     @State private var celebrating = false
     /// Instante de inicio del confeti: se guarda aquí para que un redibujado de Inicio no
@@ -206,6 +209,23 @@ struct HomeView: View {
         }
     }
 
+    /// «Entreno vacío» (como en Hevy y en la web): se eligen los ejercicios y se empieza, sin rutina.
+    private var emptyWorkoutButton: some View {
+        Button {
+            Haptics.tap()
+            // Con un entreno a medias se continúa ese: empezar otro borraría sus series.
+            if let id = session.userIdString, let draft = ActiveWorkout.restore(userId: id) {
+                activeWorkout = ActiveWorkout(draft: draft)
+            } else {
+                pickingEmpty = true
+            }
+        } label: {
+            Label { Text("Entreno vacío") } icon: { Image(systemName: "plus").font(.inter(.body).weight(.semibold)) }
+        }
+        .buttonStyle(.pillSecondary)
+        .accessibilityHint("Eliges los ejercicios y empiezas a entrenar")
+    }
+
     /// «Tu programa»: una fila por sesión con su miniatura, su foco muscular y su chevron.
     /// Es la lista de la maqueta (limpia y visual); el detalle con ejercicios se abre al tocar.
     private var routinesList: some View {
@@ -219,6 +239,10 @@ struct HomeView: View {
                 Spacer(minLength: 8)
                 Text("\(sessions.count) \(sessions.count == 1 ? "sesión" : "sesiones")")
                     .font(.apFootnote).foregroundStyle(Palette.muted)
+                Button("Editar") { Haptics.tap(); planEditorOpen = true }
+                    .font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.gold)
+                    .buttonStyle(.plain).frame(minHeight: 44).padding(.vertical, -12)
+                    .accessibilityLabel("Editar rutina")
             }
             VStack(spacing: 0) {
                 ForEach(Array(sessions.enumerated()), id: \.element.day) { index, plan in
@@ -350,6 +374,7 @@ struct HomeView: View {
                     iPhoneHeader.padding(.horizontal, horizontalPadding).padding(.top, 24)
                     wideToday
                     VStack(spacing: 12) {
+                        emptyWorkoutButton
                         weekPlan
                         nutritionRow
                     }
@@ -361,6 +386,7 @@ struct HomeView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         iPhoneHeader.padding(.bottom, 8)
                         mainAction
+                        emptyWorkoutButton
                         routinesList
                     }
                     .padding(.horizontal, 16)
@@ -395,6 +421,17 @@ struct HomeView: View {
             startAfterDismiss = false
             if let plan = snapshot?.plan { Task { await startRoutine(plan) } }
         }) { sheetView }
+        .sheet(isPresented: $pickingEmpty) {
+            ExercisePickerView(existing: []) { picked in Task { await startEmptyWorkout(picked) } }
+                .presentationBackground(Palette.background)
+        }
+        .sheet(isPresented: $planEditorOpen) {
+            PlanEditorView(original: model.days) { saved in
+                model.days = saved
+                Task { await load() }
+            }
+            .presentationBackground(Palette.background)
+        }
         .sheet(item: $editingDay) { day in
             RoutineDetailSheet(day: day, plans: snapshot?.scheduled ?? []) { updated in
                 // Refresca el snapshot para que se vea el cambio al instante.
@@ -813,6 +850,22 @@ struct HomeView: View {
         for p in prefs { if let r = p.preferred_exercise_name, (day.exercises ?? []).contains(where: { $0.name == p.original_exercise_name }) { workout.swaps[p.original_exercise_name] = r } }
         workout.draft.currentExercise = 0
         workout.openExercises = [0]
+        activeWorkout = workout
+    }
+
+    /// Entreno vacío: sesión de hoy solo con los ejercicios elegidos (igual que «Entreno vacío» en
+    /// la web, `routine_name` «Entrenamiento libre»). Se registra como cualquier entreno.
+    private func startEmptyWorkout(_ exercises: [GymExercise]) async {
+        guard !exercises.isEmpty, let id = session.userId, let idString = session.userIdString else { return }
+        let day = DayPlan(day: DayNames.today, type: "gimnasio", routine_name: "Entrenamiento libre", muscle_focus: "", exercises: exercises)
+        let previous = await TrainingRepo.previousSets(userId: id, exercises: exercises.map(\.name))
+        let workout = ActiveWorkout(userId: idString, day: day, previous: previous)
+        workout.previous = previous
+        workout.previousRpe = await TrainingRepo.previousRpe(userId: id, exercises: exercises.map(\.name))
+        workout.draft.currentExercise = 0
+        workout.openExercises = [0]
+        // La hoja del selector se cierra antes de abrir el entreno a pantalla completa.
+        try? await Task.sleep(for: .milliseconds(350))
         activeWorkout = workout
     }
 

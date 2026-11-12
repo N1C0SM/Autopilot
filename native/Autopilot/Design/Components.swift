@@ -231,6 +231,7 @@ extension AppSection {
     var phosphor: String {
         switch self {
         case .home: "ph-house"
+        case .library: "ph-barbell"
         case .nutrition: "ph-fork-knife"
         case .progress: "ph-chart-line-up"
         default: "ph-house"

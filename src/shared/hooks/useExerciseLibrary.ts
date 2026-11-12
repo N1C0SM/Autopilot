@@ -97,9 +97,16 @@ async function fetchCatalog(): Promise<LibraryExercise[]> {
   }
 }
 
-let cache: Promise<LibraryExercise[]> | null = null;
+let cache: LibraryExercise[] | null = null;
+let inflight: Promise<LibraryExercise[]> | null = null;
 
-/** Índice de la biblioteca (una descarga por sesión) + favoritos y recientes del usuario. */
+/** Una sola descarga a la vez; la última lista buena queda guardada para pintarse al instante. */
+const refreshCatalog = () =>
+  (inflight ??= fetchCatalog()
+    .then((list) => { cache = list; return list; })
+    .finally(() => { inflight = null; }));
+
+/** Índice de la biblioteca (se refresca en cada apertura) + favoritos y recientes del usuario. */
 export function useExerciseLibrary(userId: string | null | undefined, enabled = true) {
   const [items, setItems] = useState<LibraryExercise[] | null>(null);
   const [error, setError] = useState(false);
@@ -110,9 +117,12 @@ export function useExerciseLibrary(userId: string | null | undefined, enabled = 
   useEffect(() => {
     if (!enabled) return;
     let alive = true;
-    cache ??= fetchCatalog();
-    cache.then((list) => { if (alive) { setItems(list); setError(false); } })
-      .catch(() => { cache = null; if (alive) setError(true); });
+    // Lo ya descargado se ve al instante, pero cada apertura vuelve a pedir la lista: un ejercicio
+    // publicado o con foto nueva aparece sin recargar la página (igual que en el iPhone).
+    if (cache) setItems(cache);
+    refreshCatalog()
+      .then((list) => { if (alive) { setItems(list); setError(false); } })
+      .catch(() => { if (alive && !cache) setError(true); });
     return () => { alive = false; };
   }, [enabled]);
 
@@ -154,7 +164,7 @@ export function useExerciseLibrary(userId: string | null | undefined, enabled = 
       .upsert({ user_id: userId, exercise_id: exerciseId, viewed_at: new Date().toISOString() }, { onConflict: "user_id,exercise_id" });
   }, [personal, userId]);
 
-  const retry = useCallback(() => { cache = null; setError(false); setItems(null); cache = fetchCatalog(); cache.then(setItems).catch(() => { cache = null; setError(true); }); }, []);
+  const retry = useCallback(() => { setError(false); setItems(null); refreshCatalog().then(setItems).catch(() => setError(true)); }, []);
 
   return { items, error, retry, favorites, recent, personal, toggleFavorite, markViewed };
 }

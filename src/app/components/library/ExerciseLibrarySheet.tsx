@@ -21,11 +21,7 @@ const FACETS: { key: Facet; label: string; options: readonly string[] }[] = [
 ];
 
 /** Biblioteca de ejercicios: lista con buscador y filtros, y la ficha de cada ejercicio. */
-const ExerciseLibrarySheet = ({ open, onOpenChange, userId }: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  userId: string;
-}) => {
+const ExerciseLibraryBody = ({ open, userId }: { open: boolean; userId: string }) => {
   const lib = useExerciseLibrary(userId, open);
   const [filters, setFilters] = useState<LibraryFilters>(EMPTY_FILTERS);
   const [facet, setFacet] = useState<Facet | null>(null);
@@ -47,7 +43,7 @@ const ExerciseLibrarySheet = ({ open, onOpenChange, userId }: {
     setFilters((f) => ({ ...f, [key]: f[key].includes(value) ? f[key].filter((v) => v !== value) : [...f[key], value] }));
 
   return (
-    <ResponsiveSheet open={open} onOpenChange={onOpenChange} title="Ejercicios" desktopClassName="h-[88dvh] sm:max-w-2xl">
+    <>
       {selected ? (
         <ExerciseDetail
           exercise={selected}
@@ -141,9 +137,28 @@ const ExerciseLibrarySheet = ({ open, onOpenChange, userId }: {
           </div>
         </div>
       )}
-    </ResponsiveSheet>
+    </>
   );
 };
+
+/** La biblioteca como hoja (desde la rutina o el entreno). */
+const ExerciseLibrarySheet = ({ open, onOpenChange, userId }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  userId: string;
+}) => (
+  <ResponsiveSheet open={open} onOpenChange={onOpenChange} title="Ejercicios" desktopClassName="h-[88dvh] sm:max-w-2xl">
+    <ExerciseLibraryBody open={open} userId={userId} />
+  </ResponsiveSheet>
+);
+
+/** La biblioteca como pestaña «Ejercicios» de la navegación, igual que en el iPhone. El título
+ *  lo pinta la barra de la app, como en el resto de pestañas. */
+export const ExerciseLibraryPage = ({ userId }: { userId: string }) => (
+  <section aria-label="Ejercicios" className="mx-auto flex w-full max-w-2xl flex-col">
+    <ExerciseLibraryBody open userId={userId} />
+  </section>
+);
 
 const ExerciseList = ({ items, favorites, onOpen }: {
   items: LibraryExercise[];

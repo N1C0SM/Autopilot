@@ -81,9 +81,9 @@ function Scaled({ width, height, className, children }: { width: number; height:
 }
 
 const DEMO_NAME = "Alex";
-const PHONE_TABS = [{ key: "home", label: "Hoy", icon: House }, { key: "nutrition", label: "Nutrición", icon: Flame }, { key: "progress", label: "Progreso", icon: TrendingUp }] as const;
+const PHONE_TABS = [{ key: "home", label: "Hoy", icon: House }, { key: "library", label: "Ejercicios", icon: Dumbbell }, { key: "nutrition", label: "Nutrición", icon: Flame }, { key: "progress", label: "Progreso", icon: TrendingUp }] as const;
 // Menú de la app de Mac (`UserSidebar`, sin el chat, que aún no está publicado).
-const MAC_MENU = [[House, "Inicio"], [Dumbbell, "Entrenamiento"], [Flame, "Nutrición"], [TrendingUp, "Mi progreso"], [Settings, "Ajustes"]] as const;
+const MAC_MENU = [[House, "Inicio"], [Dumbbell, "Ejercicios"], [Flame, "Nutrición"], [TrendingUp, "Mi progreso"], [Settings, "Ajustes"]] as const;
 
 /** La app de Mac en «Inicio»: barra lateral, barra superior y el Hoy ancho, con datos de ejemplo. */
 function MacHome() {
