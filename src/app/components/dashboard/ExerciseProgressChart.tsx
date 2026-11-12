@@ -95,7 +95,10 @@ const ExerciseProgressChart = ({ exerciseName, history, metric, onMetricChange, 
       </Tabs>
 
       {hasLine ? (
-        <div className={`mt-3 w-full ${plotClass}`} role="img" aria-label={`Gráfica de ${exerciseName}`}>
+        // La gráfica va en una capa absoluta: con `flex-1` el alto del hueco no es «definido» y el
+        // 100% de ResponsiveContainer daba 0 px en el móvil (la tarjeta salía vacía).
+        <div className={`relative mt-3 w-full ${plotClass}`} role="img" aria-label={`Gráfica de ${exerciseName}`}>
+          <div className="absolute inset-0">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={chartData} margin={{ top: 8, right: 0, left: 0, bottom: 0 }}>
               <CartesianGrid vertical={false} stroke="hsl(var(--border))" strokeWidth={0.5} />
@@ -134,6 +137,7 @@ const ExerciseProgressChart = ({ exerciseName, history, metric, onMetricChange, 
               />
             </AreaChart>
           </ResponsiveContainer>
+          </div>
         </div>
       ) : values.length === 0 && history.length > 0 && metric !== "reps" ? (
         <ProgressInlineState
