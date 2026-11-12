@@ -1,7 +1,6 @@
-// Iconos de Autopilot desde la geometría única de la marca (`BRAND_A` y `BRAND_BOLT` de
-// src/shared/components/ui/brand-mark.tsx): la «A» dorada con el rayo sobre el negro de la app
-// (.claude/design/marca.md). Con relieve desde el 12-11-2026: el cuadro negro lleva brillo arriba,
-// canto de luz y sombra bajo la «A»; la «A», degradado dorado y bisel.
+// Iconos de Autopilot desde la geometría única de la marca (`BRAND_A` y `BRAND_P` de
+// src/shared/components/ui/brand-mark.tsx, .claude/design/marca.md): desde el 12-11-2026, cuadro
+// dorado con relieve suave y el monograma AP en negro (la propuesta de ChatGPT).
 //
 //   node scripts/gen-icon.mjs
 //
@@ -19,54 +18,41 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const mark = readFileSync(resolve(ROOT, "src/shared/components/ui/brand-mark.tsx"), "utf8");
 const path = (name) => mark.match(new RegExp(`${name} = "([^"]+)"`))[1];
 const A = path("BRAND_A");
-const BOLT = path("BRAND_BOLT");
+const P = path("BRAND_P");
 
 // `Palette.background` / `--background` y `Palette.gold` / `--primary`.
 const BLACK = "#0B0A0A";
 const GOLD = "#D8B25E";
 
 // Todo se dibuja en un lienzo de 1024 y se escala. El radio 229 es la máscara del iPhone (22,37 %).
+// Relieve suave: el cuadro en el dorado de la marca (`GOLD` en el centro de un degradado con luz
+// arriba) y el AP negro, levantado con una sombra corta. Sin brillos ni bisel.
 const DEFS = `<defs>
-  <radialGradient id="tile" cx="50%" cy="28%" r="85%"><stop offset="0" stop-color="#2B2825"/><stop offset=".5" stop-color="#15130F"/><stop offset="1" stop-color="#050404"/></radialGradient>
-  <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1"><stop offset=".6" stop-opacity="0"/><stop offset="1" stop-opacity=".45"/></linearGradient>
-  <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".16"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
-  <linearGradient id="edge" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".30"/><stop offset=".18" stop-color="#fff" stop-opacity=".06"/><stop offset=".7" stop-opacity="0"/><stop offset="1" stop-opacity=".75"/></linearGradient>
   <clipPath id="round"><rect width="1024" height="1024" rx="229"/></clipPath>
-  <linearGradient id="gold" x1="0" y1="10" x2="0" y2="86" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#EDC56A"/><stop offset=".5" stop-color="${GOLD}"/><stop offset="1" stop-color="#B89550"/></linearGradient>
-  <filter id="bevel" x="-10%" y="-10%" width="120%" height="125%" color-interpolation-filters="sRGB">
-    <feGaussianBlur in="SourceAlpha" stdDeviation="0.9" result="b"/>
-    <feDiffuseLighting in="b" surfaceScale="3" diffuseConstant="1" lighting-color="#fff" result="d"><feDistantLight azimuth="225" elevation="50"/></feDiffuseLighting>
-    <feComposite in="SourceGraphic" in2="d" operator="arithmetic" k1="1.12" result="shade"/>
-    <feSpecularLighting in="b" surfaceScale="3" specularConstant=".9" specularExponent="20" lighting-color="#fff" result="s"><feDistantLight azimuth="225" elevation="38"/></feSpecularLighting>
-    <feComposite in="shade" in2="s" operator="arithmetic" k2="1" k3=".3" result="lit"/>
-    <feComposite in="lit" in2="SourceAlpha" operator="in" result="glyph"/>
-    <feGaussianBlur in="SourceAlpha" stdDeviation="2.6" result="sb"/><feOffset in="sb" dy="2.8" result="so"/>
-    <feComponentTransfer in="so" result="shadow"><feFuncA type="linear" slope=".7"/></feComponentTransfer>
-    <feFlood flood-color="#000"/><feComposite in2="shadow" operator="in" result="drop"/>
-    <feMerge><feMergeNode in="drop"/><feMergeNode in="glyph"/></feMerge>
-  </filter>
+  <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E6C574"/><stop offset=".5" stop-color="${GOLD}"/><stop offset="1" stop-color="#C9A04E"/></linearGradient>
+  <linearGradient id="light" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset=".3" stop-color="#fff" stop-opacity="0"/></linearGradient>
+  <linearGradient id="mark" x1="0" y1="34" x2="0" y2="520" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#26221C"/><stop offset="1" stop-color="${BLACK}"/></linearGradient>
+  <filter id="lift" x="-15%" y="-15%" width="130%" height="140%"><feDropShadow dx="0" dy="14" stdDeviation="14" flood-color="#5A3F10" flood-opacity=".45"/></filter>
 </defs>`;
 
-/** El cuadro negro con relieve. Sin canto en los iconos adaptables (Android pone su propia forma). */
-const tile = (edge = true) => `<rect width="1024" height="1024" fill="url(#tile)"/><rect width="1024" height="1024" fill="url(#floor)"/>
-  <g clip-path="url(#round)"><ellipse cx="512" cy="-40" rx="700" ry="470" fill="url(#sheen)"/></g>
-  ${edge ? `<rect x="7" y="7" width="1010" height="1010" rx="222" fill="none" stroke="url(#edge)" stroke-width="14"/>` : ""}`;
+/** El cuadro dorado con luz arriba. */
+const tile = () => `<rect width="1024" height="1024" fill="url(#tile)"/><rect width="1024" height="1024" fill="url(#light)"/>`;
 
-/** La «A» con su caja (x 12–88, y 10–86) centrada en (cx, cy) y `width` de ancho, en dorado con bisel. */
+/** El AP con su caja (x 35–941,5, y 41–520) centrado en (cx, cy) y `width` de ancho. */
 const glyph = (cx, cy, width) => {
-  const k = width / 76;
-  return `<g transform="translate(${cx - 50 * k} ${cy - 48 * k}) scale(${k})" filter="url(#bevel)" fill="url(#gold)"><path d="${A}"/><path d="${BOLT}"/></g>`;
+  const k = width / 906.5;
+  return `<g transform="translate(${cx - 488.25 * k} ${cy - 280.5 * k}) scale(${k})" filter="url(#lift)" fill="url(#mark)"><path d="${A}"/><path d="${P}"/></g>`;
 };
 
 const svg = (size, body) => `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 1024 1024">${DEFS}${body}</svg>`;
-const icon = (ratio = 0.58, edge = true) => `${tile(edge)}${glyph(512, 507, 1024 * ratio)}`;
+const icon = (ratio = 0.64) => `${tile()}${glyph(512, 505, 1024 * ratio)}`;
 
 /** Cuadrado a sangre (iPhone, apple-touch): el sistema pone la máscara. */
-const square = (size, ratio = 0.58) => svg(size, icon(ratio));
+const square = (size, ratio = 0.64) => svg(size, icon(ratio));
 /** Ya redondeado, con las esquinas transparentes (pestaña del navegador, PWA, arranque). */
-const rounded = (size, ratio = 0.58) => svg(size, `<g clip-path="url(#round)">${icon(ratio)}</g>`);
-/** Adaptable (maskable / Android): a sangre, sin canto y con la «A» dentro de la zona segura. */
-const adaptive = (size, ratio = 0.42) => svg(size, icon(ratio, false));
+const rounded = (size, ratio = 0.64) => svg(size, `<g clip-path="url(#round)">${icon(ratio)}</g>`);
+/** Adaptable (maskable / Android): a sangre y con el AP dentro de la zona segura. */
+const adaptive = (size, ratio = 0.56) => svg(size, icon(ratio));
 /** El icono redondeado de `inner` px centrado en un lienzo transparente (arranque). */
 const centered = (size, inner) => svg(size, `<g transform="translate(${512 - inner / 2} ${512 - inner / 2}) scale(${inner / 1024})"><g clip-path="url(#round)">${icon()}</g></g>`);
 
@@ -150,19 +136,19 @@ await write(square(1024), "native/Autopilot/Assets.xcassets/Logo.imageset/logo.p
 // Logo de las tarjetas para compartir (se pinta a 66 px como mucho): 256 px bastan.
 await write(square(256), "src/shared/assets/autopilot-logo.png", 256, "flat");
 
-// Web y PWA. En los tamaños pequeños la «A» crece para seguir leyéndose.
+// Web y PWA. En los tamaños pequeños el AP crece para seguir leyéndose.
 await write(square(180), "public/apple-touch-icon.png", 180, "flat");
 await write(rounded(512), "public/favicon.png", 512);
 await write(rounded(192), "public/pwa-192.png", 192);
 await write(rounded(512), "public/pwa-512.png", 512);
-// Maskable: la «A» dentro del círculo seguro (80 %).
+// Maskable: el AP dentro del círculo seguro (80 %).
 await write(adaptive(512), "public/pwa-maskable-512.png", 512, "flat");
 for (const size of [48, 72, 96, 128, 192, 256, 512]) {
-  await write(adaptive(size, size <= 72 ? 0.46 : 0.42), `public/icons/icon-${size}.webp`, size, "webp");
+  await write(adaptive(size, size <= 72 ? 0.62 : 0.56), `public/icons/icon-${size}.webp`, size, "webp");
 }
 // favicon.ico con 16, 32, 48 y 64 px (PNG dentro del ICO).
 const ico = [];
-for (const size of [16, 32, 48, 64]) ico.push(await raster(rounded(size, size <= 32 ? 0.7 : 0.6), size));
+for (const size of [16, 32, 48, 64]) ico.push(await raster(rounded(size, size <= 32 ? 0.78 : 0.7), size));
 const header = Buffer.alloc(6 + 16 * ico.length);
 header.writeUInt16LE(0, 0); header.writeUInt16LE(1, 2); header.writeUInt16LE(ico.length, 4);
 let offset = header.length;
@@ -179,8 +165,8 @@ console.log("Escrito public/favicon.ico");
 
 // Capacitor (Android): icono, primer plano adaptativo (zona segura de 66/108) y fondo.
 await write(square(1024), "resources/icon.png", 1024, "flat");
-await write(svg(1024, glyph(512, 507, 1024 * 0.36)), "resources/icon-foreground.png", 1024);
-await write(svg(1024, tile(false)), "resources/icon-background.png", 1024, "flat");
+await write(svg(1024, glyph(512, 507, 1024 * 0.5)), "resources/icon-foreground.png", 1024);
+await write(svg(1024, tile()), "resources/icon-background.png", 1024, "flat");
 // Splash de Android: el icono centrado sobre el negro, como el arranque del iPhone.
 const splash = svg(2732, `<rect width="1024" height="1024" fill="${BLACK}"/><g transform="translate(${512 - 67} ${512 - 67}) scale(${134 / 1024})"><g clip-path="url(#round)">${icon()}</g></g>`);
 await write(splash, "resources/splash.png", 2732);

@@ -4,6 +4,7 @@ import { supportsMultipleAccounts } from "@/shared/lib/platform";
 import { BookOpen } from "lucide-react";
 import NotificationsBell from "@/app/components/NotificationsBell";
 import NavBar from "@/shared/components/native/NavBar";
+import { BrandMark } from "@/shared/components/ui/brand-mark";
 import { hapticTap } from "@/shared/lib/native";
 
 interface Props {
@@ -20,7 +21,17 @@ interface Props {
   solid?: boolean;
   /** Falso cuando la pantalla ya muestra un título grande como encabezado. */
   titleAsHeading?: boolean;
+  /** Hoy (diseño de ChatGPT): el AP y AUTOPILOT a la izquierda, sin título pequeño. */
+  brand?: boolean;
 }
+
+/** Firma de la cabecera de Hoy: el AP dorado y AUTOPILOT, como `BrandLockup` en la app. */
+const BrandLockup = () => (
+  <span className="flex items-center gap-2 px-2" aria-label="Autopilot" role="img">
+    <BrandMark size={30} />
+    <span aria-hidden="true" className="text-[15px] font-bold tracking-[0.12em] text-foreground">AUTOPILOT</span>
+  </span>
+);
 
 const HeaderAvatar = ({ name, src }: { name?: string; src?: string }) => {
   const [failed, setFailed] = useState(false);
@@ -38,15 +49,16 @@ const HeaderAvatar = ({ name, src }: { name?: string; src?: string }) => {
 };
 
 const MobileHeader = forwardRef<HTMLElement, Props>(
-  ({ title, profileName, profileAvatar, userId, onSettings, onResources, titleVisible = true, solid = true, titleAsHeading = true }, ref) => {
+  ({ title, profileName, profileAvatar, userId, onSettings, onResources, titleVisible = true, solid = true, titleAsHeading = true, brand = false }, ref) => {
     // Mantener pulsado el avatar abre «¿Quién entrena?» (solo apps nativas).
     const longPress = useAccountLongPress();
     return (
       <NavBar
         ref={ref}
         className="fixed left-0 right-0 top-0 md:hidden"
-        title={title}
+        title={brand ? undefined : title}
         titleVisible={titleVisible}
+        leading={brand ? <BrandLockup /> : undefined}
         titleAsHeading={titleAsHeading}
         solid={solid}
         trailing={

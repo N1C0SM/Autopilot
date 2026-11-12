@@ -579,8 +579,9 @@ struct SubscriptionBadge: View {
     }
 }
 
-/// Firma de Autopilot: la «A» con rayo (misma geometría que `BRAND_A`/`BRAND_BOLT` en la web).
-/// Logo, marca de agua y loader. Con `beat` el rayo late, salvo con «Reducir movimiento».
+/// Firma de Autopilot: el monograma AP (misma geometría que `BRAND_A`/`BRAND_P` en la web).
+/// Logo, marca de agua y loader. `size` es el ancho; el alto sale de su proporción (916 × 500).
+/// Con `beat` la «P» late, salvo con «Reducir movimiento».
 struct BrandMark: View {
     var size: CGFloat = 24
     var beat = false
@@ -589,18 +590,31 @@ struct BrandMark: View {
 
     var body: some View {
         ZStack {
-            BrandShape(points: [(50, 10), (88, 86), (70, 86), (50, 44), (30, 86), (12, 86)]).fill(color)
-            BrandShape(points: [(52, 55), (44, 70), (49.5, 70), (47, 81), (56, 65), (50.5, 65)]).fill(color)
+            BrandShape(part: .a).fill(color)
+            BrandShape(part: .p).fill(color)
                 .opacity(low ? 0.35 : 1)
                 .animation(beat ? .spring(response: 0.6, dampingFraction: 0.55).repeatForever() : nil, value: low)
         }
-        .frame(width: size, height: size)
+        .frame(width: size, height: size * 500 / 916)
         .accessibilityHidden(true)
         .onAppear { if beat && !A11y.reduceMotion { low = true } }
     }
 }
 
-/// El icono de la app (cuadro negro con relieve y la «A» dorada, de scripts/gen-icon.mjs) para el
+/// Firma de la cabecera de Hoy (diseño de ChatGPT): el AP dorado y AUTOPILOT, como `BrandLockup` en la web.
+struct BrandLockup: View {
+    var body: some View {
+        HStack(spacing: 8) {
+            BrandMark(size: 30)
+            Text("AUTOPILOT").font(.inter(size: 15, weight: .bold)).tracking(1.8)
+                .foregroundStyle(Palette.foreground)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Autopilot")
+    }
+}
+
+/// El icono de la app (cuadro dorado y el AP negro, de scripts/gen-icon.mjs) para el
 /// arranque, el acceso, el registro, la bienvenida y «¿Quién entrena?». Esquinas del iPhone (22,37 %)
 /// y sombra suave; igual que `AppIconMark` en la web.
 struct AppIconMark: View {
@@ -618,14 +632,36 @@ struct AppIconMark: View {
     }
 }
 
-/// Polígono en coordenadas 0–100 recortado al cuadro 10…90 × 8…88 (igual que el viewBox web).
+/// El monograma AP en las coordenadas del dibujo original, ajustado a la caja 30…946 × 30…530
+/// (igual que `BRAND_VIEWBOX` en la web). La «A» con sus dos curvas y la «P» con sus dos arcos.
 private struct BrandShape: Shape {
-    let points: [(CGFloat, CGFloat)]
+    enum Part { case a, p }
+    let part: Part
     func path(in rect: CGRect) -> Path {
+        let k = min(rect.width / 916, rect.height / 500)
+        let ox = rect.midX - 488 * k, oy = rect.midY - 280 * k
+        let pt = { (x: CGFloat, y: CGFloat) in CGPoint(x: ox + x * k, y: oy + y * k) }
         var p = Path()
-        let map = { (pt: (CGFloat, CGFloat)) in CGPoint(x: rect.minX + (pt.0 - 10) / 80 * rect.width, y: rect.minY + (pt.1 - 8) / 80 * rect.height) }
-        p.move(to: map(points[0]))
-        points.dropFirst().forEach { p.addLine(to: map($0)) }
+        switch part {
+        case .a: // M35 520L382 50Q396 34 411 52L680 515H548L390 235L203 510Q197 520 185 520Z
+            p.move(to: pt(35, 520))
+            p.addLine(to: pt(382, 50))
+            p.addQuadCurve(to: pt(411, 52), control: pt(396, 34))
+            p.addLine(to: pt(680, 515))
+            p.addLine(to: pt(548, 515))
+            p.addLine(to: pt(390, 235))
+            p.addLine(to: pt(203, 510))
+            p.addQuadCurve(to: pt(185, 520), control: pt(197, 520))
+        case .p: // M460 45H775A166.5 166.5 0 0 1 775 378H655L600 272H770A62 62 0 0 0 770 148H520Z
+            p.move(to: pt(460, 45))
+            p.addLine(to: pt(775, 45))
+            p.addArc(center: pt(775, 211.5), radius: 166.5 * k, startAngle: .degrees(-90), endAngle: .degrees(90), clockwise: false)
+            p.addLine(to: pt(655, 378))
+            p.addLine(to: pt(600, 272))
+            p.addLine(to: pt(770, 272))
+            p.addArc(center: pt(770, 210), radius: 62 * k, startAngle: .degrees(90), endAngle: .degrees(-90), clockwise: true)
+            p.addLine(to: pt(520, 148))
+        }
         p.closeSubpath()
         return p
     }

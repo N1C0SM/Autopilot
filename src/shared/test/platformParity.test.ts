@@ -279,11 +279,9 @@ describe("paridad web ↔ apps nativas", () => {
     // Insignia Plus con candado en las secciones bloqueadas del scan.
     expect(read("src/app/components/scan/ScanPlusCard.tsx")).toContain("<PlusBadge />");
     expect(read("native/Autopilot/Features/Scan/ScanView.swift")).toContain("PlusBadge()");
-    // Hoy: un círculo por sesión de la rutina (no por día) con check dorado si está hecha.
+    // Hoy: cada sesión de «Tu plan» con check dorado si está hecha esta semana.
     const homeWeb = read("src/app/components/dashboard/HomeOverview.tsx");
     const homeApp = read("native/Autopilot/Features/Home/HomeView.swift");
-    expect(homeWeb).toContain('"flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-semibold tabular-nums"');
-    expect(homeApp).toContain(".frame(width: 32, height: 32)");
     expect(homeWeb).toContain("completedDays.includes(plan.day)");
     expect(homeApp).toContain("snapshot?.doneDays");
     // Entrenar: lo hecho esta semana en tramos dorados, uno por sesión.
@@ -295,16 +293,31 @@ describe("paridad web ↔ apps nativas", () => {
     // Barra de pestañas con la activa en dorado, sin píldora.
     expect(read("src/app/components/mobile/FloatingMobileNav.tsx")).toContain('isActive ? "text-primary" : "text-muted-foreground"');
     expect(read("native/Autopilot/Design/Components.swift")).toContain(".foregroundStyle(active ? Palette.gold : Palette.muted)");
-    // La semana de Hoy va en tarjeta en las dos.
-    expect(homeWeb).toContain('rounded-[22px] border border-border bg-card p-4');
-    expect(homeApp).toContain("return Card(padding: 16) {");
-    // Hoy de ChatGPT: «Hoy» grande, sesión con foto a la derecha, «Tu progreso», «Tu plan», «Ver detalle» y Nutrición en tarjetas.
-    for (const text of ['>Hoy<', "Siguiente sesión", "Tu progreso", "Tu plan", "Revisa y ajusta tu plan de entrenamiento.", "Ver detalle"]) {
+    // Hoy de ChatGPT (12-11-2026): «Hoy», el nombre grande y una línea; la semana en píldoras (L–D,
+    // hoy con borde dorado y un punto en los días entrenados); la sesión con foto y botón redondo
+    // dorado; tres cifras con anillo (kcal, proteína, sesiones) y «Tu plan» con su barra.
+    for (const text of ["La constancia crea el cambio.", "Esta semana", "Entrenamiento", "Calorías", "Proteína", "Sesiones", "Sin datos", "Tu plan", "Editar", "sesiones completadas", "entrenaste", "Empezar "]) {
       expect(homeWeb, text).toContain(text);
-    }
-    for (const text of ['Text("Hoy")', "Siguiente sesión", "Tu progreso", "Tu plan", "Revisa y ajusta tu plan de entrenamiento.", "Ver detalle"]) {
       expect(homeApp, text).toContain(text);
     }
+    expect(homeWeb).toContain('["L", "lunes"], ["M", "martes"], ["X", "miércoles"]');
+    expect(homeApp).toContain('("L", "lunes"), ("M", "martes"), ("X", "miércoles")');
+    expect(homeWeb).toContain('day.isToday && "ring-[1.5px] ring-inset ring-primary"');
+    expect(homeApp).toContain("Capsule().strokeBorder(Palette.gold, lineWidth: 1.5)");
+    expect(homeWeb).toContain("<Play ");
+    expect(homeApp).toContain('Image(systemName: "play.fill")');
+    // La web ancha y el Mac son el iPhone en una columna centrada, sin bloques distintos por ancho.
+    expect(homeWeb).toContain("mx-auto flex w-full max-w-[680px] flex-col");
+    expect(homeWeb).not.toMatch(/lg:hidden|hidden lg:block/);
+    expect(homeApp).toContain(".frame(maxWidth: 680, alignment: .leading)");
+    expect(homeApp).toMatch(/greetingHeader\s*weekStrip\s*mainAction\s*dayFigures\s*planSection\s*emptyWorkoutButton/);
+    // Mismas cifras: sin objetivo legible (Gratis), el estimado del onboarding en las dos.
+    expect(read("src/app/pages/Dashboard.tsx")).toContain("(nutrition ? macros : null) ?? macroEstimate");
+    expect(homeApp).toContain("MacroEstimate.load(userId: userId)");
+    // Cabecera de Hoy con el AP y AUTOPILOT en las dos.
+    expect(read("src/app/components/mobile/MobileHeader.tsx")).toContain("leading={brand ? <BrandLockup /> : undefined}");
+    expect(read("src/app/components/mobile/MobileAppShell.tsx")).toContain('brand={active === "home"}');
+    expect(read("native/Autopilot/Features/Shell/RootView.swift")).toContain("if current == .home { BrandLockup() }");
     // Entrenar sin semana: cualquier sesión se hace cualquier día. Título «Entrenar», las sesiones
     // en orden con foto («Sesión N», la siguiente destacada) y lo hecho esta semana; sin L–D ni descansos.
     const planWeb = read("src/app/components/dashboard/TrainingPlanView.tsx");
@@ -472,7 +485,7 @@ describe("paridad web ↔ apps nativas", () => {
     expect(read("src/app/pages/Dashboard.tsx")).toContain("withSessionIdentity(dayPlans, day, identity)");
   });
 
-  it("«¿Quién entrena?» y el icono: misma cabecera que el login y el icono con relieve de la marca, en la web y en la app", () => {
+  it("«¿Quién entrena?» y el icono: misma cabecera que el login y el icono de la marca, en la web y en la app", () => {
     const web = read("src/shared/components/native/WhoIsTraining.tsx");
     const app = read("native/Autopilot/Features/Auth/WhoIsTrainingView.swift");
     for (const text of ["¿Quién entrena?", "Elige tu cuenta. Marca una como predeterminada y entrará sola al abrir la app.", "Añadir cuenta", "Otra persona en este dispositivo", "AUTOPILOT"]) {
@@ -485,9 +498,16 @@ describe("paridad web ↔ apps nativas", () => {
     // Los iconos salen de la misma geometría que `BrandMark`, con el negro y el dorado de la app.
     const icons = read("scripts/gen-icon.mjs");
     expect(icons).toContain('path("BRAND_A")');
+    expect(icons).toContain('path("BRAND_P")');
+    // El monograma AP (12-11-2026): misma geometría en la web y en nativo, sin el rayo de antes.
+    const markGeometry = read("src/shared/components/ui/brand-mark.tsx");
+    const nativeMark = read("native/Autopilot/Design/Components.swift");
+    expect(markGeometry).not.toContain("BRAND_BOLT");
+    for (const anchor of ["382 50", "396 34", "775 378", "770 148"]) expect(markGeometry, anchor).toContain(anchor);
+    for (const anchor of ["pt(382, 50)", "pt(396, 34)", "pt(775, 211.5)", "pt(770, 210)"]) expect(nativeMark, anchor).toContain(anchor);
     expect(icons).toContain('const GOLD = "#D8B25E"');
     expect(read("native/Autopilot/Assets.xcassets/LaunchBackground.colorset/Contents.json")).toContain('"red":"0.042"');
-    // El icono con relieve de las pantallas sale del mismo generador en los dos lados, con las
+    // El icono de las pantallas sale del mismo generador en los dos lados, con las
     // esquinas del iPhone; la bienvenida lo usa a 52 y el arranque, en el sitio del splash (110 de 240).
     const markWeb = read("src/shared/components/ui/app-icon-mark.tsx");
     const markApp = read("native/Autopilot/Design/Components.swift");
@@ -840,14 +860,14 @@ describe("paridad web ↔ apps nativas", () => {
     expect(read("native/Autopilot/App/AutopilotApp.swift")).toContain("BrandPhotos.shared.refresh(");
   });
 
-  it("Hoy: «Entreno vacío» bajo la sesión y «Editar» en «Tu programa», en la web y en la app", () => {
+  it("Hoy: «Editar» en «Tu plan» y «Entreno vacío» al final, en la web y en la app", () => {
     const web = read("src/app/components/dashboard/HomeOverview.tsx");
     const app = read("native/Autopilot/Features/Home/HomeView.swift");
     expect(web).toContain("Entreno vacío");
     expect(app).toContain('Text("Entreno vacío")');
-    expect(app).toMatch(/mainAction\s*emptyWorkoutButton\s*routinesList/);
-    expect(web).toMatch(/<h3 className="type-title3">Tu programa<\/h3>[\s\S]{0,600}Editar/);
-    expect(app).toMatch(/Text\("Tu programa"\)[\s\S]{0,500}Button\("Editar"\)/);
+    expect(app).toMatch(/planSection\s*emptyWorkoutButton/);
+    expect(web).toMatch(/<h3 className="type-title3">Tu plan<\/h3>[\s\S]{0,600}Editar/);
+    expect(app).toMatch(/Text\("Tu plan"\)[\s\S]{0,500}Button\("Editar"\)/);
     // Mismo nombre del entreno guardado en los dos lados.
     expect(read("src/app/pages/Dashboard.tsx")).toContain('routine_name: "Entrenamiento libre"');
     expect(app).toContain('routine_name: "Entrenamiento libre"');

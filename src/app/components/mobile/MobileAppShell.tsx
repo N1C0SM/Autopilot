@@ -265,6 +265,7 @@ const MobileAppShell = ({
           titleVisible={titleVisible}
           titleAsHeading={!showLargeTitle}
           solid={showLargeTitle ? collapsed : scrolled}
+          brand={active === "home"}
         />
       )}
 

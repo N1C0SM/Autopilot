@@ -134,7 +134,7 @@ const ExerciseMedia = ({ video, image, name, pattern, stimulus, load, className 
           }}
           className="h-full w-full object-cover"
         />
-        <BrandMark size={14} className="pointer-events-none absolute bottom-3 right-3 opacity-60" />
+        <BrandMark size={18} className="pointer-events-none absolute bottom-3 right-3 opacity-60" />
         {intro && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-background motion-safe:animate-fade-in">
             <BrandMark size={36} beat />

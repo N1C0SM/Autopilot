@@ -40,15 +40,16 @@ describe("dashboard home overview", () => {
       />,
     );
 
-    // Rediseño: «Hoy» como título grande y el saludo debajo, en gris.
+    // Diseño de ChatGPT: «Hoy» pequeño, el nombre grande y una línea en gris.
     expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("Hoy");
-    expect(screen.getByText("Hola, Nicolás. A entrenar.")).toBeVisible();
+    expect(screen.getByText("Nicolás")).toBeVisible();
+    expect(screen.getByText("La constancia crea el cambio.")).toBeVisible();
     // El saludo es corto: la sesión se nombra solo en su tarjeta.
     expect(screen.queryByText(/Hoy toca/)).not.toBeInTheDocument();
     const startButton = screen.getByRole("button", { name: "Ver la sesión Pull B · Espalda y bíceps" });
     expect(within(startButton).getByText("Pull B")).toBeVisible();
-    expect(within(startButton).getByText("1 ejercicio")).toBeVisible();
-    expect(within(startButton).getByText("Siguiente sesión · 1 de 1")).toBeVisible();
+    expect(within(startButton).getByText("Entrenamiento")).toBeVisible();
+    expect(startButton).toHaveTextContent("5 min · 1 ejercicio");
     fireEvent.click(startButton);
     expect(within(screen.getByRole("dialog")).getByText("Sentadilla")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Empezar entrenamiento" }));
@@ -57,7 +58,22 @@ describe("dashboard home overview", () => {
     expect(mocks.hapticTap).toHaveBeenCalledTimes(2);
   });
 
-  it("matches the iPhone app home order and reserves the weekly summary for wide layouts", () => {
+  it("starts the session in one tap from the round gold button", () => {
+    const onStartWorkout = vi.fn();
+    render(
+      <HomeOverview
+        dayPlans={[{ day: today, type: "gimnasio", routine_name: "Pull B", exercises: [{ exercise_id: "row", name: "Remo", series: 3, reps: 8, weight: "", rest: "90 s" }] }]}
+        onNavigate={vi.fn()}
+        onStartWorkout={onStartWorkout}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Empezar Pull B" }));
+    expect(onStartWorkout).toHaveBeenCalledWith(today);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("follows the iPhone order on every width: session, today's figures and the plan", () => {
     render(
       <HomeOverview
         dayPlans={[{
@@ -74,18 +90,18 @@ describe("dashboard home overview", () => {
       />,
     );
 
+    const week = screen.getByRole("list", { name: "Esta semana" });
     const mainAction = screen.getByRole("button", { name: "Ver la sesión Upper A · Pecho, espalda y hombros" });
-    const routines = screen.getByRole("region", { name: "Tu programa" });
-    const weekPlan = screen.getByRole("region", { name: /Esta semana:/ });
-    const nutrition = screen.getByRole("button", { name: /Nutrición/ });
-    expect(mainAction).toBeVisible();
-    expect(routines).toBeVisible();
-    expect(routines.className).toContain("lg:hidden");
-    expect(mainAction.compareDocumentPosition(routines) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(weekPlan.className).toContain("hidden");
-    expect(weekPlan.className).toContain("lg:block");
-    expect(nutrition.parentElement?.className).toContain("hidden");
-    expect(nutrition.parentElement?.className).toContain("lg:block");
+    const figures = screen.getByRole("region", { name: "Tu día" });
+    const plan = screen.getByRole("region", { name: "Tu plan" });
+    for (const [before, after] of [[week, mainAction], [mainAction, figures], [figures, plan]]) {
+      expect(before.compareDocumentPosition(after) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
+    // La web ancha es el iPhone más grande: nada se esconde ni aparece según el ancho.
+    for (const element of [week, mainAction, figures, plan]) {
+      expect(element.className).not.toMatch(/(^|\s)(lg:)?hidden|lg:block/);
+    }
+    expect(within(week).getAllByRole("listitem")).toHaveLength(7);
     expect(screen.queryByRole("button", { name: /Tu progreso/ })).not.toBeInTheDocument();
   });
 
@@ -104,11 +120,11 @@ describe("dashboard home overview", () => {
     expect(screen.getByText("Prepara tu rutina inicial gratis")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Preparar mi rutina gratis" }));
     expect(onPrepareRoutine).toHaveBeenCalledOnce();
-    expect(screen.queryByRole("region", { name: "Tu programa" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Tu plan" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Tu progreso/ })).not.toBeInTheDocument();
   });
 
-  it("proposes the next pending session whatever the weekday, with one mark per session", () => {
+  it("proposes the next pending session whatever the weekday and marks the trained days of the week", () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-10-04T12:00:00")); // domingo: no cambia nada
     const onNavigate = vi.fn();
@@ -122,17 +138,26 @@ describe("dashboard home overview", () => {
         ]}
         completedDays={["Lunes"]}
         completedThisWeek={1}
+        trainedDates={["2026-09-30"]}
         onNavigate={onNavigate}
         onStartWorkout={onStartWorkout}
       />,
     );
 
-    // Ni días de la semana ni «descanso» por ser domingo: toca la siguiente que falta.
+    // Sin «descanso» por ser domingo: toca la siguiente que falta.
     expect(screen.queryByText(/descans/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/^[LMXJVSD]$/)).not.toBeInTheDocument();
+    // La tira es la semana de lunes a domingo: hoy con borde y un punto en los días entrenados.
+    const week = within(screen.getByRole("list", { name: "Esta semana" })).getAllByRole("listitem");
+    expect(week.map((day) => day.getAttribute("aria-label"))).toEqual([
+      "lunes 28", "martes 29", "miércoles 30, entrenaste", "jueves 1", "viernes 2", "sábado 3", "domingo 4, hoy",
+    ]);
+    expect(week[6]).toHaveAttribute("aria-current", "date");
     const startButton = screen.getByRole("button", { name: "Ver la sesión Empuje" });
-    expect(within(startButton).getByText("Siguiente sesión · 2 de 3")).toBeVisible();
-    expect(screen.getByRole("region", { name: "Esta semana: 1 de 3 sesiones" })).toBeVisible();
+    expect(startButton).toBeVisible();
+    const plan = screen.getByRole("region", { name: "Tu plan" });
+    expect(within(plan).getByText("1 de 3 sesiones completadas")).toBeVisible();
+    expect(within(plan).getByRole("progressbar")).toHaveAttribute("aria-valuenow", "1");
+    expect(within(plan).getByRole("button", { name: "Ver sesión Piernas, hecha esta semana" })).toBeVisible();
     fireEvent.click(startButton);
     expect(onStartWorkout).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Empezar entrenamiento" }));
@@ -174,7 +199,7 @@ describe("dashboard home overview", () => {
     expect(images[0]).toHaveAttribute("aria-hidden", "true");
   });
 
-  it("keeps weekly progress and nutrition reachable in the wide app layout", () => {
+  it("sums up the day in three figures that open nutrition and training", () => {
     const onNavigate = vi.fn();
     render(
       <HomeOverview
@@ -186,21 +211,19 @@ describe("dashboard home overview", () => {
         onNavigate={onNavigate}
         completedDays={["Lunes"]}
         completedThisWeek={1}
-        nutrition={false}
+        macros={{ protein: 150, carbs: 250, fats: 70, calories: 2230 }}
       />,
     );
 
-    expect(screen.getByText("Plan de nutrición")).toBeVisible();
-    const nutritionCard = screen.getByRole("button", { name: /Nutrición/ });
-    expect(nutritionCard).toBeVisible();
-    expect(nutritionCard.parentElement?.className).toContain("lg:block");
-    const startButton = screen.getByRole("button", { name: /Ver la sesión Entrenamiento de fuerza/ });
-    expect(startButton).toBeVisible();
-    const allButtons = screen.getAllByRole("button");
-    expect(allButtons.indexOf(startButton)).toBeLessThan(allButtons.indexOf(nutritionCard));
-    fireEvent.click(nutritionCard);
+    const figures = screen.getByRole("region", { name: "Tu día" });
+    const kcal = within(figures).getByRole("button", { name: "Calorías: 2230 kcal" });
+    expect(within(figures).getByRole("button", { name: "Proteína: 150 g proteína" })).toBeVisible();
+    const sessions = within(figures).getByRole("button", { name: "Sesiones: 1/3 sesiones" });
+    fireEvent.click(kcal);
     expect(onNavigate).toHaveBeenLastCalledWith("nutrition");
-    expect(mocks.hapticTap).toHaveBeenCalledOnce();
+    fireEvent.click(sessions);
+    expect(onNavigate).toHaveBeenLastCalledWith("training");
+    expect(mocks.hapticTap).toHaveBeenCalledTimes(2);
   });
 
   it("rests only when the whole week is done and still opens training", () => {
@@ -255,7 +278,7 @@ describe("dashboard home overview", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: "Ver la sesión Pull B" })).toHaveTextContent("2 ejercicios · 7 series · unos 20 min");
+    expect(screen.getByRole("button", { name: "Ver la sesión Pull B" })).toHaveTextContent("20 min · 2 ejercicios");
   });
 
   it("never rests just because of the weekday", () => {
@@ -297,15 +320,15 @@ describe("dashboard home overview", () => {
     await waitFor(() => expect(onCompleteActivity).toHaveBeenCalledWith("Lunes"));
   });
 
-  it("never mentions the paid plan on iOS", () => {
+  it("never mentions the paid plan and shows no dashes without nutrition targets", () => {
     const props = { dayPlans: [{ day: today, type: "gimnasio" as const, exercises: [] }], onNavigate: vi.fn(), nutrition: false };
-    render(<HomeOverview {...props} />);
-    expect(screen.getByText(/Incluido en Plus/)).toBeVisible();
-    cleanup();
-
-    mocks.ios = true;
-    render(<HomeOverview {...props} />);
-    expect(screen.getByText("Plan de nutrición")).toBeVisible();
-    expect(screen.queryByText(/Incluido en Plus/)).not.toBeInTheDocument();
+    for (const ios of [false, true]) {
+      mocks.ios = ios;
+      render(<HomeOverview {...props} />);
+      expect(screen.queryByText(/Plus/)).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Calorías: sin datos" })).toBeVisible();
+      expect(screen.queryByText("—")).not.toBeInTheDocument();
+      cleanup();
+    }
   });
 });

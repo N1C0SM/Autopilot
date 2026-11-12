@@ -68,145 +68,141 @@ struct HomeView: View {
         return TodayCache.shared.snapshot(userId: id)
     }
 
-    // MARK: iPhone — cabecera del rediseño: «Hoy» grande y el saludo en gris (como la web)
+    // MARK: Hoy (diseño de ChatGPT, igual que `HomeOverview.tsx`)
 
-    private var iPhoneHeader: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Hoy").font(.apLargeTitle).tracking(-0.7).accessibilityAddTraits(.isHeader)
-            Text(greeting.isEmpty ? "Tu entrenamiento de hoy." : "\(greeting) Tu entrenamiento de hoy.")
-                .font(.apSubhead).foregroundStyle(Palette.muted)
-                .fixedSize(horizontal: false, vertical: true)
+    /// Saludo: «Hoy» pequeño, el nombre grande y una línea en gris.
+    private var greetingHeader: some View {
+        let name = snapshot?.firstName ?? ""
+        return VStack(alignment: .leading, spacing: 2) {
+            Text("Hoy").font(.apSubhead.weight(.medium)).foregroundStyle(Palette.muted)
+                .accessibilityAddTraits(.isHeader)
+            Text(name.isEmpty ? "Hola" : name)
+                .font(.inter(size: 34, weight: .bold)).tracking(-0.7)
+                .lineLimit(1).minimumScaleFactor(0.7)
+            Text(headline).font(.apSubhead).foregroundStyle(Palette.muted)
+                .fixedSize(horizontal: false, vertical: true).padding(.top, 2)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// Semana compacta — idéntica a la web: un círculo de 32 pt por sesión de la rutina (check
-    /// dorado si está hecha, anillo dorado la siguiente, anillo gris las pendientes) y su nombre.
-    /// Sin días de la semana: cualquier sesión se hace el día que venga bien.
-    private var weekPlan: some View {
-        let sessions = snapshot?.scheduled ?? []
-        let done = Set(snapshot?.doneDays ?? [])
-        let sessionCount = sessions.filter { done.contains($0.day) }.count
-        let nextKey = sessions.first { !done.contains($0.day) }?.day
-        // En tarjeta, como en la web (rediseño): título, contador y un círculo por sesión.
-        return Card(padding: 16) {
-            // Header
-            HStack(alignment: .firstTextBaseline) {
-                Text("Esta semana")
-                    .font(.apHeadline)
-                    .accessibilityLabel("Esta semana: \(sessionCount) de \(sessions.count) sesiones")
-                Spacer()
-                Button {
-                    Haptics.selection()
-                    if let next = sessions.first(where: { !done.contains($0.day) }) { editingDay = next }
-                } label: {
-                    HStack(spacing: 4) {
-                        Text("Ver detalle")
-                        Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold))
-                    }
-                    .font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.gold)
-                    .frame(minHeight: 44)
-                }
-                .buttonStyle(.plain)
-            }
-            // Un círculo por sesión — mismos estados que la web (al menos 3 columnas, como `grid`).
-            if !sessions.isEmpty {
-                HStack(alignment: .top, spacing: 4) {
-                    ForEach(Array(sessions.enumerated()), id: \.element.day) { index, plan in
-                        let isDone = done.contains(plan.day)
-                        let isNext = plan.day == nextKey
-                        VStack(spacing: 8) {
-                            ZStack {
-                                if isDone {
-                                    Circle().fill(Palette.gold)
-                                    Image(systemName: "checkmark").font(.system(size: 13, weight: .bold)).foregroundStyle(Palette.background)
-                                } else if isNext {
-                                    Circle().strokeBorder(Palette.gold, lineWidth: 2)
-                                    Text("\(index + 1)").font(.inter(size: 13, weight: .semibold)).foregroundStyle(Palette.gold)
-                                } else {
-                                    Circle().strokeBorder(Palette.foreground.opacity(0.25), lineWidth: 1)
-                                    Text("\(index + 1)").font(.inter(size: 13, weight: .semibold)).foregroundStyle(Palette.muted)
-                                }
-                            }
-                            .frame(width: 32, height: 32)
-                            Text(plan.title.components(separatedBy: " · ")[0])
-                                .font(.inter(size: 12, weight: isNext ? .semibold : .regular))
-                                .foregroundStyle(isNext ? Palette.foreground : Palette.muted)
-                                .lineLimit(1)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .accessibilityElement(children: .ignore)
-                        .accessibilityLabel("Sesión \(index + 1): \(plan.title)\(isDone ? ", hecha" : isNext ? ", siguiente" : "")")
-                    }
-                    ForEach(sessions.count..<max(sessions.count, 3), id: \.self) { _ in
-                        Color.clear.frame(maxWidth: .infinity, maxHeight: 1)
-                    }
-                }
-                .dynamicTypeSize(...DynamicTypeSize.accessibility1)
-            }
+    private var headline: String {
+        guard let s = snapshot else { return "La constancia crea el cambio." }
+        if s.completedToday { return "Buen trabajo hoy." }
+        if s.plan == nil && !s.scheduled.isEmpty { return "Semana completa." }
+        return "La constancia crea el cambio."
+    }
+
+    private struct WeekDay { let letter: String; let name: String; let day: Int; let key: String; let isToday: Bool }
+
+    private static let weekNames: [(String, String)] = [
+        ("L", "lunes"), ("M", "martes"), ("X", "miércoles"), ("J", "jueves"), ("V", "viernes"), ("S", "sábado"), ("D", "domingo"),
+    ]
+
+    /// La semana en curso, de lunes a domingo (como `weekDays` en la web).
+    private var weekDays: [WeekDay] {
+        let calendar = Calendar(identifier: .gregorian)
+        let now = Date()
+        let offset = (calendar.component(.weekday, from: now) + 5) % 7 // domingo = 1 → 6; lunes = 2 → 0
+        let monday = calendar.date(byAdding: .day, value: -offset, to: calendar.startOfDay(for: now)) ?? now
+        let today = LocalDate.string(now)
+        return Self.weekNames.enumerated().map { index, names in
+            let date = calendar.date(byAdding: .day, value: index, to: monday) ?? monday
+            let key = LocalDate.string(date)
+            return WeekDay(letter: names.0, name: names.1, day: calendar.component(.day, from: date), key: key, isToday: key == today)
         }
     }
 
-    /// Semana en una sola línea: contador y la siguiente sesión, sin el bloque de círculos.
-    private var compactWeek: some View {
+    /// La semana en píldoras: hoy con borde dorado y un punto dorado en los días entrenados.
+    private var weekStrip: some View {
+        let trained = Set(snapshot?.trainedDates ?? [])
+        return HStack(spacing: 6) {
+            ForEach(weekDays, id: \.key) { day in
+                let done = trained.contains(day.key)
+                VStack(spacing: 4) {
+                    Text(day.letter).font(.inter(size: 11, weight: .medium)).foregroundStyle(Palette.muted)
+                    Text("\(day.day)").font(.inter(size: 17, weight: .semibold)).monospacedDigit()
+                        .foregroundStyle(day.isToday ? Palette.gold : Palette.foreground)
+                    Circle().fill(done ? Palette.gold : Color.clear).frame(width: 4, height: 4)
+                }
+                .frame(maxWidth: .infinity, minHeight: 68)
+                .background(SurfaceBackground(shape: Capsule()))
+                .overlay { if day.isToday { Capsule().strokeBorder(Palette.gold, lineWidth: 1.5) } }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("\(day.name) \(day.day)\(day.isToday ? ", hoy" : "")\(done ? ", entrenaste" : "")")
+            }
+        }
+        .dynamicTypeSize(...DynamicTypeSize.xxLarge)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Esta semana")
+    }
+
+    /// Tu día en tres cifras con anillo: kcal y proteína del objetivo (anillo = comidas marcadas hoy)
+    /// y las sesiones de la semana.
+    private var dayFigures: some View {
         let sessions = snapshot?.scheduled ?? []
         let done = Set(snapshot?.doneDays ?? [])
-        let count = sessions.filter { done.contains($0.day) }.count
-        let next = sessions.first { !done.contains($0.day) }
-        return Button {
-            Haptics.selection()
-            if let next { editingDay = next }
-        } label: {
-            HStack(spacing: 10) {
-                Text("Esta semana")
-                    .font(.apHeadline)
-                    .accessibilityLabel("Esta semana: \(count) de \(sessions.count) sesiones")
-                Text("\(count) de \(sessions.count)")
-                    .font(.apSubhead).foregroundStyle(Palette.muted)
-                Spacer()
-                if let next {
-                    Text(next.title.components(separatedBy: " · ")[0])
-                        .font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.gold)
-                        .lineLimit(1)
-                }
-                Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold)).foregroundStyle(Palette.muted)
+        let doneCount = sessions.filter { done.contains($0.day) }.count
+        let meals = mealsProgress
+        return HStack(spacing: 12) {
+            figureTile(icon: "lu-flame", progress: meals, value: snapshot?.calories.map { NumberText.integer($0) },
+                       caption: "kcal", label: "Calorías") { onNavigate(.nutrition) }
+            figureTile(icon: "lu-beef", progress: meals, value: snapshot?.macros.map { NumberText.integer(Int($0.p.rounded())) },
+                       caption: "g proteína", label: "Proteína") { onNavigate(.nutrition) }
+            figureTile(icon: "lu-dumbbell", progress: sessions.isEmpty ? 0 : Double(doneCount) / Double(sessions.count),
+                       value: sessions.isEmpty ? nil : "\(doneCount)/\(sessions.count)", caption: "sesiones", label: "Sesiones") {
+                // Como «training» sin día en la web: abre la siguiente sesión.
+                if let next = sessions.first(where: { !done.contains($0.day) }) ?? sessions.first { editingDay = next }
             }
-            .padding(.horizontal, 18).padding(.vertical, 14)
-            .frame(maxWidth: .infinity)
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Tu día")
+    }
+
+    /// Comidas marcadas hoy sobre las del plan; sin plan de comidas, el anillo queda vacío.
+    private var mealsProgress: Double {
+        let total = snapshot?.mealCount ?? 0
+        guard total > 0 else { return 0 }
+        let c = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+        let key = "meals_done_\(session.userIdString ?? "")_\(c.year!)-\(c.month!)-\(c.day!)"
+        let done = UserDefaults.standard.data(forKey: key).flatMap { try? JSONDecoder().decode([String].self, from: $0) }?.count ?? 0
+        return min(1, Double(done) / Double(total))
+    }
+
+    /// Cifra del día: anillo dorado con su icono, la cifra grande y debajo su unidad («kcal», «g proteína»).
+    /// Sin cifra, «Sin datos» y su nombre.
+    private func figureTile(icon: String, progress: Double, value: String?, caption: String, label: String,
+                            action: @escaping () -> Void) -> some View {
+        Button { Haptics.tap(); action() } label: {
+            VStack(alignment: .leading, spacing: 0) {
+                ZStack {
+                    Circle().stroke(Palette.secondary, lineWidth: 3.5)
+                    if progress > 0 {
+                        Circle().trim(from: 0, to: min(1, progress))
+                            .stroke(Palette.gold, style: StrokeStyle(lineWidth: 3.5, lineCap: .round))
+                            .rotationEffect(.degrees(-90))
+                    }
+                    Image(icon).renderingMode(.template).resizable().frame(width: 16, height: 16)
+                        .foregroundStyle(Palette.gold)
+                }
+                .frame(width: 40, height: 40)
+                if let value {
+                    Text(value).font(.inter(size: wideLayout ? 30 : 24, weight: .bold)).monospacedDigit()
+                        .lineLimit(1).minimumScaleFactor(0.6)
+                        .padding(.top, 12)
+                } else {
+                    Text("Sin datos").font(.apFootnote).foregroundStyle(Palette.muted).padding(.top, 12)
+                }
+                Text(value == nil ? label : caption).font(.apFootnote).foregroundStyle(Palette.muted)
+                    .lineLimit(1).minimumScaleFactor(0.8).padding(.top, 2)
+            }
+            .padding(wideLayout ? 20 : 14)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .surface()
         }
-        .buttonStyle(.plain)
-    }
-
-    private var homeRows: some View {
-        let pr = snapshot?.lastPr
-        return VStack(spacing: 12) {
-            rowCard(symbol: "chart.bar", title: "Tu progreso",
-                    detail: pr.map { "\($0.exercise) · \($0.weight.rounded() == $0.weight ? NumberText.integer(Int($0.weight)) : NumberText.decimal($0.weight)) kg × \($0.reps)" } ?? "Sigue tu evolución semana a semana.") { onNavigate(.progress) }
-        }
-    }
-
-    /// Último récord personal, en una fila compacta: no es una tarjeta más, es una línea informativa.
-    private var lastPrRow: some View {
-        Group {
-            if let pr = snapshot?.lastPr {
-                HStack(spacing: 10) {
-                    Image(systemName: "trophy").font(.system(size: 16, weight: .semibold)).foregroundStyle(Palette.gold)
-                        .frame(width: 26)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text("Último récord").font(.apCaption).foregroundStyle(Palette.muted)
-                        Text("\(pr.exercise) · \(pr.weight.rounded() == pr.weight ? NumberText.integer(Int(pr.weight)) : NumberText.decimal(pr.weight)) kg × \(pr.reps)")
-                            .font(.apSubhead.weight(.semibold)).lineLimit(1)
-                    }
-                    Spacer()
-                    Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold)).foregroundStyle(Palette.muted)
-                }
-                .padding(.horizontal, 18).padding(.vertical, 14)
-                .frame(maxWidth: .infinity)
-                .surface()
-                .onTapGesture { Haptics.tap(); onNavigate(.progress) }
-            }
-        }
+        .buttonStyle(.pressableCard)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(value.map { "\(label): \($0) \(caption)" } ?? "\(label): sin datos")
+        .accessibilityAddTraits(.isButton)
     }
 
     /// «Entreno vacío» (como en Hevy y en la web): se eligen los ejercicios y se empieza, sin rutina.
@@ -226,64 +222,89 @@ struct HomeView: View {
         .accessibilityHint("Eliges los ejercicios y empiezas a entrenar")
     }
 
-    /// «Tu programa»: una fila por sesión con su miniatura, su foco muscular y su chevron.
-    /// Es la lista de la maqueta (limpia y visual); el detalle con ejercicios se abre al tocar.
-    private var routinesList: some View {
+    /// «Tu plan»: lo hecho esta semana con su barra dorada y, debajo, una fila por sesión de la rutina
+    /// (miniatura, foco muscular y check dorado si ya está hecha). Al tocar, el detalle de la sesión.
+    @ViewBuilder private var planSection: some View {
         let sessions = snapshot?.scheduled ?? []
-        guard !sessions.isEmpty else { return AnyView(EmptyView()) }
-        let card = RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
-        return AnyView(VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .firstTextBaseline) {
-                Text("Tu programa").font(.apTitle3)
-                    .accessibilityAddTraits(.isHeader)
-                Spacer(minLength: 8)
-                Text("\(sessions.count) \(sessions.count == 1 ? "sesión" : "sesiones")")
-                    .font(.apFootnote).foregroundStyle(Palette.muted)
-                Button("Editar") { Haptics.tap(); planEditorOpen = true }
-                    .font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.gold)
-                    .buttonStyle(.plain).frame(minHeight: 44).padding(.vertical, -12)
-                    .accessibilityLabel("Editar rutina")
-            }
-            VStack(spacing: 0) {
-                ForEach(Array(sessions.enumerated()), id: \.element.day) { index, plan in
-                    Button {
-                        Haptics.selection()
-                        editingDay = plan
-                    } label: {
-                        HStack(spacing: 14) {
-                            routineThumb(plan)
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(plan.title.components(separatedBy: " · ")[0])
-                                    .font(.apHeadline).foregroundStyle(Palette.foreground)
-                                    .lineLimit(1)
-                                Text(programSubtitle(plan))
-                                    .font(.apFootnote).foregroundStyle(Palette.muted)
-                                    .lineLimit(1)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(Palette.muted)
-                                .accessibilityHidden(true)
-                        }
-                        .padding(.horizontal, 14).padding(.vertical, 10)
-                        .frame(maxWidth: .infinity, minHeight: 76, alignment: .leading)
-                        .contentShape(Rectangle())
-                        .overlay(alignment: .bottom) {
-                            if index < sessions.count - 1 {
-                                Rectangle().fill(Palette.foreground.opacity(0.06)).frame(height: 1)
-                                    .padding(.leading, 84)
-                            }
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityElement(children: .combine)
-                    .accessibilityHint("Abre la sesión para ver y editar sus ejercicios")
+        let done = Set(snapshot?.doneDays ?? [])
+        let doneCount = sessions.filter { done.contains($0.day) }.count
+        if !sessions.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("Tu plan").font(.apTitle3)
+                        .accessibilityAddTraits(.isHeader)
+                    Spacer(minLength: 8)
+                    Button("Editar") { Haptics.tap(); planEditorOpen = true }
+                        .font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.gold)
+                        .buttonStyle(.plain).frame(minHeight: 44).padding(.vertical, -12)
+                        .accessibilityLabel("Editar rutina")
                 }
+                VStack(alignment: .leading, spacing: 0) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Esta semana").font(.apHeadline)
+                        Text("\(doneCount) de \(sessions.count) \(sessions.count == 1 ? "sesión completada" : "sesiones completadas")")
+                            .font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted)
+                        GeometryReader { geo in
+                            ZStack(alignment: .leading) {
+                                Capsule().fill(Palette.secondary)
+                                Capsule().fill(Palette.gold)
+                                    .frame(width: geo.size.width * CGFloat(doneCount) / CGFloat(sessions.count))
+                            }
+                        }
+                        .frame(height: 6)
+                        .padding(.top, 10)
+                        .accessibilityHidden(true)
+                    }
+                    .padding(.horizontal, 18).padding(.top, 18).padding(.bottom, 16)
+                    .accessibilityElement(children: .combine)
+                    ForEach(sessions, id: \.day) { plan in
+                        let isDone = done.contains(plan.day)
+                        Button {
+                            Haptics.selection()
+                            editingDay = plan
+                        } label: {
+                            HStack(spacing: 14) {
+                                routineThumb(plan)
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(plan.title.components(separatedBy: " · ")[0])
+                                        .font(.apHeadline).foregroundStyle(Palette.foreground)
+                                        .lineLimit(1)
+                                    Text(programSubtitle(plan))
+                                        .font(.apFootnote).foregroundStyle(Palette.muted)
+                                        .lineLimit(1)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                if isDone {
+                                    Image(systemName: "checkmark")
+                                        .font(.system(size: 11, weight: .bold))
+                                        .foregroundStyle(Palette.background)
+                                        .frame(width: 24, height: 24)
+                                        .background(Palette.gold, in: Circle())
+                                        .accessibilityHidden(true)
+                                } else {
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundStyle(Palette.muted)
+                                        .accessibilityHidden(true)
+                                }
+                            }
+                            .padding(.horizontal, 14).padding(.vertical, 10)
+                            .frame(maxWidth: .infinity, minHeight: 76, alignment: .leading)
+                            .contentShape(Rectangle())
+                            .overlay(alignment: .top) {
+                                Rectangle().fill(Palette.foreground.opacity(0.06)).frame(height: 1)
+                                    .padding(.horizontal, 14)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel("Ver sesión \(plan.title)\(isDone ? ", hecha esta semana" : "")")
+                        .accessibilityHint("Abre la sesión para ver y editar sus ejercicios")
+                    }
+                }
+                .surface()
             }
-            .background(Palette.card, in: card)
-            .overlay(card.strokeBorder(Palette.foreground.opacity(0.08), lineWidth: 1))
-        })
+        }
     }
 
     /// Miniatura de una sesión del programa: portada (foto propia o IA) y, sin ella, la foto de su
@@ -319,80 +340,22 @@ struct HomeView: View {
     }
 
 
-    private var nutritionRow: some View {
-        let kcal = snapshot?.calories
-        return rowCard(symbol: "fork.knife", title: "Nutrición",
-                       detail: kcal == nil ? (isNativeIOS ? "Plan de nutrición" : "Plan de nutrición · Incluido en Plus") : "Objetivo diario",
-                       value: kcal.map { "\(NumberText.integer($0)) kcal" }, locked: kcal == nil) { onNavigate(.nutrition) }
-    }
-
-    private var isNativeIOS: Bool {
-        #if os(iOS)
-        return true
-        #else
-        return false
-        #endif
-    }
-
-    /// Fila-tarjeta: título y una línea gris a la izquierda; icono dorado (gris con candado si está bloqueada) y chevron.
-    private func rowCard(symbol: String, title: String, detail: String, value: String? = nil, locked: Bool = false,
-                         action: @escaping () -> Void) -> some View {
-        Button { Haptics.tap(); action() } label: {
-            HStack(spacing: 14) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(title).font(.apHeadline).lineLimit(1)
-                    Text(detail).font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                if let value {
-                    Text(value).font(.apSubhead.weight(.semibold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.7)
-                }
-                Image(systemName: locked ? "lock" : symbol)
-                    .font(.system(size: 21, weight: .regular))
-                    .foregroundStyle(locked ? Palette.muted : Palette.gold)
-                    .frame(width: 26)
-                    .accessibilityHidden(true)
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Palette.muted)
-                    .accessibilityHidden(true)
-            }
-            .padding(.horizontal, 18).padding(.vertical, 16)
-            .frame(maxWidth: .infinity, minHeight: 72)
-            .surface()
-            .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).strokeBorder(Palette.foreground.opacity(0.08), lineWidth: 1))
-        }
-        .buttonStyle(.pressableCard)
-        .accessibilityElement(children: .combine)
-    }
-
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                if wideLayout {
-                    iPhoneHeader.padding(.horizontal, horizontalPadding).padding(.top, 24)
-                    wideToday
-                    VStack(spacing: 12) {
-                        emptyWorkoutButton
-                        weekPlan
-                        nutritionRow
-                    }
-                    .padding(.horizontal, horizontalPadding)
-                    .padding(.top, 24)
-                } else {
-                    // iPhone (rediseño de ChatGPT): «Hoy», sesión de hoy y, debajo, solo la semana
-                    // y la nutrición. Sin tarjetas de progreso/plan: se llegan por las pestañas.
-                    VStack(alignment: .leading, spacing: 12) {
-                        iPhoneHeader.padding(.bottom, 8)
-                        mainAction
-                        emptyWorkoutButton
-                        routinesList
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
-                }
+            // Diseño de ChatGPT: la misma columna en el iPhone y, más grande y centrada, en iPad y Mac
+            // (como la web ancha): saludo, semana, sesión, cifras del día y tu plan.
+            VStack(alignment: .leading, spacing: 20) {
+                greetingHeader
+                weekStrip
+                mainAction
+                dayFigures
+                planSection
+                emptyWorkoutButton
             }
+            .frame(maxWidth: 680, alignment: .leading)
+            .padding(.horizontal, horizontalPadding)
+            .padding(.top, wideLayout ? 24 : 8)
+            .frame(maxWidth: .infinity)
             .padding(.bottom, 40)
         }
         .screenBackground()
@@ -457,146 +420,9 @@ struct HomeView: View {
         }
     }
 
-    private var greeting: String {
-        let name = snapshot?.firstName ?? ""
-        return name.isEmpty ? "Hola." : "Hola, \(name)."
-    }
-
-    private var stateLine: String {
-        guard let s = snapshot else { return "Preparando tu día." }
-        if s.completedToday { return "Buen trabajo." }
-        if s.noPlan == true { return "Empecemos." }
-        if s.plan?.isGym == true { return "A entrenar." }
-        if let p = s.plan, p.type == "actividad" { return "A \(p.sport ?? "moverte")." }
-        return s.scheduled.isEmpty ? "" : "Semana completa."
-    }
-
-    // MARK: Escritorio (web `HomeOverview.tsx`: una columna ancha con foto héroe)
-
-    /// Lo de hoy en iPad/Mac: foto héroe a todo el ancho y, debajo, el texto y la acción.
-    @ViewBuilder private var wideToday: some View {
-        if let s = snapshot {
-            VStack(alignment: .leading, spacing: 0) {
-                // La web pinta la portada de la sesión de hoy antes que nada (`lg:h-[340px]`).
-                if s.plan?.isGym == true, let cover = todayCover {
-                    heroPhoto(cover)
-                }
-                if let plan = s.plan, !s.completedToday {
-                    wideStart(plan).padding(.top, 24)
-                } else {
-                    mainAction.padding(.top, 24)
-                }
-            }
-        } else {
-            mainAction
-        }
-    }
-
     /// Primera foto de la sesión de hoy (la portada que usa la web).
     private var todayCover: URL? {
         (snapshot?.plan?.exercises ?? []).compactMap { $0.image_url }.first.flatMap(URL.init(string:))
-    }
-
-    /// Foto héroe a todo el ancho (la web: `lg:h-[340px]`), con degradado y radio de héroe.
-    private func heroPhoto(_ url: URL) -> some View {
-        CachedAsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { Palette.card }
-            .frame(maxWidth: .infinity)
-            .frame(height: 340)
-            .clipped()
-            .overlay {
-                LinearGradient(colors: [.clear, .black.opacity(0.55)], startPoint: .center, endPoint: .bottom)
-            }
-            .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
-            .padding(.top, 32)
-            .accessibilityHidden(true)
-    }
-
-    /// Texto y CTA de la sesión de hoy, sin tarjeta y con ancho de lectura (web: `lg:max-w-md`).
-    private func wideStart(_ plan: DayPlan) -> some View {
-        let parts = plan.title.components(separatedBy: " · ")
-        let summary = detail(plan)
-        return VStack(alignment: .leading, spacing: 0) {
-            Text(sessionLabel(plan))
-                .font(.apCaption.weight(.semibold)).textCase(.uppercase).tracking(0.6)
-                .foregroundStyle(Palette.gold)
-            Text(parts[0]).font(.apTitle1).lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true).padding(.top, 6)
-            if parts.count > 1 {
-                Text(parts.dropFirst().joined(separator: " · "))
-                    .font(.apSubhead).foregroundStyle(Palette.muted)
-                    .lineLimit(2).fixedSize(horizontal: false, vertical: true).padding(.top, 2)
-            }
-            if !summary.isEmpty {
-                Text(summary).font(.apSubhead.monospacedDigit())
-                    .foregroundStyle(Palette.muted).padding(.top, 4)
-            }
-            Button { openSheet() } label: { Text("Ver la sesión") }
-                .buttonStyle(.pill)
-                .frame(maxWidth: 224)
-                .padding(.top, 20)
-        }
-        .frame(maxWidth: 448, alignment: .leading)
-    }
-
-    /// Widgets de Inicio, como la web: dos cuadrados lado a lado, Nutrición y Último récord.
-    private var widgets: some View {
-        HStack(alignment: .top, spacing: 12) {
-            let kcal = snapshot?.calories
-            widgetTile(symbol: kcal == nil ? "lu-lock" : "lu-apple", ring: kcal == nil ? nil : mealsRing,
-                       value: kcal.map { NumberText.integer($0) }, unit: kcal == nil ? nil : "kcal", title: "Nutrición",
-                       detail: kcal == nil ? "Sin plan de nutrición todavía" : "Objetivo diario",
-                       macros: snapshot?.macros) { onNavigate(.nutrition) }
-            let pr = snapshot?.lastPr
-            widgetTile(symbol: "lu-trophy", ring: nil,
-                       value: pr.map { $0.weight.rounded() == $0.weight ? NumberText.integer(Int($0.weight)) : NumberText.decimal($0.weight) },
-                       unit: pr == nil ? nil : "kg",
-                       title: pr?.exercise ?? "Récords",
-                       detail: pr.map { "\($0.reps) reps · \($0.dateLabel)" } ?? "Tu primer récord llegará entrenando") { onNavigate(.progress) }
-        }
-    }
-
-    /// Anillo de Nutrición: comidas marcadas hoy; sin comidas, el objetivo del día completo.
-    private var mealsRing: Double {
-        let total = snapshot?.mealCount ?? 0
-        guard total > 0 else { return 1 }
-        let c = Calendar.current.dateComponents([.year, .month, .day], from: Date())
-        let key = "meals_done_\(session.userIdString ?? "")_\(c.year!)-\(c.month!)-\(c.day!)"
-        let done = UserDefaults.standard.data(forKey: key).flatMap { try? JSONDecoder().decode([String].self, from: $0) }?.count ?? 0
-        return min(1, Double(done) / Double(total))
-    }
-
-    /// Widget compacto (Semana, Récord): icono arriba, cifra grande, título y una línea gris.
-    private func widgetTile(symbol: String, ring: Double?, value: String?, unit: String?, title: String,
-                            detail: String, macros: MacroSum? = nil, action: @escaping () -> Void) -> some View {
-        Button { Haptics.tap(); action() } label: {
-            VStack(alignment: .leading, spacing: 0) {
-                Group {
-                    if let m = macros { MacroRingSmall(p: m.p, c: m.c, f: m.f) }
-                    else { ProgressRing(value: (ring ?? 0) * 100, symbol: symbol) }
-                }
-                // En Mac/iPad las tarjetas son más anchas: el icono crece para no quedarse diminuto.
-                .scaleEffect(wideLayout ? 1.4 : 1, anchor: .topLeading)
-                .frame(width: wideLayout ? 45 : 32, height: wideLayout ? 45 : 32, alignment: .topLeading)
-                Spacer(minLength: 16)
-                if let value {
-                    HStack(alignment: .firstTextBaseline, spacing: 4) {
-                        Text(value).font(.figure(size: 40)).minimumScaleFactor(0.6).lineLimit(1)
-                        if let unit { Text(unit).font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.muted) }
-                    }
-                    .padding(.bottom, 8)
-                }
-                Text(title).font(.apHeadline).lineLimit(1)
-                Text(detail).font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(16)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            // Cuadrados en el iPhone; en Mac/iPad, altura fija (si no, ocupan media pantalla).
-            .squareTile(!wideLayout, height: 200)
-            .surface()
-        }
-        .buttonStyle(.pressableCard)
-        .accessibilityElement(children: .combine)
     }
 
     // MARK: Lo único de hoy (empezar, resultados o descanso)
@@ -683,99 +509,94 @@ struct HomeView: View {
                 RoundedRectangle(cornerRadius: 4, style: .continuous).fill(Palette.secondary).frame(width: 210, height: 15).padding(.top, 8)
                 RoundedRectangle(cornerRadius: 4, style: .continuous).fill(Palette.secondary).frame(width: 150, height: 13).padding(.top, 20)
             }
-            .padding(20)
-            .frame(maxWidth: .infinity, minHeight: 172, alignment: .topLeading)
-            RoundedRectangle(cornerRadius: 26, style: .continuous).fill(Palette.secondary)
-                .frame(height: 52).padding(.horizontal, 16).padding(.bottom, 16)
+            .padding(wideLayout ? 28 : 20)
+            .frame(maxWidth: .infinity, minHeight: wideLayout ? 240 : 188, alignment: .topLeading)
         }
-        .background(Palette.card)
-        .clipShape(shape)
-        .overlay(shape.strokeBorder(Palette.foreground.opacity(0.08), lineWidth: 1))
+        .background(SurfaceBackground(shape: shape))
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Cargando tu sesión de hoy")
         .accessibilityAddTraits(.updatesFrequently)
     }
 
-    /// Sesión de hoy: tarjeta visual con la foto de la sesión fundida a la derecha, la duración
-    /// estimada, el número de ejercicios y un botón dorado «Entrenar» a un solo toque.
+    /// Sesión de hoy (diseño de ChatGPT): «Entrenamiento», el nombre grande, su foco y «60 min ·
+    /// 6 ejercicios», con la foto de la sesión fundida a la derecha. La tarjeta abre el detalle y el
+    /// botón redondo dorado empieza a un toque.
     private func startCard(_ plan: DayPlan) -> some View {
         let parts = plan.title.components(separatedBy: " · ")
-        let subtitle = parts.count > 1 ? parts.dropFirst().joined(separator: " · ") : (plan.muscle_focus ?? "")
+        // El foco tal cual (como en «Tu plan»); sin él, lo que el título lleva tras el «·».
+        let focus = plan.muscle_focus?.trimmingCharacters(in: .whitespaces) ?? ""
+        let subtitle = !focus.isEmpty ? focus : (parts.count > 1 ? parts.dropFirst().joined(separator: " · ") : "")
         let cover = plan.isGym ? todayCover : nil
         let exerciseCount = plan.exercises?.count ?? 0
-        let minutes = estimatedMinutes(plan)
+        let detailLine = plan.isGym
+            ? [estimatedMinutes(plan).map { "\($0) min" },
+               exerciseCount > 0 ? "\(exerciseCount) \(exerciseCount == 1 ? "ejercicio" : "ejercicios")" : nil]
+                .compactMap { $0 }.joined(separator: " · ")
+            : detail(plan)
         let shape = RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
-        return VStack(alignment: .leading, spacing: 0) {
+        return ZStack(alignment: .bottomTrailing) {
             Button { Haptics.tap(); openSheet() } label: {
-            VStack(alignment: .leading, spacing: 0) {
-                Text("ENTRENAMIENTO DE HOY")
-                    .font(.apCaption.weight(.bold)).tracking(1.6)
-                    .foregroundStyle(Palette.gold)
-                Text(parts[0])
-                    .font(.inter(size: 26, weight: .bold)).tracking(-0.5)
-                    .lineLimit(2).minimumScaleFactor(0.8)
-                    .fixedSize(horizontal: false, vertical: true).padding(.top, 8)
-                if !subtitle.isEmpty {
-                    Text(subtitle)
-                        .font(.apSubhead).foregroundStyle(Palette.muted)
-                        .lineLimit(2).fixedSize(horizontal: false, vertical: true).padding(.top, 4)
-                }
-                if exerciseCount > 0 || minutes != nil {
-                    HStack(spacing: 18) {
-                        if let minutes {
-                            Label("~ \(minutes) min", systemImage: "clock")
-                        }
-                        if exerciseCount > 0 {
-                            Label("\(exerciseCount) \(exerciseCount == 1 ? "ejercicio" : "ejercicios")", systemImage: "dumbbell")
-                        }
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack(spacing: 6) {
+                        Image("lu-dumbbell").renderingMode(.template).resizable().frame(width: 16, height: 16)
+                            .foregroundStyle(Palette.gold)
+                        Text(plan.isGym ? "Entrenamiento" : "Actividad")
+                            .font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.muted)
                     }
-                    .font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted)
-                    .labelStyle(.titleAndIcon)
-                    .padding(.top, 16)
+                    Text(parts[0])
+                        .font(.inter(size: wideLayout ? 34 : 28, weight: .bold)).tracking(-0.5)
+                        .lineLimit(2).minimumScaleFactor(0.8)
+                        .fixedSize(horizontal: false, vertical: true).padding(.top, 8)
+                    if !subtitle.isEmpty {
+                        Text(subtitle)
+                            .font(.apSubhead).foregroundStyle(Palette.muted)
+                            .lineLimit(2).fixedSize(horizontal: false, vertical: true).padding(.top, 4)
+                    }
+                    Spacer(minLength: 16)
+                    if !detailLine.isEmpty {
+                        Text(detailLine).font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted)
+                    }
                 }
-            }
-            .padding(20)
-            .padding(.trailing, cover == nil ? 0 : 96)
-            .frame(maxWidth: .infinity, minHeight: 172, alignment: .topLeading)
-            .background(alignment: .trailing) {
-                if let cover {
-                    CachedAsyncImage(url: cover) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
-                        .frame(width: 230).frame(maxHeight: .infinity).clipped()
-                        .overlay {
-                            LinearGradient(colors: [Palette.card, Palette.card.opacity(0.7), Palette.card.opacity(0.12)],
-                                           startPoint: .leading, endPoint: .trailing)
-                        }
-                        .allowsHitTesting(false)
-                        .accessibilityHidden(true)
+                .padding(wideLayout ? 28 : 20)
+                .padding(.trailing, cover == nil ? 64 : (wideLayout ? 240 : 128))
+                .frame(maxWidth: .infinity, minHeight: wideLayout ? 240 : 188, alignment: .topLeading)
+                .background(alignment: .trailing) {
+                    if let cover {
+                        CachedAsyncImage(url: cover) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
+                            .frame(width: wideLayout ? 390 : 210).frame(maxHeight: .infinity).clipped()
+                            // Fundida con una máscara (no con el color de la tarjeta): sin corte sobre su luz.
+                            .mask {
+                                LinearGradient(colors: [.clear, .black], startPoint: .leading, endPoint: UnitPoint(x: 0.6, y: 0.5))
+                            }
+                            .allowsHitTesting(false)
+                            .accessibilityHidden(true)
+                    }
                 }
-            }
-            .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel([plan.title, subtitle, minutes.map { "unos \($0) minutos" } ?? "",
-                                 exerciseCount > 0 ? "\(exerciseCount) ejercicios" : ""].filter { !$0.isEmpty }.joined(separator: ". "))
-            .accessibilityHint("Abre el detalle de la sesión de hoy")
-
-            Button {
-                Haptics.tap()
-                Task { await startRoutine(plan) }
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "play.fill").font(.system(size: 15, weight: .bold))
-                    Text("Entrenar").font(.apHeadline)
-                }
-                .foregroundStyle(Palette.background)
-                .frame(maxWidth: .infinity, minHeight: 52)
-                .background(Palette.gold, in: Capsule())
+                .clipShape(shape)
+                .background(SurfaceBackground(shape: shape))
+                .contentShape(shape)
             }
             .buttonStyle(.pressableCard)
-            .padding(.horizontal, 16).padding(.bottom, 16)
-            .accessibilityLabel("Empezar a entrenar ahora")
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel([plan.title, subtitle, detailLine].filter { !$0.isEmpty }.joined(separator: ". "))
+            .accessibilityHint("Abre el detalle de la sesión de hoy")
+
+            // Empezar a un toque: el botón redondo dorado de la maqueta.
+            Button {
+                Haptics.tap()
+                if plan.isGym { Task { await startRoutine(plan) } } else { openSheet() }
+            } label: {
+                Image(systemName: "play.fill")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundStyle(Palette.background)
+                    .offset(x: 2)
+                    .frame(width: 56, height: 56)
+                    .background(GoldFill(shape: Circle()))
+            }
+            .buttonStyle(.pressableCard)
+            .padding(wideLayout ? 24 : 16)
+            .accessibilityLabel(plan.isGym ? "Empezar \(parts[0])" : "Ver la actividad \(parts[0])")
         }
-        .background(Palette.card)
-        .clipShape(shape)
-        .overlay(shape.strokeBorder(Palette.foreground.opacity(0.08), lineWidth: 1))
         .contextMenu {
             Button { openSheet() } label: { Label("Ver el detalle", systemImage: "list.bullet.rectangle") }
             Button { Haptics.selection(); editingDay = plan } label: { Label("Editar sesión", systemImage: "pencil") }
@@ -1033,6 +854,9 @@ struct HomeView: View {
         let plan = RoutineOrder.nextPending(scheduled, done: done)
         let completed = completions.contains { $0.date == LocalDate.string() }
         let doneDays = Array(done)
+        // Días de esta semana con algo hecho: el punto dorado de la tira de días.
+        let weekStart = RoutineOrder.weekStart
+        let trainedDates = Array(Set(completions.map(\.date).filter { $0 >= weekStart })).sorted()
         return TodaySnapshot(plan: plan,
                              scheduled: scheduled,
                              completedToday: completed,
@@ -1040,7 +864,8 @@ struct HomeView: View {
                              resumable: plan != nil && draftDay == plan?.day,
                              firstName: firstName,
                              calories: calories,
-                             noPlan: !planFailed && days.isEmpty)
+                             noPlan: !planFailed && days.isEmpty,
+                             trainedDates: trainedDates)
     }
 
     /// Clave de la copia en disco: por usuario y día (lo de hoy caduca al cambiar el día).
@@ -1114,8 +939,10 @@ private struct TodaySnapshot: Codable {
     var macros: MacroSum?
     /// Última mejor marca (widget de Récord).
     var lastPr: LastPR?
-    /// Número de comidas del plan (anillo del widget de Nutrición).
+    /// Número de comidas del plan (anillo de las cifras de Calorías y Proteína).
     var mealCount = 0
+    /// Fechas (yyyy-MM-dd) de esta semana con algún entreno o actividad hecha (tira de días).
+    var trainedDates: [String]? = nil
 }
 
 struct LastPR: Codable {

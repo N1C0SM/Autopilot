@@ -221,8 +221,12 @@ struct MainShell: View {
                             let current = selection ?? .home
                             VStack(alignment: .leading, spacing: 4) {
                                 ZStack {
-                                    // El saludo con la fecha ya dice que es hoy: sin título duplicado.
-                                    HStack { Spacer(); HeaderButtons(initial: initial, avatar: accounts.accounts.first { $0.id == session.userIdString }?.avatar) { showSettings = true } }
+                                    // Hoy (diseño de ChatGPT): el AP y AUTOPILOT a la izquierda; el saludo ya dice que es hoy.
+                                    HStack {
+                                        if current == .home { BrandLockup() }
+                                        Spacer()
+                                        HeaderButtons(initial: initial, avatar: accounts.accounts.first { $0.id == session.userIdString }?.avatar) { showSettings = true }
+                                    }
                                 }
                                 .frame(height: 44)
                                 if current != .home {

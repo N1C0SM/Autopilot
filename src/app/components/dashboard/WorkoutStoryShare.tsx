@@ -5,7 +5,7 @@ import { Spinner } from "@/shared/components/ui/spinner";
 import { hapticSelection, hapticTap, isNative, shareFileOrImage } from "@/shared/lib/native";
 import { toast } from "sonner";
 import autopilotLogo from "@/shared/assets/autopilot-logo.png";
-import { BRAND_A, BRAND_BOLT } from "@/shared/components/ui/brand-mark";
+import { BRAND_A, BRAND_P, BRAND_VIEWBOX } from "@/shared/components/ui/brand-mark";
 import { bodyRegions, regionMuscles, smoothPath } from "@/app/components/dashboard/MuscleMapFigure";
 import { BRAND_GOLD, INK, INK_TEXT, MUSCLE_HEAT } from "@/shared/lib/palette";
 
@@ -58,16 +58,17 @@ const F = "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue'
 const FIG = `"Big Shoulders", ${F}`;
 const fmt = (n: number) => Math.round(n).toLocaleString("es-ES");
 
-// «A» con rayo de la marca, en el cuadro (x, y, size).
+// Monograma AP de la marca, a lo ancho del cuadro (x, y, size) y centrado en vertical.
 export function drawBrandA(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, color = BRAND_GOLD) {
+  const k = size / BRAND_VIEWBOX.width;
   ctx.save();
-  ctx.translate(x, y); ctx.scale(size / 80, size / 80); ctx.translate(-10, -8);
+  ctx.translate(x, y + (size - BRAND_VIEWBOX.height * k) / 2); ctx.scale(k, k); ctx.translate(-BRAND_VIEWBOX.x, -BRAND_VIEWBOX.y);
   ctx.fillStyle = color;
-  ctx.fill(new Path2D(BRAND_A)); ctx.fill(new Path2D(BRAND_BOLT));
+  ctx.fill(new Path2D(BRAND_A)); ctx.fill(new Path2D(BRAND_P));
   ctx.restore();
 }
 
-// Firma común a todo lo que sale de Autopilot (stories, scan, emails): la «A» y la web, abajo.
+// Firma común a todo lo que sale de Autopilot (stories, scan, emails): el AP y la web, abajo.
 function drawSignature(ctx: CanvasRenderingContext2D, W: number, H: number) {
   drawBrandA(ctx, W / 2 - 36, H - 224, 72);
   ctx.textAlign = "center"; ctx.textBaseline = "middle";

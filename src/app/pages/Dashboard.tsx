@@ -7,7 +7,7 @@ import { localDateKey, readActiveWorkout } from "@/shared/lib/activeWorkout";
 import { readScreen, writeScreen } from "@/shared/lib/screenCache";
 import { hasCoaching, hasNutrition, getConsumerPlan, type ConsumerPlan } from "@/shared/lib/entitlements";
 import { PlanPaywall, CoachPendingAssignment } from "@/app/components/dashboard/PlanPaywall";
-import { parseMacroTargets } from "@/shared/lib/nutrition";
+import { parseMacroTargets, resolveNutritionPreview } from "@/shared/lib/nutrition";
 import CoachingOffer from "@/app/components/dashboard/CoachingOffer";
 import { track } from "@/shared/lib/analytics";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
@@ -87,6 +87,7 @@ interface Macros {
   protein: number;
   carbs: number;
   fats: number;
+  calories?: number;
 }
 
 interface Meal {
@@ -112,6 +113,8 @@ interface DashboardSnapshot {
   completedDays?: string[];
   completedTodayDays?: string[];
   completedToday: boolean;
+  trainedDates?: string[];
+  macroEstimate?: Macros | null;
 }
 
 
@@ -185,6 +188,10 @@ const Dashboard = () => {
   const [completedDays, setCompletedDays] = useState<string[]>(cached?.completedDays ?? []);
   const [completedTodayDays, setCompletedTodayDays] = useState<string[]>(cached?.completedTodayDays ?? []);
   const [completedToday, setCompletedToday] = useState(cached?.completedToday ?? false);
+  // Días de esta semana con algo hecho (tira de Hoy) y, sin plan de nutrición legible, el objetivo
+  // estimado con el onboarding (como `MacroEstimate` en la app).
+  const [trainedDates, setTrainedDates] = useState<string[]>(cached?.trainedDates ?? []);
+  const [macroEstimate, setMacroEstimate] = useState<Macros | null>(cached?.macroEstimate ?? null);
   const [workoutMode, setWorkoutMode] = useState(false);
   const [autoStartWorkout, setAutoStartWorkout] = useState(false);
   const [resumeWorkout, setResumeWorkout] = useState(false);
@@ -277,7 +284,7 @@ const Dashboard = () => {
       // Si faltan sus respuestas no se pueden calcular calorías ni macros: las pedimos antes de seguir.
       const { data: onb, error: onbError } = await supabase
         .from("onboarding")
-        .select("id")
+        .select("id, weight, sex, goal")
         .eq("user_id", user.id)
         .maybeSingle();
       if (onbError) {
@@ -289,6 +296,10 @@ const Dashboard = () => {
         navigate("/onboarding-choice");
         return;
       }
+      const estimate = resolveNutritionPreview(onb);
+      setMacroEstimate(estimate.calories && estimate.protein != null
+        ? { calories: estimate.calories, protein: estimate.protein, carbs: estimate.carbs ?? 0, fats: estimate.fats ?? 0 }
+        : null);
 
       if (profile.plan_status === "plan_ready") {
         const today = new Date();
@@ -306,7 +317,7 @@ const Dashboard = () => {
             .eq("completed_at", todayDate),
           supabase
             .from("day_completions")
-            .select("day_label")
+            .select("day_label, completed_at")
             .eq("user_id", user.id)
             .gte("completed_at", weekStartDate)
             .lte("completed_at", todayDate),
@@ -339,6 +350,7 @@ const Dashboard = () => {
           );
           setCompletedThisWeek(days.size);
           setCompletedDays([...days]);
+          setTrainedDates([...new Set((weeklyCompletions.data || []).map((row) => row.completed_at).filter((date): date is string => Boolean(date)))]);
         }
         if (np) {
           setMacros(parseMacroTargets(np.macros_json));
@@ -357,12 +369,12 @@ const Dashboard = () => {
     writeScreen<DashboardSnapshot>(user.id, "dashboard", {
       profileName, profileAvatar, planStatus, paymentStatus, coaching, consumerPlan,
       coachAssigned, nutrition, subscriptionTier, dayPlans, macros, meals,
-      completedThisWeek, completedDays, completedTodayDays, completedToday,
+      completedThisWeek, completedDays, completedTodayDays, completedToday, trainedDates, macroEstimate,
     });
   }, [
     user, loading, loadError, planStatus, paymentStatus, profileName, profileAvatar, coaching,
     consumerPlan, coachAssigned, nutrition, subscriptionTier, dayPlans, macros, meals,
-    completedThisWeek, completedDays, completedTodayDays, completedToday,
+    completedThisWeek, completedDays, completedTodayDays, completedToday, trainedDates, macroEstimate,
   ]);
 
   useEffect(() => {
@@ -682,8 +694,9 @@ const Dashboard = () => {
       )}
 
       {section === "home" && (hasPlan || !coaching) && (
-        // Hoy llena la pantalla: HomeOverview reparte el alto y lo demás va debajo.
-        <div className="flex w-full flex-1 flex-col gap-3">
+        // Hoy llena la pantalla: HomeOverview reparte el alto y lo demás va debajo, en la misma
+        // columna centrada que el iPhone (también en la web ancha).
+        <div className="mx-auto flex w-full max-w-[680px] flex-1 flex-col gap-3">
           <HomeOverview
             userId={user?.id}
             hasPlan={hasPlan}
@@ -750,10 +763,11 @@ const Dashboard = () => {
               setSection("training");
             }}
             profileName={profileName}
-            macros={nutrition ? macros : null}
+            macros={(nutrition ? macros : null) ?? macroEstimate}
             completedThisWeek={completedThisWeek}
             completedDays={completedDays}
             completedToday={completedToday}
+            trainedDates={trainedDates}
           />
           {!campaign && coaching && user && <RenewalFlow userId={user.id} subscriptionTier={subscriptionTier} />}
           {/* Modo viaje se gestiona ahora desde Ajustes; en Dashboard solo

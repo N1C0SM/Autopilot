@@ -46,7 +46,7 @@ Antes de escribir una pieza nueva, busca aquí. Si no encaja, amplía el compone
 
 ## Acceso (`src/app/components/auth/AuthScreenParts.tsx`)
 
-`AuthHero` (con `AuthAppMark`: la «A» con rayo dorada de 44 px y AUTOPILOT debajo; `kicker={false}` para no repetir la marca), `AuthFieldGroup` / `AuthFieldRow` (cada campo es una píldora de 56 px con icono gris opcional a la izquierda, ojo en la contraseña y anillo dorado al enfocar; en nativo, `PillField(icon:)`), `AuthFieldNote`, `AuthSymbol`, `AuthNotice`. Login, registro, recuperar y nueva contraseña los comparten: se cambian aquí, no en cada página.
+`AuthHero` (con `AuthAppMark`: el icono de la app de 64 px y AUTOPILOT debajo; `kicker={false}` para no repetir la marca), `AuthFieldGroup` / `AuthFieldRow` (cada campo es una píldora de 56 px con icono gris opcional a la izquierda, ojo en la contraseña y anillo dorado al enfocar; en nativo, `PillField(icon:)`), `AuthFieldNote`, `AuthSymbol`, `AuthNotice`. Login, registro, recuperar y nueva contraseña los comparten: se cambian aquí, no en cada página.
 
 ## Rediseño (ChatGPT, nov. 2026)
 

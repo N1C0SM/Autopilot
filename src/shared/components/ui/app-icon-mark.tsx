@@ -2,7 +2,7 @@ import appIcon from "@/shared/assets/autopilot-logo.png";
 import { cn } from "@/shared/lib/utils";
 
 /**
- * El icono de la app (cuadro negro con relieve y la «A» dorada, de scripts/gen-icon.mjs) para
+ * El icono de la app (cuadro dorado y el AP negro, de scripts/gen-icon.mjs) para
  * el acceso, el registro, la bienvenida y «¿Quién entrena?». Esquinas del iPhone (22,37 %) y
  * sombra suave; igual que `AppIconMark` en la app nativa.
  */

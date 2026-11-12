@@ -1,13 +1,21 @@
 import { cn } from "@/shared/lib/utils";
 
-/** Geometría única de la «A» con rayo (viewBox 0 0 100 100); la misma en nativo y en los PNG. */
-export const BRAND_A = "M50 10L88 86H70L50 44L30 86H12Z";
-export const BRAND_BOLT = "M52 55L44 70H49.5L47 81L56 65H50.5Z";
+/**
+ * Geometría única del monograma AP (desde el 12-11-2026, el de la propuesta de ChatGPT): la pata
+ * derecha de la «A» hace de palo de la «P». Coordenadas del dibujo original; caja `BRAND_VIEWBOX`.
+ * La misma en nativo (`BrandMark` en Components.swift), en los PNG (scripts/gen-icon.mjs) y en las
+ * tarjetas para compartir.
+ */
+export const BRAND_A = "M35 520L382 50Q396 34 411 52L680 515H548L390 235L203 510Q197 520 185 520Z";
+export const BRAND_P = "M460 45H775A166.5 166.5 0 0 1 775 378H655L600 272H770A62 62 0 0 0 770 148H520Z";
+/** Caja del monograma con un margen mínimo: x 30–946, y 30–530 (ancho 1,832 veces el alto). */
+export const BRAND_VIEWBOX = { x: 30, y: 30, width: 916, height: 500 } as const;
 
 /**
- * Firma de Autopilot: la «A» con rayo. Es el logo, la marca de agua y el loader.
- * Una sola por vista (.claude/design/marca.md). Hereda el color del texto; con `beat`
- * el rayo late (y queda quieto con «reducir movimiento»).
+ * Firma de Autopilot: el monograma AP. Es el logo, la marca de agua y el loader.
+ * Una sola por vista (.claude/design/marca.md). `size` es el ancho; el alto sale de su
+ * proporción. Hereda el color del texto; con `beat` la «P» late (y queda quieta con
+ * «reducir movimiento»).
  */
 export function BrandMark({ size = 24, beat = false, className, label }: {
   size?: number;
@@ -15,18 +23,19 @@ export function BrandMark({ size = 24, beat = false, className, label }: {
   className?: string;
   label?: string;
 }) {
+  const { x, y, width, height } = BRAND_VIEWBOX;
   return (
     <svg
-      viewBox="10 8 80 80"
+      viewBox={`${x} ${y} ${width} ${height}`}
       width={size}
-      height={size}
+      height={Math.round((size * height) / width)}
       role={label ? "img" : undefined}
       aria-label={label}
       aria-hidden={label ? undefined : true}
       className={cn("shrink-0 text-primary", className)}
     >
       <path d={BRAND_A} fill="currentColor" />
-      <path d={BRAND_BOLT} fill="currentColor" className={cn(beat && "origin-center motion-safe:animate-brand-beat")} style={{ transformBox: "fill-box" }} />
+      <path d={BRAND_P} fill="currentColor" className={cn(beat && "origin-center motion-safe:animate-brand-beat")} style={{ transformBox: "fill-box" }} />
     </svg>
   );
 }

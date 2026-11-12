@@ -11,7 +11,7 @@ export interface SpinnerProps extends Omit<React.HTMLAttributes<HTMLSpanElement>
 }
 
 /**
- * Indicador de actividad con la firma de Autopilot: la «A» con el rayo latiendo.
+ * Indicador de actividad con la firma de Autopilot: el monograma AP con la «P» latiendo.
  * Hereda el color del texto; por defecto, gris secundario.
  */
 const Spinner = ({ size = "md", label = "Cargando", className, style, ...props }: SpinnerProps) => (
@@ -22,7 +22,7 @@ const Spinner = ({ size = "md", label = "Cargando", className, style, ...props }
     style={{ width: SIZE[size], height: SIZE[size], ...style }}
     {...props}
   >
-    <BrandMark size={Math.round(SIZE[size] * 0.8)} beat className="text-current" />
+    <BrandMark size={SIZE[size]} beat className="text-current" />
   </span>
 );
 
