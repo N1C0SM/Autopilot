@@ -798,12 +798,12 @@ describe("paridad web ↔ apps nativas", () => {
     const web = read("src/app/components/SettingsPanel.tsx");
     expect(app).not.toMatch(/if profileLoaded \{\s*hubRow\("crown"/);
     expect(app).toContain('hubRow("crown", "Mi plan", "Tu suscripción y lo que incluye", to: .plan)');
-    expect(app).toContain("PlanBadge(name: planKnown ? planName : nil, paid: paid)");
+    expect(app).toContain("SubscriptionBadge(name: planKnown ? planName : nil, paid: paid)");
     expect(app).toContain("CachedProfile.load(id)");
-    expect(web).toContain("value: <PlanBadge name={planName} paid={hasPaidAccess} />");
+    expect(web).toContain("value: <SubscriptionBadge name={planName} paid={hasPaidAccess} />");
     expect(web).toContain('"Tu suscripción y lo que incluye"');
-    expect(read("native/Autopilot/Design/Components.swift")).toContain("struct PlanBadge: View");
-    expect(read("src/shared/components/ui/plus-badge.tsx")).toContain("export function PlanBadge(");
+    expect(read("native/Autopilot/Design/Components.swift")).toContain("struct SubscriptionBadge: View");
+    expect(read("src/shared/components/ui/plus-badge.tsx")).toContain("export function SubscriptionBadge(");
   });
 
   it("Fotos de marca: se piden por ejercicio (la URL cambia al regenerarla), nunca fijas, en la web y en la app", () => {

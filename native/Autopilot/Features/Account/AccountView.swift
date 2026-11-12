@@ -180,7 +180,7 @@ struct AccountView: View {
             // Siempre en su sitio (antes aparecía al llegar la ficha y empujaba las filas de debajo).
             // El plan va en una insignia; hasta saberlo, un hueco del mismo tamaño.
             hubRow("crown", "Mi plan", "Tu suscripción y lo que incluye", to: .plan) {
-                PlanBadge(name: planKnown ? planName : nil, paid: paid)
+                SubscriptionBadge(name: planKnown ? planName : nil, paid: paid)
             }
             hubRow("person.2", "Cuentas en este dispositivo", "Cambia de cuenta sin cerrar sesión", to: .cuentas)
         }

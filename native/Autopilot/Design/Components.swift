@@ -558,9 +558,9 @@ struct PlusBadge: View {
     }
 }
 
-/// Insignia del plan en Ajustes → Mi plan (como `PlanBadge` en la web): dorada si es de pago, gris si es
+/// Insignia del plan en Ajustes → Mi plan (como `SubscriptionBadge` en la web): dorada si es de pago, gris si es
 /// gratis. Con `name` nil (aún no se sabe) deja un hueco del mismo tamaño para que nada se mueva.
-struct PlanBadge: View {
+struct SubscriptionBadge: View {
     let name: String?
     var paid = false
 

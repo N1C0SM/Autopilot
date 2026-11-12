@@ -20,10 +20,10 @@ export function PlusBadge({ className }: { className?: string }) {
 }
 
 /**
- * Insignia del plan en Ajustes → Mi plan (igual que `PlanBadge` en nativo): dorada si es de pago,
+ * Insignia del plan en Ajustes → Mi plan (igual que `SubscriptionBadge` en nativo): dorada si es de pago,
  * gris si es gratis.
  */
-export function PlanBadge({ name, paid, className }: { name: string; paid: boolean; className?: string }) {
+export function SubscriptionBadge({ name, paid, className }: { name: string; paid: boolean; className?: string }) {
   return (
     <span
       aria-label={`Plan ${name}`}
