@@ -12,7 +12,7 @@ import { ExerciseThumb } from "@/app/components/ExerciseMedia";
 import ExerciseFocus from "@/app/components/ExerciseFocus";
 import { useExerciseMetadata } from "@/shared/hooks/useExerciseMetadata";
 import { cachedSessionCover, useSessionCover } from "@/shared/hooks/useSessionCover";
-import { BRAND_PHOTOS } from "@/shared/lib/brandPhotos";
+import { BRAND_PHOTOS, useBrandPhotos } from "@/shared/lib/brandPhotos";
 import { doneSessionCount, nextPendingSession, routineSessions } from "@/shared/lib/routineOrder";
 import { cleanSessionIcon } from "@/shared/lib/sessionIdentity";
 import SessionIdentitySheet from "@/app/components/dashboard/SessionIdentitySheet";
@@ -125,6 +125,7 @@ const SessionRow = ({ number, plan, isNext, done, expanded, photo, onSelect }: S
 };
 
 const TrainingPlanView = ({ dayPlans, initialDay, doneThisWeek = [], doneToday = [], resumableDay = null, onOpenWorkout, tools, onPersonalize }: Props) => {
+  useBrandPhotos(); // repinta las fotos de marca cuando llega su URL actual
   // La rutina en orden: solo sesiones, sin días de la semana ni días de descanso.
   const sessions = routineSessions(dayPlans);
   const next = nextPendingSession(sessions, doneThisWeek);

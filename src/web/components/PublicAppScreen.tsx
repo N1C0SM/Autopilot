@@ -1,3 +1,4 @@
+import { useBrandPhotos } from "@/shared/lib/brandPhotos";
 import { BookOpen, Check, ChevronDown, Crown, Dumbbell, Flame, Lock, Pause, Play, UtensilsCrossed } from "lucide-react";
 import ExerciseProgressChart from "@/app/components/dashboard/ExerciseProgressChart";
 import { cn } from "@/shared/lib/utils";
@@ -14,6 +15,7 @@ const card = "rounded-[22px] border border-border bg-card";
 
 /** Progreso: título, pestañas en cápsula (Fuerza en dorado) y «Tu fuerza» con la gráfica real. */
 export function PublicProgressScreen() {
+  useBrandPhotos(); // repinta las fotos de marca cuando llega su URL actual
   return <div className="pb-4">
     <h2 className="type-large-title leading-tight">Progreso</h2>
     <p className="mt-1 type-subhead text-muted-foreground">Evolución de tu fuerza, tu físico y tus récords.</p>
@@ -41,6 +43,7 @@ export function PublicProgressScreen() {
 
 /** Entreno en curso (vista de lista por defecto): ejercicios numerados y la barra Pausar · tiempo · Finalizar. */
 function ActiveWorkout() {
+  useBrandPhotos(); // repinta las fotos de marca cuando llega su URL actual
   const exercise = previewExercises[0];
   const done = 2;
   return <div className="flex h-full min-h-0 flex-col">
@@ -96,6 +99,7 @@ function ActiveWorkout() {
 
 /** Entrenar: modo del plan arriba, lo hecho esta semana y las sesiones en orden; la siguiente, abierta. */
 function RoutineList() {
+  useBrandPhotos(); // repinta las fotos de marca cuando llega su URL actual
   const nextIndex = DEMO_ROUTINE.findIndex((session) => !session.done);
   return <div className="pb-4">
     <h2 className="type-large-title leading-tight">Entrenar</h2>

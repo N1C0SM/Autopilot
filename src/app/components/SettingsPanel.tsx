@@ -14,6 +14,7 @@ import { Input } from "@/shared/components/ui/input";
 import { Textarea } from "@/shared/components/ui/textarea";
 import { Spinner } from "@/shared/components/ui/spinner";
 import { ListGroup, ListRow } from "@/shared/components/ui/list";
+import { SubscriptionBadge } from "@/shared/components/ui/plus-badge";
 import { Tabs, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { toast } from "sonner";
 
@@ -735,7 +736,8 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
             { title: "Mi cuenta", rows: [
               { id: "ajustes-perfil", icon: User, title: "Perfil", subtitle: "Nombre, foto y privacidad", show: true },
               { id: "ajustes-datos", icon: Target, title: "Tus datos y objetivo", subtitle: "Edad, peso, objetivo y disponibilidad", show: hasOnboarding },
-              { id: "ajustes-plan", icon: Crown, title: "Mi plan", subtitle: hasPaidAccess || !plans.plus || iosNoPurchases ? planName : `${planName} · Cambia a ${plans.plusName} para más funciones`, show: !campaign || consumerPlan !== "free" },
+              // El plan va en una insignia a la derecha (igual que el iPhone), no en el subtítulo.
+              { id: "ajustes-plan", icon: Crown, title: "Mi plan", subtitle: hasPaidAccess || !plans.plus || iosNoPurchases ? "Tu suscripción y lo que incluye" : `Cambia a ${plans.plusName} para más funciones`, value: <SubscriptionBadge name={planName} paid={hasPaidAccess} />, show: !campaign || consumerPlan !== "free" },
               { id: "ajustes-cuentas", icon: Users, title: "Cuentas en este dispositivo", subtitle: "Cambia de cuenta sin cerrar sesión", show: supportsMultipleAccounts() },
             ] },
             { title: "Preferencias", rows: [
@@ -749,12 +751,13 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
             ] },
           ].map((group) => (
             <ListGroup key={group.title} header={group.title}>
-              {group.rows.filter((row) => row.show).map(({ id, icon: Icon, title, subtitle }) => (
+              {group.rows.filter((row) => row.show).map(({ id, icon: Icon, title, subtitle, ...row }) => (
                 <ListRow
                   key={id}
                   icon={<Icon className="text-muted-foreground" />}
                   title={title}
                   subtitle={subtitle}
+                  value={"value" in row ? row.value : undefined}
                   chevron
                   onClick={() => {
                     void hapticTap();

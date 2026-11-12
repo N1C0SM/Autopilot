@@ -106,41 +106,62 @@ const refreshCatalog = () =>
     .then((list) => { cache = list; return list; })
     .finally(() => { inflight = null; }));
 
+/**
+ * Favoritos y recientes de la última cuenta. La pestaña se monta en cada visita: sin esto
+ * «Recientes» llegaba después de la lista y empujaba hacia abajo las tarjetas de grupos.
+ */
+let personalCache: { user: string; favorites: string[]; recent: string[] } | null = null;
+
+async function fetchPersonal(userId: string) {
+  const [fav, rec] = await Promise.all([
+    supabase.from("exercise_favorites").select("exercise_id").eq("user_id", userId),
+    supabase.from("exercise_recent").select("exercise_id").eq("user_id", userId).order("viewed_at", { ascending: false }).limit(12),
+  ]);
+  if (fav.error || rec.error) throw fav.error ?? rec.error;
+  return { favorites: (fav.data ?? []).map((r) => r.exercise_id), recent: (rec.data ?? []).map((r) => r.exercise_id) };
+}
+
 /** Índice de la biblioteca (se refresca en cada apertura) + favoritos y recientes del usuario. */
 export function useExerciseLibrary(userId: string | null | undefined, enabled = true) {
-  const [items, setItems] = useState<LibraryExercise[] | null>(null);
+  // Arranca con lo último descargado: el primer fotograma ya es el definitivo y la red lo actualiza.
+  const mine = userId && personalCache?.user === userId ? personalCache : null;
+  const [items, setItems] = useState<LibraryExercise[] | null>(() => cache);
   const [error, setError] = useState(false);
-  const [favorites, setFavorites] = useState<Set<string>>(new Set());
-  const [recent, setRecent] = useState<string[]>([]);
-  const [personal, setPersonal] = useState(false);
+  const [favorites, setFavorites] = useState<Set<string>>(() => new Set(mine?.favorites ?? []));
+  const [recent, setRecent] = useState<string[]>(() => mine?.recent ?? []);
+  const [personal, setPersonal] = useState(() => Boolean(mine));
 
   useEffect(() => {
     if (!enabled) return;
     let alive = true;
-    // Lo ya descargado se ve al instante, pero cada apertura vuelve a pedir la lista: un ejercicio
-    // publicado o con foto nueva aparece sin recargar la página (igual que en el iPhone).
+    // Lista, favoritos y recientes se piden juntos y se publican a la vez (igual que en el iPhone);
+    // cada apertura vuelve a pedirlos para que lo publicado o con foto nueva aparezca sin recargar.
     if (cache) setItems(cache);
-    refreshCatalog()
-      .then((list) => { if (alive) { setItems(list); setError(false); } })
+    // Al cambiar de cuenta no se quedan los favoritos y recientes de la anterior.
+    const known = userId && personalCache?.user === userId ? personalCache : null;
+    setFavorites(new Set(known?.favorites ?? []));
+    setRecent(known?.recent ?? []);
+    setPersonal(Boolean(known));
+    const personalTask = userId ? fetchPersonal(userId).catch(() => null) : Promise.resolve(null);
+    Promise.all([refreshCatalog(), personalTask])
+      .then(([list, p]) => {
+        if (!alive) return;
+        if (p) {
+          setFavorites(new Set(p.favorites));
+          setRecent(p.recent);
+          setPersonal(true);
+        }
+        setItems(list);
+        setError(false);
+      })
       .catch(() => { if (alive && !cache) setError(true); });
     return () => { alive = false; };
-  }, [enabled]);
-
-  useEffect(() => {
-    if (!enabled || !userId) return;
-    let alive = true;
-    void (async () => {
-      const [fav, rec] = await Promise.all([
-        supabase.from("exercise_favorites").select("exercise_id").eq("user_id", userId),
-        supabase.from("exercise_recent").select("exercise_id").eq("user_id", userId).order("viewed_at", { ascending: false }).limit(12),
-      ]);
-      if (!alive || fav.error || rec.error) return;
-      setFavorites(new Set((fav.data ?? []).map((r) => r.exercise_id)));
-      setRecent((rec.data ?? []).map((r) => r.exercise_id));
-      setPersonal(true);
-    })();
-    return () => { alive = false; };
   }, [enabled, userId]);
+
+  // Lo que cambia aquí (favorito, ejercicio visto) también queda para la próxima apertura.
+  useEffect(() => {
+    if (personal && userId) personalCache = { user: userId, favorites: [...favorites], recent };
+  }, [personal, userId, favorites, recent]);
 
   const toggleFavorite = useCallback(async (exerciseId: string) => {
     if (!userId) return;

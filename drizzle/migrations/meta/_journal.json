@@ -141,6 +141,13 @@
       "when": 1793986121752,
       "tag": "0019_mac_app_store_url",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1794502120271,
+      "tag": "0020_brand_photos_public",
+      "breakpoints": true
     }
   ]
 }

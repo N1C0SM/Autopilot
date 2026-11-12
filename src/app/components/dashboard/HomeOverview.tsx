@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { useConfirm } from "@/app/components/admin/content/useConfirm";
 import { useSessionCover } from "@/shared/hooks/useSessionCover";
 import { useExerciseMetadata } from "@/shared/hooks/useExerciseMetadata";
-import { BRAND_PHOTOS } from "@/shared/lib/brandPhotos";
+import { BRAND_PHOTOS, useBrandPhotos } from "@/shared/lib/brandPhotos";
 import { nextPendingSession, routineSessions } from "@/shared/lib/routineOrder";
 import ResponsiveSheet from "@/app/components/dashboard/ResponsiveSheet";
 import { ExerciseThumb } from "@/app/components/ExerciseMedia";
@@ -151,6 +151,7 @@ const HomeOverview = ({
   nutrition = true,
   planStatus,
 }: Props) => {
+  useBrandPhotos(); // repinta las fotos de marca cuando llega su URL actual
   const [activeWorkout, setActiveWorkout] = useState<ActiveWorkout | null>(() => userId ? readActiveWorkout(userId) : null);
   useEffect(() => {
     const refresh = () => setActiveWorkout(userId ? readActiveWorkout(userId) : null);

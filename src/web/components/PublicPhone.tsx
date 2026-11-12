@@ -1,3 +1,4 @@
+import { useBrandPhotos } from "@/shared/lib/brandPhotos";
 import { useState, type ReactNode } from "react";
 import { BarChart3, Bell, Check, ChevronRight, Dumbbell, Flame as Apple, Layers, type LucideIcon } from "lucide-react";
 import type { PlanAvailability } from "@/shared/lib/planCatalogCore";
@@ -121,6 +122,7 @@ function PhoneRow({ icon, title, detail, value, onClick }: { icon: ReactNode; ti
  * (un círculo por sesión, sin días de la semana) y Nutrición.
  */
 export function PhoneHome({ heading, onSession, onNutrition, onProgress, name, wide = false }: PhoneHomeProps) {
+  useBrandPhotos(); // repinta las fotos de marca cuando llega su URL actual
   const Title = heading ? "h2" : "p";
   const nextIndex = DEMO_ROUTINE.findIndex((session) => !session.done);
   const card = (

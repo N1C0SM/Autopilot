@@ -462,9 +462,9 @@ struct ProgressScreen: View {
         .overlay(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous).strokeBorder(Palette.gold.opacity(0.15), lineWidth: 1))
     }
 
-    private static let brandGymPhoto = "https://enebrcdrdnfkyduzyrzm.supabase.co/storage/v1/object/public/site-assets/exercise-images/a31c7206-d2a4-4b31-856a-f5dec09b890e-1791475829849.png"
-    private static let brandPullupPhoto = "https://enebrcdrdnfkyduzyrzm.supabase.co/storage/v1/object/public/site-assets/exercise-images/7ab0b27f-f296-4fa6-bf07-8f8b026b0832-1791475152675.png"
-    private static let brandDumbbellsPhoto = "https://enebrcdrdnfkyduzyrzm.supabase.co/storage/v1/object/public/site-assets/exercise-images/d5e30e05-0791-4886-84a0-7b2695728225-1791475865184.png"
+    private static var brandGymPhoto: String { BrandPhotos.string(.gym) }
+    private static var brandPullupPhoto: String { BrandPhotos.string(.pullupBar) }
+    private static var brandDumbbellsPhoto: String { BrandPhotos.string(.dumbbells) }
     /// Lo que guarda Físico: comparación del mismo ángulo, fotos por mes y fotos privadas.
     private struct Perk: Hashable { let symbol: String; let text: String }
     private static let physiquePerks = [

@@ -19,6 +19,8 @@ struct AutopilotApp: App {
                     FigureFont.register()
                     await session.start()
                 }
+                // Fotos de marca: se piden al arrancar y otra vez al entrar con otra cuenta.
+                .task(id: session.userId) { await BrandPhotos.shared.refresh(force: session.userId != nil) }
         }
         #if os(macOS)
         .defaultSize(width: 1200, height: 820)

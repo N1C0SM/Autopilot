@@ -1,4 +1,4 @@
-import { BRAND_PHOTOS } from "@/shared/lib/brandPhotos";
+import { BRAND_PHOTOS, useBrandPhotos } from "@/shared/lib/brandPhotos";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Camera, FileText, ChevronLeft, ChevronRight } from "lucide-react";
@@ -14,6 +14,7 @@ import { hapticTap } from "@/shared/lib/native";
  * 2. Continuar con onboarding tradicional
  */
 export default function OnboardingChoice() {
+  useBrandPhotos(); // repinta las fotos de marca cuando llega su URL actual
   const navigate = useNavigate();
   const [hoveredOption, setHoveredOption] = useState<"scan" | "form" | null>(null);
 

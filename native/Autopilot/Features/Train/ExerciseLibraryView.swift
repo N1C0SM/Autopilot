@@ -145,11 +145,33 @@ struct LibraryFilters: Equatable {
 final class ExerciseLibraryModel: ObservableObject {
     @Published var items: [LibraryExercise]?
     @Published var failed = false
-    @Published var favorites: Set<String> = []
-    @Published var recent: [String] = []
+    @Published var favorites: Set<String> = [] { didSet { rememberPersonal() } }
+    @Published var recent: [String] = [] { didSet { rememberPersonal() } }
     @Published var personal = false
 
     private static var cache: [LibraryExercise]?
+    /// Favoritos y recientes de la última cuenta. La pestaña crea el modelo en cada visita: sin
+    /// esto «Recientes» llegaba un segundo después y empujaba hacia abajo las tarjetas de grupos.
+    private static var personalCache: (user: String, favorites: Set<String>, recent: [String])?
+    private var cacheUser: String?
+
+    /// Arranca con lo último descargado (lista, favoritos y recientes): el primer fotograma ya es
+    /// el definitivo y la red solo lo actualiza.
+    init(userId: UUID? = nil) {
+        items = Self.cache
+        let uid = userId?.uuidString.lowercased()
+        if let uid, let mine = Self.personalCache, mine.user == uid {
+            favorites = mine.favorites
+            recent = mine.recent
+            personal = true
+        }
+        cacheUser = uid
+    }
+
+    private func rememberPersonal() {
+        guard personal, let cacheUser else { return }
+        Self.personalCache = (cacheUser, favorites, recent)
+    }
     private static let base = "id, name, muscle_group, exercise_type, movement_pattern, stimulus_type, load_level, level, image_url, video_url"
     private static let full = base + ", slug, alt_names, description, instructions, common_mistakes, tips, safety_notes, source, license, license_author, source_url, "
         + "exercise_muscles(role, muscles(name, filter_group, sort)), exercise_equipment(equipment(name, sort)), "
@@ -214,32 +236,45 @@ final class ExerciseLibraryModel: ObservableObject {
     }
 
     func load(userId: UUID?) async {
-        // Lo ya descargado se ve al instante, pero cada apertura vuelve a pedir la lista: antes la
-        // caché duraba lo que la app abierta y un ejercicio publicado o con foto nueva no aparecía.
-        if items == nil, let cached = Self.cache { items = cached }
+        // Lista, favoritos y recientes se piden juntos y se publican a la vez: así «Recientes» no
+        // aparece después encima de las tarjetas. Lo ya descargado se ve mientras tanto.
+        var list: [LibraryExercise]?
         do {
             let rows: [Row]
             do { rows = try await fetchAll(Self.full, published: true) }
             // Sin la migración de la biblioteca: mismos ejercicios, filtros por su grupo de siempre.
             catch { rows = try await fetchAll(Self.base, published: false) }
-            let list = rows.map { $0.toExercise() }
+            list = rows.map { $0.toExercise() }
+        } catch {
+            list = nil
+        }
+        var mine: (favorites: Set<String>, recent: [String])?
+        if let userId {
+            let uid = userId.uuidString.lowercased()
+            do {
+                let fav: [ExerciseRef] = try await Backend.client.from("exercise_favorites").select("exercise_id")
+                    .eq("user_id", value: uid).execute().value
+                let rec: [ExerciseRef] = try await Backend.client.from("exercise_recent").select("exercise_id")
+                    .eq("user_id", value: uid).order("viewed_at", ascending: false).limit(12).execute().value
+                mine = (Set(fav.map(\.exercise_id)), rec.map(\.exercise_id))
+            } catch {
+                mine = nil
+            }
+        }
+        if let list {
             Self.cache = list
             items = list
             failed = false
-        } catch {
+        } else {
             failed = items == nil
         }
         guard let userId else { return }
-        let uid = userId.uuidString.lowercased()
-        do {
-            let fav: [ExerciseRef] = try await Backend.client.from("exercise_favorites").select("exercise_id")
-                .eq("user_id", value: uid).execute().value
-            let rec: [ExerciseRef] = try await Backend.client.from("exercise_recent").select("exercise_id")
-                .eq("user_id", value: uid).order("viewed_at", ascending: false).limit(12).execute().value
-            favorites = Set(fav.map(\.exercise_id))
-            recent = rec.map(\.exercise_id)
+        cacheUser = userId.uuidString.lowercased()
+        if let mine {
             personal = true
-        } catch {
+            favorites = mine.favorites
+            recent = mine.recent
+        } else if Self.personalCache?.user != cacheUser {
             personal = false
         }
     }
@@ -282,13 +317,19 @@ struct ExerciseLibraryView: View {
     let userId: UUID?
     /// Pestaña «Ejercicios» de la barra: sin «Cerrar» y empujando la ficha en la pila de la app.
     var embedded = false
-    @StateObject private var model = ExerciseLibraryModel()
+    @StateObject private var model: ExerciseLibraryModel
     @State private var filters = LibraryFilters()
     @State private var facet: String?
     @State private var path: [LibraryExercise] = []
     /// Ficha abierta en modo pestaña (la pila es la de la app, no la propia).
     @State private var pushed: LibraryExercise?
     @Environment(\.dismiss) private var dismiss
+
+    init(userId: UUID?, embedded: Bool = false) {
+        self.userId = userId
+        self.embedded = embedded
+        _model = StateObject(wrappedValue: ExerciseLibraryModel(userId: userId))
+    }
 
     private var items: [LibraryExercise] { model.items ?? [] }
     private var browsing: Bool { filters.query.trimmingCharacters(in: .whitespaces).isEmpty && filters.activeCount == 0 }

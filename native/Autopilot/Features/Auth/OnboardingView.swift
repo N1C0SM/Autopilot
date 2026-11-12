@@ -38,7 +38,7 @@ struct WelcomeView: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             // Foto hero a sangre
-            AsyncImage(url: URL(string: "https://enebrcdrdnfkyduzyrzm.supabase.co/storage/v1/object/public/site-assets/exercise-images/a31c7206-d2a4-4b31-856a-f5dec09b890e-1791475829849.png")) { img in
+            AsyncImage(url: BrandPhotos.url(.gym)) { img in
                 img.resizable().scaledToFill()
             } placeholder: {
                 Color(red: 0.08, green: 0.08, blue: 0.08)
@@ -270,10 +270,12 @@ private enum Quiz {
                        Day(v: 0, s: "D", l: "Domingo")]
     /// Las mismas fotos de marca que la web (`brandPhotos.ts`).
     static func photo(_ focus: String) -> URL? {
-        let file = ["gimnasio": "a31c7206-d2a4-4b31-856a-f5dec09b890e-1791475829849.png",
-                    "calistenia": "7ab0b27f-f296-4fa6-bf07-8f8b026b0832-1791475152675.png",
-                    "mixto": "d5e30e05-0791-4886-84a0-7b2695728225-1791475865184.png"][focus] ?? ""
-        return URL(string: "https://enebrcdrdnfkyduzyrzm.supabase.co/storage/v1/object/public/site-assets/exercise-images/" + file)
+        switch focus {
+        case "gimnasio": BrandPhotos.url(.gym)
+        case "calistenia": BrandPhotos.url(.pullupBar)
+        case "mixto": BrandPhotos.url(.dumbbells)
+        default: nil
+        }
     }
     /// Lado de las fotos del cuestionario en pt: un tercio de pantalla, sin bajar la foto grande.
     static let photoSide: CGFloat = 160

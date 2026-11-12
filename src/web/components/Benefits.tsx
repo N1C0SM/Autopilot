@@ -1,13 +1,13 @@
 import type { ReactNode } from "react";
-import { BRAND_PHOTOS } from "@/shared/lib/brandPhotos";
+import { BRAND_PHOTOS, useBrandPhotos } from "@/shared/lib/brandPhotos";
 import ScrollReveal from "@/web/components/ScrollReveal";
 import { useScrollProgress } from "@/shared/hooks/useScrollProgress";
 
 const MATERIAL = [
-  { label: "Gimnasio", photo: BRAND_PHOTOS.gym },
-  { label: "Mancuernas", photo: BRAND_PHOTOS.dumbbells },
-  { label: "En casa", photo: BRAND_PHOTOS.home },
-  { label: "Barra de dominadas", photo: BRAND_PHOTOS.pullupBar },
+  { label: "Gimnasio", get photo() { return BRAND_PHOTOS.gym; } },
+  { label: "Mancuernas", get photo() { return BRAND_PHOTOS.dumbbells; } },
+  { label: "En casa", get photo() { return BRAND_PHOTOS.home; } },
+  { label: "Barra de dominadas", get photo() { return BRAND_PHOTOS.pullupBar; } },
 ];
 
 type Benefit = { eyebrow: string; title: string; text: string; visual: ReactNode };
@@ -53,6 +53,7 @@ function Row({ b, i }: { b: Benefit; i: number }) {
 }
 
 export default function Benefits() {
+  useBrandPhotos(); // repinta las fotos de marca cuando llega su URL actual
   // El ritmo vertical lo marcan las filas (`py-16`): sumar otro relleno al contenedor
   // duplicaba el aire entre secciones.
   return <section aria-label="Ventajas de Autopilot" className="px-5 sm:px-8">

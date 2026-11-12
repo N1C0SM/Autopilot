@@ -3,10 +3,11 @@ import { ArrowRight, Dumbbell, Loader2, Sparkles, Utensils } from "lucide-react"
 import { useAuth } from "@/shared/contexts/AuthContext";
 import { Helmet } from "react-helmet-async";
 import { hapticTap } from "@/shared/lib/native";
-import { BRAND_PHOTOS } from "@/shared/lib/brandPhotos";
+import { BRAND_PHOTOS, useBrandPhotos } from "@/shared/lib/brandPhotos";
 import { BrandMark } from "@/shared/components/ui/brand-mark";
 
 const Welcome = () => {
+  useBrandPhotos(); // repinta las fotos de marca cuando llega su URL actual
   const navigate = useNavigate();
   const { user, loading } = useAuth();
 

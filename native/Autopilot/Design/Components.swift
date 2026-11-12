@@ -8,7 +8,7 @@ struct RestCard<Action: View>: View {
     let title: String
     let message: String
     /// Foto real de marca, fundida a la derecha como en «Entrenamiento de hoy» (`BRAND_PHOTOS.gym` de la web).
-    var photo = "https://enebrcdrdnfkyduzyrzm.supabase.co/storage/v1/object/public/site-assets/exercise-images/a31c7206-d2a4-4b31-856a-f5dec09b890e-1791475829849.png"
+    var photo = BrandPhotos.string(.gym)
     @ViewBuilder var action: Action
 
     /// Semana completa (o descanso): la misma tarjeta que la sesión, con foto real y sin dibujos (la luna y
@@ -555,6 +555,23 @@ struct PlusBadge: View {
         .background(Palette.gold.opacity(0.15), in: Capsule())
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Incluido en Plus")
+    }
+}
+
+/// Insignia del plan en Ajustes → Mi plan (como `SubscriptionBadge` en la web): dorada si es de pago, gris si es
+/// gratis. Con `name` nil (aún no se sabe) deja un hueco del mismo tamaño para que nada se mueva.
+struct SubscriptionBadge: View {
+    let name: String?
+    var paid = false
+
+    var body: some View {
+        Text(name ?? "Plus")
+            .font(.inter(size: 12, weight: .semibold))
+            .foregroundStyle(paid ? Palette.gold : Palette.muted)
+            .padding(.horizontal, 10).padding(.vertical, 5)
+            .background(paid ? Palette.gold.opacity(0.15) : Palette.secondary, in: Capsule())
+            .redacted(reason: name == nil ? .placeholder : [])
+            .accessibilityLabel(name.map { "Plan \($0)" } ?? "Cargando plan")
     }
 }
 

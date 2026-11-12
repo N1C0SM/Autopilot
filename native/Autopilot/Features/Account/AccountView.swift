@@ -6,6 +6,30 @@ import Supabase
 import UIKit
 #endif
 
+/// Última ficha de cada cuenta vista en Ajustes, guardada en el dispositivo para pintar la pantalla
+/// al instante. Solo lo que se enseña (sin ids de pago).
+private struct CachedProfile: Codable {
+    var name: String
+    var avatar: String?
+    var namePublic: Bool
+    var avatarPublic: Bool
+    var subTier: String?
+    var subStatus: String
+    var subEnd: Date?
+    var paymentPaid: Bool
+    var oneTimePurchase: Bool
+
+    private static func key(_ id: UUID) -> String { "settings-profile.\(id.uuidString.lowercased())" }
+    static func load(_ id: UUID) -> CachedProfile? {
+        guard let data = UserDefaults.standard.data(forKey: key(id)) else { return nil }
+        return try? JSONDecoder().decode(CachedProfile.self, from: data)
+    }
+    func save(_ id: UUID) {
+        if let data = try? JSONEncoder().encode(self) { UserDefaults.standard.set(data, forKey: Self.key(id)) }
+    }
+    static func forget(_ id: UUID) { UserDefaults.standard.removeObject(forKey: key(id)) }
+}
+
 /// Ajustes / Mi cuenta, calcado de `SettingsPanel.tsx`: cabecera con avatar, nombre y correo,
 /// y los grupos Perfil, Privacidad, Tus datos, Objetivo, Disponibilidad, Tu forma de entrenar,
 /// Cambiar contraseña, Cuentas en este dispositivo, Legal y Sesión.
@@ -59,6 +83,8 @@ struct AccountView: View {
     /// Ficha y datos ya cargados del servidor. Sin esto, un fallo de red dejaba los campos vacíos
     /// y «Guardar» podía sobrescribir con vacíos lo que ya había (pérdida de datos).
     @State private var profileLoaded = false
+    /// El plan que se enseña viene del servidor o de la última ficha guardada en el dispositivo.
+    @State private var planKnown = false
     @State private var onboardingLoaded = false
     /// Sección abierta desde el índice (su propia pantalla).
     @State private var openPage: SettingsPage?
@@ -108,7 +134,14 @@ struct AccountView: View {
 
     /// Fila del índice de Ajustes (maqueta de ChatGPT): icono, título, detalle y chevron; abre su pantalla.
     private func hubRow(_ symbol: String, _ title: String, _ detail: String, to target: SettingsPage) -> some View {
-        Button {
+        hubRow(symbol, title, detail, to: target) { EmptyView() }
+    }
+
+    /// La misma fila con algo antes del chevron (la insignia de «Mi plan»).
+    private func hubRow<Trailing: View>(_ symbol: String, _ title: String, _ detail: String, to target: SettingsPage,
+                                        @ViewBuilder trailing: () -> Trailing) -> some View {
+        let accessory = trailing()
+        return Button {
             Haptics.tap()
             openPage = target
         } label: {
@@ -120,6 +153,7 @@ struct AccountView: View {
                     Text(detail).font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(2)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+                accessory
                 Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Palette.muted.opacity(0.6)).accessibilityHidden(true)
             }
@@ -143,8 +177,10 @@ struct AccountView: View {
         group("Mi cuenta") {
             hubRow("person", "Perfil", "Nombre, foto y privacidad", to: .perfil)
             hubRow("target", "Tus datos y objetivo", "Edad, peso, objetivo y disponibilidad", to: .datos)
-            if profileLoaded {
-                hubRow("crown", "Mi plan", planName, to: .plan)
+            // Siempre en su sitio (antes aparecía al llegar la ficha y empujaba las filas de debajo).
+            // El plan va en una insignia; hasta saberlo, un hueco del mismo tamaño.
+            hubRow("crown", "Mi plan", "Tu suscripción y lo que incluye", to: .plan) {
+                SubscriptionBadge(name: planKnown ? planName : nil, paid: paid)
             }
             hubRow("person.2", "Cuentas en este dispositivo", "Cambia de cuenta sin cerrar sesión", to: .cuentas)
         }
@@ -321,8 +357,8 @@ struct AccountView: View {
     }
 
     @ViewBuilder private var planSection: some View {
-                if !isAdmin, profileLoaded {
-                    // Hasta tener la ficha no se enseña el plan: «Free» por defecto mentiría a quien paga.
+                if !isAdmin, planKnown {
+                    // Hasta tener la ficha (o la última guardada) no se enseña el plan: «Free» por defecto mentiría a quien paga.
                     group("Suscripción") {
                         HStack(spacing: 12) {
                             Image(systemName: "crown").foregroundStyle(paid ? Palette.gold : Palette.muted).frame(width: 28)
@@ -718,6 +754,7 @@ struct AccountView: View {
     private func deleteAccount() async {
         do {
             _ = try await Backend.client.functions.invoke("delete-account")
+            if let id = session.userId { CachedProfile.forget(id) }
             await session.signOut()
         } catch { Haptics.error(); show("Error al eliminar la cuenta. Inténtalo de nuevo.") }
     }
@@ -891,6 +928,13 @@ struct AccountView: View {
 
     // MARK: Datos
 
+    private func apply(_ p: CachedProfile) {
+        name = p.name; avatar = p.avatar; namePublic = p.namePublic; avatarPublic = p.avatarPublic
+        subTier = p.subTier; subStatus = p.subStatus; subEnd = p.subEnd
+        paymentPaid = p.paymentPaid; oneTimePurchase = p.oneTimePurchase
+        planKnown = true
+    }
+
     private func load(clear: Bool = true) async {
         guard let id = session.userId else { return }
         // Al cambiar de cuenta se vacía antes de pedir: si la petición falla no se mezclan los
@@ -902,14 +946,20 @@ struct AccountView: View {
             age = ""; height = ""; weight = ""; days = ""; minutes = ""
             sports = ""; nutritionPrefs = ""; allergies = ""
             goal = "gain_muscle"; subTier = nil; subStatus = ""; subEnd = nil; paymentPaid = false; oneTimePurchase = false
+            planKnown = false
+            // Lo último que se vio de esta cuenta sale al instante (nombre, foto, plan): sin esto, cada
+            // vez que se entraba en Ajustes la cabecera y «Mi plan» llegaban tarde y la lista se movía.
+            // Guardar sigue bloqueado hasta que responda el servidor (`profileLoaded`).
+            if let cached = CachedProfile.load(id) { apply(cached) }
         }
         struct P: Decodable { let name: String?; let avatar_url: String?; let name_public: Bool?; let avatar_public: Bool?; let subscription_tier: String?; let subscription_status: String?; let subscription_end: Date?; let payment_status: String?; let stripe_payment_id: String? }
         if let p: P = try? await Backend.client.from("profiles").select("name, avatar_url, name_public, avatar_public, subscription_tier, subscription_status, subscription_end, payment_status, stripe_payment_id")
             .eq("user_id", value: id).single().execute().value {
-            name = p.name ?? ""; avatar = p.avatar_url
-            namePublic = p.name_public ?? false; avatarPublic = p.avatar_public ?? false
-            subTier = p.subscription_tier; subStatus = p.subscription_status ?? "inactive"; subEnd = p.subscription_end
-            paymentPaid = p.payment_status == "paid"; oneTimePurchase = !(p.stripe_payment_id ?? "").isEmpty
+            let fresh = CachedProfile(name: p.name ?? "", avatar: p.avatar_url, namePublic: p.name_public ?? false, avatarPublic: p.avatar_public ?? false,
+                                      subTier: p.subscription_tier, subStatus: p.subscription_status ?? "inactive", subEnd: p.subscription_end,
+                                      paymentPaid: p.payment_status == "paid", oneTimePurchase: !(p.stripe_payment_id ?? "").isEmpty)
+            apply(fresh)
+            fresh.save(id)
             profileLoaded = true
         }
         isAdmin = session.role == .admin

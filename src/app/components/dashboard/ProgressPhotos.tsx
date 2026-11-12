@@ -3,7 +3,7 @@ import { formatDecimal } from "@/shared/lib/numberFormat";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { motion, AnimatePresence, useDragControls, useReducedMotion } from "framer-motion";
 import { Trash2, X, ChevronLeft, ChevronRight, ImageOff, WifiOff, Sparkles, Info, Columns2, CalendarDays, Lock } from "lucide-react";
-import { BRAND_PHOTOS } from "@/shared/lib/brandPhotos";
+import { BRAND_PHOTOS, useBrandPhotos } from "@/shared/lib/brandPhotos";
 import { ProgressHero } from "@/app/components/progress/ProgressHero";
 import BeforeAfterCompare from "@/app/components/dashboard/BeforeAfterCompare";
 import { Button } from "@/shared/components/ui/button";
@@ -204,6 +204,7 @@ const PhotoInfoPanel = ({ photo, onClose }: { photo: Photo; onClose: () => void 
 };
 
 const ProgressPhotos = ({ userId, onGoScan }: Props) => {
+  useBrandPhotos(); // repinta las fotos de marca cuando llega su URL actual
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [signed, setSigned] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
