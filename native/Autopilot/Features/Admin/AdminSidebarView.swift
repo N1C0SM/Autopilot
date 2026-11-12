@@ -139,7 +139,7 @@ struct AdminSidebarView: View {
             Spacer(minLength: 0)
         }
         .padding(12)
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .surface()
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Cuenta de administración: \(accountName)")
         .accessibilityValue(account?.email ?? "")

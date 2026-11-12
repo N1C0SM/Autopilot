@@ -247,7 +247,7 @@ struct AdminRows<Content: View>: View {
     var body: some View {
         VStack(spacing: 0) { content }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            .surface()
     }
 }
 
@@ -493,7 +493,7 @@ extension View {
         self.scrollContentBackground(.hidden)
             .padding(12)
             .frame(minHeight: minHeight)
-            .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            .surface()
     }
 
     /// Separador fino entre filas de una tarjeta, alineado con el texto.

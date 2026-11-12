@@ -158,7 +158,7 @@ struct ListGroupView<Content: View>: View {
                 .padding(.horizontal, 16)
                 .accessibilityAddTraits(.isHeader)
             VStack(spacing: 0) { content }
-                .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                .surface()
         }
     }
 }
@@ -195,7 +195,7 @@ struct AdminKitRefreshWarning: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 6)
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .surface(16)
     }
 }
 
@@ -445,7 +445,7 @@ struct AdminDashboardView: View {
                 }
                 .padding(20)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
+                .surface(Radius.hero)
                 AdminKitSkeletonBlock(height: 12, radius: 6, width: 132).padding(.horizontal, 16)
                 AdminKitSkeletonBlock(height: 218, radius: Radius.card)
                 AdminKitSkeletonBlock(height: 12, radius: 6, width: 160).padding(.horizontal, 16)

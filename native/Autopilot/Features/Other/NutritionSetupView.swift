@@ -30,7 +30,7 @@ struct NutritionSetupView: View {
         VStack(alignment: .leading, spacing: 28) {
             VStack(spacing: 8) {
                 Image(systemName: "sparkles").font(.system(size: 30)).foregroundStyle(Palette.gold)
-                    .frame(width: 72, height: 72).background(Palette.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .frame(width: 72, height: 72).surface(16)
                 Text("Incluido en Plus").font(.apSubhead).foregroundStyle(Palette.muted)
                 (Text("Tus comidas, ") + Text("hechas para ti").foregroundColor(Palette.gold)).font(.apTitle1).multilineTextAlignment(.center)
                 Text("Cuatro preguntas y Autopilot te prepara las comidas de cada día, ajustadas a tus macros.")
@@ -71,7 +71,7 @@ struct NutritionSetupView: View {
                         .accessibilityAddTraits(cooking == o.v ? .isSelected : [])
                     }
                 }
-                .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                .surface()
             }
 
             group("¿Qué te gusta comer?") { chips(Self.likesOptions, selection: $likes) }

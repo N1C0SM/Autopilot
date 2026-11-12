@@ -509,7 +509,7 @@ struct ProgressScreen: View {
             }
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            .surface()
             .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).strokeBorder(Palette.foreground.opacity(0.08), lineWidth: 1))
         }
     }
@@ -649,7 +649,7 @@ struct ProgressScreen: View {
                 .multilineTextAlignment(.center).lineLimit(2)
         }
         .frame(maxWidth: .infinity).padding(.horizontal, 8).padding(.vertical, 16)
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .surface()
     }
 
     private var recordsHeader: some View {
@@ -669,7 +669,7 @@ struct ProgressScreen: View {
                 LazyVStack(spacing: 0) { recordsRows }
             }
         }
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .surface()
     }
 
     @ViewBuilder private var recordsRows: some View {
@@ -721,7 +721,7 @@ struct ProgressScreen: View {
             }
             .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
+            .surface(Radius.hero)
         }
     }
 
@@ -792,7 +792,7 @@ struct ProgressScreen: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .surface()
     }
 }
 

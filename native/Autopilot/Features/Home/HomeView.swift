@@ -173,7 +173,7 @@ struct HomeView: View {
             }
             .padding(.horizontal, 18).padding(.vertical, 14)
             .frame(maxWidth: .infinity)
-            .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            .surface()
         }
         .buttonStyle(.plain)
     }
@@ -203,7 +203,7 @@ struct HomeView: View {
                 }
                 .padding(.horizontal, 18).padding(.vertical, 14)
                 .frame(maxWidth: .infinity)
-                .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                .surface()
                 .onTapGesture { Haptics.tap(); onNavigate(.progress) }
             }
         }
@@ -360,7 +360,7 @@ struct HomeView: View {
             }
             .padding(.horizontal, 18).padding(.vertical, 16)
             .frame(maxWidth: .infinity, minHeight: 72)
-            .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            .surface()
             .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).strokeBorder(Palette.foreground.opacity(0.08), lineWidth: 1))
         }
         .buttonStyle(.pressableCard)
@@ -439,7 +439,7 @@ struct HomeView: View {
             }
             .environmentObject(session)
         }
-        .fullScreenCover(item: $activeWorkout) { workout in
+        .fullScreenCoverCompat(item: $activeWorkout) { workout in
             // NavigationStack para que la barra superior exista: «Finalizar» arriba a la derecha.
             NavigationStack {
                 WorkoutView(workout: workout, userId: session.userId ?? UUID()) { finished in
@@ -593,7 +593,7 @@ struct HomeView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             // Cuadrados en el iPhone; en Mac/iPad, altura fija (si no, ocupan media pantalla).
             .squareTile(!wideLayout, height: 200)
-            .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            .surface()
         }
         .buttonStyle(.pressableCard)
         .accessibilityElement(children: .combine)
@@ -930,7 +930,7 @@ struct HomeView: View {
             // respiran igual y las filas de Nutrición y Progreso miden lo mismo.
             .padding(18)
             .frame(maxWidth: .infinity, minHeight: 68, alignment: .leading)
-            .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            .surface()
         }
         .buttonStyle(.pressableCard)
         .accessibilityLabel(label)
@@ -1377,7 +1377,7 @@ private struct TodaySessionSheet: View {
                 .accessibilityLabel(accessibilityLabel(for: ex))
             }
         }
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .surface()
         .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
     }
 
@@ -1394,7 +1394,7 @@ private struct TodaySessionSheet: View {
             sheetInfoRow("lu-flame", "Intensidad", plan?.intensity ?? "—", last: false)
             sheetInfoRow("lu-clock", "Duración", planDuration, last: true)
         }
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .surface()
     }
 
     /// Duración: la del plan o, si falta, estimada por series y descansos.

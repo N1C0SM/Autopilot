@@ -226,7 +226,7 @@ private extension View {
     func accountCard() -> some View {
         padding(.vertical, 12).padding(.leading, 12).padding(.trailing, 18)
             .frame(maxWidth: .infinity, minHeight: 76, alignment: .leading)
-            .background(Palette.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .surface(22)
             .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 }

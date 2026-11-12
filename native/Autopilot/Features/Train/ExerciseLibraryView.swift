@@ -746,7 +746,7 @@ struct ExerciseDetailView: View {
             }
         }
         .padding(16).frame(maxWidth: .infinity, alignment: .leading)
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .surface()
     }
 
     @ViewBuilder private var sections: some View {
@@ -757,7 +757,7 @@ struct ExerciseDetailView: View {
                     if !e.instructions.isEmpty { list(e.instructions, numbered: true) }
                     else if let d = e.description {
                         Text(d).font(.apSubhead).padding(16).frame(maxWidth: .infinity, alignment: .leading)
-                            .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                            .surface()
                     }
                 }
             }
@@ -770,7 +770,7 @@ struct ExerciseDetailView: View {
                         }
                     }
                     .font(.apSubhead).padding(16).frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                    .surface()
                 }
             }
             if !e.mistakes.isEmpty { section("Errores frecuentes") { list(e.mistakes) } }

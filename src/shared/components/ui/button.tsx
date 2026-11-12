@@ -7,7 +7,7 @@ import { hapticTap, isNative } from "@/shared/lib/native";
 
 // Sizes come from the `.btn-*` component classes in index.css (UIKit metrics on the
 // phone, compact from `md` up) so a utility passed at the call site still wins.
-const filled = "bg-primary text-primary-foreground hover:bg-primary/90 active:opacity-80";
+const filled = "btn-gold bg-primary text-primary-foreground hover:brightness-105 active:opacity-80";
 const tinted = "bg-primary/15 text-primary hover:bg-primary/20 active:bg-primary/25";
 const plain = "text-primary active:opacity-60";
 
@@ -21,7 +21,7 @@ const buttonVariants = cva(
         destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90 active:opacity-80",
         tinted,
         outline: "border border-foreground/30 bg-transparent text-foreground hover:bg-foreground/5 active:bg-foreground/10",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-accent active:bg-accent",
+        secondary: "btn-raised bg-secondary text-secondary-foreground hover:bg-accent active:bg-accent",
         plain,
         link: `${plain} underline-offset-4 hover:underline`,
         ghost: "hover:bg-secondary active:bg-secondary active:opacity-70",

@@ -176,7 +176,7 @@ struct NutritionView: View {
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .surface()
     }
 
     @ViewBuilder private var content: some View {
@@ -266,7 +266,7 @@ struct NutritionView: View {
                     mealRow(meal, own: split.indices.contains(i) ? split[i] : nil, last: i == meals.count - 1)
                 }
             }
-            .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            .surface()
             if generateFailed && !generating {
                 HStack(spacing: 10) {
                     Image(systemName: "exclamationmark.triangle").foregroundStyle(Palette.muted)
@@ -344,7 +344,7 @@ struct NutritionView: View {
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .surface()
     }
 
     /// «Calorías» de la maqueta: cifra grande, objetivo y una barra dorada con su porcentaje.
@@ -838,7 +838,7 @@ private struct NutritionSkeleton: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .surface()
     }
 
     /// Fantasma de «Comidas de hoy»: tres filas con check, textos y foto.
@@ -865,7 +865,7 @@ private struct NutritionSkeleton: View {
                     }
                 }
             }
-            .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            .surface()
         }
     }
 
@@ -927,7 +927,7 @@ private struct MacrosWeightCard: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
+        .surface(Radius.hero)
     }
 
     private func save() async {

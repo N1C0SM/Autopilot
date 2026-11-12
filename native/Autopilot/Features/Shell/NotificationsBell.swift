@@ -151,7 +151,7 @@ private struct NoticesSheet: View {
                             .accessibilityElement(children: .combine)
                         }
                     }
-                    .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                    .surface()
                 }
             }
             .padding(20)

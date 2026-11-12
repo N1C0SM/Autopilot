@@ -32,7 +32,7 @@ struct PlanEditorView: View {
                                 .buttonStyle(.pillSecondary)
                         }
                         .padding(18).frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                        .surface()
                     } else {
                         TextField("Nombre del \(day.lowercased()) (p. ej. Torso A)", text: Binding(
                             get: { plan?.routine_name ?? "" },
@@ -47,7 +47,7 @@ struct PlanEditorView: View {
                                     Text("Añade ejercicios para entrenar el \(day.lowercased())").font(.apFootnote).foregroundStyle(Palette.muted)
                                 }
                                 .frame(maxWidth: .infinity, minHeight: 200)
-                                .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
+                                .surface(Radius.hero)
                             }
                             .buttonStyle(.pressableCard)
                         } else {
@@ -182,7 +182,7 @@ private struct ExerciseEditRow: View {
             }
         }
         .padding(16)
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .surface()
     }
 
     private func field(_ label: String, _ text: Binding<String>, numeric: Bool = false) -> some View {

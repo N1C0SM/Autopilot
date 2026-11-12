@@ -112,7 +112,7 @@ struct AdminBlogView: View {
                             .font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(1).minimumScaleFactor(0.8)
                     }
                     .padding(16).frame(maxWidth: .infinity, minHeight: 132, alignment: .topLeading)
-                    .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                    .surface()
                     .contentShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                 }
                 .buttonStyle(.plain)

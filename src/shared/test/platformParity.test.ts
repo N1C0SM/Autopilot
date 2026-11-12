@@ -878,6 +878,33 @@ describe("paridad web ↔ apps nativas", () => {
     expect(read("native/Autopilot/Features/Admin/AdminExercises.swift")).toContain("AdminCatalogImportCard {");
   });
 
+  it("Profundidad: tarjetas con luz arriba y sombra, dorado y segmentos con relieve y barra flotante de cristal, igual en la web y en la app", () => {
+    const css = read("src/index.css");
+    const theme = read("native/Autopilot/Design/Theme.swift");
+    const components = read("native/Autopilot/Design/Components.swift");
+    // Tarjeta: la luz se apaga a los 140 px/pt con el mismo 5,5 % de blanco, filo arriba y sombra difusa.
+    expect(css).toContain("--surface-sheen: linear-gradient(180deg, hsl(0 0% 100% / 0.055) 0, hsl(0 0% 100% / 0) 140px);");
+    expect(css).toMatch(/\.bg-card \{\s*background-image: var\(--surface-sheen\);\s*box-shadow: var\(--surface-shadow\);/);
+    expect(theme).toContain("static let sheen = dynamic(dark: (1, 1, 1, 0.055)");
+    expect(theme).toMatch(/struct SurfaceBackground[\s\S]*?140 \/ max/);
+    expect(theme).toMatch(/struct Card<Content: View>[\s\S]*?\.surface\(radius\)/);
+    // Ninguna tarjeta nativa vuelve al relleno plano.
+    for (const file of ["Home/HomeView.swift", "Train/TrainView.swift", "Progress/ProgressScreen.swift", "Other/OtherViews.swift"]) {
+      expect(read(`native/Autopilot/Features/${file}`), file).not.toContain(".background(Palette.card, in: RoundedRectangle(");
+    }
+    // Botones: dorado y secundario con relieve en los dos lados.
+    const button = read("src/shared/components/ui/button.tsx");
+    expect(button).toContain('const filled = "btn-gold bg-primary');
+    expect(button).toContain('secondary: "btn-raised bg-secondary');
+    expect(theme).toContain("case .primary: GoldFill(shape: Capsule())");
+    expect(theme).toContain("case .secondary: RaisedFill(shape: Capsule())");
+    // Segmento activo y barra de pestañas.
+    expect(css).toContain('[role="tab"][data-state="active"]');
+    expect(components).toContain("if gold { GoldFill(shape: Capsule()) } else { RaisedFill(shape: Capsule(), fill: Palette.accent) }");
+    expect(read("src/app/components/mobile/FloatingMobileNav.tsx")).toContain("nav-chrome rounded-full");
+    expect(components).toContain("LinearGradient(colors: [Palette.chromeTop, Palette.chromeBottom]");
+  });
+
   it("Identidad visual: la paleta nativa (iPhone y Mac) tiene los mismos valores que los tokens de la web", () => {
     // Tokens del :root de `@layer base` (antes están los de «Aumentar contraste»).
     const css = read("src/index.css");

@@ -8,12 +8,23 @@ import AppKit
 /// Lenguaje de diseño de Autopilot (.claude/design): negro, dorado contenido,
 /// tarjetas sin borde de 22/28 pt, botones y campos en píldora, cifras grandes redondeadas.
 enum Palette {
-    /// Color dinámico: oscuro en dark mode, claro en light mode.
+    /// Color dinámico: oscuro en dark mode, claro en light mode (UIKit en iPhone, AppKit en Mac).
     private static func dynamic(dark: (CGFloat, CGFloat, CGFloat), light: (CGFloat, CGFloat, CGFloat)) -> Color {
-        Color(UIColor { trait in
-            let (r, g, b) = trait.userInterfaceStyle == .dark ? dark : light
-            return UIColor(red: r, green: g, blue: b, alpha: 1)
+        dynamic(dark: (dark.0, dark.1, dark.2, 1), light: (light.0, light.1, light.2, 1))
+    }
+
+    private static func dynamic(dark: (CGFloat, CGFloat, CGFloat, CGFloat), light: (CGFloat, CGFloat, CGFloat, CGFloat)) -> Color {
+        #if os(macOS)
+        Color(NSColor(name: nil) { appearance in
+            let (r, g, b, a) = appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? dark : light
+            return NSColor(srgbRed: r, green: g, blue: b, alpha: a)
         })
+        #else
+        Color(UIColor { trait in
+            let (r, g, b, a) = trait.userInterfaceStyle == .dark ? dark : light
+            return UIColor(red: r, green: g, blue: b, alpha: a)
+        })
+        #endif
     }
 
     /// --background
@@ -36,6 +47,72 @@ enum Palette {
     static let accent = dynamic(dark: (0.199, 0.199, 0.221), light: (0.88, 0.88, 0.90))
     /// --border
     static let border = dynamic(dark: (0.144, 0.144, 0.156), light: (0.88, 0.88, 0.90))
+
+    // Profundidad (tokens `--surface-*`, `--gold-sheen` y `--chrome-*` de la web).
+    /// Luz que baja desde arriba en tarjetas y controles.
+    static let sheen = dynamic(dark: (1, 1, 1, 0.055), light: (1, 1, 1, 0))
+    /// Filo de luz de 1 pt en el borde superior.
+    static let edge = dynamic(dark: (1, 1, 1, 0.085), light: (1, 1, 1, 0.7))
+    /// Sombra difusa bajo las superficies.
+    static let shadow = dynamic(dark: (0, 0, 0, 0.55), light: (0.06, 0.06, 0.08, 0.10))
+    /// Extremos del degradado dorado (`--gold-sheen`), con `gold` en el centro.
+    static let goldLight = dynamic(dark: (0.930, 0.806, 0.490), light: (0.704, 0.537, 0.176))
+    static let goldDeep = dynamic(dark: (0.770, 0.572, 0.230), light: (0.482, 0.334, 0.078))
+    /// Barra de pestañas flotante (`--chrome-sheen`).
+    static let chromeTop = dynamic(dark: (0.123, 0.123, 0.137, 0.92), light: (1, 1, 1, 0.94))
+    static let chromeBottom = dynamic(dark: (0.067, 0.067, 0.074, 0.92), light: (0.958, 0.958, 0.962, 0.94))
+}
+
+/// Fondo de tarjeta con profundidad, como `.bg-card` en la web: luz arriba que se apaga en
+/// 140 pt, filo de luz arriba y sombra difusa. Úsalo con `.surface(radio)`.
+struct SurfaceBackground<S: InsettableShape>: View {
+    let shape: S
+    var fill: Color = Palette.card
+
+    var body: some View {
+        shape.fill(fill)
+            .overlay {
+                GeometryReader { g in
+                    shape.fill(LinearGradient(stops: [
+                        .init(color: Palette.sheen, location: 0),
+                        .init(color: Palette.sheen.opacity(0), location: min(1, 140 / max(g.size.height, 1))),
+                    ], startPoint: .top, endPoint: .bottom))
+                }
+            }
+            .overlay(shape.strokeBorder(LinearGradient(colors: [Palette.edge, Palette.edge.opacity(0)], startPoint: .top, endPoint: .center), lineWidth: 1))
+            .shadow(color: Palette.shadow, radius: 14, y: 8)
+    }
+}
+
+/// Relleno dorado con relieve (`.btn-gold` en la web): degradado del dorado, filo de luz y halo.
+struct GoldFill<S: InsettableShape>: View {
+    let shape: S
+
+    var body: some View {
+        shape.fill(LinearGradient(colors: [Palette.goldLight, Palette.gold, Palette.goldDeep], startPoint: .top, endPoint: .bottom))
+            .overlay(shape.strokeBorder(LinearGradient(colors: [.white.opacity(0.45), .white.opacity(0)], startPoint: .top, endPoint: .center), lineWidth: 1))
+            .shadow(color: Palette.gold.opacity(0.32), radius: 10, y: 6)
+    }
+}
+
+/// Control elevado (`.btn-raised` en la web): luz arriba, filo y sombra corta.
+struct RaisedFill<S: InsettableShape>: View {
+    let shape: S
+    var fill: Color = Palette.secondary
+
+    var body: some View {
+        shape.fill(fill)
+            .overlay(shape.fill(LinearGradient(colors: [Palette.sheen, Palette.sheen.opacity(0)], startPoint: .top, endPoint: .bottom)))
+            .overlay(shape.strokeBorder(LinearGradient(colors: [Palette.edge, Palette.edge.opacity(0)], startPoint: .top, endPoint: .center), lineWidth: 1))
+            .shadow(color: Palette.shadow.opacity(0.8), radius: 6, y: 4)
+    }
+}
+
+extension View {
+    /// Tarjeta con profundidad (sustituye a `.background(Palette.card, in: RoundedRectangle(…))`).
+    func surface(_ radius: CGFloat = Radius.card) -> some View {
+        background(SurfaceBackground(shape: RoundedRectangle(cornerRadius: radius, style: .continuous)))
+    }
 }
 
 enum Radius {
@@ -98,7 +175,7 @@ extension Font {
     static let apFigureSmall = inter(size: 28, weight: .bold, relativeTo: .title).monospacedDigit()
 }
 
-/// Tarjeta del sistema: sin borde, 22 pt.
+/// Tarjeta del sistema: sin borde, 22 pt, con la profundidad de `.surface`.
 struct Card<Content: View>: View {
     var padding: CGFloat = 18
     var radius: CGFloat = Radius.card
@@ -108,8 +185,7 @@ struct Card<Content: View>: View {
         VStack(alignment: .leading, spacing: 12) { content }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(padding)
-            .background(Palette.card, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).strokeBorder(Palette.foreground.opacity(0.08), lineWidth: 1))
+            .surface(radius)
     }
 }
 
@@ -126,7 +202,7 @@ struct PillButtonStyle: ButtonStyle {
             .frame(maxWidth: .infinity, minHeight: height)
             .padding(.horizontal, 24)
             .foregroundStyle(kind == .primary ? Palette.background : Palette.foreground)
-            .background(kind == .primary ? Palette.gold : (kind == .destructive ? Palette.destructive : (kind == .outline ? Color.clear : Palette.secondary)), in: Capsule())
+            .background { fill }
             // Contorno claro de la portada («Ver demo», «Iniciar sesión»): acción secundaria sin relleno.
             .overlay { if kind == .outline { Capsule().strokeBorder(Palette.foreground.opacity(0.3), lineWidth: 1) } }
             .opacity(isEnabled ? (configuration.isPressed ? 0.75 : 1) : 0.4)
@@ -135,6 +211,16 @@ struct PillButtonStyle: ButtonStyle {
             .scaleEffect(configuration.isPressed && !A11y.reduceMotion ? 0.97 : 1)
             .animation(A11y.reduceMotion ? nil : .spring(response: 0.22, dampingFraction: 0.72), value: configuration.isPressed)
             .contentShape(Capsule())
+    }
+
+    /// Dorado y secundario con relieve, como `.btn-gold` y `.btn-raised` en la web.
+    @ViewBuilder private var fill: some View {
+        switch kind {
+        case .primary: GoldFill(shape: Capsule())
+        case .secondary: RaisedFill(shape: Capsule())
+        case .destructive: Capsule().fill(Palette.destructive)
+        case .outline: Color.clear
+        }
     }
 }
 

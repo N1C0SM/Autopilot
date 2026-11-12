@@ -348,7 +348,7 @@ struct RoutineListView: View {
                             .accessibilityHint("Abre la ficha de técnica del ejercicio")
                         }
                     }
-                    .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                    .surface()
                     .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                 }
             } else {
@@ -356,7 +356,7 @@ struct RoutineListView: View {
                     infoRow("lu-flame", "Intensidad", plan.intensity ?? "", last: false)
                     infoRow("lu-clock", "Duración", planDurations(plan), last: true)
                 }
-                .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                .surface()
             }
             if onPersonalize != nil {
                 Button { Haptics.selection(); personalizing = plan } label: {
@@ -451,7 +451,7 @@ struct RoutineListView: View {
         }
         .padding(.horizontal, 20).padding(.vertical, 24)
         .frame(maxWidth: .infinity, minHeight: 288)
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
+        .surface(Radius.hero)
     }
 
 }
@@ -525,8 +525,8 @@ struct SessionIdentitySheet: View {
                     Text("Imagen de portada").font(.apSubhead.weight(.semibold))
                     PhotosPicker(selection: $photoItem, matching: .images) {
                         HStack {
-                            if let customImage, let url = URL(string: customImage), url.isFileURL, let img = UIImage(contentsOfFile: url.path) {
-                                Image(uiImage: img).resizable().scaledToFill().frame(width: 48, height: 48).clipShape(RoundedRectangle(cornerRadius: 12))
+                            if let customImage, let url = URL(string: customImage), url.isFileURL, let img = PlatformImage(contentsOfFile: url.path) {
+                                Image(platformImage: img).resizable().scaledToFill().frame(width: 48, height: 48).clipShape(RoundedRectangle(cornerRadius: 12))
                             } else if let customImage, !customImage.isEmpty {
                                 Text("Imagen elegida").font(.apBody)
                             } else {

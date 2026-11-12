@@ -47,7 +47,7 @@ const FloatingMobileNav = ({ active, items, label, layoutId, onChange, className
       className="pointer-events-none absolute -inset-x-3 -top-6 bg-gradient-to-t from-background via-background/95 to-transparent"
       style={{ bottom: "calc(-0.75rem - env(safe-area-inset-bottom, 0px))" }}
     />
-    <ul className="relative mx-auto flex h-[var(--mobile-nav-height)] max-w-[30rem] items-stretch gap-0.5 rounded-full border border-border bg-card/90 p-1 backdrop-blur-xl">
+    <ul className="relative mx-auto flex h-[var(--mobile-nav-height)] max-w-[30rem] items-stretch gap-0.5 nav-chrome rounded-full bg-card/90 p-1 backdrop-blur-xl">
       {items.map(({ key, label: itemLabel, icon: Icon, activeIcon: ActiveIcon, locked }) => {
         const isActive = active === key;
         return (

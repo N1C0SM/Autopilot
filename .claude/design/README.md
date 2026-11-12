@@ -16,8 +16,8 @@ Documentos:
 2. **Negro profundo y dorado contenido.** El fondo es negro; el dorado solo marca lo importante (acción principal, cifra protagonista, palabra clave del titular). Si todo es dorado, nada lo es.
 3. **Una cifra o una frase grande por bloque.** Titulares redondeados y apretados; números enormes (`font-rounded`, negrita, `tabular-nums`). El texto secundario es gris y legible, nunca diminuto.
 4. **Formas redondas.** Tarjetas de 22 px, portadas y hojas de 28 px, botones, campos y filas de selección en píldora, avatares en círculo. Nada de esquinas rectas ni de bordes de 1 px alrededor de las tarjetas.
-5. **Sin bordes, con planos.** Las superficies se separan del fondo por color (`bg-card`, `bg-secondary`), no por líneas. Las líneas solo como separadores finos dentro de una lista.
-6. **Halo dorado, no brillos.** La profundidad se consigue con un degradado radial dorado muy tenue detrás del elemento principal (≈14 % de opacidad). Prohibidos los brillos, neones y degradados de colores.
+5. **Sin bordes, con luz.** Las superficies se separan del fondo por color y por profundidad (luz arriba, filo de 1 px y sombra difusa: tokens de [tokens.md](tokens.md#profundidad)), no por líneas. Las líneas solo como separadores finos dentro de una lista.
+6. **Relieve contenido.** Tarjetas, botones dorados, segmentos y barra de pestañas tienen el relieve del icono, siempre desde los tokens compartidos; detrás del elemento principal, un halo dorado muy tenue (≈14 %). Prohibidos los neones, los degradados de colores y las sombras escritas a mano.
 7. **Movimiento físico y opcional.** Entradas de 200–700 ms con curva de iOS; nada de esperas artificiales. Con «reducir movimiento» todo se muestra quieto y completo.
 8. **Accesible siempre.** Zonas táctiles de 44 pt, contraste AA (el gris sobre negro ya da ≈9:1), texto que crece con el tamaño de letra de iOS y contenido que VoiceOver puede leer sin hacer scroll.
 9. **Solo verdades.** Ninguna cifra, testimonio o función inventada. Lo de pago dice en qué plan está; lo oculto en Admin no se anuncia en ningún sitio.

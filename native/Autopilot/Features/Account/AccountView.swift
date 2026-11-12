@@ -544,7 +544,7 @@ struct AccountView: View {
                     .buttonStyle(.plain)
                     .accessibilityHint("Pide confirmación y borra tu cuenta y tus datos")
                 }
-                .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                .surface()
     }
 
     /// Contenido de una pantalla de Ajustes.
@@ -832,7 +832,7 @@ struct AccountView: View {
             VStack(alignment: .leading, spacing: 0) {
                 _VariadicView.Tree(SeparatedLayout()) { content() }
             }
-            .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            .surface()
             .accessibilityElement(children: .contain)
             if let footer { Text(footer).font(.apFootnote).foregroundStyle(Palette.muted).padding(.horizontal, 16) }
         }

@@ -420,7 +420,7 @@ struct AdminUsersView: View {
                             }
                         }
                     }
-                    .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                    .surface()
                     if groupIndex < 2 { Spacer().frame(height: 2) }
                 }
             }

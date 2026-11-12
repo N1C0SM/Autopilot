@@ -36,7 +36,20 @@ Halo de marca (detrás del elemento principal):
 <span aria-hidden className="pointer-events-none absolute … rounded-full bg-[radial-gradient(closest-side,hsl(var(--primary)/0.14),transparent)]" />
 ```
 
-Prohibido: hex sueltos, otros acentos (azul, morado, verde decorativo), degradados de varios colores, sombras de color salvo el resplandor dorado del avatar o icono de app.
+Prohibido: hex sueltos, otros acentos (azul, morado, verde decorativo), degradados de varios colores, sombras de color salvo el resplandor dorado del avatar, el icono de app y el botón dorado.
+
+## Profundidad
+
+Desde el 12-11-2026 la app no es plana: la luz viene de arriba. Todo sale de estos tokens (`src/index.css`, con valores propios en modo claro) y de sus gemelos nativos en `Theme.swift`; no se escriben sombras ni degradados a mano.
+
+| Pieza | Web | Nativo |
+|---|---|---|
+| Tarjeta | `bg-card` ya lleva `--surface-sheen` (5,5 % de blanco que se apaga en 140 px) y `--surface-shadow` (filo de 1 px arriba + sombra difusa) | `.surface(radio)` / `Card` (`SurfaceBackground`) |
+| Botón dorado | `Button` por defecto (`.btn-gold`: `--gold-sheen`, filo de luz y halo dorado) | `PillButtonStyle` `.primary` (`GoldFill`) |
+| Botón secundario y segmento activo | `.btn-raised` / `TabsTrigger` activo (`--control-*`) | `.secondary` / `SegmentedPill` (`RaisedFill`) |
+| Barra de pestañas | `.nav-chrome` (`--chrome-*`) | `FloatingTabBar` (`Palette.chromeTop/Bottom`) |
+
+Para quitarla en un caso concreto: `shadow-none bg-none` en la web, `.background(Palette.card, in: …)` en nativo.
 
 ## Tipografía
 

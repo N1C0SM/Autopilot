@@ -122,7 +122,7 @@ struct ScanView: View {
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .surface()
         .accessibilityElement(children: .combine)
     }
 
@@ -140,7 +140,7 @@ struct ScanView: View {
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .surface()
     }
 
     private func tipRow(_ symbol: String, _ text: String) -> some View {
@@ -745,7 +745,7 @@ struct ScanResultView: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
+        .surface(Radius.hero)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Físico: \(result.physique.map { NumberText.decimal($0) + " sobre 10" } ?? "sin datos")")
     }
@@ -792,7 +792,7 @@ struct ScanResultView: View {
                 }
                 .padding(.horizontal, 16).padding(.vertical, 12)
                 .frame(minHeight: 56)
-                .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                .surface()
                 .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).strokeBorder(Palette.foreground.opacity(0.08), lineWidth: 1))
             }
             Text("Incluido en Plus").font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.gold).padding(.top, 6)
@@ -942,7 +942,7 @@ struct ScanResultView: View {
         VStack(alignment: .leading, spacing: 0) { content() }
             .padding(.horizontal, 18).padding(.vertical, 10)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            .surface()
     }
 
     private func infoRow(_ label: String, _ value: String) -> some View {
@@ -1010,7 +1010,7 @@ struct ScanResultView: View {
                 }
                 .padding(16)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                .surface()
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("Mejora \(index + 1): \(item.label ?? ""). Prioridad \(item.priority ?? "sin definir")")
             }

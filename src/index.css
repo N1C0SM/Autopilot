@@ -288,6 +288,19 @@ body.keyboard-open main {
     --shadow-glow: 0 0 0 1px hsl(41 68% 58% / 0.35);
     --shadow-card: none;
     --shadow-premium: 0 0 0 1px hsl(41 58% 54% / 0.3);
+
+    /* Profundidad (desde el 12-11-2026, .claude/design/tokens.md): la superficie recibe luz
+       desde arriba (brillo que se apaga en 140 px y un filo de 1 px) y flota con una sombra
+       difusa; el dorado lleva el mismo relieve que el icono. Igual que `Surface` y
+       `PillButtonStyle` en la app nativa. */
+    --surface-sheen: linear-gradient(180deg, hsl(0 0% 100% / 0.055) 0, hsl(0 0% 100% / 0) 140px);
+    --surface-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.075), 0 1px 2px rgb(0 0 0 / 0.4), 0 14px 30px -14px rgb(0 0 0 / 0.9);
+    --control-sheen: linear-gradient(180deg, hsl(0 0% 100% / 0.06), hsl(0 0% 100% / 0));
+    --control-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.08), 0 6px 14px -8px rgb(0 0 0 / 0.8);
+    --gold-sheen: linear-gradient(180deg, hsl(43 76% 71%) 0%, hsl(41 61% 61%) 50%, hsl(38 54% 50%) 100%);
+    --gold-shadow: inset 0 1px 0 hsl(48 100% 88% / 0.55), inset 0 -1px 0 hsl(33 60% 26% / 0.45), 0 10px 22px -10px hsl(41 75% 48% / 0.55);
+    --chrome-sheen: linear-gradient(180deg, hsl(240 5% 13% / 0.92), hsl(240 5% 7% / 0.92));
+    --chrome-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.09), 0 18px 40px -12px rgb(0 0 0 / 0.95);
   }
 
   :root.light {
@@ -320,6 +333,14 @@ body.keyboard-open main {
     --sidebar-accent-foreground: 240 6% 8%;
     --sidebar-border: 240 4% 82%;
     --sidebar-ring: 41 70% 34%;
+    --surface-sheen: none;
+    --surface-shadow: 0 1px 2px rgb(16 16 20 / 0.06), 0 10px 26px -14px rgb(16 16 20 / 0.18);
+    --control-sheen: linear-gradient(180deg, hsl(0 0% 100% / 0.7), hsl(0 0% 100% / 0));
+    --control-shadow: 0 1px 2px rgb(16 16 20 / 0.08);
+    --gold-sheen: linear-gradient(180deg, hsl(41 60% 44%) 0%, hsl(41 70% 34%) 55%, hsl(38 72% 28%) 100%);
+    --gold-shadow: inset 0 1px 0 hsl(45 90% 75% / 0.4), 0 8px 18px -10px hsl(38 72% 28% / 0.5);
+    --chrome-sheen: linear-gradient(180deg, hsl(0 0% 100% / 0.94), hsl(240 5% 96% / 0.94));
+    --chrome-shadow: 0 1px 0 hsl(0 0% 100% / 0.9) inset, 0 14px 34px -14px rgb(16 16 20 / 0.3);
   }
 }
 
@@ -360,11 +381,11 @@ body.keyboard-open main {
     outline-offset: 3px;
   }
 
-  /* Superficie plana: el borde separa, no la sombra. Nada de degradados apilados
-     ni de cuatro capas de box-shadow en cada tarjeta. */
+  /* Superficie con luz arriba y sombra difusa (tokens de profundidad). Está en la capa base,
+     así cualquier utilidad (`shadow-none`, `bg-none`, `ring-*`) sigue mandando. */
   .bg-card {
-    background-image: none;
-    box-shadow: none;
+    background-image: var(--surface-sheen);
+    box-shadow: var(--surface-shadow);
   }
 
   /* Bar material (navigation bar, tab bar, toolbars). */
@@ -435,6 +456,15 @@ body.keyboard-open main {
   /* Kicker — etiqueta de sección igual que la landing: 11px bold uppercase tracking-[0.2em] dorado */
   .kicker { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.2em; color: hsl(var(--primary)); }
   .btn-icon { height: 44px; width: 44px; border-radius: 9999px; }
+  /* Relieve de los botones: dorado como el icono y secundario con luz arriba. */
+  /* Solo si el color sigue siendo el de la variante: un `bg-*` del que llama lo quita (twMerge). */
+  .btn-gold.bg-primary       { background-image: var(--gold-sheen); box-shadow: var(--gold-shadow); }
+  .btn-raised.bg-secondary   { background-image: var(--control-sheen); box-shadow: var(--control-shadow); }
+  /* Segmento activo (`TabsTrigger`): sube como un botón; en dorado, con el relieve del dorado. */
+  [role="tab"][data-state="active"].data-\[state\=active\]\:bg-secondary { background-image: var(--control-sheen); box-shadow: var(--control-shadow); }
+  [role="tab"][data-state="active"].data-\[state\=active\]\:bg-primary   { background-image: var(--gold-sheen); box-shadow: var(--gold-shadow); }
+  /* Barra de pestañas flotante: cristal oscuro con filo de luz y sombra larga. */
+  .nav-chrome { background-image: var(--chrome-sheen); box-shadow: var(--chrome-shadow); }
   
   /* iOS transition timing: 150ms ease for consistent feel */
   * { transition-timing-function: ease-out; }

@@ -146,7 +146,7 @@ struct AdminTrainersView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
             .contentShape(Rectangle())
-            .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            .surface()
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Promover usuario a entrenador")
@@ -189,7 +189,7 @@ struct AdminTrainersView: View {
             candidates
         }
         .padding(16)
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .surface()
     }
 
     private var candidates: some View {
@@ -382,7 +382,7 @@ struct TrainerDetail: View {
                 }
                 .padding(16)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                .surface()
             }
         } else if profile != nil {
             form

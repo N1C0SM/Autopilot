@@ -296,7 +296,7 @@ private struct ExerciseEditRow: View {
             }
         }
         .padding(12)
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .surface(12)
         .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Color.white.opacity(0.06), lineWidth: 1))
     }
 

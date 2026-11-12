@@ -371,7 +371,7 @@ struct WorkoutView: View {
                     }
                     .padding(.leading, 12).padding(.trailing, 16).padding(.vertical, 12)
                     .frame(maxWidth: .infinity, minHeight: 88, alignment: .leading)
-                    .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                    .surface()
                     .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).strokeBorder(Palette.foreground.opacity(0.08), lineWidth: 1))
                 }
                 .buttonStyle(.plain)
@@ -430,7 +430,7 @@ struct WorkoutView: View {
             }
             .padding(.horizontal, 4)
             .padding(.vertical, 6)
-            .background(Palette.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .surface(14)
         }
         .accessibilityElement(children: .combine)
     }
@@ -734,7 +734,7 @@ struct SessionExerciseCard: View {
                                     isCurrent: si == firstPending, separator: si > 0)
                         }
                     }
-                    .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                    .surface()
 
                     Button { workout.addSet(exercise.name) } label: {
                         Label("Añadir serie", systemImage: "plus")
@@ -748,7 +748,7 @@ struct SessionExerciseCard: View {
                 .padding(.horizontal, 8).padding(.bottom, 12).padding(.top, 4)
             }
         }
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .surface(14)
         .overlay {
             // Aviso visual breve (1,2 s) al completar el ejercicio; sin animación con Reduce Motion.
             RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -851,7 +851,7 @@ struct SessionExerciseCard: View {
                         Text("Buscando alternativas…").font(.apSubhead).foregroundStyle(Palette.muted).padding(20)
                     }
                 }
-                .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                .surface()
                 .padding(16)
             }
             Button("Cerrar") { Haptics.tap(); swapSheet = false }.buttonStyle(.pillSecondary).padding(20)

@@ -143,9 +143,10 @@ struct FloatingTabBar: View {
         .padding(4)
         .frame(height: 68)
         .frame(maxWidth: 480)
-        .background(Palette.card.opacity(0.9), in: Capsule())
-        .overlay(Capsule().strokeBorder(Palette.border, lineWidth: 1))
-        .shadow(color: .black.opacity(0.5), radius: 12, y: 8)
+        // Cristal oscuro con filo de luz y sombra larga (`.nav-chrome` en la web).
+        .background(LinearGradient(colors: [Palette.chromeTop, Palette.chromeBottom], startPoint: .top, endPoint: .bottom), in: Capsule())
+        .overlay(Capsule().strokeBorder(LinearGradient(colors: [Palette.edge, Palette.edge.opacity(0)], startPoint: .top, endPoint: .center), lineWidth: 1))
+        .shadow(color: .black.opacity(0.6), radius: 20, y: 12)
         .padding(.horizontal, 12)
         // La barra se lee como un grupo de pestañas (VoiceOver anuncia «pestaña, seleccionada»).
         .accessibilityElement(children: .contain)
@@ -178,11 +179,14 @@ struct SegmentedPill: View {
                         .frame(maxWidth: .infinity)
                         .frame(minHeight: 44)
                         .background {
-                            // La cápsula activa se desliza a la opción tocada, sin sombra, como `rounded-full` en la web.
+                            // La cápsula activa se desliza a la opción tocada y sube como un botón (relieve
+                            // del dorado o del control, como el segmento activo en la web).
                             if i == selection {
-                                Capsule().fill(gold ? Palette.gold : Palette.accent)
-                                    .frame(height: pillHeight)
-                                    .matchedGeometryEffect(id: "pill", in: pill)
+                                Group {
+                                    if gold { GoldFill(shape: Capsule()) } else { RaisedFill(shape: Capsule(), fill: Palette.accent) }
+                                }
+                                .frame(height: pillHeight)
+                                .matchedGeometryEffect(id: "pill", in: pill)
                             }
                         }
                         .contentShape(Rectangle())

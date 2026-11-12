@@ -450,7 +450,7 @@ struct OnboardingQuizView: View {
                 summaryRow(c.duo ? "person.2" : "person", "Modalidad", Quiz.label(Quiz.modes, c.mode))
                 summaryRow("calendar", t("Tu semana", "Vuestra semana"), "\(c.days.count) días (\(dayNames)) · \(Quiz.label(Quiz.durations, String(c.minutes)))")
             }
-            .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
+            .surface(Radius.hero)
             Text((c.structure == "coach" ? "Distribución: Autopilot elige la mejor para \(c.days.count) días." : "Distribución: \(Quiz.label(Quiz.structures, c.structure)).")
                  + (c.duo ? " Mismo calendario, cargas adaptadas a cada uno." : ""))
                 .font(.apFootnote).foregroundStyle(Palette.muted).padding(.horizontal, 4)
@@ -618,7 +618,7 @@ struct PlanPreviewView: View {
                         .accessibilityElement(children: .combine)
                     }
                 }
-                .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                .surface()
                 Text("\(s.muscle) · +\(max(days - 1, 2)) sesiones que se completarán al crear el plan")
                     .font(.apFootnote).foregroundStyle(Palette.muted).padding(.horizontal, 16)
             }
