@@ -778,6 +778,17 @@ describe("paridad web ↔ apps nativas", () => {
     }
   });
 
+  it("Biblioteca de ejercicios: la foto subida manda sobre la huella y la lista se refresca en cada apertura, en la web y en la app", () => {
+    const thumb = read("src/app/components/ExerciseMedia.tsx");
+    expect(thumb).toMatch(/\{showImage \? \([\s\S]*?\) : spec \?/);
+    const app = read("native/Autopilot/Features/Train/ExerciseLibraryView.swift");
+    const appThumb = app.slice(app.indexOf("private struct ExerciseThumbView"));
+    expect(appThumb).toMatch(/if let url, let u = URL\(string: url\) \{\s*CachedAsyncImage[^\n]*placeholder: \{ fallback \}/);
+    expect(app).toContain("exercise.image == nil || showRhythm");
+    expect(app).not.toContain("if Self.cache == nil");
+    expect(read("src/shared/hooks/useExerciseLibrary.ts")).toMatch(/if \(cache\) setItems\(cache\);\s*refreshCatalog\(\)/);
+  });
+
   it("Admin → Biblioteca: el catálogo base se importa, redacta y publica igual en la web y en la app", () => {
     const web = read("src/app/components/admin-library/CatalogImport.tsx");
     const app = read("native/Autopilot/Features/Admin/AdminCatalogImport.swift");

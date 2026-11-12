@@ -214,20 +214,20 @@ final class ExerciseLibraryModel: ObservableObject {
     }
 
     func load(userId: UUID?) async {
+        // Lo ya descargado se ve al instante, pero cada apertura vuelve a pedir la lista: antes la
+        // caché duraba lo que la app abierta y un ejercicio publicado o con foto nueva no aparecía.
         if items == nil, let cached = Self.cache { items = cached }
-        if Self.cache == nil {
-            do {
-                let rows: [Row]
-                do { rows = try await fetchAll(Self.full, published: true) }
-                // Sin la migración de la biblioteca: mismos ejercicios, filtros por su grupo de siempre.
-                catch { rows = try await fetchAll(Self.base, published: false) }
-                let list = rows.map { $0.toExercise() }
-                Self.cache = list
-                items = list
-                failed = false
-            } catch {
-                failed = items == nil
-            }
+        do {
+            let rows: [Row]
+            do { rows = try await fetchAll(Self.full, published: true) }
+            // Sin la migración de la biblioteca: mismos ejercicios, filtros por su grupo de siempre.
+            catch { rows = try await fetchAll(Self.base, published: false) }
+            let list = rows.map { $0.toExercise() }
+            Self.cache = list
+            items = list
+            failed = false
+        } catch {
+            failed = items == nil
         }
         guard let userId else { return }
         let uid = userId.uuidString.lowercased()
@@ -496,18 +496,25 @@ private struct ExerciseThumbView: View {
     var height: CGFloat = 48
     var body: some View {
         Group {
-            if let spec = ExerciseMotion.spec(name: name, pattern: pattern, stimulus: stimulus, load: load) {
-                // La huella del ejercicio manda: es la firma de Autopilot, no una foto.
-                ZStack { Palette.secondary; ExerciseMotionGlyph(spec: spec).padding(6) }
-            } else if let url, let u = URL(string: url) {
-                CachedAsyncImage(url: u, maxSide: 200) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
+            // Igual que `ExerciseThumb` en la web: la foto del ejercicio manda y la huella queda
+            // mientras carga, si falla o si no tiene foto.
+            if let url, let u = URL(string: url) {
+                CachedAsyncImage(url: u, maxSide: 200) { $0.resizable().scaledToFill() } placeholder: { fallback }
             } else {
-                ZStack { Palette.secondary; Image("lu-dumbbell").resizable().frame(width: 18, height: 18).foregroundStyle(Palette.muted) }
+                fallback
             }
         }
         .frame(width: width, height: height)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .accessibilityHidden(true)
+    }
+
+    @ViewBuilder private var fallback: some View {
+        if let spec = ExerciseMotion.spec(name: name, pattern: pattern, stimulus: stimulus, load: load) {
+            ZStack { Palette.secondary; ExerciseMotionGlyph(spec: spec).padding(6) }
+        } else {
+            ZStack { Palette.secondary; Image("lu-dumbbell").resizable().frame(width: 18, height: 18).foregroundStyle(Palette.muted) }
+        }
     }
 }
 
@@ -546,7 +553,8 @@ struct ExerciseDetailView: View {
     let userId: UUID?
     let onOpen: (LibraryExercise) -> Void
     @State private var variantIds: [String] = []
-    @State private var showPhoto = false
+    /// Con foto se abre en la foto, como `ExerciseMedia` en la web; «Ritmo» muestra la huella.
+    @State private var showRhythm = false
 
     private var all: [LibraryExercise] { model.items ?? [] }
     private var variants: [LibraryExercise] { variantIds.compactMap { id in all.first { $0.id == id } } }
@@ -614,7 +622,7 @@ struct ExerciseDetailView: View {
             Palette.card
             if let videoURL {
                 LoopingVideo(url: videoURL)
-            } else if let motion, !showPhoto {
+            } else if let motion, exercise.image == nil || showRhythm {
                 ExerciseMotionHero(spec: motion).padding(12)
             } else if let image = exercise.image, let url = URL(string: image) {
                 CachedAsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { Palette.card }
@@ -627,8 +635,8 @@ struct ExerciseDetailView: View {
             // Con foto y huella, se cambia entre las dos con una píldora discreta.
             if motion != nil, exercise.image != nil, videoURL == nil {
                 HStack(spacing: 2) {
-                    heroTab("Ritmo", on: !showPhoto) { showPhoto = false }
-                    heroTab("Foto", on: showPhoto) { showPhoto = true }
+                    heroTab("Ritmo", on: showRhythm) { showRhythm = true }
+                    heroTab("Foto", on: !showRhythm) { showRhythm = false }
                 }
                 .padding(2)
                 .background(Palette.secondary, in: Capsule())
