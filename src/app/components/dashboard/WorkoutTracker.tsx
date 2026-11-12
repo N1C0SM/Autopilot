@@ -1581,7 +1581,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
             <header className="px-1 pb-4">
               <p className={`flex items-center gap-1.5 type-footnote font-medium ${paused ? "text-muted-foreground" : "text-primary"}`}>
                 {paused ? <Pause className="h-4 w-4" aria-hidden="true" /> : <Dumbbell className="h-4 w-4" aria-hidden="true" />}
-                {paused ? "En pausa" : "Entrenamiento en curso"}
+                {paused ? "Entrenamiento en pausa" : "Entrenamiento en curso"}
               </p>
               <h1 className="mt-1 line-clamp-2 text-[30px] font-bold leading-tight tracking-tight">
                 {activePlan?.routine_name?.trim() || trainingTitle || "Entrenamiento"}
