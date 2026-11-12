@@ -323,39 +323,10 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
 
   if (embedded) return body;
 
-  if (!user) return (
+  return (
     <PublicLayout title="Recursos: guías y artículos de entrenamiento · Autopilot" description="Guías en PDF, recomendaciones y artículos sobre entrenamiento, nutrición e hipertrofia seleccionados por Autopilot.">
       {body}
     </PublicLayout>
-  );
-
-  return (
-    <SidebarProvider>
-    <div className="min-h-screen bg-background text-foreground flex w-full">
-      {user && <UserSidebar section="resources" onNavigate={(s) => navigate(s === "resources" ? "/recursos" : "/dashboard")} onSignOut={() => { signOut(); navigate("/"); }} />}
-      <div className="flex-1 min-w-0">
-      <Helmet>
-        <title>Recursos: guías y artículos de entrenamiento · Autopilot</title>
-        <meta name="description" content="Guías en PDF, recomendaciones y artículos sobre entrenamiento, nutrición e hipertrofia seleccionados por Autopilot." />
-        <link rel="canonical" href="https://autopilotplan.com/recursos" />
-      </Helmet>
-      <header className="app-chrome sticky top-0 z-40 border-b-[0.5px]">
-        <div className="container mx-auto flex h-14 max-w-7xl items-center gap-1 px-4">
-          <button
-            type="button"
-            onClick={() => { void hapticTap(); navigate(-1); }}
-            className="inline-flex h-11 items-center gap-0.5 pl-0.5 pr-2 text-primary transition-opacity active:opacity-60"
-          >
-            <ChevronLeft className="h-[22px] w-[22px]" strokeWidth={2.5} aria-hidden="true" />
-            <span className="type-body">Atrás</span>
-          </button>
-          {user && <SidebarTrigger />}
-        </div>
-      </header>
-      {body}
-      </div>
-    </div>
-    </SidebarProvider>
   );
 };
 
