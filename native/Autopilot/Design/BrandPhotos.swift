@@ -26,13 +26,19 @@ final class BrandPhotos {
         /// `get_brand_photos_public` y `brandPhotos.ts`.
         var patterns: [String] {
             switch self {
-            case .pullupBar: ["dominada"]
+            case .pullupBar: ["dominada", "chin", "pull"]
             case .dumbbells: ["mancuerna"]
-            case .home: ["goblet", "flexi", "zancada"]
+            case .home: ["goblet", "flexi", "zancada", "plancha", "burpee"]
             case .gym: ["press", "sentadilla", "peso muerto"]
             }
         }
-        var excludes: [String] { self == .home || self == .gym ? ["mancuerna"] : [] }
+        var excludes: [String] {
+            switch self {
+            case .pullupBar: ["pullover", "mancuerna"]
+            case .dumbbells: []
+            case .home, .gym: ["mancuerna"]
+            }
+        }
     }
 
     /// Orden en que se reparten las fotos (cada una con un ejercicio distinto).
@@ -45,15 +51,20 @@ final class BrandPhotos {
         var image_url: String?
     }
 
+    /// Fotos fijas: un GIF o APNG de técnica no sirve de portada.
+    static func isStill(_ url: String) -> Bool {
+        !url.isEmpty && url.range(of: #"\.(gif|apng)(\?|$)"#, options: [.regularExpression, .caseInsensitive]) == nil
+    }
+
     /// Elige la foto de cada hueco: la que ya decidió el servidor, la de su ejercicio o, si no
     /// está, la de un ejercicio parecido.
     static func pick(_ rows: [Row]) -> [String: String] {
         var out: [String: String] = [:]
         for row in rows {
-            if let slot = row.slot, Kind(rawValue: slot) != nil, let url = row.image_url, !url.isEmpty { out[slot] = url }
+            if let slot = row.slot, Kind(rawValue: slot) != nil, let url = row.image_url, isStill(url) { out[slot] = url }
         }
         let fold = { (text: String) in text.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: nil).lowercased() }
-        let live = rows.filter { $0.id != nil && !($0.image_url ?? "").isEmpty }
+        let live = rows.filter { $0.id != nil && isStill($0.image_url ?? "") }
             .sorted { fold($0.name ?? "") < fold($1.name ?? "") }
         var used = Set(out.values)
         for kind in order where out[kind.rawValue] == nil {
@@ -79,7 +90,7 @@ final class BrandPhotos {
     @ObservationIgnored private var lastAttempt: Date?
 
     private init() {
-        urls = (UserDefaults.standard.dictionary(forKey: Self.storageKey) as? [String: String]) ?? [:]
+        urls = ((UserDefaults.standard.dictionary(forKey: Self.storageKey) as? [String: String]) ?? [:]).filter { Self.isStill($0.value) }
     }
 
     /// Foto propia incluida en la app (la misma que usa la web de reserva): sale mientras no se sabe
@@ -110,14 +121,18 @@ final class BrandPhotos {
             picked = Self.pick(rows)
         }
         if Kind.allCases.contains(where: { picked[$0.rawValue] == nil }) {
-            let ids = Kind.allCases.map(\.exerciseId).joined(separator: ",")
-            let names = Kind.allCases.flatMap(\.patterns).map { "name.ilike.*\($0.replacingOccurrences(of: " ", with: "*"))*" }
-            if let rows: [Row] = try? await Backend.client.from("exercises").select("id, name, image_url")
-                .not("image_url", operator: .is, value: "null")
-                .or((["id.in.(\(ids))"] + names).joined(separator: ","))
-                .limit(300).execute().value {
-                picked = Self.pick(rows).merging(picked) { _, server in server }
+            // Una consulta pequeña por hueco que falte (una sola con todo se cortaba antes de llegar a algunos).
+            var rows: [Row] = (try? await Backend.client.from("exercises").select("id, name, image_url")
+                .in("id", values: Kind.allCases.map(\.exerciseId)).execute().value) ?? []
+            for kind in Self.order where picked[kind.rawValue] == nil {
+                let names = kind.patterns.map { "name.ilike.*\($0)*" }.joined(separator: ",")
+                let found: [Row] = (try? await Backend.client.from("exercises").select("id, name, image_url")
+                    .in("status", values: ["published", "archived"])
+                    .not("image_url", operator: .is, value: "null")
+                    .or(names).order("name").limit(25).execute().value) ?? []
+                rows += found
             }
+            picked = Self.pick(rows).merging(picked) { _, server in server }
         }
         // Cancelada (cambio de cuenta): manda la petición nueva, y esta no cuenta como intento.
         if Task.isCancelled { lastAttempt = nil; return }

@@ -25,3 +25,17 @@ describe("pickBrandPhotos", () => {
     expect(picked).toEqual({ home: "flex.webp", gym: "sb.webp" });
   });
 });
+
+describe("pickBrandPhotos: solo fotos fijas", () => {
+  it("salta GIF y APNG y el pullover no cuenta como dominada", () => {
+    const picked = pickBrandPhotos([
+      { slot: "dumbbells", image_url: "x/press-anim.gif" },
+      { id: "1", name: "Press inclinado con mancuernas", image_url: "x/anim.gif" },
+      { id: "2", name: "Remo con mancuerna", image_url: "x/remo.webp" },
+      { id: "3", name: "Pullover con mancuerna", image_url: "x/pullover.webp" },
+      { id: "4", name: "Jalón al pecho (pull down)", image_url: "x/jalon.webp" },
+    ]);
+    // Por orden alfabético, «Pullover con mancuerna» va a mancuernas, no a dominadas.
+    expect(picked).toEqual({ pullupBar: "x/jalon.webp", dumbbells: "x/pullover.webp" });
+  });
+});

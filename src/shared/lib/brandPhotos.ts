@@ -25,7 +25,8 @@ const RETRY_MS = 60_000;
 function readStored(): Partial<Record<BrandPhotoKey, string>> {
   try {
     const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-    return parsed && typeof parsed === "object" ? parsed : {};
+    if (!parsed || typeof parsed !== "object") return {};
+    return Object.fromEntries(Object.entries(parsed).filter(([, url]) => typeof url === "string" && !/\.(gif|apng)(\?|$)/i.test(url)));
   } catch {
     return {};
   }
@@ -56,21 +57,24 @@ type Row = { slot?: string | null; id?: string | null; name?: string | null; ima
  * `get_brand_photos_public` y `BrandPhotos.pick` (iPhone/Mac). Cada hueco, un ejercicio distinto.
  */
 const SLOTS: { key: BrandPhotoKey; patterns: string[]; excludes: string[] }[] = [
-  { key: "pullupBar", patterns: ["dominada"], excludes: [] },
+  { key: "pullupBar", patterns: ["dominada", "chin", "pull"], excludes: ["pullover", "mancuerna"] },
   { key: "dumbbells", patterns: ["mancuerna"], excludes: [] },
-  { key: "home", patterns: ["goblet", "flexi", "zancada"], excludes: ["mancuerna"] },
+  { key: "home", patterns: ["goblet", "flexi", "zancada", "plancha", "burpee"], excludes: ["mancuerna"] },
   { key: "gym", patterns: ["press", "sentadilla", "peso muerto"], excludes: ["mancuerna"] },
 ];
 
 const fold = (text: string) => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
+/** Fotos fijas: un GIF o APNG de técnica no sirve de portada. */
+const isStill = (url: string | null | undefined) => Boolean(url) && !/\.(gif|apng)(\?|$)/i.test(url!);
+
 export function pickBrandPhotos(rows: Row[]): Partial<Record<BrandPhotoKey, string>> {
   const out: Partial<Record<BrandPhotoKey, string>> = {};
   for (const row of rows) {
-    if (row.slot && row.slot in BRAND_PHOTO_EXERCISES && row.image_url) out[row.slot as BrandPhotoKey] = row.image_url;
+    if (row.slot && row.slot in BRAND_PHOTO_EXERCISES && isStill(row.image_url)) out[row.slot as BrandPhotoKey] = row.image_url!;
   }
   const live = rows
-    .filter((row) => row.id && row.image_url)
+    .filter((row) => row.id && isStill(row.image_url))
     .sort((a, b) => (fold(a.name ?? "") < fold(b.name ?? "") ? -1 : fold(a.name ?? "") > fold(b.name ?? "") ? 1 : 0));
   const used = new Set(Object.values(out));
   for (const slot of SLOTS) {
@@ -93,11 +97,16 @@ async function fetchPhotos(): Promise<Partial<Record<BrandPhotoKey, string>>> {
   const { data, error } = await supabase.rpc("get_brand_photos_public" as never);
   let picked = !error && Array.isArray(data) ? pickBrandPhotos(data as Row[]) : {};
   if (KEYS.some((key) => !picked[key])) {
-    const ids = Object.values(BRAND_PHOTO_EXERCISES).join(",");
-    const names = SLOTS.flatMap((slot) => slot.patterns).map((p) => `name.ilike.*${p.replace(/ /g, "*")}*`);
-    const res = await supabase.from("exercises").select("id, name, image_url")
-      .not("image_url", "is", null).or([`id.in.(${ids})`, ...names].join(",")).limit(300);
-    picked = { ...pickBrandPhotos((res.data as Row[] | null) ?? []), ...picked };
+    // Una consulta pequeña por hueco que falte (una sola con todo se cortaba antes de llegar a algunos).
+    const own = await supabase.from("exercises").select("id, name, image_url").in("id", Object.values(BRAND_PHOTO_EXERCISES));
+    const rows: Row[] = [...((own.data as Row[] | null) ?? [])];
+    for (const slot of SLOTS.filter((s) => !picked[s.key])) {
+      const res = await supabase.from("exercises").select("id, name, image_url")
+        .in("status", ["published", "archived"]).not("image_url", "is", null)
+        .or(slot.patterns.map((p) => `name.ilike.*${p.replace(/ /g, "*")}*`).join(",")).order("name").limit(25);
+      rows.push(...((res.data as Row[] | null) ?? []));
+    }
+    picked = { ...pickBrandPhotos(rows), ...picked };
   }
   return picked;
 }
