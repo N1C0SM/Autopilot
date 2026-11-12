@@ -4,7 +4,7 @@ import Foundation
 /// Secciones de la app. Admin usa los mismos grupos que `src/app/components/admin/adminNav.ts`.
 enum AppSection: String, CaseIterable, Identifiable, Hashable {
     // Usuario
-    case home, progress, nutrition, scan, settings
+    case home, library, progress, nutrition, scan, settings
     // Entrenador
     case trainerClients, trainerProfile
     // Admin
@@ -15,9 +15,9 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
     var id: String { rawValue }
 
     /// Barra lateral de la web (UserSidebar): Inicio, Nutrición, Mi progreso, Ajustes.
-    static let userSections: [AppSection] = [.home, .nutrition, .progress, .settings]
+    static let userSections: [AppSection] = [.home, .library, .nutrition, .progress, .settings]
     /// Pestañas del iPhone (MobileTabBar): Hoy, Nutrición, Progreso. Ajustes va en el avatar.
-    static let userTabs: [AppSection] = [.home, .nutrition, .progress]
+    static let userTabs: [AppSection] = [.home, .library, .nutrition, .progress]
     static let trainerSections: [AppSection] = [.trainerClients, .trainerProfile, .settings]
 
     static let adminGroups: [(label: String, items: [AppSection])] = [
@@ -41,6 +41,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
     var title: String {
         switch self {
         case .home: "Inicio"
+        case .library: "Ejercicios"
         case .progress: "Mi progreso"
         case .nutrition: "Nutrición"
         case .scan: "Escáner"
@@ -70,6 +71,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
     var symbol: String {
         switch self {
         case .home: "house.fill"
+        case .library: "dumbbell.fill"
         case .progress: "chart.line.uptrend.xyaxis"
         case .nutrition: "fork.knife"
         case .scan: "figure.stand"
@@ -479,6 +481,7 @@ struct SectionView: View {
         Group {
             switch section {
             case .home: HomeView(onNavigate: onNavigate)
+            case .library: ExerciseLibraryView(userId: session.userId, embedded: true)
             case .progress: ProgressScreen(onNavigate: onNavigate)
             case .nutrition: NutritionView()
             case .scan: ScanView()
@@ -524,6 +527,7 @@ extension AppSection {
     var lucide: String? {
         switch self {
         case .home: "lu-house"
+        case .library: "lu-dumbbell"
         case .nutrition: "lu-apple"
         case .progress: "lu-sparkles"
         case .settings: "lu-settings"
@@ -541,6 +545,7 @@ extension AppSection {
     var deskHint: String? {
         switch self {
         case .home: "Tu entreno de hoy y lo que toca comer"
+        case .library: "Técnica, músculos y variantes de cada ejercicio"
         case .nutrition: "Tus macros y comidas del día"
         case .progress: "Fotos, peso y evolución semanal"
         case .settings: "Perfil, suscripción y notificaciones"

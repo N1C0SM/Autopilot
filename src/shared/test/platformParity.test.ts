@@ -39,16 +39,16 @@ describe("paridad web ↔ apps nativas", () => {
   it("web grande = Mac: mismo menú lateral, en el mismo orden", () => {
     const mac = swiftList("userSections").map((s) => titles[s]);
     expect(mac).toHaveLength(5);
-    expect(webItems("src/app/components/UserSidebar.tsx", "NAV_ITEMS", "title", "section")).toEqual(mac);
+    // El chat solo sale en la web cuando se publica (releaseScope); la app aún no lo tiene.
+    expect(webItems("src/app/components/UserSidebar.tsx", "NAV_ITEMS", "title", "section").filter((t) => t !== "Chat")).toEqual(mac);
+    expect(mac).toEqual(["Inicio", "Ejercicios", "Nutrición", "Mi progreso", "Ajustes"]);
   });
 
-  it("web móvil: solo Hoy, Nutrición y Progreso en la navegación principal", () => {
-    expect(webItems("src/app/components/mobile/MobileTabBar.tsx", "TABS", "label", "key")).toEqual([
-      "Hoy", "Nutrición", "Progreso",
-    ]);
-    expect(webItems("src/web/components/LandingSections.tsx", "PHONE_TABS", "label", "key")).toEqual([
-      "Hoy", "Nutrición", "Progreso",
-    ]);
+  it("web móvil = iPhone: Hoy, Ejercicios, Nutrición y Progreso en la navegación principal", () => {
+    const tabs = ["Hoy", "Ejercicios", "Nutrición", "Progreso"];
+    expect(webItems("src/app/components/mobile/MobileTabBar.tsx", "TABS", "label", "key")).toEqual(tabs);
+    expect(webItems("src/web/components/LandingSections.tsx", "PHONE_TABS", "label", "key")).toEqual(tabs);
+    expect(swiftList("userTabs").map((t) => (t === "home" ? "Hoy" : t === "progress" ? "Progreso" : titles[t]))).toEqual(tabs);
   });
 
   it("Admin: mismos grupos y secciones en la web y en la app", () => {
@@ -753,7 +753,7 @@ describe("paridad web ↔ apps nativas", () => {
     expect(progressWeb).toContain(">Tu último scan<");
   });
 
-  it("Biblioteca de ejercicios: misma entrada en Entrenar, mismos filtros y mismas secciones de ficha, en la web y en la app", () => {
+  it("Biblioteca de ejercicios: misma entrada en la rutina, mismos filtros y mismas secciones de ficha, en la web y en la app", () => {
     const app = read("native/Autopilot/Features/Train/ExerciseLibraryView.swift");
     const swiftArray = (name: string) => {
       const m = app.match(new RegExp(`static let ${name} = \\[([^\\]]*)\\]`));
@@ -766,11 +766,9 @@ describe("paridad web ↔ apps nativas", () => {
     expect(FILTER_GROUPS).toHaveLength(12);
     expect(EQUIPMENT).toHaveLength(11);
     expect(MODALITIES).toHaveLength(5);
-    // Se abre desde la barra de la rutina, junto a «Editar», en los dos lados.
-    expect(read("src/app/pages/Dashboard.tsx")).toMatch(/aria: "Ejercicios",[^}]*setLibraryOpen\(true\)/);
-    const train = read("native/Autopilot/Features/Train/TrainView.swift");
-    expect(train).toMatch(/Image\("lu-book-open"\)[\s\S]{0,400}\.accessibilityLabel\("Ejercicios"\)/);
-    expect(train).toContain("ExerciseLibraryView(userId: session.userId)");
+    // Pestaña «Ejercicios» en la navegación de los dos lados (sin «Cerrar», como pantalla propia).
+    expect(read("src/app/pages/Dashboard.tsx")).toMatch(/section === "library" && user[\s\S]{0,120}<ExerciseLibraryPage userId=\{user\.id\} \/>/);
+    expect(read("native/Autopilot/Features/Shell/RootView.swift")).toContain("case .library: ExerciseLibraryView(userId: session.userId, embedded: true)");
     const web = read("src/app/components/library/ExerciseLibrarySheet.tsx");
     for (const text of ["Demostración en preparación", "Recientes", "Favoritos", "Quitar filtros"]) {
       expect(web).toContain(text);
@@ -787,6 +785,21 @@ describe("paridad web ↔ apps nativas", () => {
     expect(app).toContain("exercise.image == nil || showRhythm");
     expect(app).not.toContain("if Self.cache == nil");
     expect(read("src/shared/hooks/useExerciseLibrary.ts")).toMatch(/if \(cache\) setItems\(cache\);\s*refreshCatalog\(\)/);
+  });
+
+  it("Hoy: «Entreno vacío» bajo la sesión y «Editar» en «Tu programa», en la web y en la app", () => {
+    const web = read("src/app/components/dashboard/HomeOverview.tsx");
+    const app = read("native/Autopilot/Features/Home/HomeView.swift");
+    expect(web).toContain("Entreno vacío");
+    expect(app).toContain('Text("Entreno vacío")');
+    expect(app).toMatch(/mainAction\s*emptyWorkoutButton\s*routinesList/);
+    expect(web).toMatch(/<h3 className="type-title3">Tu programa<\/h3>[\s\S]{0,600}Editar/);
+    expect(app).toMatch(/Text\("Tu programa"\)[\s\S]{0,500}Button\("Editar"\)/);
+    // Mismo nombre del entreno guardado en los dos lados.
+    expect(read("src/app/pages/Dashboard.tsx")).toContain('routine_name: "Entrenamiento libre"');
+    expect(app).toContain('routine_name: "Entrenamiento libre"');
+    expect(read("src/app/components/dashboard/FreeSessionBuilder.tsx")).toContain('title="Entreno vacío"');
+    expect(web).not.toContain("Tu rutina semanal");
   });
 
   it("Admin → Biblioteca: el catálogo base se importa, redacta y publica igual en la web y en la app", () => {

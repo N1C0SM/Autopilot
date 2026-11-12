@@ -21,11 +21,11 @@ const shell = (active: MobileTab, onChange = vi.fn()) => (
 );
 
 describe("MobileAppShell", () => {
-  it("shows only Home, Nutrition, and Progress in the mobile web navigation", () => {
+  it("shows Home, Exercises, Nutrition, and Progress in the mobile web navigation, like the iPhone", () => {
     render(shell("home"));
     const navigation = screen.getByRole("navigation", { name: "Navegación principal" });
     expect(within(navigation).getAllByRole("button").map((button) => button.getAttribute("aria-label"))).toEqual([
-      "Hoy", "Nutrición", "Progreso",
+      "Hoy", "Ejercicios", "Nutrición", "Progreso",
     ]);
   });
 

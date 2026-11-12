@@ -1,6 +1,6 @@
 import { readMealsDone as readMealsDoneFor } from "@/shared/lib/mealsDone";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { Flame as Apple, Flame, Check, ChevronRight, Clock, Dumbbell, LockKeyhole } from "lucide-react";
+import { Flame as Apple, Flame, Check, ChevronRight, Clock, Dumbbell, LockKeyhole, Plus } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { EmptyState } from "@/shared/components/ui/empty-state";
 import { supabase } from "@/shared/integrations/supabase/client";
@@ -48,6 +48,10 @@ interface Props {
   /** Marca una actividad como hecha en la fecha local. */
   onCompleteActivity?: (day: string) => Promise<boolean>;
   onResumeWorkout?: () => void;
+  /** «Entreno vacío»: eliges los ejercicios y empiezas, sin rutina (como en el iPhone). */
+  onEmptyWorkout?: () => void;
+  /** «Editar» en «Tu programa»: abre el editor de la rutina. */
+  onEditRoutine?: () => void;
   profileName?: string;
   macros?: Macros | null;
   completedThisWeek?: number;
@@ -137,6 +141,8 @@ const HomeOverview = ({
   onStartWorkout,
   onCompleteActivity,
   onResumeWorkout,
+  onEmptyWorkout,
+  onEditRoutine,
   profileName,
   macros,
   completedThisWeek = 0,
@@ -489,11 +495,23 @@ const HomeOverview = ({
         )}
       </section>
 
+      {onEmptyWorkout && (
+        <Button type="button" variant="secondary" size="lg" className="w-full" onClick={() => { void hapticTap(); onEmptyWorkout(); }}>
+          <Plus className="h-5 w-5" strokeWidth={2.25} aria-hidden="true" />
+          Entreno vacío
+        </Button>
+      )}
+
       {sessions.length > 0 && (
         <section className="lg:hidden" aria-label="Tu programa" data-home-routines>
-          <div className="mb-2 flex items-baseline justify-between">
+          <div className="mb-2 flex items-baseline justify-between gap-3">
             <h3 className="type-title3">Tu programa</h3>
-            <span className="type-footnote text-muted-foreground">{sessions.length} {sessions.length === 1 ? "sesión" : "sesiones"}</span>
+            <span className="ml-auto type-footnote text-muted-foreground">{sessions.length} {sessions.length === 1 ? "sesión" : "sesiones"}</span>
+            {onEditRoutine && (
+              <button type="button" onClick={() => { void hapticTap(); onEditRoutine(); }} className="-my-3 min-h-11 px-1 type-subhead font-semibold text-primary active:opacity-60">
+                Editar
+              </button>
+            )}
           </div>
           <div className="overflow-hidden rounded-[22px] bg-card">
             {sessions.map((plan, index) => (
@@ -516,19 +534,6 @@ const HomeOverview = ({
           </div>
         </section>
       )}
-
-      {/* En móvil, acceso a la rutina semanal: editar, modo libre y ejercicios. */}
-      <button
-        type="button"
-        onClick={() => { void hapticTap(); onNavigate("training"); }}
-        className="flex min-h-14 w-full items-center justify-between rounded-[22px] bg-card px-4 py-3 text-left transition-opacity active:opacity-60 lg:hidden"
-      >
-        <span className="min-w-0">
-          <span className="block type-headline text-foreground">Tu rutina semanal</span>
-          <span className="block type-subhead text-muted-foreground">Editar, modo libre y ejercicios</span>
-        </span>
-        <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={2} aria-hidden="true" />
-      </button>
 
       {/* El diseño ancho de la app nativa muestra el resumen semanal y nutrición. */}
       <section className="hidden rounded-[22px] bg-card p-4 lg:block" aria-label={`Esta semana: ${sessionCount} de ${sessions.length} sesiones`}>

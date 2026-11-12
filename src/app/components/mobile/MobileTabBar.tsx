@@ -1,4 +1,4 @@
-import { Flame as Apple, TrendingUp, Home, type LucideIcon } from "lucide-react";
+import { Flame as Apple, TrendingUp, Home, Dumbbell, type LucideIcon } from "lucide-react";
 import type { UserSection } from "@/app/components/UserSidebar";
 import FloatingMobileNav from "@/app/components/mobile/FloatingMobileNav";
 
@@ -47,6 +47,7 @@ const ProgressIcon = ({ className, strokeWidth }: { className?: string; strokeWi
 /** Navegación móvil web; Entrenar se abre desde Inicio, no como pestaña. */
 export const TABS: { key: MobileTab; label: string; icon: LucideIcon | typeof NutritionIcon | typeof ProgressIcon; activeIcon?: typeof HomeFill }[] = [
   { key: "home", label: "Hoy", icon: Home, activeIcon: HomeFill },
+  { key: "library", label: "Ejercicios", icon: Dumbbell },
   { key: "nutrition", label: "Nutrición", icon: NutritionIcon, activeIcon: NutritionFill },
   { key: "progress", label: "Progreso", icon: ProgressIcon, activeIcon: ProgressFill },
 ];

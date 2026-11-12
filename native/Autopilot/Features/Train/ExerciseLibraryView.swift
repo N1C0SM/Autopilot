@@ -280,10 +280,14 @@ final class ExerciseLibraryModel: ObservableObject {
 /// Lista con buscador, filtros, recientes, favoritos y grupos musculares.
 struct ExerciseLibraryView: View {
     let userId: UUID?
+    /// Pestaña «Ejercicios» de la barra: sin «Cerrar» y empujando la ficha en la pila de la app.
+    var embedded = false
     @StateObject private var model = ExerciseLibraryModel()
     @State private var filters = LibraryFilters()
     @State private var facet: String?
     @State private var path: [LibraryExercise] = []
+    /// Ficha abierta en modo pestaña (la pila es la de la app, no la propia).
+    @State private var pushed: LibraryExercise?
     @Environment(\.dismiss) private var dismiss
 
     private var items: [LibraryExercise] { model.items ?? [] }
@@ -295,20 +299,37 @@ struct ExerciseLibraryView: View {
     ]
 
     var body: some View {
-        NavigationStack(path: $path) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
-                    searchField
-                    facetRow
-                    if let facet, let options = facets.first(where: { $0.key == facet })?.options {
-                        FlowRow { ForEach(options, id: \.self) { chip($0, facet: facet) } }
-                            .transition(.opacity)
-                    }
-                    content.padding(.top, 4)
+        Group {
+            if embedded {
+                list.navigationDestination(item: $pushed) { e in
+                    LibraryDetailHost(exercise: e, model: model, userId: userId)
                 }
-                .padding(.horizontal, 20).padding(.bottom, 24)
+            } else {
+                sheet
             }
-            .screenBackground()
+        }
+        .task { await model.load(userId: userId) }
+    }
+
+    private var list: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                searchField
+                facetRow
+                if let facet, let options = facets.first(where: { $0.key == facet })?.options {
+                    FlowRow { ForEach(options, id: \.self) { chip($0, facet: facet) } }
+                        .transition(.opacity)
+                }
+                content.padding(.top, 4)
+            }
+            .padding(.horizontal, embedded ? 16 : 20).padding(.bottom, 24)
+        }
+        .screenBackground()
+    }
+
+    private var sheet: some View {
+        NavigationStack(path: $path) {
+            list
             .navigationTitle("Ejercicios")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.large)
@@ -322,7 +343,6 @@ struct ExerciseLibraryView: View {
                 ExerciseDetailView(exercise: e, model: model, userId: userId) { path.append($0) }
             }
         }
-        .task { await model.load(userId: userId) }
     }
 
     private var searchField: some View {
@@ -415,7 +435,7 @@ struct ExerciseLibraryView: View {
     private func open(_ e: LibraryExercise) {
         Haptics.tap()
         model.markViewed(e.id, userId: userId)
-        path.append(e)
+        if embedded { pushed = e } else { path.append(e) }
     }
 
     private var browse: some View {
@@ -475,6 +495,21 @@ struct ExerciseLibraryView: View {
         }
         .aspectRatio(4 / 3, contentMode: .fit)
         .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+    }
+}
+
+/// Ficha dentro de la pila de la app (pestaña «Ejercicios»): cada variante abre otra encima.
+private struct LibraryDetailHost: View {
+    let exercise: LibraryExercise
+    @ObservedObject var model: ExerciseLibraryModel
+    let userId: UUID?
+    @State private var next: LibraryExercise?
+
+    var body: some View {
+        ExerciseDetailView(exercise: exercise, model: model, userId: userId) { next = $0 }
+            .navigationDestination(item: $next) { e in
+                LibraryDetailHost(exercise: e, model: model, userId: userId)
+            }
     }
 }
 

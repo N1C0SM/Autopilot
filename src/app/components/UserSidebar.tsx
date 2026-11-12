@@ -10,7 +10,7 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/shared/components/ui/sidebar";
-import { Home, Flame as Apple, MessageCircle, Settings, LogOut, TrendingUp as Sparkles, Lock, ArrowLeftRight } from "lucide-react";
+import { Home, Dumbbell, Flame as Apple, MessageCircle, Settings, LogOut, TrendingUp as Sparkles, Lock, ArrowLeftRight } from "lucide-react";
 import { openAccountPicker } from "@/shared/lib/accounts";
 import { supportsMultipleAccounts } from "@/shared/lib/platform";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/tooltip";
@@ -20,6 +20,7 @@ import { cn } from "@/shared/lib/utils";
 const TOOLTIPS: Partial<Record<UserSection, string>> = {
   home: "Resumen de hoy: entrenamiento, comidas y racha",
   training: "Tu rutina de la semana y registro de series",
+  library: "Técnica, músculos y variantes de cada ejercicio",
   nutrition: "Macros y comidas del día",
   chat: "Habla con tu entrenador, envía fotos o vídeos",
   progress: "Fotos, peso, evolución semanal y AI Scan",
@@ -27,7 +28,7 @@ const TOOLTIPS: Partial<Record<UserSection, string>> = {
   resources: "Biblioteca, guías y recomendaciones",
 };
 
-export type UserSection = "home" | "training" | "nutrition" | "chat" | "progress" | "settings" | "resources";
+export type UserSection = "home" | "training" | "library" | "nutrition" | "chat" | "progress" | "settings" | "resources";
 
 interface Props {
   section: UserSection;
@@ -41,6 +42,7 @@ interface Props {
 
 const NAV_ITEMS: { title: string; section: UserSection; icon: typeof Home }[] = [
   { title: "Inicio",        section: "home",       icon: Home },
+  { title: "Ejercicios",    section: "library",    icon: Dumbbell },
   { title: "Nutrición",     section: "nutrition",  icon: Apple },
   { title: "Mi progreso",   section: "progress",   icon: Sparkles },
   { title: "Chat",          section: "chat",       icon: MessageCircle },

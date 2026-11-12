@@ -38,7 +38,7 @@ const FreeSessionBuilder = ({ open, onOpenChange, onStart }: Props) => {
     <ResponsiveSheet
       open={open}
       onOpenChange={onOpenChange}
-      title="Entrenamiento libre"
+      title="Entreno vacío"
       description="Cuenta para tu mapa muscular, tu historial y tus récords."
       desktopClassName="sm:max-w-2xl"
       footer={
