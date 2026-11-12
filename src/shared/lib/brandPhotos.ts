@@ -48,15 +48,58 @@ export const BRAND_PHOTOS = {
   meal: "/healthy_meal_plate.jpg",
 };
 
-type Row = { id: string; image_url: string | null };
+type Row = { slot?: string | null; id?: string | null; name?: string | null; image_url?: string | null };
 
-async function fetchRows(): Promise<Row[]> {
-  const ids = Object.values(BRAND_PHOTO_EXERCISES);
-  // Sin sesión solo responde la función pública; si aún no existe, con sesión basta la tabla.
+/**
+ * Si el ejercicio de una foto ya no está en la biblioteca (se borró o se reimportó), la foto es la
+ * del primer ejercicio publicado, por nombre, que encaje con su tipo. Igual que
+ * `get_brand_photos_public` y `BrandPhotos.pick` (iPhone/Mac). Cada hueco, un ejercicio distinto.
+ */
+const SLOTS: { key: BrandPhotoKey; patterns: string[]; excludes: string[] }[] = [
+  { key: "pullupBar", patterns: ["dominada"], excludes: [] },
+  { key: "dumbbells", patterns: ["mancuerna"], excludes: [] },
+  { key: "home", patterns: ["goblet", "flexi", "zancada"], excludes: ["mancuerna"] },
+  { key: "gym", patterns: ["press", "sentadilla", "peso muerto"], excludes: ["mancuerna"] },
+];
+
+const fold = (text: string) => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+export function pickBrandPhotos(rows: Row[]): Partial<Record<BrandPhotoKey, string>> {
+  const out: Partial<Record<BrandPhotoKey, string>> = {};
+  for (const row of rows) {
+    if (row.slot && row.slot in BRAND_PHOTO_EXERCISES && row.image_url) out[row.slot as BrandPhotoKey] = row.image_url;
+  }
+  const live = rows
+    .filter((row) => row.id && row.image_url)
+    .sort((a, b) => (fold(a.name ?? "") < fold(b.name ?? "") ? -1 : fold(a.name ?? "") > fold(b.name ?? "") ? 1 : 0));
+  const used = new Set(Object.values(out));
+  for (const slot of SLOTS) {
+    if (out[slot.key]) continue;
+    const row = live.find((r) => r.id === BRAND_PHOTO_EXERCISES[slot.key])
+      ?? live.find((r) => {
+        const name = fold(r.name ?? "");
+        return !used.has(r.image_url!) && slot.patterns.some((p) => name.includes(p)) && !slot.excludes.some((p) => name.includes(p));
+      });
+    if (row?.image_url) {
+      out[slot.key] = row.image_url;
+      used.add(row.image_url);
+    }
+  }
+  return out;
+}
+
+async function fetchPhotos(): Promise<Partial<Record<BrandPhotoKey, string>>> {
+  // Primero la función pública (vale sin sesión); con sesión, si falta alguna, la tabla.
   const { data, error } = await supabase.rpc("get_brand_photos_public" as never);
-  if (!error && Array.isArray(data)) return data as Row[];
-  const res = await supabase.from("exercises").select("id, image_url").in("id", ids);
-  return (res.data as Row[] | null) ?? [];
+  let picked = !error && Array.isArray(data) ? pickBrandPhotos(data as Row[]) : {};
+  if (KEYS.some((key) => !picked[key])) {
+    const ids = Object.values(BRAND_PHOTO_EXERCISES).join(",");
+    const names = SLOTS.flatMap((slot) => slot.patterns).map((p) => `name.ilike.*${p.replace(/ /g, "*")}*`);
+    const res = await supabase.from("exercises").select("id, name, image_url")
+      .not("image_url", "is", null).or([`id.in.(${ids})`, ...names].join(",")).limit(300);
+    picked = { ...pickBrandPhotos((res.data as Row[] | null) ?? []), ...picked };
+  }
+  return picked;
 }
 
 /** Pide las URLs actuales (una vez a la vez, y como mucho cada minuto si falta alguna). */
@@ -64,13 +107,9 @@ export function refreshBrandPhotos(): Promise<void> {
   const complete = KEYS.every((k) => urls[k]);
   if (inflight || (complete && lastAttempt) || Date.now() - lastAttempt < RETRY_MS) return inflight ?? Promise.resolve();
   lastAttempt = Date.now();
-  inflight = fetchRows()
-    .then((rows) => {
-      const next = { ...urls };
-      for (const key of KEYS) {
-        const url = rows.find((r) => r.id === BRAND_PHOTO_EXERCISES[key])?.image_url;
-        if (url) next[key] = url;
-      }
+  inflight = fetchPhotos()
+    .then((picked) => {
+      const next = { ...urls, ...picked };
       if (JSON.stringify(next) === JSON.stringify(urls)) return;
       urls = next;
       version += 1;

@@ -20,6 +20,55 @@ final class BrandPhotos {
             case .pullupBar: "7ab0b27f-f296-4fa6-bf07-8f8b026b0832"
             }
         }
+
+        /// Si su ejercicio ya no está en la biblioteca (se borró o se reimportó), la foto es la del
+        /// primer ejercicio publicado, por nombre, que encaje con estas palabras. Igual que
+        /// `get_brand_photos_public` y `brandPhotos.ts`.
+        var patterns: [String] {
+            switch self {
+            case .pullupBar: ["dominada"]
+            case .dumbbells: ["mancuerna"]
+            case .home: ["goblet", "flexi", "zancada"]
+            case .gym: ["press", "sentadilla", "peso muerto"]
+            }
+        }
+        var excludes: [String] { self == .home || self == .gym ? ["mancuerna"] : [] }
+    }
+
+    /// Orden en que se reparten las fotos (cada una con un ejercicio distinto).
+    static let order: [Kind] = [.pullupBar, .dumbbells, .home, .gym]
+
+    struct Row: Decodable {
+        var slot: String?
+        var id: UUID?
+        var name: String?
+        var image_url: String?
+    }
+
+    /// Elige la foto de cada hueco: la que ya decidió el servidor, la de su ejercicio o, si no
+    /// está, la de un ejercicio parecido.
+    static func pick(_ rows: [Row]) -> [String: String] {
+        var out: [String: String] = [:]
+        for row in rows {
+            if let slot = row.slot, Kind(rawValue: slot) != nil, let url = row.image_url, !url.isEmpty { out[slot] = url }
+        }
+        let fold = { (text: String) in text.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: nil).lowercased() }
+        let live = rows.filter { $0.id != nil && !($0.image_url ?? "").isEmpty }
+            .sorted { fold($0.name ?? "") < fold($1.name ?? "") }
+        var used = Set(out.values)
+        for kind in order where out[kind.rawValue] == nil {
+            let own = live.first { $0.id?.uuidString.lowercased() == kind.exerciseId }
+            let similar = live.first { row in
+                let name = fold(row.name ?? "")
+                return !used.contains(row.image_url ?? "") && kind.patterns.contains { name.contains($0) }
+                    && !kind.excludes.contains { name.contains($0) }
+            }
+            if let url = (own ?? similar)?.image_url {
+                out[kind.rawValue] = url
+                used.insert(url)
+            }
+        }
+        return out
     }
 
     static let shared = BrandPhotos()
@@ -55,22 +104,24 @@ final class BrandPhotos {
         lastAttempt = Date()
         defer { refreshing = false }
 
-        struct Row: Decodable { let id: UUID; let image_url: String? }
-        var rows: [Row] = []
-        if let found: [Row] = try? await Backend.client.rpc("get_brand_photos_public").execute().value {
-            rows = found
-        } else if let found: [Row] = try? await Backend.client.from("exercises").select("id, image_url")
-            .in("id", values: Kind.allCases.map(\.exerciseId)).execute().value {
-            rows = found
+        // Primero la función pública (vale sin sesión); con sesión, si falta alguna, la tabla.
+        var picked: [String: String] = [:]
+        if let rows: [Row] = try? await Backend.client.rpc("get_brand_photos_public").execute().value {
+            picked = Self.pick(rows)
+        }
+        if Kind.allCases.contains(where: { picked[$0.rawValue] == nil }) {
+            let ids = Kind.allCases.map(\.exerciseId).joined(separator: ",")
+            let names = Kind.allCases.flatMap(\.patterns).map { "name.ilike.*\($0.replacingOccurrences(of: " ", with: "*"))*" }
+            if let rows: [Row] = try? await Backend.client.from("exercises").select("id, name, image_url")
+                .not("image_url", operator: .is, value: "null")
+                .or((["id.in.(\(ids))"] + names).joined(separator: ","))
+                .limit(300).execute().value {
+                picked = Self.pick(rows).merging(picked) { _, server in server }
+            }
         }
         // Cancelada (cambio de cuenta): manda la petición nueva, y esta no cuenta como intento.
         if Task.isCancelled { lastAttempt = nil; return }
-        var next = urls
-        for kind in Kind.allCases {
-            if let url = rows.first(where: { $0.id.uuidString.lowercased() == kind.exerciseId })?.image_url, !url.isEmpty {
-                next[kind.rawValue] = url
-            }
-        }
+        let next = urls.merging(picked) { _, new in new }
         guard next != urls else { return }
         urls = next
         UserDefaults.standard.set(next, forKey: Self.storageKey)

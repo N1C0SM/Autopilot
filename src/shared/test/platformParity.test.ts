@@ -831,6 +831,15 @@ describe("paridad web ↔ apps nativas", () => {
     expect(existsSync(resolve(root, "native/Autopilot/Design/brand-fallback.jpg"))).toBe(true);
     expect(web).toContain('import fallbackPhoto from "@/shared/assets/landing/hero-athlete.jpg"');
     expect(read("native/Autopilot/Features/Progress/ProgressScreen.swift")).toContain(".task { await BrandPhotos.shared.refresh() }");
+    // Si su ejercicio ya no está, se elige uno parecido con las mismas palabras en la web, la app y la base de datos.
+    const sql = read("drizzle/migrations/0021_brand_photos_by_slot.sql");
+    for (const word of ["dominada", "mancuerna", "goblet", "flexi", "zancada", "press", "sentadilla"]) {
+      expect(web).toContain(`"${word}"`);
+      expect(app).toContain(`"${word}"`);
+      expect(sql).toContain(`%${word}%`);
+    }
+    expect(app).toContain("static let order: [Kind] = [.pullupBar, .dumbbells, .home, .gym]");
+    expect(sql).toMatch(/'pullupBar', 1[\s\S]*'dumbbells', 2[\s\S]*'home', 3[\s\S]*'gym', 4/);
   });
 
   it("Hoy: «Entreno vacío» bajo la sesión y «Editar» en «Tu programa», en la web y en la app", () => {

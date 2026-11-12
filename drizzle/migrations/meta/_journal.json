@@ -148,6 +148,13 @@
       "when": 1794502120271,
       "tag": "0020_brand_photos_public",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1794504703731,
+      "tag": "0021_brand_photos_by_slot",
+      "breakpoints": true
     }
   ]
 }
