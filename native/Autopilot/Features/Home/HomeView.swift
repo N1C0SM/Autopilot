@@ -632,7 +632,7 @@ struct HomeView: View {
     /// sesión de la rutina en una línea. Se toca y abre el resumen del entreno de hoy.
     private func doneCard() -> some View {
         // `snapshot.plan` ya es la SIGUIENTE (la de hoy está hecha): la foto es la de marca del gimnasio.
-        let cover = URL(string: "https://enebrcdrdnfkyduzyrzm.supabase.co/storage/v1/object/public/site-assets/exercise-images/a31c7206-d2a4-4b31-856a-f5dec09b890e-1791475829849.png")
+        let cover = BrandPhotos.url(.gym)
         let title = "Sesión completada"
         let next: String? = snapshot.flatMap { s in
             if let plan = s.plan { return "Siguiente: \(plan.title.components(separatedBy: " · ")[0])." }
@@ -997,7 +997,7 @@ struct HomeView: View {
                           routine_name: "Full Body B",
                           muscle_focus: "Hombros, piernas, glúteos, isquiotibiales y core",
                           exercises: [
-                            GymExercise(exercise_id: "1", name: "Press militar con barra de pie estricto", series: 4, reps: "4-6", weight: "40", rest: "180s", image_url: "https://enebrcdrdnfkyduzyrzm.supabase.co/storage/v1/object/public/site-assets/exercise-images/a31c7206-d2a4-4b31-856a-f5dec09b890e-1791475829849.png", muscle_group: "Hombros"),
+                            GymExercise(exercise_id: "1", name: "Press militar con barra de pie estricto", series: 4, reps: "4-6", weight: "40", rest: "180s", image_url: BrandPhotos.string(.gym), muscle_group: "Hombros"),
                             GymExercise(exercise_id: "2", name: "Sentadilla con barra", series: 4, reps: "6", weight: "60", rest: "180s", muscle_group: "Piernas"),
                             GymExercise(exercise_id: "3", name: "Remo con barra", series: 3, reps: "10", weight: "50", rest: "90s", muscle_group: "Espalda"),
                           ], custom: nil)

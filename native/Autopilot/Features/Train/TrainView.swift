@@ -433,7 +433,7 @@ struct RoutineListView: View {
 
     /// Foto de marca de la web (`BRAND_PHOTOS.gym`): respaldo de la portada cuando la sesión no
     /// tiene ninguna foto de ejercicio, igual que `TrainingPlanView.tsx`.
-    private static let brandGymPhoto = "https://enebrcdrdnfkyduzyrzm.supabase.co/storage/v1/object/public/site-assets/exercise-images/a31c7206-d2a4-4b31-856a-f5dec09b890e-1791475829849.png"
+    private static var brandGymPhoto: String { BrandPhotos.string(.gym) }
 
     /// Plan sin sesiones: tarjeta vacía con su icono y el siguiente paso.
     private func emptyCard(icon: String, title: String, message: String) -> some View {

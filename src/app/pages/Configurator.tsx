@@ -19,7 +19,7 @@ import { Spinner } from "@/shared/components/ui/spinner";
 import Screen from "@/shared/components/native/Screen";
 import PageHead from "@/web/components/PageHead";
 import PlanPreview from "@/app/components/PlanPreview";
-import { BRAND_PHOTOS } from "@/shared/lib/brandPhotos";
+import { BRAND_PHOTOS, useBrandPhotos } from "@/shared/lib/brandPhotos";
 import { setWorkoutLayout, type WorkoutLayout } from "@/shared/lib/workoutPreferences";
 
 const DOW = [
@@ -31,9 +31,9 @@ const GOALS = [
   { v: "recomp", l: "Recomposición", icon: RefreshCw }, { v: "general_health", l: "Fuerza y salud", icon: HeartPulse },
 ];
 const FOCUS = [
-  { v: "gimnasio", l: "Gimnasio", photo: BRAND_PHOTOS.gym },
-  { v: "calistenia", l: "Calistenia", photo: BRAND_PHOTOS.pullupBar },
-  { v: "mixto", l: "Mixto", photo: BRAND_PHOTOS.dumbbells },
+  { v: "gimnasio", l: "Gimnasio", get photo() { return BRAND_PHOTOS.gym; } },
+  { v: "calistenia", l: "Calistenia", get photo() { return BRAND_PHOTOS.pullupBar; } },
+  { v: "mixto", l: "Mixto", get photo() { return BRAND_PHOTOS.dumbbells; } },
 ];
 const DURATION = [{ v: 40, l: "30–45 min" }, { v: 55, l: "45–60 min" }, { v: 75, l: "60–90 min" }];
 const STRUCTURE = [
@@ -84,7 +84,9 @@ const SelectMark = ({ on }: { on: boolean }) => (
 /** Opciones con foto, como las fichas de material de la landing: misma identidad dentro y fuera. */
 const PhotoChoices = ({ header, options, value, onChange }: {
   header: string; options: { v: string; l: string; photo: string }[]; value: string; onChange: (v: string) => void;
-}) => (
+}) => {
+  useBrandPhotos(); // repinta las fotos de marca cuando llega su URL actual
+  return (
   <section>
     <h2 className="px-1 pb-2.5 type-headline">{header}</h2>
     <div className="grid grid-cols-3 gap-2.5">
@@ -100,7 +102,8 @@ const PhotoChoices = ({ header, options, value, onChange }: {
       })}
     </div>
   </section>
-);
+  );
+};
 
 const Choices = ({ header, options, value, onChange, columns = false, stackOnMobile = false, iconTiles = false }: {
   header?: string; options: Option[]; value: string | number; onChange: (v: string | number) => void;

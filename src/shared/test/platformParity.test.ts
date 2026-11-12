@@ -784,7 +784,46 @@ describe("paridad web ↔ apps nativas", () => {
     expect(appThumb).toMatch(/if let url, let u = URL\(string: url\) \{\s*CachedAsyncImage[^\n]*placeholder: \{ fallback \}/);
     expect(app).toContain("exercise.image == nil || showRhythm");
     expect(app).not.toContain("if Self.cache == nil");
-    expect(read("src/shared/hooks/useExerciseLibrary.ts")).toMatch(/if \(cache\) setItems\(cache\);\s*refreshCatalog\(\)/);
+    const lib = read("src/shared/hooks/useExerciseLibrary.ts");
+    expect(lib).toMatch(/if \(cache\) setItems\(cache\);/);
+    // Lista, favoritos y recientes llegan juntos y salen de la caché al volver: «Recientes» no empuja las tarjetas.
+    expect(lib).toContain("Promise.all([refreshCatalog(), personalTask])");
+    expect(lib).toContain("useState<LibraryExercise[] | null>(() => cache)");
+    expect(app).toContain("_model = StateObject(wrappedValue: ExerciseLibraryModel(userId: userId))");
+    expect(app).toContain("private static var personalCache");
+  });
+
+  it("Ajustes → Mi plan: fila siempre en su sitio y el plan en una insignia, en la web y en la app", () => {
+    const app = read("native/Autopilot/Features/Account/AccountView.swift");
+    const web = read("src/app/components/SettingsPanel.tsx");
+    expect(app).not.toMatch(/if profileLoaded \{\s*hubRow\("crown"/);
+    expect(app).toContain('hubRow("crown", "Mi plan", "Tu suscripción y lo que incluye", to: .plan)');
+    expect(app).toContain("PlanBadge(name: planKnown ? planName : nil, paid: paid)");
+    expect(app).toContain("CachedProfile.load(id)");
+    expect(web).toContain("value: <PlanBadge name={planName} paid={hasPaidAccess} />");
+    expect(web).toContain('"Tu suscripción y lo que incluye"');
+    expect(read("native/Autopilot/Design/Components.swift")).toContain("struct PlanBadge: View");
+    expect(read("src/shared/components/ui/plus-badge.tsx")).toContain("export function PlanBadge(");
+  });
+
+  it("Fotos de marca: se piden por ejercicio (la URL cambia al regenerarla), nunca fijas, en la web y en la app", () => {
+    const deadUrl = /site-assets\/exercise-images\/[0-9a-f-]{36}-\d+\.(png|webp)/;
+    for (const file of [
+      "src/shared/lib/brandPhotos.ts", "src/web/components/FeatureGallery.tsx", "src/web/components/previewData.ts",
+      "src/web/components/ProductPreview.tsx", "native/Autopilot/Features/Progress/ProgressScreen.swift",
+      "native/Autopilot/Features/Home/HomeView.swift", "native/Autopilot/Features/Auth/OnboardingView.swift",
+      "native/Autopilot/Design/Components.swift", "native/Autopilot/Features/Train/TrainView.swift",
+    ]) expect(read(file), file).not.toMatch(deadUrl);
+    const web = read("src/shared/lib/brandPhotos.ts");
+    const app = read("native/Autopilot/Design/BrandPhotos.swift");
+    for (const id of ["a31c7206-d2a4-4b31-856a-f5dec09b890e", "d5e30e05-0791-4886-84a0-7b2695728225", "14988835-a004-49d6-95c5-63978dbce978", "7ab0b27f-f296-4fa6-bf07-8f8b026b0832"]) {
+      expect(web).toContain(id);
+      expect(app).toContain(id);
+      expect(read("drizzle/migrations/0020_brand_photos_public.sql")).toContain(id);
+    }
+    expect(web).toContain('"get_brand_photos_public"');
+    expect(app).toContain('rpc("get_brand_photos_public")');
+    expect(read("native/Autopilot/App/AutopilotApp.swift")).toContain("BrandPhotos.shared.refresh(");
   });
 
   it("Hoy: «Entreno vacío» bajo la sesión y «Editar» en «Tu programa», en la web y en la app", () => {

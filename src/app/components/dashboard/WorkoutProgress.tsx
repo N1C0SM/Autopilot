@@ -1,7 +1,7 @@
 import { useExerciseImages } from "@/shared/hooks/useExerciseImages";
 import { useEffect, useMemo, useState } from "react";
 import { BarChart3, ChevronRight, ChevronsUpDown, Dumbbell, Flame, TrendingUp, Trophy, WifiOff } from "lucide-react";
-import { BRAND_PHOTOS } from "@/shared/lib/brandPhotos";
+import { BRAND_PHOTOS, useBrandPhotos } from "@/shared/lib/brandPhotos";
 import { ProgressHero } from "@/app/components/progress/ProgressHero";
 import { Button } from "@/shared/components/ui/button";
 import { EmptyState } from "@/shared/components/ui/empty-state";
@@ -51,6 +51,7 @@ const ExercisePhoto = ({ src, size }: { src?: string; size: "md" | "lg" }) => (
 );
 
 const WorkoutProgress = ({ userId, compact = false, onGoTrain }: Props) => {
+  useBrandPhotos(); // repinta las fotos de marca cuando llega su URL actual
   const [historyByExercise, setHistoryByExercise] = useState<Record<string, ExerciseHistoryEntry[]>>({});
   const [selectedExercise, setSelectedExercise] = useState("");
   const [metric, setMetric] = useState<"volumeKg" | "reps" | "bestEstimated1RmKg">("volumeKg");

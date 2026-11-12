@@ -3,18 +3,16 @@ import { Apple, BookOpen, Dumbbell, LineChart, SlidersHorizontal, type LucideIco
 import { useScrollProgress } from "@/shared/hooks/useScrollProgress";
 import { usePlanAvailability } from "@/shared/lib/planCatalog";
 import { usePublicBooks } from "@/shared/hooks/usePublicBooks";
-import { BRAND_PHOTOS } from "@/shared/lib/brandPhotos";
+import { BRAND_PHOTOS, useBrandPhotos } from "@/shared/lib/brandPhotos";
 import BookCover from "@/web/components/BookCover";
-import { fastImage } from "@/shared/lib/fastImage";
 
 type Card = { icon: LucideIcon; title: string; text: string; tag?: string; photo?: string; visual?: ReactNode };
 
 // Fotos reales de ejercicios de la biblioteca de la app (las mismas que usa la demo).
-const IMG = "https://enebrcdrdnfkyduzyrzm.supabase.co/storage/v1/object/public/site-assets/exercise-images/";
 const PHOTOS = {
-  squat: fastImage(`${IMG}14988835-a004-49d6-95c5-63978dbce978-1791475887313.png`, 1000),
-  row: fastImage(`${IMG}d5e30e05-0791-4886-84a0-7b2695728225-1791475865184.png`, 1000),
-  press: fastImage(`${IMG}a31c7206-d2a4-4b31-856a-f5dec09b890e-1791475829849.png`, 1000),
+  get squat() { return BRAND_PHOTOS.home; },
+  get row() { return BRAND_PHOTOS.dumbbells; },
+  get press() { return BRAND_PHOTOS.gym; },
   meal: BRAND_PHOTOS.meal,
 };
 
@@ -24,6 +22,7 @@ const PHOTOS = {
  * Sin movimiento queda como fila deslizable normal.
  */
 export default function FeatureGallery() {
+  useBrandPhotos(); // repinta las fotos de marca cuando llega su URL actual
   const plans = usePlanAvailability();
   const books = usePublicBooks();
   const pack = books?.find((b) => b.is_pack) ?? books?.[0];

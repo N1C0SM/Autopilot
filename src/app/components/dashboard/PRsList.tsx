@@ -6,7 +6,7 @@ import { Button } from "@/shared/components/ui/button";
 import { ListGroup, ListRow } from "@/shared/components/ui/list";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { hapticTap } from "@/shared/lib/native";
-import { BRAND_PHOTOS } from "@/shared/lib/brandPhotos";
+import { BRAND_PHOTOS, useBrandPhotos } from "@/shared/lib/brandPhotos";
 import { ProgressHero } from "@/app/components/progress/ProgressHero";
 import { useExerciseImages } from "@/shared/hooks/useExerciseImages";
 
@@ -39,6 +39,7 @@ const toMonthKey = (date: string) => {
 };
 
 const PRsList = ({ userId, onGoTrain }: Props) => {
+  useBrandPhotos(); // repinta las fotos de marca cuando llega su URL actual
   const [prs, setPrs] = useState<PR[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
