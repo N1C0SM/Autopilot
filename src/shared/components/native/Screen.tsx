@@ -25,6 +25,8 @@ interface ScreenProps {
   hideBack?: boolean;
   trailing?: ReactNode;
   footer?: ReactNode;
+  /** Pie pegado abajo al hacer scroll. Con `false` va tras el contenido, como en la app nativa (login). */
+  stickyFooter?: boolean;
   centered?: boolean;
   /** `reading` = columna de lectura (~70 caracteres): documento legal o artículo. */
   maxWidth?: "sm" | "md" | "lg" | "reading" | "full";
@@ -50,6 +52,7 @@ const Screen = ({
   hideBack = false,
   trailing,
   footer,
+  stickyFooter = true,
   centered = false,
   maxWidth = "md",
   className,
@@ -129,7 +132,7 @@ const Screen = ({
               abajo, a mano del pulgar y por encima del teclado. */}
           {footer ? (
             <div
-              className="sticky bottom-0 z-10 mt-3 bg-background/92 pt-2 backdrop-blur-sm"
+              className={cn("mt-3 pt-2", stickyFooter && "sticky bottom-0 z-10 bg-background/92 backdrop-blur-sm")}
               style={{ paddingBottom: "max(1rem, var(--safe-bottom, 0px))" }}
             >
               {footer}

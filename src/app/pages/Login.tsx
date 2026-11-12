@@ -174,7 +174,7 @@ const Login = () => {
   );
 
   return (
-    <Screen onBack={() => navigate("/")} centered maxWidth="sm" contentClassName="py-6" footer={footer}>
+    <Screen onBack={() => navigate("/")} centered maxWidth="sm" contentClassName="py-6" footer={footer} stickyFooter={false}>
       <Helmet>
         <title>Iniciar sesión · Autopilot</title>
         <meta name="description" content="Accede a tu cuenta de Autopilot: tu rutina, tu registro y tu progreso." />
