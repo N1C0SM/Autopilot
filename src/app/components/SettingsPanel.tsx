@@ -66,7 +66,7 @@ const emailChangeError = (message: string): string => {
 type RowSaveState = "idle" | "saving" | "saved";
 
 
-const rowInput = "h-11 min-w-0 flex-1 bg-transparent px-0 text-right";
+const rowInput = "h-11 min-w-0 flex-1 rounded-none border-0 bg-transparent px-0 text-right shadow-none focus-visible:ring-0 focus-visible:ring-offset-0";
 const blockTextarea = "rounded-none bg-transparent px-4";
 
 // Row with the label on the left and the value right-aligned, like a UITableView text field cell.

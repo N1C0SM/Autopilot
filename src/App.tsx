@@ -146,6 +146,12 @@ const DomainRoutes = () => {
           <Route path="/signup" element={<Signup />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/para-entrenadores" element={<ForTrainers />} />
+          <Route path="/entrenadores" element={<Navigate to="/para-entrenadores" replace />} />
+          <Route path="/academia" element={<Navigate to="/recursos" replace />} />
+          <Route path="/terminos" element={<Navigate to="/legal/terminos" replace />} />
+          <Route path="/privacidad" element={<Navigate to="/legal/privacidad" replace />} />
+          <Route path="/comenzar" element={<Navigate to="/onboarding" replace />} />
+          <Route path="/ajustes" element={<Navigate to="/settings" replace />} />
           <Route path="/invitacion/:token" element={<AcceptInvitation />} />
           <Route path="/login" element={<Login />} />
           <Route path="/scan" element={<Scan />} />

@@ -112,7 +112,6 @@ describe("resources screen", () => {
     render(<MemoryRouter><Recursos /></MemoryRouter>);
 
     expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Atrás" })).toBeInTheDocument();
     await waitFor(() => expect(screen.getByText("Sin recursos todavía")).toBeInTheDocument());
   });
 

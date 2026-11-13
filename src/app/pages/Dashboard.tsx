@@ -238,7 +238,8 @@ const Dashboard = () => {
       : Promise.resolve(null);
     const [profileResult, roleResult] = await Promise.all([profileRequest, roleRequest]);
 
-    if (roleResult?.data) {
+    // Solo se envía al panel de admin desde la entrada genérica; ver su propio panel de usuario sigue permitido.
+    if (roleResult?.data && !window.location.pathname.startsWith("/dashboard/user/")) {
       navigate("/admin");
       return;
     }

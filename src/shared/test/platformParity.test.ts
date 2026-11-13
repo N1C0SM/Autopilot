@@ -437,7 +437,7 @@ describe("paridad web ↔ apps nativas", () => {
     expect(app).toContain('if advanced { Text("RPE")');
     // Carrusel antes que la foto, y la foto rellena el hueco.
     const webFocus = web.slice(web.indexOf("Carrusel arriba"));
-    expect(webFocus.indexOf('role="tablist"')).toBeLessThan(webFocus.indexOf("fetchPriority"));
+    expect(webFocus.indexOf('role="tablist"')).toBeLessThan(webFocus.indexOf("fetchpriority"));
     expect(webFocus).toContain('loading="eager" className="h-full w-full object-cover"');
     const appFocus = app.slice(app.indexOf("struct FocusViewer"));
     expect(appFocus.indexOf("ScrollView(.horizontal")).toBeLessThan(appFocus.indexOf("CachedAsyncImage"));

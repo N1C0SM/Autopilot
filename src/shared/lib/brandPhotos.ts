@@ -53,8 +53,11 @@ type Row = { id: string; image_url: string | null };
 async function fetchRows(): Promise<Row[]> {
   const ids = Object.values(BRAND_PHOTO_EXERCISES);
   // Sin sesión solo responde la función pública; si aún no existe, con sesión basta la tabla.
-  const { data, error } = await supabase.rpc("get_brand_photos_public" as never);
-  if (!error && Array.isArray(data)) return data as Row[];
+  const { data: auth } = await supabase.auth.getSession();
+  if (!auth.session) {
+    const { data, error } = await supabase.rpc("get_brand_photos_public" as never);
+    if (!error && Array.isArray(data)) return data as Row[];
+  }
   const res = await supabase.from("exercises").select("id, image_url").in("id", ids);
   return (res.data as Row[] | null) ?? [];
 }
