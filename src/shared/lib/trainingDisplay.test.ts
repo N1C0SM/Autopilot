@@ -19,3 +19,11 @@ describe("formatTrainingTitle", () => {
     expect(formatTrainingTitle(undefined, "Espalda · Bíceps")).toBe("Espalda y bíceps");
   });
 });
+
+describe("formatTrainingTitle con una «y» ya escrita", () => {
+  it("no repite la «y» del foco", () => {
+    expect(formatTrainingTitle("Pierna", "Cuádriceps, femoral y glúteo")).toBe("Pierna · Cuádriceps, femoral y glúteo");
+    expect(formatTrainingTitle("Empuje", "Pecho, hombros y tríceps")).toBe("Empuje · Pecho, hombros y tríceps");
+    expect(formatTrainingTitle("Tirón", "Espalda y bíceps")).toBe("Tirón · Espalda y bíceps");
+  });
+});

@@ -81,7 +81,9 @@ struct DayPlan: Codable, Hashable, Identifiable {
     }
 
     static func formatFocus(_ focus: String) -> String {
-        let parts = focus.split(whereSeparator: { "·,;".contains($0) }).map { $0.trimmingCharacters(in: .whitespaces).lowercased() }.filter { !$0.isEmpty }
+        // «Cuádriceps, femoral y glúteo» ya trae su «y»: se parte también por ella para no repetirla.
+        let parts = focus.replacingOccurrences(of: " y ", with: ",")
+            .split(whereSeparator: { "·,;".contains($0) }).map { $0.trimmingCharacters(in: .whitespaces).lowercased() }.filter { !$0.isEmpty }
         guard parts.count >= 2 else { return focus }
         let first = parts[0].prefix(1).uppercased() + parts[0].dropFirst()
         let middle = parts.dropFirst().dropLast()

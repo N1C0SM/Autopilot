@@ -1,6 +1,7 @@
 const formatMuscleFocus = (muscleFocus: string) => {
   const muscles = muscleFocus
-    .split(/\s*[·,;]\s*/)
+    // «Cuádriceps, femoral y glúteo» ya trae su «y»: se parte también por ella para no repetirla.
+    .split(/\s*[·,;]\s*|\s+y\s+/)
     .map((muscle) => muscle.trim().toLocaleLowerCase("es"))
     .filter(Boolean);
 

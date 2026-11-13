@@ -793,39 +793,42 @@ const Dashboard = () => {
           <Suspense fallback={<SectionFallback />}>
               {trainingView === "plan" && !workoutMode && !autoStartWorkout ? (
                 <TrainingPlanView dayPlans={dayPlans} initialDay={planFocusDay} doneThisWeek={completedDays} doneToday={completedTodayDays} resumableDay={readActiveWorkout(user.id)?.plan.day} tools={(
-                // Cabecera de la rutina, arriba: el modo en dorado, de dónde sale y sus acciones (sin cápsulas).
-                <div className="flex w-full items-center gap-3 rounded-[22px] bg-card py-3.5 pl-5 pr-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
-                      {isManualPlan(dayPlans) ? "Rutina personalizada" : "Piloto automático"}
-                    </p>
-                    <p className="mt-1 truncate type-subhead text-muted-foreground">
-                      {isManualPlan(dayPlans) ? "Creada por ti." : "Preparada por Autopilot."}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-1">
-                    {[
-                      { aria: "Entreno vacío", Icon: Play, on: () => setFreeOpen(true) },
-                      { aria: "Ejercicios", Icon: BookOpen, on: () => setLibraryOpen(true) },
-                    ].map(({ aria, Icon, on }) => (
-                      <button
-                        key={aria}
-                        type="button"
-                        aria-label={aria}
-                        onClick={() => { void hapticTap(); on(); }}
-                        className="flex h-11 w-11 items-center justify-center rounded-full text-primary transition-opacity hover:bg-foreground/5 active:opacity-50"
-                      >
-                        <Icon className="h-5 w-5" strokeWidth={1.75} aria-hidden />
-                      </button>
-                    ))}
+                // Cabecera de la rutina, arriba: el modo en dorado y de dónde sale con «Editar» a la derecha
+                // (como «Tu plan» en Hoy) y, debajo, «Entreno vacío» y «Ejercicios» con su nombre.
+                <div className="w-full rounded-[22px] bg-card p-5">
+                  <div className="flex items-start gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
+                        {isManualPlan(dayPlans) ? "Rutina personalizada" : "Piloto automático"}
+                      </p>
+                      <p className="mt-1 type-subhead text-muted-foreground">
+                        {isManualPlan(dayPlans) ? "Creada por ti." : "Preparada por Autopilot."}
+                      </p>
+                    </div>
                     <button
                       type="button"
                       aria-label="Editar rutina"
                       onClick={() => { void hapticTap(); setEditorOpen(true); }}
-                      className="flex h-11 items-center rounded-full px-3 type-subhead font-semibold text-primary transition-opacity hover:bg-foreground/5 active:opacity-50"
+                      className="-my-2 -mr-1 min-h-11 shrink-0 px-1 type-subhead font-semibold text-primary active:opacity-60"
                     >
                       Editar
                     </button>
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    {[
+                      { label: "Entreno vacío", Icon: Play, on: () => setFreeOpen(true) },
+                      { label: "Ejercicios", Icon: BookOpen, on: () => setLibraryOpen(true) },
+                    ].map(({ label, Icon, on }) => (
+                      <button
+                        key={label}
+                        type="button"
+                        onClick={() => { void hapticTap(); on(); }}
+                        className="flex h-11 items-center justify-center gap-2 rounded-full bg-secondary px-3 type-subhead font-semibold transition-opacity active:opacity-60"
+                      >
+                        <Icon className="h-4 w-4 shrink-0 text-primary" strokeWidth={2} aria-hidden />
+                        <span className="truncate">{label}</span>
+                      </button>
+                    ))}
                   </div>
                 </div>
                 )} onOpenWorkout={(day) => {
