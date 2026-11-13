@@ -23,8 +23,7 @@ import {
 } from "@/shared/components/ui/alert-dialog";
 import { toast } from "sonner";
 import {
-  Check, Dumbbell, Image as ImageIcon, ImageOff, Play, RefreshCw, AlertTriangle, Search, Video, VideoOff, X, Trash2, CheckSquare, Square,
-  type LucideIcon,
+  Check, Dumbbell, Play, Search, X, Trash2, CheckSquare, Square,
 } from "lucide-react";
 import type { Exercise } from "@/shared/types/training";
 import {
@@ -59,7 +58,6 @@ type ExerciseRow = Exercise & {
   video_priority?: number | null;
 };
 
-type MediaFilter ="all" |"no-image" |"no-video" |"old-style" |"error";
 
 const isOldStyle = (exercise: ExerciseRow) => (exercise.media_style_version ?? 0) !== MEDIA_STYLE_VERSION;
 /** Tiene algún medio pero generado con un estilo anterior (o sin versión). */
@@ -151,23 +149,6 @@ const CRITERIA = [
 
 /* ── Fila de la biblioteca ── */
 
-type MediaTone = "ok" | "missing" | "stale" | "error";
-
-const MEDIA_TONE_CLASS: Record<MediaTone, string> = {
-  ok: "text-muted-foreground",
-  // «Sin imagen/vídeo» es un estado neutro, no un aviso: mismo gris legible que el resto.
-  missing: "text-muted-foreground",
-  stale: "text-primary",
-  error: "text-destructive",
-};
-
-const MediaStatus = ({ tone, icon: Icon, label }: { tone: MediaTone; icon: LucideIcon; label: string }) => (
-  <span className={cn("inline-flex items-center gap-1", MEDIA_TONE_CLASS[tone])}>
-    <Icon className="h-3.5 w-3.5" strokeWidth={2} aria-hidden="true" />
-    {label}
-  </span>
-);
-
 /** Miniatura de fila con vídeo-como-GIF en hover. Si hay video_url (mp4 de site-assets),
  *  se reproduce en loop silencioso al pasar el ratón o al montar en móvil. */
 const ExerciseThumbWithGif = ({ image, video, name }: { image: string | null | undefined; video: string | null | undefined; name: string }) => {
@@ -209,33 +190,18 @@ const ExerciseThumbWithGif = ({ image, video, name }: { image: string | null | u
   );
 };
 
-/** Clasificación y estado de medios de un ejercicio, para el subtítulo de su fila. */
+/** Clasificación de un ejercicio, para el subtítulo de su fila: solo grupo muscular y tipo. */
 const ExerciseMeta = ({ exercise: ex }: { exercise: ExerciseRow }) => {
   const categories = [ex.muscle_group, ex.exercise_type].filter((c): c is string => Boolean(c));
   return (
-    <>
-      <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-        {categories.map((category) => (
-          <span key={category} className="rounded-full bg-secondary px-2 py-0.5 text-muted-foreground">
-            {category}
-          </span>
-        ))}
-        {categories.length === 0 && <span>Sin clasificar</span>}
-        <MediaStatus
-          tone={ex.image_url ? "ok" : "missing"}
-          icon={ex.image_url ? ImageIcon : ImageOff}
-          label={ex.image_url ? "Imagen" : "Sin imagen"}
-        />
-        <MediaStatus
-          tone={ex.video_url ? "ok" : "missing"}
-          icon={ex.video_url ? Video : VideoOff}
-          label={ex.video_url ? "Vídeo" : "Sin vídeo"}
-        />
-        {hasOutdatedMedia(ex) && <MediaStatus tone="stale" icon={RefreshCw} label="Estilo antiguo" />}
-        {ex.media_error && <MediaStatus tone="error" icon={AlertTriangle} label="Error" />}
-      </span>
-      {ex.media_error ? <span className="mt-1 line-clamp-2 block text-destructive">{ex.media_error}</span> : null}
-    </>
+    <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+      {categories.map((category) => (
+        <span key={category} className="rounded-full bg-secondary px-2 py-0.5 text-muted-foreground">
+          {category}
+        </span>
+      ))}
+      {categories.length === 0 && <span>Sin clasificar</span>}
+    </span>
   );
 };
 
@@ -814,7 +780,6 @@ const ExerciseLibrary = () => {
   const [search, setSearch] = useState("");
   const [filterGroup, setFilterGroup] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<string | null>(null);
-  const [mediaFilter, setMediaFilter] = useState<MediaFilter>("all");
 
   // Selección múltiple para borrado masivo
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -1029,17 +994,13 @@ const ExerciseLibrary = () => {
     }
     if (filterGroup) result = result.filter((e) => (e.muscle_group ||"Sin grupo") === filterGroup);
     if (filterType) result = result.filter((e) => e.exercise_type === filterType);
-    if (mediaFilter ==="no-image") result = result.filter((e) => !e.image_url);
-    if (mediaFilter ==="no-video") result = result.filter((e) => !e.video_url);
-    if (mediaFilter ==="old-style") result = result.filter(hasOutdatedMedia);
-    if (mediaFilter ==="error") result = result.filter((e) => Boolean(e.media_error));
     return result;
-  }, [exercises, search, filterGroup, filterType, mediaFilter]);
+  }, [exercises, search, filterGroup, filterType]);
 
   // Pintado progresivo: 30 filas al instante, el resto al acercarse al final.
   const [visibleCount, setVisibleCount] = useState(30);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => { setVisibleCount(30); }, [search, filterGroup, filterType, mediaFilter]);
+  useEffect(() => { setVisibleCount(30); }, [search, filterGroup, filterType]);
   useEffect(() => {
     const node = sentinelRef.current;
     if (!node) return;
@@ -1056,14 +1017,6 @@ const ExerciseLibrary = () => {
     () => filtered.filter(needsGeneration).sort((a, b) => (a.video_priority ?? 99) - (b.video_priority ?? 99)),
     [filtered],
   );
-
-  const mediaFilterOptions = useMemo(() => ([
-    { value:"all" as const, label:"Todos", count: exercises.length },
-    { value:"no-image" as const, label:"Sin imagen", count: exercises.filter((e) => !e.image_url).length },
-    { value:"no-video" as const, label:"Sin vídeo", count: exercises.filter((e) => !e.video_url).length },
-    { value:"old-style" as const, label:"Estilo antiguo", count: exercises.filter(hasOutdatedMedia).length },
-    { value:"error" as const, label:"Con error", count: exercises.filter((e) => Boolean(e.media_error)).length },
-  ]), [exercises]);
 
   const pendingCounts = useMemo(() => ({
     missingImage: pendingQueue.filter((e) => !e.image_url).length,
@@ -1388,27 +1341,6 @@ const ExerciseLibrary = () => {
             {EXERCISE_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}
           </select>
         </label>
-      </div>
-
-      {/* Chips de estado de medios */}
-      <div className="flex flex-wrap items-center gap-2">
-        {mediaFilterOptions.map((option) => {
-          const selected = mediaFilter === option.value;
-          return (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => { void hapticSelection(); setMediaFilter(option.value); }}
-              aria-pressed={selected}
-              className={cn(
-                "relative h-9 rounded-full px-3.5 type-subhead font-medium transition-colors duration-150 before:absolute before:inset-x-0 before:-inset-y-1",
-                selected ? "bg-primary/15 text-primary active:bg-primary/25" : "bg-secondary text-muted-foreground active:bg-accent",
-              )}
-            >
-              {option.label} · <span className="tabular-nums">{option.count}</span>
-            </button>
-          );
-        })}
       </div>
 
       {!fetched ? (

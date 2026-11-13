@@ -207,15 +207,17 @@ describe("ExerciseLibrary", () => {
     expect(screen.getByText("Sin resultados")).toBeInTheDocument();
   });
 
-  it("filters by media status with the chips", async () => {
+  it("shows a clean row with only muscle group and type, without media status badges", async () => {
     render(<ExerciseLibrary />);
     await screen.findByText("Press banca");
-    const chip = screen.getByRole("button", { name: /^Sin imagen ·/ });
-    expect(chip).toHaveAttribute("aria-pressed", "false");
-    fireEvent.click(chip);
-    expect(chip).toHaveAttribute("aria-pressed", "true");
-    expect(screen.queryByText("Press banca")).not.toBeInTheDocument();
-    expect(screen.getByText("Dominadas")).toBeInTheDocument();
+    expect(screen.getAllByText("Pecho").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Gimnasio").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Espalda").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Calistenia").length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Sin imagen/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Sin vídeo/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Estilo antiguo/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Con error/)).not.toBeInTheDocument();
   });
 
   it("replaces a broken thumbnail with the composed placeholder", async () => {
