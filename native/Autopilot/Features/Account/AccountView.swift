@@ -146,8 +146,11 @@ struct AccountView: View {
             openPage = target
         } label: {
             HStack(spacing: 12) {
-                Image(systemName: symbol).font(.system(size: 18)).foregroundStyle(Palette.muted)
-                    .frame(width: 28).accessibilityHidden(true)
+                // Icono en una losa redondeada, como las filas de Plus en Nutrición y la web.
+                Image(systemName: symbol).font(.system(size: 15)).foregroundStyle(Palette.muted)
+                    .frame(width: 32, height: 32)
+                    .background(Palette.secondary, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                    .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title).font(.apBody).foregroundStyle(Palette.foreground)
                     Text(detail).font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(2)

@@ -425,6 +425,11 @@ describe("paridad web ↔ apps nativas", () => {
     }
   });
 
+  it("Ajustes: cada icono del índice en una losa redondeada de 32 (como las filas de Plus), en la web y en la app", () => {
+    expect(read("src/app/components/SettingsPanel.tsx")).toContain('className="flex h-8 w-8 items-center justify-center rounded-[9px] bg-secondary"');
+    expect(read("native/Autopilot/Features/Account/AccountView.swift")).toContain(".background(Palette.secondary, in: RoundedRectangle(cornerRadius: 9, style: .continuous))");
+  });
+
   it("Nutrición sin peso: Gratis ve «Calcula tus macros» en la web y en la app, no solo la tarjeta de Plus", () => {
     const web = read("src/app/components/dashboard/BasicNutrition.tsx");
     const app = read("native/Autopilot/Features/Other/OtherViews.swift");

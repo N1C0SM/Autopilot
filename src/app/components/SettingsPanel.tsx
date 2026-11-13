@@ -754,7 +754,12 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
               {group.rows.filter((row) => row.show).map(({ id, icon: Icon, title, subtitle, ...row }) => (
                 <ListRow
                   key={id}
-                  icon={<Icon className="text-muted-foreground" />}
+                  // Icono en una losa redondeada, como las filas de Plus en Nutrición y el iPhone.
+                  leading={(
+                    <span aria-hidden className="flex h-8 w-8 items-center justify-center rounded-[9px] bg-secondary">
+                      <Icon className="h-[18px] w-[18px] text-muted-foreground" strokeWidth={1.75} />
+                    </span>
+                  )}
                   title={title}
                   subtitle={subtitle}
                   value={"value" in row ? row.value : undefined}
