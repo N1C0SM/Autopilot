@@ -6,6 +6,7 @@ import { Spinner } from "@/shared/components/ui/spinner";
 import { EmptyState } from "@/shared/components/ui/empty-state";
 import { Button } from "@/shared/components/ui/button";
 import { Apple, Flame } from "lucide-react";
+import NutritionHero, { NutritionIntro } from "@/app/components/dashboard/NutritionHero";
 import { Input } from "@/shared/components/ui/input";
 import { hapticNotify, hapticTap } from "@/shared/lib/native";
 
@@ -102,49 +103,27 @@ export default function BasicNutrition({ userId, onEdit, onUpgrade }: { userId: 
 
   if (!targets.hasWeight) {
     return (
-      <section className="w-full space-y-8 py-4">
-        <p className="-mb-4 -mt-3 type-subhead text-muted-foreground md:hidden">Plan de alimentación básico.</p>
-        <MacrosWeightCard userId={userId} />
+      <section className="mx-auto w-full max-w-[680px] space-y-8 pb-4">
+        <div>
+          <NutritionIntro />
+          <MacrosWeightCard userId={userId} />
+        </div>
         <NutritionPlusSection onUpgrade={onUpgrade} />
       </section>
     );
   }
 
   return (
-    <section className="w-full space-y-8 py-4">
-      <p className="-mb-4 -mt-3 type-subhead text-muted-foreground md:hidden">Plan de alimentación básico.</p>
-      {/* Calorías del día y macros a la derecha (maqueta de ChatGPT); solo cifras reales del plan o del cálculo inicial. */}
-      <div className="rounded-[22px] border border-border bg-card p-5">
-        <div className="flex items-center gap-4">
-          <div role="group" aria-label={`Calorías diarias: ${targets.calories?.toLocaleString("es-ES")} kcal`} className="flex min-w-0 flex-1 items-center gap-3">
-            <span className="min-w-0">
-              {/* Llama pequeña junto a la etiqueta: con la grande al lado, «Calorías» se partía en dos líneas en el móvil. */}
-              <span className="flex items-center gap-1.5 whitespace-nowrap type-footnote text-muted-foreground">
-                <Flame aria-hidden className="h-4 w-4 shrink-0 fill-primary text-primary" strokeWidth={1.75} />Calorías diarias
-              </span>
-              <span className="block whitespace-nowrap text-[28px] font-bold leading-tight tracking-tight tabular-nums">
-                {targets.calories?.toLocaleString("es-ES")}<span className="ml-1 text-[17px] font-semibold">kcal</span>
-              </span>
-            </span>
-          </div>
-          <ul aria-label="Macros del día" className="shrink-0 space-y-1.5 border-l border-border pl-4">
-            {[
-              { label: "Proteína", value: targets.protein, dot: "bg-primary" },
-              { label: "Carbohidratos", value: targets.carbs, dot: "bg-primary/60" },
-              { label: "Grasas", value: targets.fats, dot: "bg-primary/30" },
-            ].filter((m) => (m.value ?? 0) > 0).map((m) => (
-              <li key={m.label} className="flex items-center gap-2 type-footnote">
-                <span aria-hidden className={`h-2 w-2 shrink-0 rounded-full ${m.dot}`} />
-                <span className="text-muted-foreground">{m.label}</span>
-                <span className="ml-auto pl-3 font-semibold tabular-nums">{m.value} g</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div className="mt-4 flex items-end justify-between gap-4 border-t border-border pt-3">
-          <p className="type-caption1 text-muted-foreground">Estimación inicial según tus datos y objetivo. No sustituye una valoración nutricional individual.</p>
-          <Button variant="outline" size="sm" className="shrink-0" onClick={onEdit}>Actualizar datos</Button>
-        </div>
+    <section className="mx-auto w-full max-w-[680px] space-y-8 pb-4">
+      <div>
+        <NutritionIntro />
+        {/* Anillo de calorías y barras de macros (maqueta de ChatGPT); solo cifras reales del plan o del cálculo inicial. */}
+        <NutritionHero
+          target={{ kcal: targets.calories ?? 0, protein: targets.protein ?? 0, carbs: targets.carbs ?? 0, fats: targets.fats ?? 0 }}
+          footnote="Estimación inicial según tus datos y objetivo. No sustituye una valoración nutricional individual."
+        >
+          <Button variant="plain" className="-ml-4 mt-1" onClick={() => { void hapticTap(); onEdit(); }}>Actualizar datos</Button>
+        </NutritionHero>
       </div>
       <NutritionPlusSection onUpgrade={onUpgrade} />
     </section>

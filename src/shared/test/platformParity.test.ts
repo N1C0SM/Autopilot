@@ -67,7 +67,7 @@ describe("paridad web ↔ apps nativas", () => {
     expect(app).not.toMatch(/coverCard/);
     // La foto de respaldo solo vale para las tarjetas vacías, nunca repetida en las filas.
     expect(web).toMatch(/const src = useMealPhoto\(dish\);\s*if \(!src\) return null;/);
-    expect(app).toMatch(/if let url = photos\[Self\.dish\(meal\)\]/);
+    expect(app).toMatch(/let photoURL = photos\[Self\.dish\(meal\)\][\s\S]*?if let url = photoURL/);
     expect(app).toMatch(/group\.addTask \{ \(dish, await AiCover\.ownMeal\(dish\)\) \}/);
   });
 
@@ -105,7 +105,9 @@ describe("paridad web ↔ apps nativas", () => {
     for (const src of [web, app]) {
       expect(src).toContain("¿Regenerar tus comidas?");
       expect(src).toContain(note);
-      expect(src).toContain("Regenerando comidas…");
+      // «Regenerar» en la cabecera de «Comidas de hoy», como en el iPhone.
+      expect(src).toContain("Regenerando…");
+      expect(src).toContain("Comidas de hoy");
     }
   });
 
@@ -354,17 +356,6 @@ describe("paridad web ↔ apps nativas", () => {
     }
     expect(progressWeb).toContain("exerciseRecord(history)");
     expect(progressApp).toContain("static func record(_ entries: [ExerciseEntry])");
-    // Nutrición de ChatGPT (Gratis): tarjeta de calorías con macros y «Más en Plus» con candados, sin pagos externos en la app.
-    const nutritionWeb = read("src/app/components/dashboard/BasicNutrition.tsx") + read("src/app/components/dashboard/NutritionPlusSection.tsx");
-    const nutritionApp = read("native/Autopilot/Features/Other/OtherViews.swift");
-    for (const text of ["Plan de alimentación básico.", "Calorías diarias", "Carbohidratos", "Grasas", "Más en Plus", "Desbloquea tu plan de comidas completo y personalizado.",
-      "Comidas de cada día", "Ajustadas a tus macros y a lo que te gusta.", "Seguimiento de macros", "Marca cada comida y se suman sus macros.", "Menú a tu gusto", "Regenera tus comidas cuando quieras.", "Incluido en Plus",
-      "Estimación inicial según tus datos y objetivo. No sustituye una valoración nutricional individual."]) {
-      expect(nutritionWeb, text).toContain(text);
-      expect(nutritionApp, text).toContain(text);
-    }
-    expect(nutritionWeb).toContain("onUpgrade && !isIOSNative()");
-    expect(nutritionApp).not.toContain("Descubre Autopilot Plus");
     // Ajustes de ChatGPT: índice agrupado con iconos que lleva a cada sección, en las dos.
     const settingsWeb = read("src/app/components/SettingsPanel.tsx");
     const settingsApp = read("native/Autopilot/Features/Account/AccountView.swift");
@@ -383,8 +374,6 @@ describe("paridad web ↔ apps nativas", () => {
     // Nutrición Gratis: misma cuenta, mismos macros. Sin plan legible, grasas al 25 % de las kcal y el resto en carbohidratos en las dos.
     expect(read("src/shared/lib/nutrition.ts")).toContain("Math.round((kcal * 0.25) / 9)");
     expect(read("native/Autopilot/Design/Components.swift")).toContain("(kcal * 0.25 / 9).rounded()");
-    expect(nutritionWeb).toContain("value: targets.carbs");
-    expect(nutritionWeb).toContain("value: targets.fats");
     expect(settingsApp).toContain(".navigationDestination(item: $openPage)");
     // Onboarding de ChatGPT: preguntas en negrita, opciones en tarjetas con icono y círculo de selección.
     const quizWeb = read("src/app/pages/Configurator.tsx");
@@ -395,6 +384,34 @@ describe("paridad web ↔ apps nativas", () => {
     }
     expect(quizWeb).toContain("<SelectMark on={on} />");
     expect(quizApp).toContain("selectMark(on)");
+  });
+
+  it("Nutrición de ChatGPT: anillo de calorías con macros al lado y Plus en un solo grupo, igual en la web y en la app", () => {
+    // Nutrición de ChatGPT: anillo de calorías con las barras de macros al lado y «Registra tus comidas» (Plus) en un solo grupo con candados, sin pagos externos en la app.
+    const nutritionWeb = read("src/app/components/dashboard/BasicNutrition.tsx") + read("src/app/components/dashboard/NutritionPlusSection.tsx") + read("src/app/components/dashboard/NutritionHero.tsx");
+    const nutritionApp = read("native/Autopilot/Features/Other/OtherViews.swift");
+    for (const text of ["Controla tu alimentación y alcanza tu objetivo.", "kcal al día", "Proteína", "Hidratos", "Grasas", "Registra tus comidas", "Disponible en Plus.",
+      "Objetivo de", "Resumen de hoy",
+      "Comidas de cada día", "Ajustadas a tus macros y a lo que te gusta.", "Seguimiento de macros", "Marca cada comida y se suman sus macros.", "Menú a tu gusto", "Regenera tus comidas cuando quieras.", "Incluido en Plus",
+      "Estimación inicial según tus datos y objetivo. No sustituye una valoración nutricional individual."]) {
+      expect(nutritionWeb, text).toContain(text);
+      expect(nutritionApp, text).toContain(text);
+    }
+    expect(nutritionWeb).toContain("onUpgrade && !isIOSNative()");
+    expect(nutritionApp).not.toContain("Descubre Autopilot Plus");
+    expect(nutritionWeb).toContain("carbs: targets.carbs");
+    expect(nutritionWeb).toContain("fats: targets.fats");
+    // La misma cabecera en las dos: anillo de 136 con trazo 12 (reparto en oro, oro 60 % y oro 32 %, o lo marcado) y una tarjeta de 28.
+    const hero = read("src/app/components/dashboard/NutritionHero.tsx");
+    expect(hero).toMatch(/size=\{136\} stroke=\{12\}/);
+    expect(hero).toContain('"hsl(var(--primary) / 0.6)", "hsl(var(--primary) / 0.32)"');
+    expect(hero).toContain("rounded-[28px]");
+    expect(nutritionApp).toContain("[Palette.gold, Palette.gold.opacity(0.6), Palette.gold.opacity(0.32)]");
+    expect(nutritionApp).toMatch(/\.frame\(width: 136, height: 136\)/);
+    expect(nutritionApp).toContain(".surface(Radius.hero)");
+    expect(read("src/app/components/dashboard/MealsList.tsx")).toContain("<NutritionHero");
+    expect(read("src/app/components/dashboard/BasicNutrition.tsx")).toContain("<NutritionHero");
+    expect(nutritionApp).toContain("nutritionHero(kcal: kcal, p: p, c: c, f: f, eaten: hasMeals ? eatenToday : nil");
   });
 
   it("Nutrición sin peso: Gratis ve «Calcula tus macros» en la web y en la app, no solo la tarjeta de Plus", () => {

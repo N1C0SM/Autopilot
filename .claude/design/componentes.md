@@ -51,5 +51,6 @@ Antes de escribir una pieza nueva, busca aquí. Si no encaja, amplía el compone
 ## Rediseño (ChatGPT, nov. 2026)
 
 - Semana de Hoy: un círculo de 32 px por día (dorado con check si está hecho, anillo dorado hoy, anillo gris si toca sesión, relleno tenue en descanso).
+- Cabecera de Nutrición (`NutritionHero` en la web, `nutritionHero` en la app): tarjeta de 28 con un anillo de 136 (trazo 12) y, a su lado, Proteína, Hidratos y Grasas con su barra. Sin comidas, el anillo reparte la energía (oro, oro 60 %, oro 32 %) y las kcal del día van dentro; con comidas, el anillo y las barras suman lo marcado.
 - Selector de días del Plan: el día elegido en dorado macizo y hoy con anillo dorado.
 - Control segmentado de Progreso: 44 px, fondo de tarjeta y la sección activa en dorado (`SegmentedPill(gold: true)` en nativo). El resto de controles segmentados siguen en gris.

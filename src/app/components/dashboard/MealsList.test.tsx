@@ -29,11 +29,11 @@ describe("meal check-ins", () => {
     render(<MealsList meals={meals} macros={{ protein: 140, carbs: 220, fats: 65 }} />);
     expect(screen.getByText(/^de 2\.?025 kcal$/)).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: /Desayuno Avena/ }));
-    expect(screen.getByRole("group", { name: "Proteína: 70 de 140 gramos" })).toBeVisible();
+    expect(screen.getByRole("listitem", { name: "Proteína: 70 de 140 gramos" })).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: /Cena Pescado/ }));
-    expect(screen.getByRole("group", { name: "Proteína: 140 de 140 gramos" })).toBeVisible();
-    expect(screen.getByRole("group", { name: "Carbos: 220 de 220 gramos" })).toBeVisible();
-    expect(screen.getByRole("group", { name: "Grasas: 65 de 65 gramos" })).toBeVisible();
+    expect(screen.getByRole("listitem", { name: "Proteína: 140 de 140 gramos" })).toBeVisible();
+    expect(screen.getByRole("listitem", { name: "Hidratos: 220 de 220 gramos" })).toBeVisible();
+    expect(screen.getByRole("listitem", { name: "Grasas: 65 de 65 gramos" })).toBeVisible();
     expect(screen.getByText(/Es una estimación/)).toBeVisible();
   });
   it("flags existing invalid targets while preserving the saved meal", () => {
@@ -100,9 +100,9 @@ describe("day summary", () => {
     render(<MealsList meals={[]} macros={{ protein: 140, carbs: 220, fats: 65 }} />);
 
     expect(screen.getByText("2025")).toBeVisible();
-    expect(screen.getByRole("group", { name: "Proteína: objetivo diario de 140 gramos, 28 % de las calorías" })).toBeVisible();
-    expect(screen.getByRole("group", { name: "Carbos: objetivo diario de 220 gramos, 43 % de las calorías" })).toBeVisible();
-    expect(screen.getByRole("group", { name: "Grasas: objetivo diario de 65 gramos, 29 % de las calorías" })).toBeVisible();
+    expect(screen.getByRole("listitem", { name: "Proteína: objetivo diario de 140 gramos, 28 % de las calorías" })).toBeVisible();
+    expect(screen.getByRole("listitem", { name: "Hidratos: objetivo diario de 220 gramos, 43 % de las calorías" })).toBeVisible();
+    expect(screen.getByRole("listitem", { name: "Grasas: objetivo diario de 65 gramos, 29 % de las calorías" })).toBeVisible();
   });
 
   it("keeps the plan's calorie target when it is set explicitly", () => {
@@ -118,7 +118,7 @@ describe("day summary", () => {
 
     expect(screen.getByText("Aún no hay plan de comidas")).toBeVisible();
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
-    expect(screen.queryByRole("group")).not.toBeInTheDocument();
+    expect(screen.queryByRole("list", { name: "Macros del día" })).not.toBeInTheDocument();
   });
 });
 
@@ -187,7 +187,7 @@ describe("regenerate meals", () => {
       name === "sync-nutrition-macros" ? { data: { updated: true, meals_updated: true }, error: null } : { data: { url: null }, error: null },
     ));
     render(<MealsList meals={[{ name: "Comida", description: "Plato" }]} onMealsGenerated={onMealsGenerated} />);
-    fireEvent.click(screen.getByRole("button", { name: "Regenerar comidas" }));
+    fireEvent.click(screen.getByRole("button", { name: "Regenerar" }));
     expect(screen.getByText("¿Regenerar tus comidas?")).toBeVisible();
     expect(mocks.invoke).not.toHaveBeenCalledWith("sync-nutrition-macros", expect.anything());
     fireEvent.click(screen.getByRole("button", { name: "Regenerar comidas" }));

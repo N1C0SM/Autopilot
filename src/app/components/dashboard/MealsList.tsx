@@ -16,7 +16,6 @@ import {
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
 import { EmptyState } from "@/shared/components/ui/empty-state";
-import { ListGroup } from "@/shared/components/ui/list";
 import { ProgressRing } from "@/shared/components/ui/progress-ring";
 import type { MacroTargets } from "@/shared/lib/nutrition";
 import { nutritionMacroError } from "@/shared/lib/nutritionValidation";
@@ -24,6 +23,7 @@ import { useMealPhoto } from "@/shared/hooks/useSessionCover";
 import { BRAND_PHOTOS } from "@/shared/lib/brandPhotos";
 import { mealMacros, sumMacros, type PlanMeal } from "@/shared/lib/mealMacros";
 import MealsPlusCard from "@/app/components/dashboard/MealsPlusCard";
+import NutritionHero, { NutritionIntro } from "@/app/components/dashboard/NutritionHero";
 import NutritionSetup from "@/app/components/dashboard/NutritionSetup";
 
 /**
@@ -175,104 +175,40 @@ const MealsList = ({ meals, macros, onOpenProfile, userId, onMealsGenerated }: P
   const perMeal = tracking ? mealMacros(meals, { kcal, protein: p, carbs: c, fats: f }) : [];
   const eaten = sumMacros(perMeal.filter((_, i) => done.has(meals[i].name)));
 
-  // Sin comidas, las barras muestran qué parte de la energía del día aporta cada macro.
-  const macroEnergy = p * 4 + c * 4 + f * 9;
-  const macroSummary = [
-    { label: "Proteína", value: p, eaten: eaten.protein, energy: p * 4 },
-    { label: "Carbos", value: c, eaten: eaten.carbs, energy: c * 4 },
-    { label: "Grasas", value: f, eaten: eaten.fats, energy: f * 9 },
-  ].map((m) => ({ ...m, share: macroEnergy > 0 ? Math.round((m.energy / macroEnergy) * 100) : 0 }))
-    .map((m) => ({ ...m, bar: tracking ? (m.value > 0 ? Math.min(100, (m.eaten / Math.max(1, Math.round(m.value))) * 100) : 0) : m.share }));
-
   return (
-    <div className="space-y-8">
-      {(hasMeals || showTargets) && (
-        <section aria-label="Resumen de hoy" className="rounded-media bg-card p-4">
-          <div className="flex items-center gap-5">
-            {hasMeals && (
-              <ProgressRing
-                value={ratio * 100}
-                size={136}
-                stroke={14}
-                label={`${doneCount} de ${meals.length} comidas hechas hoy`}
-              >
-                <span className="flex flex-col items-center">
-                  <span className="type-figure text-[44px] font-bold leading-none tabular-nums text-foreground">
-                    {doneCount}
-                  </span>
-                  <span className="mt-1 type-footnote tabular-nums text-muted-foreground">
-                    de {meals.length} {meals.length === 1 ? "comida" : "comidas"}
-                  </span>
-                </span>
-              </ProgressRing>
-            )}
+    <div className="mx-auto w-full max-w-[680px] space-y-8">
+      <div>
+        <NutritionIntro />
+        {showTargets ? (
+          // Anillo de calorías y barras de macros (maqueta de ChatGPT): con comidas suman lo marcado.
+          <NutritionHero
+            target={{ kcal, protein: p, carbs: c, fats: f }}
+            eaten={tracking ? eaten : null}
+            footnote={tracking
+              ? "Al marcar una comida se suman sus macros del plan. Es una estimación: no se pesa lo que comes."
+              : "Objetivos de tu plan para hoy."}
+          />
+        ) : hasMeals && (
+          <section aria-label="Resumen de hoy" className="flex items-center gap-5 rounded-[28px] bg-card p-5">
+            <ProgressRing value={ratio * 100} size={136} stroke={12} label={`${doneCount} de ${meals.length} comidas hechas hoy`}>
+              <span className="flex flex-col items-center">
+                <span className="type-figure text-[40px] font-bold leading-none tabular-nums text-foreground">{doneCount}</span>
+                <span className="mt-1 type-footnote tabular-nums text-muted-foreground">de {meals.length} {meals.length === 1 ? "comida" : "comidas"}</span>
+              </span>
+            </ProgressRing>
             <div className="min-w-0 flex-1">
-              {showTargets ? (
-                <>
-                  <p
-                    className={cn(
-                      "type-figure font-bold leading-none tabular-nums",
-                      hasMeals ? "text-[34px]" : "text-[48px]",
-                    )}
-                  >
-                    {fmt(tracking ? eaten.kcal : kcal)}
-                  </p>
-                  <p className="mt-1.5 type-subhead text-muted-foreground">
-                    {tracking ? `de ${fmt(kcal)} kcal` : "kcal de objetivo diario"}
-                  </p>
-                </>
-              ) : (
-                <>
-                  <p className="type-headline">
-                    {remaining === 0
-                      ? "Día completo"
-                      : `Te ${remaining === 1 ? "queda" : "quedan"} ${remaining} ${remaining === 1 ? "comida" : "comidas"}`}
-                  </p>
-                  <p className="mt-1 type-subhead text-muted-foreground">
-                    {remaining === 0 ? "Has marcado todas las comidas de hoy." : "Márcalas según las vayas haciendo."}
-                  </p>
-                </>
-              )}
-            </div>
-          </div>
-
-          {showTargets && (
-            <>
-              <div className="mt-6 grid grid-cols-3 gap-4 md:max-w-lg">
-                {macroSummary.map((m) => (
-                  <div
-                    key={m.label}
-                    role="group"
-                    aria-label={tracking
-                      ? `${m.label}: ${fmt(m.eaten)} de ${fmt(m.value)} gramos`
-                      : `${m.label}: objetivo diario de ${fmt(m.value)} gramos, ${m.share} % de las calorías`}
-                  >
-                    {/* Con letra grande el porcentaje baja de línea en vez de cortar la etiqueta. */}
-                    <div className="flex flex-wrap items-baseline justify-between gap-x-1">
-                      <p className="type-footnote text-muted-foreground">{m.label}</p>
-                      {!tracking && <p className="type-footnote tabular-nums text-muted-foreground">{m.share} %</p>}
-                    </div>
-                    <p className="mt-0.5 text-[22px] font-bold leading-7 tabular-nums">
-                      {fmt(tracking ? m.eaten : m.value)}
-                      <span className="ml-0.5 type-subhead font-semibold text-muted-foreground">
-                        {tracking ? `/${fmt(m.value)} g` : "g"}
-                      </span>
-                    </p>
-                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-primary/20" aria-hidden="true">
-                      <div className="h-full rounded-full bg-primary transition-[width] duration-500 ease-out" style={{ width: `${m.bar}%` }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <p className="mt-4 type-footnote text-muted-foreground">
-                {tracking
-                  ? "Al marcar una comida se suman sus macros del plan. Es una estimación: no se pesa lo que comes."
-                  : "Objetivos de tu plan para hoy."}
+              <p className="type-headline">
+                {remaining === 0
+                  ? "Día completo"
+                  : `Te ${remaining === 1 ? "queda" : "quedan"} ${remaining} ${remaining === 1 ? "comida" : "comidas"}`}
               </p>
-            </>
-          )}
-        </section>
-      )}
+              <p className="mt-1 type-subhead text-muted-foreground">
+                {remaining === 0 ? "Has marcado todas las comidas de hoy." : "Márcalas según las vayas haciendo."}
+              </p>
+            </div>
+          </section>
+        )}
+      </div>
 
       {targetError && (
         <Notice
@@ -324,7 +260,20 @@ const MealsList = ({ meals, macros, onOpenProfile, userId, onMealsGenerated }: P
         />
       ) : (
         <div className="space-y-3">
-        <ListGroup header="Comidas de hoy">
+        {/* Como el iPhone: «Comidas de hoy» con «Regenerar» en la cabecera y las filas en un grupo sin borde. */}
+        <section aria-labelledby="meals-today-title">
+        <div className="mb-2 flex items-baseline justify-between gap-3">
+          <h3 id="meals-today-title" className="type-title3">Comidas de hoy</h3>
+          <button
+            type="button"
+            disabled={generating}
+            onClick={() => { void hapticTap(); setConfirmingNew(true); }}
+            className="-my-3 ml-auto min-h-11 px-1 type-subhead font-semibold text-primary active:opacity-60 disabled:text-muted-foreground"
+          >
+            {generating ? "Regenerando…" : "Regenerar"}
+          </button>
+        </div>
+        <div className="overflow-hidden rounded-[22px] bg-card">
           {meals.map((meal, i) => {
             const isDone = done.has(meal.name);
             const own = perMeal[i];
@@ -380,11 +329,8 @@ const MealsList = ({ meals, macros, onOpenProfile, userId, onMealsGenerated }: P
               </button>
             );
           })}
-        </ListGroup>
-        {/* Comidas nuevas cuando quieras, como en Ajustes: solo cambian las comidas, no el entreno. */}
-        <Button variant="secondary" size="lg" className="w-full" disabled={generating} onClick={() => { void hapticTap(); setConfirmingNew(true); }}>
-          {generating ? "Regenerando comidas…" : "Regenerar comidas"}
-        </Button>
+        </div>
+        </section>
         {generateFailed && !generating && (
           <p role="alert" className="type-footnote text-muted-foreground">No se pudieron regenerar las comidas. Inténtalo de nuevo en unos minutos.</p>
         )}
