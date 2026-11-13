@@ -113,6 +113,8 @@ struct ProgressScreen: View {
                     }
                 }
                 .padding(.horizontal, horizontalPadding).padding(.top, 8).padding(.bottom, isWide ? 16 : 96)
+                // Una columna de 680 en iPad y Mac, como Hoy, Nutrición y Ejercicios (la web ancha igual).
+                .frame(maxWidth: 680)
                 .frame(maxWidth: .infinity)
             }
             .screenBackground()

@@ -414,6 +414,17 @@ describe("paridad web ↔ apps nativas", () => {
     expect(nutritionApp).toContain("nutritionHero(kcal: kcal, p: p, c: c, f: f, eaten: hasMeals ? eatenToday : nil");
   });
 
+  it("Web ancha, iPad y Mac: Hoy, Nutrición, Ejercicios y Progreso en la misma columna centrada de 680, como el iPhone ampliado", () => {
+    const dash = read("src/app/pages/Dashboard.tsx");
+    expect(dash).toContain('className="mx-auto w-full min-w-0 max-w-[680px] space-y-4"');
+    expect(read("src/app/components/dashboard/MealsList.tsx")).toContain('className="mx-auto w-full max-w-[680px] space-y-8"');
+    expect(read("src/app/components/dashboard/BasicNutrition.tsx")).toContain("mx-auto w-full max-w-[680px]");
+    expect(read("src/app/components/library/ExerciseLibrarySheet.tsx")).toContain("mx-auto flex w-full max-w-[680px] flex-col");
+    for (const file of ["native/Autopilot/Features/Other/OtherViews.swift", "native/Autopilot/Features/Train/ExerciseLibraryView.swift", "native/Autopilot/Features/Progress/ProgressScreen.swift", "native/Autopilot/Features/Home/HomeView.swift"]) {
+      expect(read(file), file).toContain(".frame(maxWidth: 680");
+    }
+  });
+
   it("Nutrición sin peso: Gratis ve «Calcula tus macros» en la web y en la app, no solo la tarjeta de Plus", () => {
     const web = read("src/app/components/dashboard/BasicNutrition.tsx");
     const app = read("native/Autopilot/Features/Other/OtherViews.swift");

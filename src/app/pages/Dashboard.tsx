@@ -946,7 +946,7 @@ const Dashboard = () => {
             void hapticSelection();
             setProgressTab(tab as typeof progressTab);
           }}
-          className="w-full min-w-0 space-y-4"
+          className="mx-auto w-full min-w-0 max-w-[680px] space-y-4"
         >
           {/* Subtítulo de la maqueta bajo el título grande; en escritorio la barra ya lleva su pista. */}
           <p className="-mt-1 type-subhead text-muted-foreground md:hidden">Evolución de tu fuerza, tu físico y tus récords.</p>
