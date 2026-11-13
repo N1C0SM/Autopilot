@@ -355,6 +355,15 @@ struct ExerciseLibraryView: View {
     private var list: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
+                #if os(iOS)
+                // Subtítulo bajo el título grande, como la web móvil (en Mac la barra lleva su pista).
+                if embedded {
+                    Text("Técnica, músculos y variantes de cada ejercicio.")
+                        .font(.apSubhead).foregroundStyle(Palette.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.bottom, 4)
+                }
+                #endif
                 searchField
                 facetRow
                 if let facet, let options = facets.first(where: { $0.key == facet })?.options {
@@ -364,6 +373,9 @@ struct ExerciseLibraryView: View {
                 content.padding(.top, 4)
             }
             .padding(.horizontal, embedded ? 16 : 20).padding(.bottom, 24)
+            // Una columna de 680 en iPad y Mac, como Hoy y Nutrición.
+            .frame(maxWidth: 680)
+            .frame(maxWidth: .infinity)
         }
         .screenBackground()
     }
@@ -488,33 +500,39 @@ struct ExerciseLibraryView: View {
             let members = ExerciseLibraryCatalog.filter(items, f)
             return members.isEmpty ? nil : (g, members.count, members.first { $0.image != nil }?.image)
         }
-        return VStack(alignment: .leading, spacing: 24) {
+        return VStack(alignment: .leading, spacing: 32) {
             if !recent.isEmpty {
-                LibrarySectionTitle("Recientes")
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(alignment: .top, spacing: 12) {
-                        ForEach(recent) { e in
-                            Button { open(e) } label: {
-                                VStack(alignment: .leading, spacing: 6) {
-                                    ExerciseThumbView(url: e.image, name: e.name, pattern: e.pattern, stimulus: e.stimulus, load: e.load, width: 112, height: 63)
-                                    Text(e.name).font(.apFootnote.weight(.medium)).lineLimit(2).multilineTextAlignment(.leading)
+                VStack(alignment: .leading, spacing: 10) {
+                    LibrarySectionTitle("Recientes")
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(alignment: .top, spacing: 12) {
+                            ForEach(recent) { e in
+                                Button { open(e) } label: {
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        ExerciseThumbView(url: e.image, name: e.name, pattern: e.pattern, stimulus: e.stimulus, load: e.load, width: 112, height: 63)
+                                        Text(e.name).font(.apFootnote.weight(.medium)).lineLimit(2).multilineTextAlignment(.leading)
+                                    }
+                                    .frame(width: 112, alignment: .leading)
                                 }
-                                .frame(width: 112, alignment: .leading)
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
                         }
                     }
                 }
             }
             if !favorites.isEmpty {
-                LibrarySectionTitle("Favoritos")
-                ExerciseRows(items: favorites, favorites: []) { open($0) }
+                VStack(alignment: .leading, spacing: 10) {
+                    LibrarySectionTitle("Favoritos")
+                    ExerciseRows(items: favorites, favorites: []) { open($0) }
+                }
             }
-            LibrarySectionTitle("Grupos musculares")
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
-                ForEach(tiles, id: \.0) { tile in
-                    Button { Haptics.selection(); filters.groups = [tile.0] } label: { groupTile(tile.0, count: tile.1, image: tile.2) }
-                        .buttonStyle(PressableCardStyle())
+            VStack(alignment: .leading, spacing: 10) {
+                LibrarySectionTitle("Grupos musculares")
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
+                    ForEach(tiles, id: \.0) { tile in
+                        Button { Haptics.selection(); filters.groups = [tile.0] } label: { groupTile(tile.0, count: tile.1, image: tile.2) }
+                            .buttonStyle(PressableCardStyle())
+                    }
                 }
             }
         }
@@ -558,7 +576,8 @@ private struct LibrarySectionTitle: View {
     let text: String
     init(_ text: String) { self.text = text }
     var body: some View {
-        Text(text.uppercased()).font(.apFootnote.weight(.semibold)).tracking(0.5).foregroundStyle(Palette.muted)
+        // Cabecera de sección como «Tu plan» o «Comidas de hoy»: Title 3, sin mayúsculas.
+        Text(text).font(.apTitle3).accessibilityAddTraits(.isHeader)
     }
 }
 
@@ -594,6 +613,7 @@ private struct ExerciseThumbView: View {
     }
 }
 
+/// Filas en un grupo sin borde (como «Comidas de hoy»): miniatura, nombre, músculo y equipo, y chevron.
 private struct ExerciseRows: View {
     let items: [LibraryExercise]
     let favorites: Set<String>
@@ -605,20 +625,26 @@ private struct ExerciseRows: View {
                     HStack(spacing: 12) {
                         ExerciseThumbView(url: e.image, name: e.name, pattern: e.pattern, stimulus: e.stimulus, load: e.load)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(e.name).font(.apBody.weight(.medium)).lineLimit(1)
+                            Text(e.name).font(.apHeadline).lineLimit(1)
                             Text(e.subtitle).font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(1)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         if favorites.contains(e.id) {
                             Image(systemName: "heart.fill").font(.footnote).foregroundStyle(Palette.gold).accessibilityLabel("Favorito")
                         }
+                        Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(Palette.muted.opacity(0.6)).accessibilityHidden(true)
                     }
-                    .padding(.vertical, 10).contentShape(Rectangle())
+                    .padding(.horizontal, 12).padding(.vertical, 10).contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                if index < items.count - 1 { Divider().overlay(Palette.separator) }
+                .overlay(alignment: .bottom) {
+                    // El separador nace donde empieza el texto (12 + 48 + 12).
+                    if index < items.count - 1 { Rectangle().fill(Palette.separator).frame(height: 0.5).padding(.leading, 72) }
+                }
             }
         }
+        .surface()
     }
 }
 
@@ -648,7 +674,8 @@ struct ExerciseDetailView: View {
                 hero
                 HStack(alignment: .top, spacing: 12) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(exercise.name).font(.apTitle2)
+                        Text(exercise.name).font(.inter(size: 28, weight: .bold)).tracking(-0.4)
+                            .fixedSize(horizontal: false, vertical: true)
                         if !exercise.altNames.isEmpty {
                             Text(exercise.altNames.joined(separator: " · ")).font(.apSubhead).foregroundStyle(Palette.muted)
                         }
@@ -676,9 +703,11 @@ struct ExerciseDetailView: View {
                         }
                     }
                 }
-                sections.padding(.top, 8)
+                sections.padding(.top, 16)
             }
             .padding(.horizontal, 20).padding(.bottom, 32)
+            .frame(maxWidth: 680)
+            .frame(maxWidth: .infinity)
         }
         .screenBackground()
         .navigationTitle(exercise.name)
@@ -736,12 +765,21 @@ struct ExerciseDetailView: View {
         .buttonStyle(.plain)
     }
 
+    /// Pasos con su número en un círculo dorado tenue; el resto, con un punto dorado (como la web).
     private func list(_ items: [String], numbered: Bool = false) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 12) {
             ForEach(Array(items.enumerated()), id: \.offset) { i, t in
-                HStack(alignment: .firstTextBaseline, spacing: 12) {
-                    Text(numbered ? "\(i + 1)" : "·").font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.gold).frame(width: 18, alignment: .leading)
-                    Text(t).font(.apSubhead).frame(maxWidth: .infinity, alignment: .leading)
+                HStack(alignment: .top, spacing: 12) {
+                    if numbered {
+                        Text("\(i + 1)").font(.apFootnote.weight(.bold).monospacedDigit()).foregroundStyle(Palette.gold)
+                            .frame(width: 24, height: 24).background(Palette.gold.opacity(0.15), in: Circle())
+                            .accessibilityHidden(true)
+                    } else {
+                        Circle().fill(Palette.gold).frame(width: 6, height: 6).padding(.top, 7).accessibilityHidden(true)
+                    }
+                    Text(t).font(.apSubhead).padding(.top, numbered ? 2 : 0)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
         }
@@ -751,7 +789,7 @@ struct ExerciseDetailView: View {
 
     @ViewBuilder private var sections: some View {
         let e = exercise
-        VStack(alignment: .leading, spacing: 24) {
+        VStack(alignment: .leading, spacing: 32) {
             if !e.instructions.isEmpty || e.description != nil {
                 section("Cómo se hace") {
                     if !e.instructions.isEmpty { list(e.instructions, numbered: true) }
@@ -763,13 +801,15 @@ struct ExerciseDetailView: View {
             }
             if !e.primaryMuscles.isEmpty || !e.groups.isEmpty {
                 section("Músculos") {
-                    VStack(alignment: .leading, spacing: 4) {
-                        (Text("Principal: ").foregroundStyle(Palette.muted) + Text((e.primaryMuscles.isEmpty ? e.groups : e.primaryMuscles).joined(separator: ", ")))
+                    // «Principal» y «Secundarios» como filas de dato (etiqueta pequeña y valor), como la web.
+                    VStack(alignment: .leading, spacing: 0) {
+                        muscleRow("Principal", (e.primaryMuscles.isEmpty ? e.groups : e.primaryMuscles).joined(separator: ", "))
                         if !e.secondaryMuscles.isEmpty {
-                            Text("Secundarios: ").foregroundStyle(Palette.muted) + Text(e.secondaryMuscles.joined(separator: ", "))
+                            Rectangle().fill(Palette.separator).frame(height: 0.5)
+                            muscleRow("Secundarios", e.secondaryMuscles.joined(separator: ", "))
                         }
                     }
-                    .font(.apSubhead).padding(16).frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 16).frame(maxWidth: .infinity, alignment: .leading)
                     .surface()
                 }
             }
@@ -794,8 +834,18 @@ struct ExerciseDetailView: View {
         onOpen(e)
     }
 
+    private func muscleRow(_ label: String, _ value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label).font(.apFootnote).foregroundStyle(Palette.muted)
+            Text(value).font(.apHeadline).fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
+    }
+
     private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             LibrarySectionTitle(title)
             content()
         }

@@ -821,10 +821,20 @@ describe("paridad web ↔ apps nativas", () => {
     expect(read("src/app/pages/Dashboard.tsx")).toMatch(/section === "library" && user[\s\S]{0,120}<ExerciseLibraryPage userId=\{user\.id\} \/>/);
     expect(read("native/Autopilot/Features/Shell/RootView.swift")).toContain("case .library: ExerciseLibraryView(userId: session.userId, embedded: true)");
     const web = read("src/app/components/library/ExerciseLibrarySheet.tsx");
-    for (const text of ["Demostración en preparación", "Recientes", "Favoritos", "Quitar filtros"]) {
+    for (const text of ["Demostración en preparación", "Recientes", "Favoritos", "Quitar filtros", "Técnica, músculos y variantes de cada ejercicio.", "Principal", "Secundarios"]) {
       expect(web).toContain(text);
       expect(app).toContain(text);
     }
+    // Rediseño: cabeceras de sección en Title 3 (sin mayúsculas), filas en un grupo sin borde con chevron,
+    // pasos con el número en un círculo dorado tenue y la columna de 680, igual en las dos.
+    expect(web).toContain('<h3 className="mb-2.5 type-title3">{children}</h3>');
+    expect(app).toContain("Text(text).font(.apTitle3)");
+    expect(web).toContain('<ul className="overflow-hidden rounded-[22px] bg-card">');
+    expect(app.slice(app.indexOf("private struct ExerciseRows"))).toMatch(/chevron\.right[\s\S]*?\.surface\(\)/);
+    expect(web).toContain("rounded-full bg-primary/15 type-footnote font-bold tabular-nums text-primary");
+    expect(app).toContain(".frame(width: 24, height: 24).background(Palette.gold.opacity(0.15), in: Circle())");
+    expect(web).toContain("max-w-[680px]");
+    expect(app).toContain(".frame(maxWidth: 680)");
   });
 
   it("Biblioteca de ejercicios: la foto subida manda sobre la huella y la lista se refresca en cada apertura, en la web y en la app", () => {

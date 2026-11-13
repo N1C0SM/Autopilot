@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, Heart, Search, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Heart, Search, X } from "lucide-react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import ResponsiveSheet from "@/app/components/dashboard/ResponsiveSheet";
 import ExerciseMedia, { ExerciseThumb } from "@/app/components/ExerciseMedia";
@@ -21,7 +21,7 @@ const FACETS: { key: Facet; label: string; options: readonly string[] }[] = [
 ];
 
 /** Biblioteca de ejercicios: lista con buscador y filtros, y la ficha de cada ejercicio. */
-const ExerciseLibraryBody = ({ open, userId }: { open: boolean; userId: string }) => {
+const ExerciseLibraryBody = ({ open, userId, page }: { open: boolean; userId: string; page?: boolean }) => {
   const lib = useExerciseLibrary(userId, open);
   const [filters, setFilters] = useState<LibraryFilters>(EMPTY_FILTERS);
   const [facet, setFacet] = useState<Facet | null>(null);
@@ -57,6 +57,8 @@ const ExerciseLibraryBody = ({ open, userId }: { open: boolean; userId: string }
         />
       ) : (
         <div className="flex min-h-0 flex-1 flex-col">
+          {/* Subtítulo bajo el título grande, como en el iPhone (en escritorio la barra lleva su pista). */}
+          {page && <p className="-mt-3 mb-4 type-subhead text-muted-foreground md:hidden">Técnica, músculos y variantes de cada ejercicio.</p>}
           <label className="flex h-11 shrink-0 items-center gap-2 rounded-full bg-card px-4">
             <Search className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
             <input
@@ -155,26 +157,31 @@ const ExerciseLibrarySheet = ({ open, onOpenChange, userId }: {
 /** La biblioteca como pestaña «Ejercicios» de la navegación, igual que en el iPhone. El título
  *  lo pinta la barra de la app, como en el resto de pestañas. */
 export const ExerciseLibraryPage = ({ userId }: { userId: string }) => (
-  <section aria-label="Ejercicios" className="mx-auto flex w-full max-w-2xl flex-col">
-    <ExerciseLibraryBody open userId={userId} />
+  <section aria-label="Ejercicios" className="mx-auto flex w-full max-w-[680px] flex-col">
+    <ExerciseLibraryBody open userId={userId} page />
   </section>
 );
 
+/** Filas en un grupo sin borde (como «Comidas de hoy»): miniatura, nombre, músculo y equipo, y chevron. */
 const ExerciseList = ({ items, favorites, onOpen }: {
   items: LibraryExercise[];
   favorites?: Set<string>;
   onOpen: (e: LibraryExercise) => void;
 }) => (
-  <ul className="divide-y divide-border/40">
+  <ul className="overflow-hidden rounded-[22px] bg-card">
     {items.map((e) => (
-      <li key={e.id}>
-        <button type="button" onClick={() => onOpen(e)} className="flex w-full items-center gap-3 py-2.5 text-left transition active:opacity-60">
-          <ExerciseThumb image={e.image} name={e.name} pattern={e.pattern} stimulus={e.stimulus} load={e.load} size="md" />
-          <span className="min-w-0 flex-1">
-            <span className="block truncate type-body font-medium">{e.name}</span>
-            <span className="block truncate type-footnote text-muted-foreground">{subtitle(e)}</span>
+      <li key={e.id} className="group/row">
+        <button type="button" onClick={() => onOpen(e)} className="flex w-full items-center gap-3 pl-3 text-left transition-colors duration-150 active:bg-accent">
+          <span className="py-2.5"><ExerciseThumb image={e.image} name={e.name} pattern={e.pattern} stimulus={e.stimulus} load={e.load} size="md" /></span>
+          {/* El separador nace donde empieza el texto, como en ListRow. */}
+          <span className="flex min-w-0 flex-1 items-center gap-2 self-stretch py-2.5 pr-3 group-[:not(:last-child)]/row:sep-b">
+            <span className="min-w-0 flex-1">
+              <span className="block truncate type-headline">{e.name}</span>
+              <span className="block truncate type-footnote text-muted-foreground">{subtitle(e)}</span>
+            </span>
+            {favorites?.has(e.id) && <Heart className="h-4 w-4 shrink-0 fill-primary text-primary" aria-label="Favorito" />}
+            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/60" aria-hidden />
           </span>
-          {favorites?.has(e.id) && <Heart className="h-4 w-4 shrink-0 fill-primary text-primary" aria-label="Favorito" />}
         </button>
       </li>
     ))}
@@ -182,7 +189,7 @@ const ExerciseList = ({ items, favorites, onOpen }: {
 );
 
 const SectionTitle = ({ children }: { children: string }) => (
-  <h3 className="mb-2 px-1 type-footnote font-semibold uppercase tracking-wide text-muted-foreground">{children}</h3>
+  <h3 className="mb-2.5 type-title3">{children}</h3>
 );
 
 /** Sin búsqueda: recientes, favoritos y los grupos musculares con foto real. */
@@ -198,7 +205,7 @@ const Browse = ({ items, recent, favorites, onOpen, onGroup }: {
     return { g, count: members.length, image: members.find((e) => e.image)?.image ?? null };
   }).filter((x) => x.count > 0);
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {recent.length > 0 && (
         <section>
           <SectionTitle>Recientes</SectionTitle>
@@ -237,14 +244,17 @@ const Browse = ({ items, recent, favorites, onOpen, onGroup }: {
   );
 };
 
+/** Pasos con su número en un círculo dorado tenue; el resto, con un punto dorado. */
 const Bullets = ({ items, numbered }: { items: string[]; numbered?: boolean }) => {
   const List = numbered ? "ol" : "ul";
   return (
-    <List className="space-y-2 rounded-[22px] bg-card p-4">
+    <List className="space-y-3 rounded-[22px] bg-card p-4">
       {items.map((t, i) => (
         <li key={i} className="flex gap-3 type-subhead">
-          <span className="w-5 shrink-0 font-semibold text-primary">{numbered ? i + 1 : "·"}</span>
-          <span className="min-w-0 flex-1">{t}</span>
+          {numbered
+            ? <span aria-hidden className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/15 type-footnote font-bold tabular-nums text-primary">{i + 1}</span>
+            : <span aria-hidden className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />}
+          <span className={cn("min-w-0 flex-1", numbered && "pt-0.5")}>{t}</span>
         </li>
       ))}
     </List>
@@ -286,7 +296,7 @@ const ExerciseDetail = ({ exercise: e, all, byId, favorite, canFavorite, onFavor
       <ExerciseMedia video={e.video} image={e.image} name={e.name} pattern={e.pattern} stimulus={e.stimulus} load={e.load} emptyLabel="Demostración en preparación" className="rounded-[22px]" />
       <div className="mt-4 flex items-start gap-3">
         <div className="min-w-0 flex-1">
-          <h2 className="type-title2 font-bold tracking-tight">{e.name}</h2>
+          <h2 className="text-[28px] font-bold leading-tight tracking-tight">{e.name}</h2>
           {e.altNames.length > 0 && <p className="mt-0.5 type-subhead text-muted-foreground">{e.altNames.join(" · ")}</p>}
         </div>
         {canFavorite && (
@@ -307,7 +317,7 @@ const ExerciseDetail = ({ exercise: e, all, byId, favorite, canFavorite, onFavor
         </div>
       )}
 
-      <div className="mt-6 space-y-6">
+      <div className="mt-8 space-y-8">
         {(e.instructions.length > 0 || e.description) && (
           <section>
             <SectionTitle>Cómo se hace</SectionTitle>
@@ -319,10 +329,18 @@ const ExerciseDetail = ({ exercise: e, all, byId, favorite, canFavorite, onFavor
         {(e.primaryMuscles.length > 0 || e.groups.length > 0) && (
           <section>
             <SectionTitle>Músculos</SectionTitle>
-            <div className="rounded-[22px] bg-card p-4 type-subhead">
-              <p><span className="text-muted-foreground">Principal: </span>{(e.primaryMuscles.length ? e.primaryMuscles : e.groups).join(", ")}</p>
-              {e.secondaryMuscles.length > 0 && <p className="mt-1"><span className="text-muted-foreground">Secundarios: </span>{e.secondaryMuscles.join(", ")}</p>}
-            </div>
+            <dl className="overflow-hidden rounded-[22px] bg-card px-4">
+              <div className="py-3">
+                <dt className="type-footnote text-muted-foreground">Principal</dt>
+                <dd className="mt-0.5 type-headline">{(e.primaryMuscles.length ? e.primaryMuscles : e.groups).join(", ")}</dd>
+              </div>
+              {e.secondaryMuscles.length > 0 && (
+                <div className="sep-t py-3">
+                  <dt className="type-footnote text-muted-foreground">Secundarios</dt>
+                  <dd className="mt-0.5 type-headline">{e.secondaryMuscles.join(", ")}</dd>
+                </div>
+              )}
+            </dl>
           </section>
         )}
         {e.mistakes.length > 0 && <section><SectionTitle>Errores frecuentes</SectionTitle><Bullets items={e.mistakes} /></section>}
