@@ -6,8 +6,9 @@ import Foundation
 enum Snapshots {
     /// Versión del formato: al cambiarlo, las cachés viejas se ignoran solas.
     private static let version = 1
-    /// Una caché más vieja que esto ya no se usa: mejor esqueleto que datos de hace días.
-    private static let maxAge: TimeInterval = 3 * 24 * 60 * 60
+    /// Una caché más vieja que esto ya no se usa. Solo pinta el primer fotograma: la red la
+    /// refresca siempre por detrás, así que 30 días sin abrir la app siguen abriendo al instante.
+    private static let maxAge: TimeInterval = 30 * 24 * 60 * 60
     private static let queue = DispatchQueue(label: "app.autopilotplan.snapshots", qos: .utility)
 
     private static var directory: URL? {

@@ -104,7 +104,10 @@ final class SessionModel: ObservableObject {
         func has(_ r: String) async -> Bool {
             (try? await Backend.client.rpc("has_role", params: ["_user_id": id.uuidString, "_role": r]).execute().value as Bool) ?? false
         }
-        let isAdmin = await has("admin")
+        // Las dos consultas a la vez (antes, una detrás de otra).
+        async let adminCheck = has("admin")
+        async let trainerCheck = has("trainer")
+        let isAdmin = await adminCheck
         guard userId == id else { return }
         #if DEBUG
         // QA visual del panel de Admin sin cuenta admin en el dispositivo.
@@ -117,7 +120,7 @@ final class SessionModel: ObservableObject {
             setRole(.admin, for: id)
             return
         }
-        let isTrainer = await has("trainer")
+        let isTrainer = await trainerCheck
         guard userId == id else { return }
         setRole(isTrainer ? .trainer : .user, for: id)
     }

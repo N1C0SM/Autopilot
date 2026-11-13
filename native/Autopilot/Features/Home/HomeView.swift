@@ -887,10 +887,12 @@ struct HomeView: View {
     private func fetchCalories(userId: UUID) async -> (kcal: Int?, macros: MacroSum?, meals: Int) {
         struct M: Decodable { let calories: Double?; let protein: Double?; let carbs: Double?; let fats: Double? }
         struct N: Decodable { let macros_json: M?; let meals_json: [Meal]? ; struct Meal: Decodable { let name: String? } }
+        // La estimación sale a la vez que el plan (antes iba detrás): sin Plus no hay que esperar dos viajes.
+        async let estimate = MacroEstimate.load(userId: userId)
         let rows: [N] = (try? await Backend.client.from("nutrition_plan").select("macros_json, meals_json").eq("user_id", value: userId).limit(1).execute().value) ?? []
         guard let m = rows.first?.macros_json, m.protein != nil || m.calories != nil else {
             // Sin Plus no se puede leer el plan: los macros se estiman con el onboarding (siempre gratis).
-            if let e = await MacroEstimate.load(userId: userId) { return (Int(e.kcal), MacroSum(p: e.p, c: e.c, f: e.f), 0) }
+            if let e = await estimate { return (Int(e.kcal), MacroSum(p: e.p, c: e.c, f: e.f), 0) }
             return (snapshot?.calories, snapshot?.macros, snapshot?.mealCount ?? 0)
         }
         let kcal = Int((m.calories ?? ((m.protein ?? 0) * 4 + (m.carbs ?? 0) * 4 + (m.fats ?? 0) * 9)).rounded())

@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/shared/integrations/supabase/client", () => ({
   supabase: {
     auth: {
+      storageKey: "sb-test-auth-token",
       onAuthStateChange: (listener: typeof mocks.authListener) => {
         mocks.authListener = listener;
         return { data: { subscription: { unsubscribe: mocks.unsubscribe } } };
@@ -52,6 +53,16 @@ describe("AuthProvider", () => {
       resolveRestore({ data: { session: null }, error: null });
     });
     expect(screen.getByText("saved-user")).toBeInTheDocument();
+  });
+
+  it("paints the saved session at once while supabase renews an expired token", () => {
+    localStorage.setItem("sb-test-auth-token", JSON.stringify({
+      access_token: "caducado", refresh_token: "r", expires_at: 1, user: { id: "stored-user" },
+    }));
+    mocks.getSession.mockReturnValue(new Promise(() => {}));
+    render(<AuthProvider><AuthStatus /></AuthProvider>);
+    expect(screen.getByText("stored-user")).toBeInTheDocument();
+    localStorage.removeItem("sb-test-auth-token");
   });
 
   it("restores the session found in persistent auth storage", async () => {

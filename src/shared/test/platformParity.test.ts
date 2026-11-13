@@ -1002,4 +1002,23 @@ describe("paridad web ↔ apps nativas", () => {
     expect(read("src/app/components/dashboard/RPEDialog.tsx")).toContain("type-figure text-[64px] font-bold leading-none tabular-nums text-primary");
     expect(read("native/Autopilot/Features/Train/WorkoutView.swift")).toContain('Text("\\(rpe)").font(.figure(size: 64)).foregroundStyle(Palette.gold)');
   });
+
+  it("Velocidad: caché de 30 días, rutina siempre fresca de la red y comidas con IA solas una vez al día, en la web y en la app", () => {
+    const screenCache = read("src/shared/lib/screenCache.ts");
+    const snapshots = read("native/Autopilot/Core/Snapshots.swift");
+    expect(screenCache).toContain("SCREEN_CACHE_TTL = 30 * 24 * 60 * 60 * 1000");
+    expect(snapshots).toContain("maxAge: TimeInterval = 30 * 24 * 60 * 60");
+    // La copia en disco solo pinta el primer fotograma; el plan se pide a la red y, sin red, se usa la copia.
+    const training = read("native/Autopilot/Core/Training.swift");
+    expect(training).toMatch(/do \{\s*fetched = try await fetchPlan\(userId: userId\)\s*\} catch \{\s*if !force, let disk = Snapshots\.load/);
+    // Generar comidas con IA cuesta dinero: lo automático, como mucho una vez al día (los botones, siempre).
+    expect(read("src/app/components/dashboard/MealsList.tsx")).toContain("claimMealsAutoGenerate(userId)");
+    const nutritionApp = read("native/Autopilot/Features/Other/OtherViews.swift");
+    expect(nutritionApp).toContain("if Self.claimAutoGenerate(id) { await generateMeals() } else { generateFailed = true }");
+    expect(nutritionApp).toContain('"meals-autogen.');
+    // Hoy en la web: una sola tanda de consultas y la sesión guardada pinta sin esperar a renovarse.
+    const dashboard = read("src/app/pages/Dashboard.tsx");
+    expect(dashboard).not.toContain('await supabase.functions.invoke("check-subscription")');
+    expect(read("src/shared/contexts/AuthContext.tsx")).toContain("useState(readStoredSession)");
+  });
 });

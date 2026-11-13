@@ -1,4 +1,4 @@
-import { mealsDoneKey, readMealsDone } from "@/shared/lib/mealsDone";
+import { claimMealsAutoGenerate, mealsDoneKey, readMealsDone } from "@/shared/lib/mealsDone";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { Check, Clock, TriangleAlert, UserRound, type LucideIcon } from "lucide-react";
@@ -128,13 +128,18 @@ const MealsList = ({ meals, macros, onOpenProfile, userId, onMealsGenerated }: P
   const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
   useEffect(() => {
     if (meals.length || !onMealsGenerated || asked.current) return;
-    if (!userId) { void generate(); return; }
+    // Una vez al día como mucho: si ya se intentó hoy, queda «Volver a intentarlo».
+    const auto = () => {
+      if (claimMealsAutoGenerate(userId)) void generate();
+      else { asked.current = true; setGenerateFailed(true); }
+    };
+    if (!userId) { auto(); return; }
     let alive = true;
     void supabase.from("onboarding").select("nutrition_preferences").eq("user_id", userId).maybeSingle().then(({ data }) => {
       if (!alive) return;
       const missing = !data?.nutrition_preferences?.trim();
       setNeedsSetup(missing);
-      if (!missing) void generate();
+      if (!missing) auto();
     });
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps

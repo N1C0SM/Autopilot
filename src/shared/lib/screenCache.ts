@@ -10,8 +10,11 @@
 const PREFIX = "autopilot:screen:";
 /** Al cambiar el formato, las copias antiguas se descartan solas. */
 const VERSION = 1;
-/** Más viejo que esto ya no se pinta: mejor esqueleto que datos de hace días. */
-export const SCREEN_CACHE_TTL = 3 * 24 * 60 * 60 * 1000;
+/**
+ * Más viejo que esto ya no se pinta. Solo es el primer fotograma: la red lo refresca siempre por
+ * detrás, así que volver tras semanas sin abrir la app sigue siendo instantáneo. Igual en la nativa.
+ */
+export const SCREEN_CACHE_TTL = 30 * 24 * 60 * 60 * 1000;
 
 type Envelope<T> = { v: number; at: number; data: T };
 

@@ -438,13 +438,19 @@ enum TrainingRepo {
             prefetchCompletions(userId: userId)
             return cached
         }
-        // Copia en disco de la sesión anterior: la rutina se pinta al abrir la app, sin esperar.
-        if !force, let disk = Snapshots.load([DayPlan].self, planKey(userId)) {
-            TrainingCache.shared.storePlan(disk, userId: userId)
-            prefetchCompletions(userId: userId)
-            return disk
+        // La copia en disco ya pinta al abrir (`instantPlan`); aquí manda la red para que un cambio
+        // hecho en la web o por el piloto automático llegue enseguida. Sin red, la copia en disco.
+        let fetched: [DayPlan]
+        do {
+            fetched = try await fetchPlan(userId: userId)
+        } catch {
+            if !force, let disk = Snapshots.load([DayPlan].self, planKey(userId)) {
+                TrainingCache.shared.storePlan(disk, userId: userId)
+                return disk
+            }
+            throw error
         }
-        let days = await withImages(try await fetchPlan(userId: userId))
+        let days = await withImages(fetched)
         TrainingCache.shared.storePlan(days, userId: userId)
         Snapshots.save(days, planKey(userId))
         // PlanModel pide el plan y *después* las completions, en serie: se adelanta la segunda

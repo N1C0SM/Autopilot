@@ -1,6 +1,6 @@
 import { forgetAccount, rememberSession } from "@/shared/lib/accounts";
 import { supportsMultipleAccounts } from "@/shared/lib/platform";
-import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 import { authRedirect, verifyEmailRedirect } from "@/shared/lib/authRedirect";
@@ -21,10 +21,38 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+/**
+ * La sesión guardada en este navegador, leída sin red. Con el token caducado (más de una hora
+ * sin abrir) supabase lo renueva antes de contestar y la app esperaba con un spinner; así se
+ * pinta al instante con lo guardado y la renovación sigue por detrás: las consultas la esperan
+ * solas y, si no se puede renovar, llega el cierre de sesión como siempre. Igual que la app
+ * nativa (`emitLocalSessionAsInitialSession`). En una pestaña de suplantación no se adelanta nada.
+ */
+function readStoredSession(): Session | null {
+  try {
+    if (sessionStorage.getItem("lovable-impersonating") === "1") return null;
+    const key = (supabase.auth as unknown as { storageKey?: unknown }).storageKey;
+    if (typeof key !== "string") return null;
+    const raw = localStorage.getItem(key);
+    const parsed = raw ? (JSON.parse(raw) as Partial<Session> | null) : null;
+    return parsed?.user?.id && parsed.refresh_token ? (parsed as Session) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [stored] = useState(readStoredSession);
+  const [user, setUser] = useState<User | null>(stored?.user ?? null);
+  const [session, setSession] = useState<Session | null>(stored);
+  const [loading, setLoading] = useState(!stored);
+  /**
+   * Misma persona, mismo objeto: al confirmar la sesión guardada (o renovar el token cada hora)
+   * no cambia `user`, así que las pantallas no repiten sus consultas ni sus suscripciones.
+   */
+  const applyUser = useCallback((next: User | null) => {
+    setUser((prev) => (prev && next && prev.id === next.id && prev.updated_at === next.updated_at ? prev : next));
+  }, []);
   const authEventReceived = useRef(false);
 
   useEffect(() => {
@@ -34,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // En las apps nativas cada sesión queda guardada para poder cambiar de cuenta.
       if (session && supportsMultipleAccounts()) rememberSession(session);
       setSession(session);
-      setUser(session?.user ?? null);
+      applyUser(session?.user ?? null);
       setLoading(false);
     });
 
@@ -45,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         toast.error("No se pudo recuperar tu sesión. Comprueba la conexión e inténtalo de nuevo.");
       }
       setSession(session);
-      setUser(session?.user ?? null);
+      applyUser(session?.user ?? null);
       setLoading(false);
     }).catch((error: unknown) => {
       if (!active || authEventReceived.current) return;
@@ -58,7 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       active = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [applyUser]);
 
   const signUp = async (email: string, password: string, metadata?: Record<string, string>, options?: { next?: string }) => {
     const { data, error } = await supabase.auth.signUp({

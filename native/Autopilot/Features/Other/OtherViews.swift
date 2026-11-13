@@ -637,7 +637,19 @@ struct NutritionView: View {
         guard let result else { return }
         if result.reason == "no_access" { setAccess(false); return }
         setAccess(true)
-        if hasPrefs { await generateMeals() } else { needsSetup = true }
+        guard hasPrefs else { needsSetup = true; return }
+        // Una vez al día como mucho: si ya se intentó hoy, queda «Volver a intentarlo».
+        if Self.claimAutoGenerate(id) { await generateMeals() } else { generateFailed = true }
+    }
+
+    /// Las comidas con IA cuestan dinero: la preparación automática se intenta como mucho una vez
+    /// al día por cuenta (como `claimMealsAutoGenerate` en la web). Los botones no pasan por aquí.
+    private static func claimAutoGenerate(_ id: UUID) -> Bool {
+        let key = "meals-autogen.\(id.uuidString.lowercased())"
+        let today = LocalDate.string()
+        if UserDefaults.standard.string(forKey: key) == today { return false }
+        UserDefaults.standard.set(today, forKey: key)
+        return true
     }
 
     /// Comidas del día con las preferencias del onboarding (`sync-nutrition-macros`, igual que la web).

@@ -225,25 +225,48 @@ const Dashboard = () => {
     }
   }, [searchParams]);
 
+  const fetchDataRef = useRef<(() => Promise<void>) | null>(null);
   const fetchData = useCallback(async ({
     syncSubscription = false,
     checkAdmin = false,
   }: { syncSubscription?: boolean; checkAdmin?: boolean } = {}) => {
     if (!user) return;
 
-    if (syncSubscription) {
-      await supabase.functions.invoke("check-subscription").catch(() => {});
-    }
+    // Todo a la vez: antes iba en cadena (Stripe → perfil → onboarding → plan), cuatro viajes
+    // seguidos antes de pintar. La comprobación con Stripe ya no frena la pantalla: si cambia
+    // el plan, se vuelve a leer al terminar.
+    const syncRequest = syncSubscription
+      ? supabase.functions.invoke("check-subscription").catch(() => null)
+      : null;
 
-    const profileRequest = supabase
-      .from("profiles")
-      .select("plan_status, payment_status, name, avatar_url, created_at, subscription_tier, subscription_status, subscription_end, stripe_payment_id")
-      .eq("user_id", user.id)
-      .maybeSingle();
-    const roleRequest = checkAdmin
-      ? supabase.rpc("has_role", { _user_id: user.id, _role: "admin" })
-      : Promise.resolve(null);
-    const [profileResult, roleResult] = await Promise.all([profileRequest, roleRequest]);
+    const today = new Date();
+    const todayDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+    const weekStartDate = `${weekStart.getFullYear()}-${String(weekStart.getMonth() + 1).padStart(2, "0")}-${String(weekStart.getDate()).padStart(2, "0")}`;
+
+    const [profileResult, roleResult, onbResult, { data: tp }, { data: np }, todayCompletions, weeklyCompletions] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("plan_status, payment_status, name, avatar_url, created_at, subscription_tier, subscription_status, subscription_end, stripe_payment_id")
+        .eq("user_id", user.id)
+        .maybeSingle(),
+      checkAdmin ? supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }) : Promise.resolve(null),
+      supabase.from("onboarding").select("id, weight, sex, goal").eq("user_id", user.id).maybeSingle(),
+      supabase.from("training_plan").select("workouts_json").eq("user_id", user.id).maybeSingle(),
+      supabase.from("nutrition_plan").select("macros_json, meals_json").eq("user_id", user.id).maybeSingle(),
+      supabase
+        .from("day_completions")
+        .select("day_label")
+        .eq("user_id", user.id)
+        .eq("completed_at", todayDate),
+      supabase
+        .from("day_completions")
+        .select("day_label, completed_at")
+        .eq("user_id", user.id)
+        .gte("completed_at", weekStartDate)
+        .lte("completed_at", todayDate),
+    ]);
 
     if (roleResult?.data) {
       navigate("/admin");
@@ -282,11 +305,7 @@ const Dashboard = () => {
       }
 
       // Si faltan sus respuestas no se pueden calcular calorías ni macros: las pedimos antes de seguir.
-      const { data: onb, error: onbError } = await supabase
-        .from("onboarding")
-        .select("id, weight, sex, goal")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      const { data: onb, error: onbError } = onbResult;
       if (onbError) {
         setLoadError(true);
         setLoading(false);
@@ -302,27 +321,6 @@ const Dashboard = () => {
         : null);
 
       if (profile.plan_status === "plan_ready") {
-        const today = new Date();
-        const todayDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-        const weekStart = new Date(today);
-        weekStart.setDate(today.getDate() - ((today.getDay() + 6) % 7));
-        const weekStartDate = `${weekStart.getFullYear()}-${String(weekStart.getMonth() + 1).padStart(2, "0")}-${String(weekStart.getDate()).padStart(2, "0")}`;
-        const [{ data: tp }, { data: np }, todayCompletions, weeklyCompletions] = await Promise.all([
-          supabase.from("training_plan").select("workouts_json").eq("user_id", user.id).maybeSingle(),
-          supabase.from("nutrition_plan").select("macros_json, meals_json").eq("user_id", user.id).maybeSingle(),
-          supabase
-            .from("day_completions")
-            .select("day_label")
-            .eq("user_id", user.id)
-            .eq("completed_at", todayDate),
-          supabase
-            .from("day_completions")
-            .select("day_label, completed_at")
-            .eq("user_id", user.id)
-            .gte("completed_at", weekStartDate)
-            .lte("completed_at", todayDate),
-        ]);
-
         const plans = tp?.workouts_json as unknown as DayPlan[] | undefined;
         if (plans) {
           setDayPlans(plans);
@@ -361,7 +359,16 @@ const Dashboard = () => {
     lastFetchRef.current = Date.now();
     setLoadError(false);
     setLoading(false);
+    // Si Stripe cambió el plan mientras se pintaba, se relee una vez (sin volver a Stripe).
+    const seenTier = profile.subscription_tier || "free";
+    const seenPaid = profile.payment_status === "paid";
+    void syncRequest?.then((res) => {
+      const sync = res?.data as { tier?: string; subscribed?: boolean } | null | undefined;
+      if (!sync?.tier) return;
+      if (sync.tier !== seenTier || Boolean(sync.subscribed) !== seenPaid) void fetchDataRef.current?.();
+    });
   }, [user, navigate, campaign]);
+  useEffect(() => { fetchDataRef.current = fetchData; }, [fetchData]);
 
   // Lo bueno del panel se guarda para abrirlo al instante la próxima vez.
   useEffect(() => {
@@ -428,6 +435,32 @@ const Dashboard = () => {
       window.removeEventListener("autopilot:nutrition-plan-updated", onNutritionUpdated);
     };
   }, [user, fetchData]);
+
+  // Con Hoy pintado y el navegador libre se descargan las demás pestañas: el primer toque en
+  // Entrenar, Nutrición o Progreso abre al momento, sin el círculo de carga. Con ahorro de datos, no.
+  useEffect(() => {
+    if (loading) return;
+    if ((navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData) return;
+    const warm = () => {
+      void Promise.allSettled([
+        import("@/app/components/dashboard/TrainingPlanView"),
+        import("@/app/components/dashboard/WorkoutTracker"),
+        import("@/app/components/dashboard/MealsList"),
+        import("@/app/components/ProgressCharts"),
+        import("@/app/components/dashboard/WorkoutProgress"),
+        import("@/app/components/dashboard/PRsList"),
+        import("@/app/components/dashboard/ProgressPhotos"),
+        import("@/app/components/library/ExerciseLibrarySheet"),
+      ]);
+    };
+    // Safari no tiene requestIdleCallback: allí basta con un momento tras pintar.
+    if (typeof window.requestIdleCallback === "function") {
+      const id = window.requestIdleCallback(warm, { timeout: 3000 });
+      return () => window.cancelIdleCallback(id);
+    }
+    const id = window.setTimeout(warm, 1200);
+    return () => window.clearTimeout(id);
+  }, [loading]);
 
   // Al volver a Hoy, refrescamos como mucho cada 30 s para no mostrar datos viejos.
   useEffect(() => {
