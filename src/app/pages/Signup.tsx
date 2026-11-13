@@ -236,7 +236,7 @@ const Signup = () => {
   const hasNotices = (fromScan && Boolean(scanCtx?.result)) || fromQuiz || (Boolean(referralCode) && !isFree);
 
   return (
-    <Screen onBack={() => navigate("/")} centered maxWidth="sm" contentClassName="py-6" footer={footer}>
+    <Screen onBack={() => navigate("/")} centered maxWidth="sm" contentClassName="py-6" footer={footer} stickyFooter={false}>
       <Helmet>
         <title>Crear cuenta · Autopilot</title>
         <meta name="description" content="Crea tu cuenta gratis, empieza tu rutina y registra tu progreso. Sin tarjeta para empezar." />
