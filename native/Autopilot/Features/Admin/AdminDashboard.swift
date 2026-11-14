@@ -15,6 +15,9 @@ final class AdminData: ObservableObject {
         var id: String { user_id }
         var display: String { (name?.trimmingCharacters(in: .whitespaces)).flatMap { $0.isEmpty ? nil : $0 } ?? email ?? "?" }
         var createdDate: Date? { DateFormatter.ymd.date(from: String(created_at.prefix(10))) }
+        var showsPaymentIndicator: Bool {
+            AdminPaymentIndicator.isVisible(tier: subscription_tier, status: payment_status)
+        }
         var traveling: Bool {
             guard let t = travel_mode_until, let d = DateFormatter.ymd.date(from: String(t.prefix(10))) else { return false }
             return d >= Calendar.current.startOfDay(for: Date())
@@ -397,7 +400,7 @@ struct AdminDashboardView: View {
                             }
                             Spacer(minLength: 8)
                             PlanBadge(planStatus: u.plan_status, traveling: u.traveling)
-                            PaymentDot(paid: u.payment_status == "paid")
+                            if u.showsPaymentIndicator { PaymentDot(paid: u.payment_status == "paid") }
                             Image(systemName: "chevron.right")
                                 .font(.inter(.footnote).weight(.semibold))
                                 .foregroundStyle(Palette.muted)
@@ -462,6 +465,13 @@ struct PlanBadge: View {
             : planStatus == "plan_ready" ? ("Plan listo", Palette.success)
             : planStatus == "plan_pending" ? ("Pendiente", Palette.gold) : ("Onboarding", Palette.muted)
         AdminStatusPill(text: label, tint: color)
+    }
+}
+
+enum AdminPaymentIndicator {
+    static func isVisible(tier: String?, status: String?) -> Bool {
+        ["training", "plus", "full", "transform", "personal", "coach"].contains(tier ?? "")
+            && ["paid", "unpaid"].contains(status ?? "")
     }
 }
 

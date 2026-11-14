@@ -148,6 +148,13 @@
       "when": 1794502120271,
       "tag": "0020_brand_photos_public",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1794638349817,
+      "tag": "0021_restore_public_brand_photo_lookup",
+      "breakpoints": true
     }
   ]
 }

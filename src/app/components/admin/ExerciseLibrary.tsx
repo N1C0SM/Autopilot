@@ -417,9 +417,11 @@ const ExerciseFormDialog = ({
         </DialogHeader>
 
         {/* Vídeo del ejercicio arriba del todo, o su imagen si aún no tiene vídeo */}
-        <WithImageFallback image={form.image_url}>
-          {(image) => <ExerciseMedia video={form.video_url} image={image} name={form.name} className="rounded-[14px]" />}
-        </WithImageFallback>
+        <div className="min-w-0 w-full">
+          <WithImageFallback image={form.image_url}>
+            {(image) => <ExerciseMedia video={form.video_url} image={image} name={form.name} className="rounded-[14px]" />}
+          </WithImageFallback>
+        </div>
 
         <div className="space-y-6 pt-1">
           <FormSection title="Información básica">

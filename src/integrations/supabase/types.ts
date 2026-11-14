@@ -2697,6 +2697,13 @@ export type Database = {
       }
       exercise_name_key: { Args: { _name: string }; Returns: string }
       get_apk_download_enabled: { Args: never; Returns: boolean }
+      get_brand_photos_public: {
+        Args: never
+        Returns: {
+          id: string
+          image_url: string
+        }[]
+      }
       get_consumer_plans_public: {
         Args: never
         Returns: {

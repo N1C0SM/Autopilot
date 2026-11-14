@@ -1,6 +1,7 @@
 # Roadmap
 
 ## Peticiones actuales
+- [ ] Continuar auditoría: separar foto y formulario de Biblioteca, contraste de Guías, navegación de Análisis corporal, indicadores de cuentas gratis y confirmaciones accesibles; comprobar fotos públicas del cuestionario y paridad.
 - [x] Tracker: visor de 140, encuadre completo, caché PNG transparente y crunch APNG (12 fotogramas); 23 pruebas específicas y lectura en Biblioteca verificadas.
 - [ ] Verificar tracker en iPhone/Mac tras recompilar (requiere Xcode/dispositivo); prueba completa web bloqueada por sesión admin sin acceso al tracker. La suite general de paridad reporta 15 fallos fuera de las pruebas específicas.
 - [ ] Aplicar los 29 ejercicios y los siete días de THE 0.1% PROTOCOL a la cuenta indicada y verificar la lectura.

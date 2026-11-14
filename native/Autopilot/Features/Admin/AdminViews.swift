@@ -174,6 +174,9 @@ struct AdminUsersView: View {
         let user_id: String; let name: String?; let email: String?; let created_at: String
         let plan_status: String?; let payment_status: String?; let avatar_url: String?
         let travel_mode_until: String?; let subscription_tier: String?
+        var showsPaymentIndicator: Bool {
+            AdminPaymentIndicator.isVisible(tier: subscription_tier, status: payment_status)
+        }
         var id: String { user_id }
         var display: String { (name?.trimmingCharacters(in: .whitespaces)).flatMap { $0.isEmpty ? nil : $0 } ?? email ?? "?" }
         var traveling: Bool {
@@ -212,8 +215,8 @@ struct AdminUsersView: View {
         let ok = fold(query).split(separator: " ").allSatisfy { hay.contains($0) }
         switch filter {
         case "all": return ok
-        case "paid": return ok && u.payment_status == "paid"
-        case "unpaid": return ok && u.payment_status == "unpaid"
+        case "paid": return ok && u.showsPaymentIndicator && u.payment_status == "paid"
+        case "unpaid": return ok && u.showsPaymentIndicator && u.payment_status == "unpaid"
         case "traveling": return ok && u.traveling
         default: return ok && u.plan_status == filter
         }
@@ -369,7 +372,7 @@ struct AdminUsersView: View {
             Spacer(minLength: 8)
             if kind == "user" {
                 PlanBadge(planStatus: u.plan_status, traveling: u.traveling)
-                PaymentDot(paid: u.payment_status == "paid")
+                if u.showsPaymentIndicator { PaymentDot(paid: u.payment_status == "paid") }
             }
             Image(systemName: "chevron.right")
                 .font(.inter(.footnote).weight(.semibold))
