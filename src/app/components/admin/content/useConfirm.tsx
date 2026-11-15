@@ -56,10 +56,12 @@ export function useConfirm() {
   const destructive = options?.destructive !== false;
   const dialog = (
     <AlertDialog open={open} onOpenChange={(next) => { if (!next) settle(false); }}>
-      <AlertDialogContent onOpenAutoFocus={skipAutoFocusOnTouch} {...(options?.description ? {} : { "aria-describedby": undefined })}>
+      <AlertDialogContent onOpenAutoFocus={skipAutoFocusOnTouch}>
         <AlertDialogHeader>
           <AlertDialogTitle>{options?.title}</AlertDialogTitle>
-          {options?.description ? <AlertDialogDescription>{options.description}</AlertDialogDescription> : null}
+          <AlertDialogDescription>
+            {options?.description || "Confirma la acción o cancela para dejar todo como está."}
+          </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancelar</AlertDialogCancel>
