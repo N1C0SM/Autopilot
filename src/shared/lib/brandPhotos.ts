@@ -8,6 +8,10 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import fallbackPhoto from "@/shared/assets/landing/hero-athlete.jpg";
+import gymPhoto from "@/shared/assets/academy/fases-de-la-repeticion.jpg";
+import dumbbellsPhoto from "@/shared/assets/academy/tecnica-eficiente.jpg";
+import homePhoto from "@/shared/assets/academy/palancas-en-calistenia.jpg";
+import pullupPhoto from "@/shared/assets/academy/como-empezar-en-calistenia.jpg";
 import { fastImage } from "./fastImage";
 
 export const BRAND_PHOTO_EXERCISES = {
@@ -19,13 +23,22 @@ export const BRAND_PHOTO_EXERCISES = {
 
 type BrandPhotoKey = keyof typeof BRAND_PHOTO_EXERCISES;
 const KEYS = Object.keys(BRAND_PHOTO_EXERCISES) as BrandPhotoKey[];
-const STORAGE_KEY = "brand-photos-v1";
+const STORAGE_KEY = "brand-photos-v2";
 const RETRY_MS = 60_000;
+const FALLBACKS: Record<BrandPhotoKey, string> = {
+  gym: gymPhoto, dumbbells: dumbbellsPhoto, home: homePhoto, pullupBar: pullupPhoto,
+};
+
+function validPhoto(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  try { return new URL(value).protocol === "https:"; } catch { return false; }
+}
 
 function readStored(): Partial<Record<BrandPhotoKey, string>> {
   try {
     const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-    return parsed && typeof parsed === "object" ? parsed : {};
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    return Object.fromEntries(KEYS.filter((key) => validPhoto(parsed[key])).map((key) => [key, parsed[key]]));
   } catch {
     return {};
   }
@@ -37,7 +50,10 @@ let inflight: Promise<void> | null = null;
 let lastAttempt = 0;
 const listeners = new Set<() => void>();
 
-const photo = (key: BrandPhotoKey) => (urls[key] ? fastImage(urls[key]!, 1000) : fallbackPhoto);
+const photo = (key: BrandPhotoKey) => {
+  const url = urls[key];
+  return url ? fastImage(url, 1000) : FALLBACKS[key] ?? fallbackPhoto;
+};
 
 /** Siempre la última URL conocida; hasta saberla, una foto local (nunca una imagen rota). */
 export const BRAND_PHOTOS = {
@@ -57,6 +73,7 @@ async function fetchRows(): Promise<Row[]> {
   if (!auth.session) {
     const { data, error } = await supabase.rpc("get_brand_photos_public" as never);
     if (!error && Array.isArray(data)) return data as Row[];
+    return [];
   }
   const res = await supabase.from("exercises").select("id, image_url").in("id", ids);
   return (res.data as Row[] | null) ?? [];
@@ -72,7 +89,7 @@ export function refreshBrandPhotos(): Promise<void> {
       const next = { ...urls };
       for (const key of KEYS) {
         const url = rows.find((r) => r.id === BRAND_PHOTO_EXERCISES[key])?.image_url;
-        if (url) next[key] = url;
+        if (validPhoto(url)) next[key] = url;
       }
       if (JSON.stringify(next) === JSON.stringify(urls)) return;
       urls = next;

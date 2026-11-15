@@ -3,7 +3,8 @@
 ## Peticiones actuales
 - [x] Auditoría: separación de foto/formulario de Biblioteca, contraste de Guías e indicadores de cuentas gratis corregidos en la ronda anterior.
 - [x] Confirmaciones y campos de texto compartidos: explicación accesible incluso cuando no se proporciona una descripción específica; pruebas de confirmar/cancelar y edición verificadas.
-- [ ] Fotos públicas del cuestionario: consulta preparada, activación bloqueada porque Lovable Cloud no permite conectar con el servicio actual; no se aplicó ningún cambio de datos.
+- [ ] Fotos del cuestionario: respaldos distintos compartidos web/iPhone y caché validada; activación pública pendiente por conexión de Lovable Cloud.
+- [ ] Análisis corporal: conservar la sección elegida al volver al panel, también con cuenta de administrador.
 - [ ] Paridad web/nativa: 13 comprobaciones fallan; revisar navegación de Análisis corporal y diferencias restantes sin dar por comprobada la app nativa.
 - [x] Tracker: visor de 140, encuadre completo, caché PNG transparente y crunch APNG (12 fotogramas); 23 pruebas específicas y lectura en Biblioteca verificadas.
 - [ ] Verificar tracker en iPhone/Mac tras recompilar (requiere Xcode/dispositivo); prueba completa web bloqueada por sesión admin sin acceso al tracker. La suite general de paridad reporta 15 fallos fuera de las pruebas específicas.
