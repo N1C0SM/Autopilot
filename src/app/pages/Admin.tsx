@@ -210,8 +210,8 @@ const Admin = () => {
 
   if (!isAdmin) return null;
 
-  // Hide the currently-logged-in admin from every list
-  const users = allUsers.filter((u) => u.user_id !== user?.id);
+  // La cuenta con la sesión abierta también aparece (en su grupo de admin).
+  const users = allUsers;
 
   // Una ficha abierta es una pantalla empujada: su barra lleva el nombre y "‹ Usuarios".
   const detailUser = section === "users" ? selectedUser : null;
