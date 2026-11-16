@@ -1,6 +1,7 @@
 # Roadmap
 
 ## Peticiones actuales
+- [x] Entrada general de administradores corregida: sesión real abre /admin, vista explícita de usuario preservada y 15 pruebas de entrada/callback pasan; no se ha publicado ni probado el consentimiento externo de Google/Apple.
 - [x] Auditoría: separación de foto/formulario de Biblioteca, contraste de Guías e indicadores de cuentas gratis corregidos en la ronda anterior.
 - [x] Confirmaciones y campos de texto compartidos: explicación accesible incluso cuando no se proporciona una descripción específica; pruebas de confirmar/cancelar y edición verificadas.
 - [x] Fotos del cuestionario: respaldos distintos comprobados en navegador; caché web/nativa elimina fotos retiradas sin perder las conocidas si falla la conexión.
