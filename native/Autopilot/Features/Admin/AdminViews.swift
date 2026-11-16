@@ -523,7 +523,7 @@ struct AdminWebSectionView: View {
 
     private var webURL: URL? {
         let webSection = String(section.rawValue.dropFirst(5)).lowercased()
-        return URL(string: "https://autopilotplan.app/admin?section=\(webSection)")
+        return URL(string: "https://app.autopilotplan.com/admin?section=\(webSection)")
     }
 
     var body: some View {

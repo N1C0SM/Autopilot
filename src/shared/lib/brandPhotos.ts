@@ -88,8 +88,10 @@ export function refreshBrandPhotos(): Promise<void> {
     .then((rows) => {
       const next = { ...urls };
       for (const key of KEYS) {
-        const url = rows.find((r) => r.id === BRAND_PHOTO_EXERCISES[key])?.image_url;
-        if (validPhoto(url)) next[key] = url;
+        const row = rows.find((r) => r.id === BRAND_PHOTO_EXERCISES[key]);
+        if (!row) continue;
+        if (validPhoto(row.image_url)) next[key] = row.image_url;
+        else delete next[key];
       }
       if (JSON.stringify(next) === JSON.stringify(urls)) return;
       urls = next;

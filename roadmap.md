@@ -3,9 +3,11 @@
 ## Peticiones actuales
 - [x] Auditoría: separación de foto/formulario de Biblioteca, contraste de Guías e indicadores de cuentas gratis corregidos en la ronda anterior.
 - [x] Confirmaciones y campos de texto compartidos: explicación accesible incluso cuando no se proporciona una descripción específica; pruebas de confirmar/cancelar y edición verificadas.
-- [ ] Fotos del cuestionario: respaldos distintos compartidos web/iPhone y caché validada; activación pública pendiente por conexión de Lovable Cloud.
-- [ ] Análisis corporal: conservar la sección elegida al volver al panel, también con cuenta de administrador.
-- [ ] Paridad web/nativa: 13 comprobaciones fallan; revisar navegación de Análisis corporal y diferencias restantes sin dar por comprobada la app nativa.
+- [x] Fotos del cuestionario: respaldos distintos comprobados en navegador; caché web/nativa elimina fotos retiradas sin perder las conocidas si falla la conexión.
+- [ ] Activación pública de fotos de biblioteca: bloqueada por conexión de Lovable Cloud.
+- [x] Enlaces antiguos de iPhone/Mac: legal, ayuda y blog apuntan al sitio público; administración al subdominio de la app.
+- [ ] Análisis corporal: destino Nutrición comprobado con sesión en navegador y cinco pruebas pasan; lectura del panel y cuenta admin bloqueadas por Lovable Cloud aún no disponible.
+- [ ] Paridad web/nativa: 13 comprobaciones siguen fallando; incluyen expectativas de diseños anteriores y diferencias de Progreso/entreno que requieren revisión, no cambios ciegos del test.
 - [x] Tracker: visor de 140, encuadre completo, caché PNG transparente y crunch APNG (12 fotogramas); 23 pruebas específicas y lectura en Biblioteca verificadas.
 - [ ] Verificar tracker en iPhone/Mac tras recompilar (requiere Xcode/dispositivo); prueba completa web bloqueada por sesión admin sin acceso al tracker. La suite general de paridad reporta 15 fallos fuera de las pruebas específicas.
 - [ ] Aplicar los 29 ejercicios y los siete días de THE 0.1% PROTOCOL a la cuenta indicada y verificar la lectura.

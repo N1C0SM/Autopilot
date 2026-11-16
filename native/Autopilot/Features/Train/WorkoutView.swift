@@ -1754,7 +1754,7 @@ struct WorkoutSummaryView: View {
         HStack {
             Text("AUTOPILOT").font(.apCaption.weight(.bold)).tracking(2).foregroundStyle(Palette.foreground)
             Spacer()
-            Text("autopilotplan.app").font(.apCaption).foregroundStyle(Palette.muted)
+            Text("autopilotplan.com").font(.apCaption).foregroundStyle(Palette.muted)
         }
     }
 

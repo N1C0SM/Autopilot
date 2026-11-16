@@ -23,14 +23,17 @@ final class BrandPhotos {
     }
 
     static let shared = BrandPhotos()
-    private static let storageKey = "brand-photos-v1"
+    private static let storageKey = "brand-photos-v2"
 
     private var urls: [String: String]
     @ObservationIgnored private var refreshing = false
     @ObservationIgnored private var lastAttempt: Date?
 
     private init() {
-        urls = (UserDefaults.standard.dictionary(forKey: Self.storageKey) as? [String: String]) ?? [:]
+        let stored = (UserDefaults.standard.dictionary(forKey: Self.storageKey) as? [String: String]) ?? [:]
+        urls = stored.filter { key, value in
+            Kind(rawValue: key) != nil && URL(string: value)?.scheme == "https"
+        }
     }
 
     /// URL actual como texto ("" hasta saberla). Leerla en `body` repinta la vista cuando llega.
@@ -49,16 +52,21 @@ final class BrandPhotos {
 
         struct Row: Decodable { let id: UUID; let image_url: String? }
         var rows: [Row] = []
-        if let found: [Row] = try? await Backend.client.rpc("get_brand_photos_public").execute().value {
-            rows = found
-        } else if let found: [Row] = try? await Backend.client.from("exercises").select("id, image_url")
-            .in("id", values: Kind.allCases.map(\.exerciseId)).execute().value {
+        if Backend.client.auth.currentSession != nil {
+            if let found: [Row] = try? await Backend.client.from("exercises").select("id, image_url")
+                .in("id", values: Kind.allCases.map(\.exerciseId)).execute().value {
+                rows = found
+            }
+        } else if let found: [Row] = try? await Backend.client.rpc("get_brand_photos_public").execute().value {
             rows = found
         }
         var next = urls
         for kind in Kind.allCases {
-            if let url = rows.first(where: { $0.id.uuidString.lowercased() == kind.exerciseId })?.image_url, !url.isEmpty {
+            guard let row = rows.first(where: { $0.id.uuidString.lowercased() == kind.exerciseId }) else { continue }
+            if let url = row.image_url, URL(string: url)?.scheme == "https" {
                 next[kind.rawValue] = url
+            } else {
+                next.removeValue(forKey: kind.rawValue)
             }
         }
         guard next != urls else { return }
