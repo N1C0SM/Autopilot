@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import MyRoutines, { RoutinesPreview } from "@/app/components/dashboard/MyRoutines";
 import type { DayPlan } from "@/shared/types/training";
@@ -62,5 +62,46 @@ describe("Mis rutinas", () => {
     expect(screen.getAllByRole("button", { name: /^R / })).toHaveLength(3);
     fireEvent.click(screen.getByRole("button", { name: "Ver todas" }));
     expect(onOpen).toHaveBeenCalled();
+  });
+
+  it("«Completar con el autopiloto»: fila secundaria con lo que cubren tus rutinas, el AP mientras trabaja y «Hemos respetado tus N rutinas»", async () => {
+    let finish: (kept: number | null) => void = () => {};
+    const onComplete = vi.fn(() => new Promise<number | null>((resolve) => { finish = resolve; }));
+    const routines = [routine("Lunes", "Torso", 2), routine("Jueves", "Pierna", 2)];
+    const { rerender } = render(<MyRoutines routines={routines} limitReached={false} autopilot={{ own: 2, frequency: 4, onComplete }} {...handlers()} />);
+    expect(screen.getByText("Tus rutinas cubren 2 de tus 4 días de entreno")).toBeInTheDocument();
+    const action = screen.getByRole("button", { name: "Completar con el autopiloto" });
+    // Secundaria: la acción dorada de la sección sigue siendo «Nueva rutina».
+    expect(action.className).toContain("bg-secondary");
+    fireEvent.click(action);
+    expect(onComplete).toHaveBeenCalledTimes(1);
+    const busy = screen.getByRole("button", { name: /Preparando tus sesiones…/ });
+    expect(busy).toHaveAttribute("aria-busy", "true");
+    fireEvent.click(busy);
+    expect(onComplete).toHaveBeenCalledTimes(1);
+    // El plan se refresca antes de terminar: ya no lo pide, pero la carga sigue en su sitio.
+    rerender(<MyRoutines routines={routines} limitReached={false} autopilot={null} {...handlers()} />);
+    expect(screen.getByRole("button", { name: /Preparando tus sesiones…/ })).toBeInTheDocument();
+    await act(async () => { finish(2); });
+    expect(screen.getByRole("status")).toHaveTextContent("Hemos respetado tus 2 rutinas");
+    expect(screen.getByRole("status")).toHaveTextContent("El piloto automático solo adapta sus propias sesiones.");
+    expect(screen.queryByRole("button", { name: "Completar con el autopiloto" })).toBeNull();
+  });
+
+  it("«Completar con el autopiloto»: en singular con una rutina y, si falla, el aviso con «Reintentar»", async () => {
+    const onComplete = vi.fn().mockResolvedValueOnce(null).mockResolvedValueOnce(1);
+    render(<MyRoutines routines={[routine("Lunes", "Torso", 2)]} limitReached={false} autopilot={{ own: 1, frequency: 3, onComplete }} {...handlers()} />);
+    expect(screen.getByText("Tu rutina cubre 1 de tus 3 días de entreno")).toBeInTheDocument();
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Completar con el autopiloto" })); });
+    expect(screen.getByRole("alert")).toHaveTextContent("No se han podido preparar tus sesiones");
+    expect(screen.getByRole("alert")).toHaveTextContent("Tus rutinas siguen guardadas.");
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Reintentar" })); });
+    expect(onComplete).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole("status")).toHaveTextContent("Hemos respetado tu rutina");
+  });
+
+  it("«Completar con el autopiloto» no aparece si Entrenar no lo ofrece", () => {
+    render(<MyRoutines routines={[routine("Lunes", "Torso", 2)]} limitReached={false} {...handlers()} />);
+    expect(screen.queryByText("Completar con el autopiloto")).toBeNull();
   });
 });

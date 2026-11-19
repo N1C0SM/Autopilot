@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getAvailabilityDayCount, getAvailabilityHours, getSportSchedules, getCustomActivities } from "@/shared/lib/availability";
+import { getAvailabilityDayCount, getAvailabilityHours, getSportSchedules, getCustomActivities, planTrainingDays } from "@/shared/lib/availability";
 
 describe("onboarding availability", () => {
   it("reads explicit capacity without counting metadata or schedule objects", () => {
@@ -36,5 +36,26 @@ describe("onboarding availability", () => {
     expect(getCustomActivities(saved)).toEqual([{ title: "Trabajo", dow: 1, start: "08:00", end: "09:00" }]);
     expect(getSportSchedules(null)).toEqual({});
     expect(getCustomActivities({ custom_activities: {} })).toEqual([]);
+  });
+});
+
+describe("días de entreno de generate-plan (planTrainingDays)", () => {
+  it("cuenta los días de «Mi horario» antes que los del cuestionario", () => {
+    expect(planTrainingDays({ days: "3", training_days: [1, 3, 5] }, [{ day: 1 }, { day: 2 }, { day: 4 }, { day: 6 }])).toBe(4);
+    expect(planTrainingDays({ days: "3", training_days: [1, 3, 5] }, [{ day: 1 }, { day: 1 }])).toBe(1);
+    // Franjas sin día válido: cuenta cuántas hay.
+    expect(planTrainingDays({ days: "3" }, [{ day: 9 }, { start: "18:00" }])).toBe(2);
+  });
+
+  it("sin horario, los días elegidos mandan sobre el número; si no, el número; y si tampoco, 4", () => {
+    expect(planTrainingDays({ days: "5", training_days: [1, 3, 5] })).toBe(3);
+    expect(planTrainingDays({ days: "5", training_days: [] }, [])).toBe(5);
+    expect(planTrainingDays({ days: 2, training_days: [9, "x"] })).toBe(2);
+    expect(planTrainingDays({ days: "3 días" })).toBe(3);
+    expect(planTrainingDays({ days: "" })).toBe(4);
+    expect(planTrainingDays({ days: 0 })).toBe(4);
+    expect(planTrainingDays({ days: "muchos" })).toBe(4);
+    expect(planTrainingDays(null)).toBe(4);
+    expect(planTrainingDays({ days: "12" })).toBe(7);
   });
 });

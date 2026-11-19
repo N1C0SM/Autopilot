@@ -1,9 +1,10 @@
 import { BookOpen, Play } from "lucide-react";
 import { generatePlanGuarded } from "@/shared/lib/planShield";
 import {
-  addRoutine, canAddRoutine, commitRoutineChange, deleteRoutine, duplicateRoutine, FREE_WORKOUT_NAME, myRoutines, planModeCopy,
-  SESSION_LIMIT_MESSAGE, updateRoutine, type RoutineChange, type RoutineCommit,
+  addRoutine, canAddRoutine, canCompleteWithAutopilot, commitRoutineChange, deleteRoutine, duplicateRoutine, FREE_WORKOUT_NAME,
+  myRoutines, planModeCopy, SESSION_LIMIT_MESSAGE, updateRoutine, type RoutineChange, type RoutineCommit,
 } from "@/shared/lib/customRoutines";
+import { planTrainingDays } from "@/shared/lib/availability";
 import { routineSessions } from "@/shared/lib/routineOrder";
 import { withSessionIdentity } from "@/shared/lib/sessionIdentity";
 import type { Json } from "@/shared/integrations/supabase/types";
@@ -152,6 +153,8 @@ const Dashboard = () => {
   const [preparingRoutine, setPreparingRoutine] = useState(false);
   const [subscriptionTier, setSubscriptionTier] = useState<string>(cached?.subscriptionTier ?? "full");
   const [dayPlans, setDayPlans] = useState<DayPlan[]>(cached?.dayPlans ?? []);
+  /** Tus días de entreno, contados como generate-plan (`planTrainingDays`); null hasta leerlos. */
+  const [trainingDays, setTrainingDays] = useState<number | null>(null);
   const [macros, setMacros] = useState<Macros | null>(cached?.macros ?? null);
   const [meals, setMeals] = useState<Meal[]>(cached?.meals ?? []);
   const [loading, setLoading] = useState(!cached);
@@ -270,14 +273,14 @@ const Dashboard = () => {
     weekStart.setDate(today.getDate() - ((today.getDay() + 6) % 7));
     const weekStartDate = `${weekStart.getFullYear()}-${String(weekStart.getMonth() + 1).padStart(2, "0")}-${String(weekStart.getDate()).padStart(2, "0")}`;
 
-    const [profileResult, roleResult, onbResult, { data: tp }, { data: np }, todayCompletions, weeklyCompletions] = await Promise.all([
+    const [profileResult, roleResult, onbResult, { data: tp }, { data: np }, todayCompletions, weeklyCompletions, scheduleResult] = await Promise.all([
       supabase
         .from("profiles")
         .select("plan_status, payment_status, name, avatar_url, created_at, subscription_tier, subscription_status, subscription_end, stripe_payment_id")
         .eq("user_id", user.id)
         .maybeSingle(),
       checkAdmin ? supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }) : Promise.resolve(null),
-      supabase.from("onboarding").select("id, weight, sex, goal").eq("user_id", user.id).maybeSingle(),
+      supabase.from("onboarding").select("id, weight, sex, goal, availability").eq("user_id", user.id).maybeSingle(),
       supabase.from("training_plan").select("workouts_json").eq("user_id", user.id).maybeSingle(),
       supabase.from("nutrition_plan").select("macros_json, meals_json").eq("user_id", user.id).maybeSingle(),
       supabase
@@ -291,6 +294,8 @@ const Dashboard = () => {
         .eq("user_id", user.id)
         .gte("completed_at", weekStartDate)
         .lte("completed_at", todayDate),
+      // Días de «Mi horario»: mandan sobre los del cuestionario al preparar el plan («Completar con el autopiloto»).
+      supabase.from("user_schedule").select("gym_slots").eq("user_id", user.id).maybeSingle(),
     ]);
 
     // Solo se envía al panel de admin desde la entrada genérica; ver su propio panel de usuario sigue permitido.
@@ -341,6 +346,8 @@ const Dashboard = () => {
         navigate("/onboarding-choice");
         return;
       }
+      // Sin leer «Mi horario» no se sabe cuántos días cuenta el piloto: no se ofrece completarlos.
+      setTrainingDays(scheduleResult.error ? null : planTrainingDays(onb.availability, scheduleResult.data?.gym_slots));
       const estimate = resolveNutritionPreview(onb);
       setMacroEstimate(estimate.calories && estimate.protein != null
         ? { calories: estimate.calories, protein: estimate.protein, carbs: estimate.carbs ?? 0, fats: estimate.fats ?? 0 }
@@ -608,6 +615,19 @@ const Dashboard = () => {
   const hasPlan = planStatus === "plan_ready" || routineSessions(dayPlans).length > 0;
   const routines = myRoutines(dayPlans);
   const routineLimit = !canAddRoutine(dayPlans);
+
+  /**
+   * «Completar con el autopiloto» en «Mis rutinas»: generate-plan prepara las sesiones que faltan
+   * alrededor de tus rutinas (nunca las toca) y el plan se vuelve a leer. Devuelve cuántas rutinas
+   * respetó, o null si no se pudo. Es `TrainingRepo.generateStarterPlan` en la app.
+   */
+  const completeWithAutopilot = async (): Promise<number | null> => {
+    if (!user) return null;
+    const { data, error, keptCustom } = await generatePlanGuarded(supabase, { user_id: user.id });
+    if (error || (!data?.success && !data?.protected)) return null;
+    await fetchData();
+    return keptCustom;
+  };
 
   /**
    * Rutinas propias: el cambio se aplica sobre el plan guardado y se guarda en `training_plan`
@@ -957,6 +977,10 @@ const Dashboard = () => {
                     onDuplicate={async (day) => (await commitRoutine((plans) => duplicateRoutine(plans, day), "Rutina duplicada")).ok}
                     onDelete={async (day) => (await commitRoutine((plans) => deleteRoutine(plans, day), "Rutina borrada")).ok}
                     focus={routinesFocus}
+                    // Free y Plus, como en la app: generate-plan solo lo rechaza con Coach.
+                    autopilot={consumerPlan !== "coach" && canCompleteWithAutopilot(dayPlans, trainingDays)
+                      ? { own: routineSessions(dayPlans).length, frequency: trainingDays ?? 0, onComplete: completeWithAutopilot }
+                      : null}
                   />
                 )} onOpenWorkout={(day) => {
                   setRoutinesFocus(false);

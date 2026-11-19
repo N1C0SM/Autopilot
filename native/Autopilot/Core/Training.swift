@@ -346,6 +346,77 @@ enum CustomRoutines {
         }
     }
 
+    /// «Completar con el autopiloto» en «Mis rutinas» (`canCompleteWithAutopilot` en la web): solo con
+    /// rutinas tuyas, un plan que es todo tuyo (sin sesiones del piloto automático) y menos sesiones
+    /// que tus días de entreno (`frequency`, la misma cuenta que generate-plan: `trainingFrequency`).
+    /// Sin saber tus días (nil), no se ofrece.
+    static func canCompleteWithAutopilot(_ plans: [DayPlan], frequency: Int?) -> Bool {
+        guard let frequency, !mine(plans).isEmpty else { return false }
+        let sessions = RoutineOrder.sessions(plans)
+        guard sessions.allSatisfy({ $0.custom == true }) else { return false }
+        return sessions.count < min(max(frequency, 0), DayNames.all.count)
+    }
+
+    // Textos de «Completar con el autopiloto»: los mismos que `AUTOPILOT_FILL` de la web.
+    static let fillAction = "Completar con el autopiloto"
+    static let fillDetail = "El piloto automático prepara las sesiones que faltan y respeta las tuyas."
+    static let fillRunning = "Preparando tus sesiones…"
+    static let fillErrorTitle = "No se han podido preparar tus sesiones"
+    static let fillErrorDetail = "Revisa tu conexión y vuelve a intentarlo. Tus rutinas siguen guardadas."
+    static let fillRetry = "Reintentar"
+
+    /// «Tus rutinas cubren 2 de tus 4 días de entreno» / «Tu rutina cubre 1 de tus 3 días de entreno».
+    static func fillSummary(own: Int, frequency: Int) -> String {
+        own == 1
+            ? "Tu rutina cubre 1 de tus \(frequency) días de entreno"
+            : "Tus rutinas cubren \(own) de tus \(frequency) días de entreno"
+    }
+
+    /// Días de entreno con los que generate-plan prepara el plan, con su misma regla (`planTrainingDays`
+    /// en la web): los días de «Mi horario» (`gym_slots`) o, si no hay, los del cuestionario
+    /// (`training_days`, 0 = domingo); sin ninguno válido, cuántas franjas hay o su número de días
+    /// (`days`), y si tampoco, 4. Entre 0 y 7.
+    static func trainingFrequency(availability: AnyJSON?, gymSlots: AnyJSON?) -> Int {
+        func weekday(_ value: AnyJSON?) -> Int? {
+            let n: Double?
+            switch value {
+            case .integer(let i)?: n = Double(i)
+            case .double(let d)?: n = d
+            case .string(let text)?: n = text.trimmingCharacters(in: .whitespaces).isEmpty ? nil : Double(text.trimmingCharacters(in: .whitespaces))
+            default: n = nil
+            }
+            guard let n, n.rounded() == n, (0...6).contains(n) else { return nil }
+            return Int(n)
+        }
+        /// `parseInt(String(days || "4"))` del servidor: el entero del principio («3», «3 días», 3,5 → 3);
+        /// nil si no hay número (o es 0, que allí cuenta como vacío).
+        func leadingInt(_ value: AnyJSON?) -> Int? {
+            switch value {
+            case .integer(let i)?: return i == 0 ? nil : i
+            case .double(let d)?: return d == 0 || !d.isFinite ? nil : Int(min(max(d, -1_000), 1_000))
+            case .string(let text)?:
+                let trimmed = text.trimmingCharacters(in: .whitespaces)
+                let sign = trimmed.hasPrefix("-") ? "-" : ""
+                let digits = trimmed.dropFirst(sign.count).prefix { $0.isASCII && $0.isNumber }
+                return digits.isEmpty ? nil : Int(sign + digits)
+            default: return nil
+            }
+        }
+        var slots: [AnyJSON] = []
+        if case .array(let list)? = gymSlots { slots = list }
+        var record: [String: AnyJSON] = [:]
+        if case .object(let object)? = availability { record = object }
+        var picked: [AnyJSON?] = []
+        if !slots.isEmpty {
+            picked = slots.map { slot -> AnyJSON? in if case .object(let object) = slot { return object["day"] }; return nil }
+        } else if case .array(let list)? = record["training_days"] {
+            picked = list.map { Optional($0) }
+        }
+        let chosen = Set(picked.compactMap(weekday))
+        let days = !chosen.isEmpty ? chosen.count : !slots.isEmpty ? slots.count : leadingInt(record["days"]) ?? 4
+        return min(max(days, 0), DayNames.all.count)
+    }
+
     /// Cabecera de Entrenar: el modo y de dónde sale («Piloto automático · 2 rutinas tuyas»).
     static func mode(_ plans: [DayPlan]) -> (title: String, detail: String) {
         let sessions = RoutineOrder.sessions(plans)
@@ -641,8 +712,9 @@ enum TrainingRepo {
 
     private static func planKey(_ userId: UUID) -> String { "plan|\(userId.uuidString.lowercased())" }
 
-    /// «Preparar mi rutina gratis» (web `Dashboard.tsx`): generate-plan sin `force`. El servidor nunca
-    /// pierde ni reescribe una rutina tuya: el piloto automático solo adapta sus propias sesiones.
+    /// «Preparar mi rutina gratis» y «Completar con el autopiloto» (web `Dashboard.tsx`, con
+    /// `generatePlanGuarded`): generate-plan sin `force`. El servidor nunca pierde ni reescribe una
+    /// rutina tuya: el piloto automático solo adapta sus propias sesiones.
     /// Devuelve cuántas rutinas tuyas respetó (`kept_custom`), o nil si no se pudo preparar.
     /// Al terminar, la rutina nueva queda en caché y en disco.
     static func generateStarterPlan(userId: UUID) async -> Int? {
@@ -653,6 +725,20 @@ enum TrainingRepo {
               r.success == true || r.protected == true else { return nil }
         _ = try? await plan(userId: userId, force: true)
         return max(r.kept_custom ?? 0, 0)
+    }
+
+    /// Tus días de entreno, contados como generate-plan (`CustomRoutines.trainingFrequency`): el
+    /// cuestionario y «Mi horario», que manda. nil sin cuestionario o sin poder leerlos (entonces no se
+    /// ofrece «Completar con el autopiloto»). Como `planTrainingDays` en `Dashboard.tsx`.
+    static func trainingFrequency(userId: UUID) async -> Int? {
+        struct Onboarding: Decodable { let availability: AnyJSON? }
+        struct Schedule: Decodable { let gym_slots: AnyJSON? }
+        async let onboarding: [Onboarding]? = try? await Backend.client.from("onboarding").select("availability")
+            .eq("user_id", value: userId).limit(1).execute().value
+        async let schedule: [Schedule]? = try? await Backend.client.from("user_schedule").select("gym_slots")
+            .eq("user_id", value: userId).limit(1).execute().value
+        guard let rows = await onboarding, let row = rows.first, let slots = await schedule else { return nil }
+        return CustomRoutines.trainingFrequency(availability: row.availability, gymSlots: slots.first?.gym_slots)
     }
 
     enum RoutineCommit { case ok([DayPlan], day: String), limit, missing, failed }

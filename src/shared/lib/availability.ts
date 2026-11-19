@@ -45,6 +45,27 @@ export function getAvailabilityDayCount(value: unknown): number | null {
   return hasWeekday ? selected.size : null;
 }
 
+/**
+ * Días de entreno con los que generate-plan prepara el plan, con su misma regla
+ * (`supabase/functions/generate-plan/index.ts`): los días de «Mi horario» (`user_schedule.gym_slots`)
+ * o, si no hay, los elegidos en el cuestionario (`training_days`, 0 = domingo); sin ninguno válido,
+ * cuántas franjas hay o su número de días (`days`), y si tampoco, 4. Entre 0 y 7.
+ * Es `CustomRoutines.trainingFrequency` en la app.
+ */
+export function planTrainingDays(availability: unknown, gymSlots?: unknown): number {
+  const record = asRecord(availability) ?? {};
+  const slots = Array.isArray(gymSlots) ? gymSlots : [];
+  const picked: unknown[] = slots.length > 0
+    ? slots.map((slot) => asRecord(slot)?.day)
+    : Array.isArray(record.training_days) ? record.training_days : [];
+  const chosen = new Set(picked.flatMap((day) => {
+    const n = typeof day === "number" ? day : typeof day === "string" && day.trim() !== "" ? Number(day) : NaN;
+    return Number.isInteger(n) && n >= 0 && n <= 6 ? [n] : [];
+  }));
+  const days = chosen.size > 0 ? chosen.size : slots.length > 0 ? slots.length : Number.parseInt(String(record.days || "4"), 10);
+  return Number.isFinite(days) ? Math.min(Math.max(Math.floor(days), 0), 7) : 4;
+}
+
 export function getAvailabilityHours(value: unknown): number | null {
   const hours = numericValue(asRecord(value)?.hours);
   return hours !== null && hours > 0 && hours <= 24 ? hours : null;

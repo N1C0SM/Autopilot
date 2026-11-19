@@ -26,6 +26,9 @@ struct TrainView: View {
     @State private var pickingEmpty = false
     /// «Nueva rutina» (`day == nil`) o «Editar» de una rutina de «Mis rutinas».
     @State private var routineEditor: RoutineEditorTarget?
+    /// Tus días de entreno, contados como generate-plan; nil hasta leerlos (sin ellos no se ofrece
+    /// «Completar con el autopiloto»).
+    @State private var trainingDays: Int?
     var onNavigate: (AppSection) -> Void = { _ in }
 
     struct RoutineEditorTarget: Identifiable { let day: String?; var id: String { day ?? "nueva" } }
@@ -128,7 +131,7 @@ struct TrainView: View {
             }
         }
         .sheet(isPresented: $editing) {
-            PlanEditorView(original: model.days) { saved in model.days = saved }
+            PlanEditorView(original: model.days) { saved in model.days = saved; Task { await loadTrainingDays() } }
                 .presentationBackground(Palette.background)
         }
         .sheet(isPresented: $library) {
@@ -221,9 +224,15 @@ struct TrainView: View {
         withAnimation(reduceMotion ? nil : .snappy) { proxy.scrollTo("mis-rutinas", anchor: .top) }
     }
 
+    /// «Completar con el autopiloto»: solo con un plan todo tuyo que no llega a tus días de entreno.
+    private var autopilotOffer: MyRoutinesSection.Autopilot? {
+        guard CustomRoutines.canCompleteWithAutopilot(model.days, frequency: trainingDays), let trainingDays else { return nil }
+        return MyRoutinesSection.Autopilot(own: model.sessions.count, frequency: trainingDays) { await completeWithAutopilot() }
+    }
+
     private var routinesSection: some View {
         MyRoutinesSection(routines: routines, limitReached: limitReached, resumableDay: resumableDay,
-                          doneToday: model.doneTodayKeys,
+                          doneToday: model.doneTodayKeys, autopilot: autopilotOffer,
                           onNew: { routineEditor = RoutineEditorTarget(day: nil) },
                           onStart: { day in Task { await open(day) } },
                           onEdit: { day in routineEditor = RoutineEditorTarget(day: day) },
@@ -238,8 +247,26 @@ struct TrainView: View {
         await model.load(userId: session.userId)
         // Entreno a medias guardado: la rutina lo ofrece como «Continuar entreno».
         resumableDay = session.userIdString.flatMap { ActiveWorkout.restore(userId: $0)?.day.day }
+        await loadTrainingDays()
         let urls = model.days.flatMap { ($0.exercises ?? []).compactMap(\.image_url) }.compactMap(URL.init(string:))
         ImageCache.shared.prefetch(urls, maxSide: 140)
+    }
+
+    /// Tus días de entreno (`trainingDays`) mientras el plan no tenga sesiones del piloto automático
+    /// (vacío o todo tuyo): así, al crear tu primera rutina o al dejar el plan todo tuyo en el editor,
+    /// «Completar con el autopiloto» ya sabe si ofrecerse, como en la web.
+    private func loadTrainingDays() async {
+        guard let userId = session.userId, model.sessions.allSatisfy({ $0.custom == true }) else { return }
+        trainingDays = await TrainingRepo.trainingFrequency(userId: userId)
+    }
+
+    /// «Completar con el autopiloto» (web `Dashboard.tsx`, `generatePlanGuarded`): generate-plan prepara
+    /// las sesiones que faltan alrededor de tus rutinas (nunca las toca) y el plan se vuelve a leer.
+    /// Devuelve cuántas rutinas respetó, o nil si no se pudo.
+    private func completeWithAutopilot() async -> Int? {
+        guard let userId = session.userId, let kept = await TrainingRepo.generateStarterPlan(userId: userId) else { return nil }
+        await load()
+        return kept
     }
 
     /// Rutinas propias: el cambio se guarda sobre el plan guardado y la pantalla se pone al día.
