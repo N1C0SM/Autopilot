@@ -97,7 +97,13 @@ const OptionRow = ({ label, selected, focusable, onSelect }: { label: string; se
   </button>
 );
 
-const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "training" | "full") => void; adminMode?: boolean } = {}) => {
+const SettingsPanel = ({ onUpgrade, adminMode = false, page: controlledPage, onPageChange }: {
+  onUpgrade?: (plan: "training" | "full") => void;
+  adminMode?: boolean;
+  /** Sección abierta controlada desde fuera: el panel pone su título grande y el botón de volver. */
+  page?: string | null;
+  onPageChange?: (page: string | null) => void;
+} = {}) => {
   const plans = usePlanAvailability();
   const { theme, setTheme } = useTheme();
   const campaign = useFreeCampaign();
@@ -105,7 +111,9 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
   // Índice de Ajustes: cada fila abre su sección sola, con «Ajustes» para volver. Antes bajaba
   // a ella y debajo del índice seguían todas las secciones (parecía la versión vieja). El admin
   // no tiene índice y lo ve todo seguido.
-  const [page, setPage] = useState<string | null>(null);
+  const [ownPage, setOwnPage] = useState<string | null>(null);
+  const page = controlledPage !== undefined ? controlledPage : ownPage;
+  const setPage = onPageChange ?? setOwnPage;
   const hubOpen = !adminMode && page === null;
   const only = (...ids: string[]) => (adminMode || (page !== null && ids.includes(page)) ? "" : " hidden");
   const onHub = adminMode || hubOpen ? "" : " hidden";
@@ -714,7 +722,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
   return (
     <div className="flex w-full flex-col gap-6">
       {/* Sección abierta: «Ajustes» para volver al índice. */}
-      {!adminMode && page !== null && (
+      {!adminMode && page !== null && !onPageChange && (
         <button
           type="button"
           onClick={() => { void hapticTap(); openPage(null); }}
@@ -912,9 +920,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
               <Input id="settings-weight" type="number" inputMode="decimal" enterKeyHint="done" value={onboarding.weight} onChange={(e) => editOnboarding({ weight: e.target.value })} className={rowInput} />
             </FieldRow>
           </ListGroup>
-          <Button onClick={() => void saveOnboarding()} disabled={dataSaveState === "saving"} className="w-full">
-            {dataSaveState === "saving" ? "Guardando…" : dataSaveState === "saved" ? "Guardado" : "Guardar cambios"}
-          </Button>
+          {/* Un solo «Guardar datos», al final (como el iPhone): antes había dos botones que hacían lo mismo. */}
 
           <ListGroup header="Objetivo">
             <div role="radiogroup" aria-label="Objetivo" onKeyDown={handleGoalKeyDown}>
@@ -988,7 +994,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
       <ListGroup
         id="ajustes-apariencia"
         className={`order-3 scroll-mt-20${hideForAdmin}${only("ajustes-apariencia")}`}
-        header="Apariencia"
+        header={page ? undefined : "Apariencia"}
       >
         <div className="px-4 py-3">
           <p className="mb-2 type-body">Modo de color</p>
@@ -1010,7 +1016,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
       <ListGroup
         id="ajustes-entreno"
         className={`order-4 scroll-mt-20${hideForAdmin}${only("ajustes-entreno")}`}
-        header="Tu forma de entrenar"
+        header={page ? undefined : "Tu forma de entrenar"}
         footer="Elige cuánto quieres descansar al marcar una serie. El temporizador se inicia solo durante tu entreno. Puedes cambiarlo cuando quieras. El descanso específico de cada ejercicio sigue apareciendo en tu plan. La disposición cambia cómo se organizan las tarjetas, no la vista «Ejercicio a ejercicio»."
       >
         <div className="px-4 py-3 sep-b">
@@ -1245,7 +1251,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
       <div id="ajustes-privacidad"       className={`order-8 flex scroll-mt-20 flex-col gap-6${hideForAdmin}${only("ajustes-privacidad", "ajustes-legal")}`}>
         <ListGroup
           className={only("ajustes-privacidad").trim()}
-          header="Privacidad y mis datos"
+          header={page ? undefined : "Privacidad y mis datos"}
           footer="Conforme al RGPD tienes derecho a acceder, portar y eliminar tus datos en cualquier momento."
         >
           <ListRow

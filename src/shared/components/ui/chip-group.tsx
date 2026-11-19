@@ -11,7 +11,8 @@ export function ChipGroup({ header, options, isOn, onToggle }: {
 }) {
   return (
     <section>
-      {header && <p className="mb-3 px-1 type-footnote font-semibold uppercase tracking-wide text-muted-foreground">{header}</p>}
+      {/* Misma cabecera que los grupos de lista (ListGroup): alineada con sus filas, sin negrita. */}
+      {header && <p className="type-group-header px-4 pb-1.5">{header}</p>}
       <div className="flex flex-wrap gap-2">
         {options.map((o) => {
           const on = isOn(o);

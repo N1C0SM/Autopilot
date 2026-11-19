@@ -1038,4 +1038,19 @@ describe("paridad web ↔ apps nativas", () => {
     expect(read("src/app/components/dashboard/WorkoutProgress.tsx")).toContain('<span className="whitespace-nowrap">Mejor marca:</span> <span className="whitespace-nowrap">{best.label}</span>');
     expect(progressApp).toContain('Text("Mejor marca:").lineLimit(1)');
   });
+
+  it("Ajustes: cada sección abierta lleva su nombre como título grande y «‹ Ajustes» para volver, con los mismos títulos que la app", () => {
+    const titles = read("src/shared/lib/settingsPages.ts");
+    const app = read("native/Autopilot/Features/Account/AccountView.swift");
+    for (const title of ["Perfil", "Tus datos y objetivo", "Mi plan", "Tu forma de entrenar", "Contraseña", "Privacidad y mis datos", "Legal", "Cuentas en este dispositivo"]) {
+      expect(titles, title).toContain(`"${title}"`);
+      expect(app, title).toContain(`"${title}"`);
+    }
+    expect(app).toContain(".navigationTitle(page.title)");
+    const dashboard = read("src/app/pages/Dashboard.tsx");
+    expect(dashboard).toContain("title={settingsTitle ?? MOBILE_TITLES[section]}");
+    expect(dashboard).toContain('back={settingsTitle ? { label: "Ajustes"');
+    // Un solo «Guardar datos» en «Tus datos y objetivo», como el iPhone.
+    expect(read("src/app/components/SettingsPanel.tsx")).not.toContain('"Guardar cambios"}');
+  });
 });

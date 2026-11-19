@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ArrowDown, Loader2 } from "lucide-react";
+import { ArrowDown, ChevronLeft, Loader2 } from "lucide-react";
 import MobileHeader from "@/app/components/mobile/MobileHeader";
 import MobileTabBar, { MobileTab } from "@/app/components/mobile/MobileTabBar";
 import OfflineBanner from "@/app/components/mobile/OfflineBanner";
@@ -41,6 +41,8 @@ interface Props {
    * entran desde la derecha y se pueden cerrar con el gesto de borde izquierdo.
    */
   pushedTabs?: MobileTab[];
+  /** Subpantalla abierta: «‹ Ajustes» encima del título grande, como la barra de navegación de iOS. */
+  back?: { label: string; onClick: () => void };
   /** Refresco al tirar hacia abajo (UIRefreshControl). */
   onRefresh?: () => Promise<unknown> | unknown;
   children: ReactNode;
@@ -63,6 +65,7 @@ const MobileAppShell = ({
   titleInContent = false,
   pushedTabs = NO_PUSHED_TABS,
   onRefresh,
+  back,
   children,
 }: Props) => {
   const scrollRef = useRef<HTMLElement>(null);
@@ -309,6 +312,15 @@ const MobileAppShell = ({
           paddingRight: "max(1rem, var(--safe-right, 0px))",
         }}
       >
+        {showLargeTitle && back && (
+          <button
+            type="button"
+            onClick={back.onClick}
+            className="-mb-1 -ml-2 flex min-h-11 w-fit shrink-0 items-center gap-0.5 px-2 type-body text-primary transition-opacity active:opacity-60"
+          >
+            <ChevronLeft className="h-5 w-5" strokeWidth={2.5} aria-hidden />{back.label}
+          </button>
+        )}
         {showLargeTitle && (
           <h1 ref={titleRef} className="type-large-title shrink-0 pb-2 pt-1">
             {title}

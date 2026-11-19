@@ -10,12 +10,13 @@ import { PlanPaywall, CoachPendingAssignment } from "@/app/components/dashboard/
 import { parseMacroTargets, resolveNutritionPreview } from "@/shared/lib/nutrition";
 import CoachingOffer from "@/app/components/dashboard/CoachingOffer";
 import { track } from "@/shared/lib/analytics";
+import { SETTINGS_PAGE_TITLES } from "@/shared/lib/settingsPages";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/shared/contexts/AuthContext";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { Button } from "@/shared/components/ui/button";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Apple, Clock, Dumbbell } from "lucide-react";
+import { Apple, ChevronLeft, Clock, Dumbbell } from "lucide-react";
 import { Spinner } from "@/shared/components/ui/spinner";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { EmptyState } from "@/shared/components/ui/empty-state";
@@ -201,6 +202,12 @@ const Dashboard = () => {
   const [editorOpen, setEditorOpen] = useState(false);
   const [freeOpen, setFreeOpen] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
+  // Sección de Ajustes abierta: su nombre es el título grande y «Ajustes» pasa a ser el botón de volver.
+  const [settingsPage, setSettingsPage] = useState<string | null>(null);
+  const openSettingsPage = useCallback((page: string | null) => { setSettingsPage(page); window.scrollTo({ top: 0 }); }, []);
+  useEffect(() => { if (section !== "settings") setSettingsPage(null); }, [section]);
+  const settingsTitle = section === "settings" && settingsPage ? SETTINGS_PAGE_TITLES[settingsPage] ?? null : null;
+
   const [freePlans, setFreePlans] = useState<DayPlan[] | null>(null);
   const [trainingView, setTrainingView] = useState<"tracker" | "plan">(() => {
     const fromParam = searchParams.get("view");
@@ -1041,7 +1048,7 @@ const Dashboard = () => {
       )}
 
       {section === "settings" && (
-        <div className="w-full"><SettingsPanel onUpgrade={(plan) => handleCompletePayment(plan)} /></div>
+        <div className="w-full"><SettingsPanel onUpgrade={(plan) => handleCompletePayment(plan)} page={settingsPage} onPageChange={openSettingsPage} /></div>
       )}
 
       {section === "resources" && (
@@ -1119,7 +1126,8 @@ const Dashboard = () => {
         noindex
       />
       <MobileAppShell
-        title={MOBILE_TITLES[section]}
+        title={settingsTitle ?? MOBILE_TITLES[section]}
+        back={settingsTitle ? { label: "Ajustes", onClick: () => { void hapticTap(); openSettingsPage(null); } } : undefined}
         largeTitle={LARGE_TITLE_TABS.includes(section)}
         titleInContent={section === "home"}
         active={section}
@@ -1169,10 +1177,20 @@ const Dashboard = () => {
           {/* Top bar */}
           <header className={`app-chrome sticky top-0 z-50 flex h-14 lg:h-16 items-center gap-3 border-b-[0.5px] px-4 lg:px-6 ${workoutMode ? "hidden" : ""}`}>
             <SidebarTrigger />
+            {settingsTitle && (
+              <button
+                type="button"
+                onClick={() => { void hapticTap(); openSettingsPage(null); }}
+                aria-label="Volver a Ajustes"
+                className="-ml-1 flex min-h-11 items-center gap-0.5 px-1 type-body text-primary transition-opacity active:opacity-60"
+              >
+                <ChevronLeft className="h-5 w-5" strokeWidth={2.5} aria-hidden />Ajustes
+              </button>
+            )}
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
                 <h1 className="truncate type-headline lg:text-[18px]">
-                  {SECTION_LABELS[section]}
+                  {settingsTitle ?? SECTION_LABELS[section]}
                 </h1>
                 {sectionHelp && <InfoHint text={sectionHelp} />}
               </div>
