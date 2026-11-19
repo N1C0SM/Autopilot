@@ -42,16 +42,15 @@ export function PublicProgressScreen() {
 }
 
 /** Entreno en curso (vista de lista por defecto): ejercicios numerados y la barra Pausar · tiempo · Finalizar. */
-function ActiveWorkout() {
+function ActiveWorkout({ done = 2 }: { done?: number }) {
   useBrandPhotos(); // repinta las fotos de marca cuando llega su URL actual
   const exercise = previewExercises[0];
-  const done = 2;
   return <div className="flex h-full min-h-0 flex-col">
     <p className="flex items-center gap-1.5 type-subhead font-medium text-primary"><Dumbbell className="h-4 w-4" aria-hidden="true" />Entrenamiento en curso</p>
     <h2 className="mt-1 type-large-title leading-tight">{DEMO_SESSION.title}</h2>
     <p className="mt-1 type-subhead tabular-nums text-muted-foreground">{`${DEMO_SESSION.exercises} ejercicios · ${done} de ${DEMO_SESSION.series} series`}</p>
     <div className="mt-4 flex items-center gap-3">
-      <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-secondary"><span className="block h-full w-[22%] rounded-full bg-primary" /></span>
+      <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-secondary"><span className="block h-full rounded-full bg-primary transition-[width] duration-300" style={{ width: `${(done / DEMO_SESSION.series) * 100}%` }} /></span>
       <span className="type-footnote tabular-nums text-muted-foreground">0/3 ejercicios</span>
     </div>
     <div className={cn(card, "mt-4 p-3")}>
@@ -73,7 +72,7 @@ function ActiveWorkout() {
           <span className="type-caption2 tabular-nums text-muted-foreground">18×10</span>
           <span className="rounded-xl bg-secondary py-2.5 text-center type-body tabular-nums">20</span>
           <span className="rounded-xl bg-secondary py-2.5 text-center type-body tabular-nums">{exercise.reps}</span>
-          <span className={cn("mx-auto flex h-8 w-8 items-center justify-center rounded-full", i < done ? "bg-primary text-primary-foreground" : "border border-foreground/30 text-muted-foreground")}><Check className="h-4 w-4" strokeWidth={3} aria-hidden="true" /></span>
+          <span className={cn("mx-auto flex h-8 w-8 items-center justify-center rounded-full transition-[transform,background-color] duration-200", i < done ? "scale-100 bg-primary text-primary-foreground" : "scale-90 border border-foreground/30 text-muted-foreground")}><Check className="h-4 w-4" strokeWidth={3} aria-hidden="true" /></span>
         </div>
       ))}
     </div>
@@ -148,8 +147,9 @@ function RoutineList() {
   </div>;
 }
 
-export function PublicTrainingScreen({ active = false }: { active?: boolean }) {
-  return active ? <ActiveWorkout /> : <RoutineList />;
+/** `done`: series ya marcadas del primer ejercicio (la historia de la portada las marca con el scroll). */
+export function PublicTrainingScreen({ active = false, done }: { active?: boolean; done?: number }) {
+  return active ? <ActiveWorkout done={done} /> : <RoutineList />;
 }
 
 /** Nutrición en Gratis: calorías y macros del cálculo inicial y, debajo, lo que añade Plus. */

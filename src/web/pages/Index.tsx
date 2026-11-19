@@ -8,7 +8,8 @@ import { track } from "@/shared/lib/analytics";
 import { type PlanKey } from "@/shared/config/tiers";
 import { usePlanAvailability } from "@/shared/lib/planCatalog";
 import { LANDING_META, landingDescription, landingFaqs } from "@/shared/lib/publicCopy";
-import { LandingHero, LandingExperience, LandingProblem, LandingOrigin, LandingWhy, LandingPlans, LandingSteps, LandingFaq, LandingFinal } from "@/web/components/LandingSections";
+import { LandingHero, LandingExperience, LandingProblem, LandingOrigin, LandingPlans, LandingFaq, LandingFinal } from "@/web/components/LandingSections";
+import LandingStory from "@/web/components/LandingStory";
 import { hapticTap } from "@/shared/lib/native";
 
 
@@ -114,11 +115,11 @@ export default function Index() {
         })}</script>
     </Helmet>
     <LandingHero ctaRef={heroCtaRef} />
-    <LandingExperience />
+    {/* La historia: el problema y, con el scroll, la app resolviéndolo escena a escena (poco texto, como Apple). */}
     <LandingProblem />
+    <LandingStory />
+    <LandingExperience />
     <LandingOrigin />
-    <LandingSteps />
-    <LandingWhy />
     <LandingPlans onSelect={selectPlan} innerRef={pricingRef} />
     <LandingFaq faqs={faqs.slice(0, 4)} />
     <LandingFinal innerRef={finalCtaRef} />
