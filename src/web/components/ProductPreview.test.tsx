@@ -38,7 +38,7 @@ describe("public product preview", () => {
   it("renders read-only screens from sample data and switches them from the visible tabs", () => {
     render(<ProductPreview onPlans={() => {}} />);
     expect(screen.getByRole("heading", { name: "Hoy" })).toBeVisible();
-    expect(screen.getByText(/Hola, Nicolás\./)).toBeVisible();
+    expect(screen.getByText("Nicolás")).toBeVisible();
     expect(screen.getByText("Muestra interactiva · datos de ejemplo")).toBeVisible();
 
     fireEvent.click(screen.getByRole("tab", { name: "Nutrición" }));
