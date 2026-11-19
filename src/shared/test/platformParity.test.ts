@@ -1021,4 +1021,21 @@ describe("paridad web ↔ apps nativas", () => {
     expect(dashboard).not.toContain('await supabase.functions.invoke("check-subscription")');
     expect(read("src/shared/contexts/AuthContext.tsx")).toContain("useState(readStoredSession)");
   });
+
+  it("Biblioteca y Récords sin huecos: grupo sin foto con su figura en dorado, récords con título de sección y la mejor marca sin partir, en la web y en la app", () => {
+    const libWeb = read("src/app/components/library/ExerciseLibrarySheet.tsx");
+    const libApp = read("native/Autopilot/Features/Train/ExerciseLibraryView.swift");
+    const shared = read("src/shared/lib/exerciseLibrary.ts");
+    const map = read("native/Autopilot/Design/MuscleMapView.swift");
+    expect(libWeb).toContain("<MuscleMapFigure {...groupFigure(g)}");
+    expect(libApp).toContain("MuscleGroupFigure(group: name)");
+    expect(shared).toContain('BACK_GROUPS: readonly string[] = ["Espalda", "Isquiotibiales", "Glúteos", "Gemelos"]');
+    expect(map).toContain('libraryBackGroups: Set<String> = ["Espalda", "Isquiotibiales", "Glúteos", "Gemelos"]');
+    expect(read("src/app/components/dashboard/PRsList.tsx")).toContain('className="mb-2.5 type-title3">Tus récords personales</h3>');
+    const progressApp = read("native/Autopilot/Features/Progress/ProgressScreen.swift");
+    expect(progressApp).toContain('Text("Tus récords personales")\n            .font(.apTitle3)');
+    expect(progressApp).not.toContain('Text("TUS RÉCORDS PERSONALES")');
+    expect(read("src/app/components/dashboard/WorkoutProgress.tsx")).toContain('<span className="whitespace-nowrap">Mejor marca:</span> <span className="whitespace-nowrap">{best.label}</span>');
+    expect(progressApp).toContain('Text("Mejor marca:").lineLimit(1)');
+  });
 });

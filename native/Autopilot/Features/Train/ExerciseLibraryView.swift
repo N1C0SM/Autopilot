@@ -544,8 +544,13 @@ struct ExerciseLibraryView: View {
             if let image, let url = URL(string: image) {
                 CachedAsyncImage(url: url, maxSide: 500) { $0.resizable().scaledToFill() } placeholder: { Palette.card }
                     .opacity(0.7)
+                LinearGradient(colors: [.black.opacity(0.8), .black.opacity(0.2), .clear], startPoint: .bottom, endPoint: .top)
+            } else {
+                // Sin foto, el propio cuerpo con el grupo en dorado: nunca una tarjeta vacía (como la web).
+                MuscleGroupFigure(group: name)
+                    .padding(12)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
             }
-            LinearGradient(colors: [.black.opacity(0.8), .black.opacity(0.2), .clear], startPoint: .bottom, endPoint: .top)
             VStack(alignment: .leading, spacing: 2) {
                 Text(name).font(.apHeadline).foregroundStyle(.white)
                 Text("\(count) \(count == 1 ? "ejercicio" : "ejercicios")").font(.apFootnote).foregroundStyle(.white.opacity(0.7))

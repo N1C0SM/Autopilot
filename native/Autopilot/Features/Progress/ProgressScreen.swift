@@ -655,8 +655,10 @@ struct ProgressScreen: View {
     }
 
     private var recordsHeader: some View {
-        Text("TUS RÉCORDS PERSONALES")
-            .font(.apFootnote).foregroundStyle(Palette.muted)
+        // Título de sección como el resto de la app (Title 3), igual que la web.
+        Text("Tus récords personales")
+            .font(.apTitle3).foregroundStyle(Palette.foreground)
+            .accessibilityAddTraits(.isHeader)
             // En escritorio la cabecera abre su columna; en iPhone conserva su aire sobre la lista.
             .padding(.top, isWide ? 0 : 12)
     }
@@ -2058,8 +2060,21 @@ struct ExerciseProgressSection: View {
                 photo(name, size: 48)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(name).font(.apHeadline).foregroundStyle(Palette.foreground).lineLimit(1)
-                    Text(best.label.map { "Mejor marca: \($0)" } ?? "\(entries.count) \(entries.count == 1 ? "sesión" : "sesiones")")
-                        .font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted).lineLimit(2)
+                    // La cifra nunca se parte: si no cabe en una línea, baja entera a la segunda (como la web).
+                    Group {
+                        if let label = best.label {
+                            ViewThatFits(in: .horizontal) {
+                                Text("Mejor marca: \(label)").lineLimit(1)
+                                VStack(alignment: .leading, spacing: 0) {
+                                    Text("Mejor marca:").lineLimit(1)
+                                    Text(label).lineLimit(1)
+                                }
+                            }
+                        } else {
+                            Text("\(entries.count) \(entries.count == 1 ? "sesión" : "sesiones")").lineLimit(1)
+                        }
+                    }
+                    .font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 gainChip(best.gain)

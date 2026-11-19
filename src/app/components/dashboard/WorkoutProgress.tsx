@@ -241,7 +241,8 @@ const WorkoutProgress = ({ userId, compact = false, onGoTrain }: Props) => {
                       <span className="min-w-0 flex-1">
                         <span className="block truncate type-headline">{exercise}</span>
                         <span className="mt-0.5 block line-clamp-2 type-footnote tabular-nums text-muted-foreground">
-                          {best.label ? `Mejor marca: ${best.label}` : `${historyByExercise[exercise].length} ${historyByExercise[exercise].length === 1 ? "sesión" : "sesiones"}`}
+                          {/* La cifra nunca se parte: si no cabe en una línea, baja entera a la segunda. */}
+                          {best.label ? <><span className="whitespace-nowrap">Mejor marca:</span> <span className="whitespace-nowrap">{best.label}</span></> : `${historyByExercise[exercise].length} ${historyByExercise[exercise].length === 1 ? "sesión" : "sesiones"}`}
                         </span>
                       </span>
                       <GainChip kg={best.gainKg} />

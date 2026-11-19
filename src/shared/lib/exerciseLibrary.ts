@@ -8,6 +8,20 @@ export const FILTER_GROUPS = [
   "Cuádriceps", "Isquiotibiales", "Glúteos", "Gemelos", "Cuerpo completo",
 ] as const;
 
+/** Grupos que se ven de espaldas en su figura (tarjetas de la biblioteca sin foto). Igual en la app nativa. */
+export const BACK_GROUPS: readonly string[] = ["Espalda", "Isquiotibiales", "Glúteos", "Gemelos"];
+
+/**
+ * Figura de un grupo muscular para su tarjeta cuando ningún ejercicio del grupo tiene foto:
+ * el cuerpo con ese grupo en dorado, de frente o de espaldas. Nombres del mapa muscular.
+ */
+export function groupFigure(group: string): { side: "front" | "back"; muscles: string[] } {
+  const side = BACK_GROUPS.includes(group) ? "back" : "front";
+  if (group === "Abdomen") return { side, muscles: ["Abdominales"] };
+  if (group === "Cuerpo completo") return { side, muscles: ["Pecho", "Hombros", "Abdominales", "Cuádriceps", "Bíceps"] };
+  return { side, muscles: [group] };
+}
+
 export const EQUIPMENT = [
   "Peso corporal", "Mancuernas", "Barra", "Máquinas", "Poleas", "Kettlebell",
   "Bandas elásticas", "Anillas", "Barra de dominadas", "Paralelas", "Otros",

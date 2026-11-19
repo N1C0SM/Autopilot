@@ -3,10 +3,11 @@ import { ChevronLeft, ChevronRight, Heart, Search, X } from "lucide-react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import ResponsiveSheet from "@/app/components/dashboard/ResponsiveSheet";
 import ExerciseMedia, { ExerciseThumb } from "@/app/components/ExerciseMedia";
+import { MuscleMapFigure } from "@/app/components/dashboard/MuscleMapFigure";
 import { ChipGroup } from "@/shared/components/ui/chip-group";
 import { useExerciseLibrary } from "@/shared/hooks/useExerciseLibrary";
 import {
-  EMPTY_FILTERS, EQUIPMENT, FILTER_GROUPS, MODALITIES, activeFilterCount, attribution, filterLibrary,
+  EMPTY_FILTERS, EQUIPMENT, FILTER_GROUPS, MODALITIES, activeFilterCount, attribution, filterLibrary, groupFigure,
   similarExercises, subtitle, type LibraryExercise, type LibraryFilters,
 } from "@/shared/lib/exerciseLibrary";
 import { hapticSelection, hapticTap } from "@/shared/lib/native";
@@ -230,8 +231,15 @@ const Browse = ({ items, recent, favorites, onOpen, onGroup }: {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {groups.map(({ g, count, image }) => (
             <button key={g} type="button" onClick={() => onGroup(g)} className="relative aspect-[4/3] overflow-hidden rounded-[22px] bg-card text-left transition active:scale-[0.98]">
-              {image && <img src={image} alt="" loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover opacity-70" />}
-              <span className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" aria-hidden />
+              {image ? <>
+                <img src={image} alt="" loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover opacity-70" />
+                <span className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" aria-hidden />
+              </> : (
+                // Sin foto, el propio cuerpo con el grupo en dorado: nunca una tarjeta vacía.
+                <span aria-hidden className="absolute inset-y-3 right-3 w-[38%]">
+                  <MuscleMapFigure {...groupFigure(g)} intensityFor={() => "hsl(var(--primary))"} />
+                </span>
+              )}
               <span className="absolute bottom-3 left-3 right-3">
                 <span className="block type-headline font-semibold text-white">{g}</span>
                 <span className="block type-footnote text-white/70">{count} {count === 1 ? "ejercicio" : "ejercicios"}</span>

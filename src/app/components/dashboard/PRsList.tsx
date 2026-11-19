@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
-import { CalendarDays, Sparkles, Trophy, WifiOff } from "lucide-react";
+import { CalendarDays, Dumbbell, Sparkles, Trophy, WifiOff } from "lucide-react";
 import { EmptyState } from "@/shared/components/ui/empty-state";
 import { Button } from "@/shared/components/ui/button";
 import { ListGroup, ListRow } from "@/shared/components/ui/list";
@@ -187,11 +187,15 @@ const PRsList = ({ userId, onGoTrain }: Props) => {
           </div>
         ))}
       </div>
-      <ListGroup header="Tus récords personales">
+      <section aria-labelledby="records-list-title">
+      <h3 id="records-list-title" className="mb-2.5 type-title3">Tus récords personales</h3>
+      <ListGroup>
         {prs.slice(0, 20).map((pr) => (
           <ListRow
             key={pr.id}
-            leading={<span aria-hidden="true" className="block h-11 w-11 overflow-hidden rounded-media bg-secondary">{images[pr.exercise_name] && <img src={images[pr.exercise_name]} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover object-[50%_30%]" />}</span>}
+            leading={<span aria-hidden="true" className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-media bg-secondary">{images[pr.exercise_name]
+              ? <img src={images[pr.exercise_name]} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover object-[50%_30%]" />
+              : <Dumbbell className="h-[18px] w-[18px] text-muted-foreground" strokeWidth={1.75} />}</span>}
             title={pr.exercise_name}
             subtitle={isThisMonth(pr)
               ? <span className="inline-flex items-center gap-1.5">{formatDate(pr.achieved_at)}<span className="rounded-full bg-primary/15 px-1.5 py-px type-caption2 font-semibold text-primary">Nuevo</span></span>
@@ -211,6 +215,7 @@ const PRsList = ({ userId, onGoTrain }: Props) => {
           />
         ))}
       </ListGroup>
+      </section>
       </div>
     </div>
   );
