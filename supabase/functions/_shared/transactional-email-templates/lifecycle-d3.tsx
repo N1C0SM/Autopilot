@@ -35,7 +35,7 @@ const Email = ({ name, ctaUrl = 'https://autopilotplan.com/dashboard?section=set
             <Button href={ctaUrl} style={s.button}>Activar mi plan</Button>
           </Section>
           <Hr style={s.hr} />
-          <Text style={s.small}>Garantía 30 días · sin permanencia · sin letra pequeña.</Text>
+          <Text style={s.small}>7 días de prueba · sin permanencia · cancelas desde Ajustes.</Text>
         </Section>
         <Section style={s.footer}>
           <Text style={s.footerText}>— El equipo de Autopilot</Text>

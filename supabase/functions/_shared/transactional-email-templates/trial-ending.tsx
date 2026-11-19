@@ -23,7 +23,7 @@ const TrialEndingEmail = ({
   return (
     <Html lang="es" dir="ltr">
       <Head />
-      <Preview>{headline} · Sigue con Autopilot desde 29€/mes</Preview>
+      <Preview>{headline} · Si quieres seguir, no tienes que hacer nada</Preview>
       <Body style={s.main}>
         <Container style={s.container}>
           <Section style={s.header}>
@@ -32,19 +32,18 @@ const TrialEndingEmail = ({
           </Section>
           <Section style={s.body}>
             <Heading style={s.h1}>
-              {name ? `${name}, ` : ''}{headline}.
+              {name ? `${name}, ${headline.charAt(0).toLowerCase()}${headline.slice(1)}` : headline}.
             </Heading>
             <Text style={s.text}>
-              A partir de ese día se activará tu suscripción de{' '}
-              <strong style={{ color: s.link.color }}>29€/mes</strong>{' '}
-              y seguirás recibiendo tu plan adaptado cada semana.
+              Ese día empieza tu suscripción, al precio que viste al activar la prueba,
+              y tu plan sigue adaptándose a cada entreno.
               Si quieres seguir, no tienes que hacer nada.
             </Text>
             <Hr style={s.hr} />
             <Heading as="h2" style={s.h2}>¿Necesitas pausar o cancelar?</Heading>
             <Text style={s.text}>
-              Puedes gestionar tu suscripción en un clic desde tu panel.
-              Cancelar antes de mañana no genera ningún cobro.
+              Gestiónala desde Ajustes → Suscripción.
+              Si cancelas antes de que termine la prueba, no se cobra nada.
             </Text>
             <Section style={s.buttonContainer}>
               <Button href={manageUrl} style={s.button}>

@@ -22,13 +22,13 @@ const Email = ({ name, ctaUrl = 'https://autopilotplan.com/dashboard?section=set
           </Heading>
           <Text style={s.text}>
             Hace 5 días creaste tu plan personalizado y aún no lo has activado.
-            En 48h dejaremos de guardarlo para liberar espacio.
+            Sigue guardado y listo para tu primera sesión.
           </Text>
           <Text style={s.text}>Si activas ahora tienes:</Text>
           <Section style={s.card}>
             <Text style={{ ...s.text, margin: 0 }}>
               · 1ª semana <strong style={{ color: s.link.color }}>completamente gratis</strong><br />
-              · Garantía de 30 días: si no avanzas, te devolvemos todo<br />
+              · Tu plan se adapta a cada serie que registras<br />
               · Sin permanencia, cancelas en 1 clic
             </Text>
           </Section>

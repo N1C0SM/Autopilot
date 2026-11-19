@@ -33,7 +33,7 @@ const PaymentReminderEmail = ({
               'Te registraste en Autopilot pero todavía no has activado tu plan. Tu entrenamiento + nutrición personalizados están listos para empezar.'}
           </Text>
           <Text style={s.text}>
-            Empieza hoy y recibe tu plan completo en Google Calendar mañana mismo.
+            Empieza hoy: tu primera sesión ya te espera en la app.
           </Text>
           <Section style={s.buttonContainer}>
             <Button href={checkoutUrl} style={s.button}>
