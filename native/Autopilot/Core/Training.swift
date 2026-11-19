@@ -378,6 +378,18 @@ enum CustomRoutines {
     }
 }
 
+/// Escudo de rutinas propias (`planShield.ts` de la web). generate-plan nunca pierde ni reescribe una
+/// rutina tuya: el piloto automático solo adapta sus propias sesiones, en los días libres, y responde
+/// cuántas respetó (`kept_custom`). Mismos textos que la web. La hoja que lo explica solo existe en la
+/// web porque Mi horario, aplicar un scan al plan y repetir el cuestionario solo están allí.
+enum PlanShield {
+    /// «Hemos respetado tus 2 rutinas» / «Hemos respetado tu rutina».
+    static func keptTitle(_ count: Int) -> String {
+        count == 1 ? "Hemos respetado tu rutina" : "Hemos respetado tus \(count) rutinas"
+    }
+    static let description = "El piloto automático solo adapta sus propias sesiones."
+}
+
 enum RoutineOrder {
     /// Sesiones del plan (gimnasio o actividad) en el orden de la rutina, sin días vacíos.
     static func sessions(_ days: [DayPlan]) -> [DayPlan] {
@@ -629,15 +641,18 @@ enum TrainingRepo {
 
     private static func planKey(_ userId: UUID) -> String { "plan|\(userId.uuidString.lowercased())" }
 
-    /// «Preparar mi rutina gratis» (web `Dashboard.tsx`): generate-plan sin `force`, así que una
-    /// rutina manual nunca se sustituye. Al terminar, la rutina nueva queda en caché y en disco.
-    static func generateStarterPlan(userId: UUID) async -> Bool {
-        struct Result: Decodable { let success: Bool?; let protected: Bool? }
+    /// «Preparar mi rutina gratis» (web `Dashboard.tsx`): generate-plan sin `force`. El servidor nunca
+    /// pierde ni reescribe una rutina tuya: el piloto automático solo adapta sus propias sesiones.
+    /// Devuelve cuántas rutinas tuyas respetó (`kept_custom`), o nil si no se pudo preparar.
+    /// Al terminar, la rutina nueva queda en caché y en disco.
+    static func generateStarterPlan(userId: UUID) async -> Int? {
+        // `protected`: respuesta de un servidor anterior, que dejaba el plan tal cual.
+        struct Result: Decodable { let success: Bool?; let protected: Bool?; let kept_custom: Int? }
         guard let r: Result = try? await Backend.client.functions.invoke(
             "generate-plan", options: FunctionInvokeOptions(body: ["user_id": userId.uuidString.lowercased()])),
-              r.success == true || r.protected == true else { return false }
+              r.success == true || r.protected == true else { return nil }
         _ = try? await plan(userId: userId, force: true)
-        return true
+        return max(r.kept_custom ?? 0, 0)
     }
 
     enum RoutineCommit { case ok([DayPlan], day: String), limit, missing, failed }

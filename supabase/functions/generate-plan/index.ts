@@ -4,6 +4,7 @@ import { getConsumerPlan, hasCoaching, resolveFeatures } from "../_shared/entitl
 import { calcNutritionMacros, detectDiet, parseBodyWeight, nutritionMacroError, type DietType } from "../_shared/nutrition.ts";
 import { parsePriorityMuscles } from "../_shared/scan-focus.ts";
 import { parseScanProtocol, type ScanProtocolPlan } from "../_shared/scan-protocol.ts";
+import { autopilotDays, customDays, hasAutopilotSessions, mergePlan, planAutopilotRun } from "../_shared/planMerge.ts";
 const GYM_EQUIPMENT_RE = /polea|cable|mancuerna|dumbbell|kettlebell|pesa rusa|goblet|barra ol[ií]mpica|press banca|m[aá]quina|prensa|smith|multipower|landmine|lastr|disco|barra t\b|trap bar|glute-ham|ghr|farmer/i;
 function isBodyweightOk(ex: { name?: string | null; exercise_type?: string | null }): boolean {
   if (ex.exercise_type === "Gimnasio") return false;
@@ -956,29 +957,32 @@ serve(async (req) => {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    if (!paidCoaching && !adminSelf) {
-      // Free accounts get one initial routine. Repeated requests preserve it and its logs.
-      const { data: existing, error } = await supabase.from("training_plan").select("id")
+    // Plan actual. Las rutinas del usuario (`custom: true`) nunca se pierden ni se reescriben, ni con
+    // `force`: el piloto automático solo rehace sus propias sesiones, en las claves libres
+    // (`_shared/planMerge.ts`). La respuesta dice cuántas respetó (`kept_custom`).
+    const readPlan = async () => {
+      const { data, error } = await supabase.from("training_plan").select("id, workouts_json")
         .eq("user_id", targetUserId).maybeSingle();
       if (error) throw error;
-      if (existing) {
+      return { exists: !!data, days: Array.isArray(data?.workouts_json) ? (data!.workouts_json as unknown[]) : [] };
+    };
+    const currentPlan = await readPlan();
+    const existingResponse = (days: readonly unknown[]) => new Response(
+      JSON.stringify({ success: true, existing: true, kept_custom: customDays(days).length }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+
+    if (!paidCoaching && !adminSelf) {
+      // Free accounts get one initial routine from the autopilot. Repeated requests preserve it and
+      // its logs. A plan with no autopilot session yet (empty, or only the user's own routines) still
+      // gets it, prepared around those routines.
+      if (currentPlan.exists && hasAutopilotSessions(currentPlan.days)) {
         const { error: readyError } = await supabase.from("profiles").update({ plan_status: "plan_ready" }).eq("user_id", targetUserId);
         if (readyError) throw readyError;
-        return new Response(JSON.stringify({ success: true, existing: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        return existingResponse(currentPlan.days);
       }
     }
-
-    // Escudo: una rutina hecha a mano nunca se sustituye sin que el usuario lo confirme.
-    if (!force) {
-      const { data: current } = await supabase.from("training_plan").select("workouts_json")
-        .eq("user_id", targetUserId).maybeSingle();
-      const days = Array.isArray(current?.workouts_json) ? (current!.workouts_json as unknown as DayPlan[]) : [];
-      if (days.some((d) => d?.custom === true)) {
-        return new Response(JSON.stringify({ success: false, protected: true, current: days }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-    }
+    if (force) console.log("[GENERATE-PLAN] force: only the autopilot's own sessions are redone; the user's routines stay");
 
     // Fetch rules, onboarding, user_schedule AND scan data in parallel
     const [onbResult, rulesResult, scheduleResult, scanResult] = await Promise.all([
@@ -1149,21 +1153,13 @@ serve(async (req) => {
     console.log(`[GENERATE-PLAN] User: level=${userLevel}, intensity=${intensityLevel}, goal=${goal}, equipment=${equipmentType}, specificGoal="${specificGoal}"`);
 
     // ─── LOAD EXISTING PLAN AND USER PREFERENCES TO PRESERVE ADJUSTMENTS ───
-    const [existingPlanResult, preferencesResult] = await Promise.all([
-      supabase
-        .from("training_plan")
-        .select("workouts_json")
-        .eq("user_id", targetUserId)
-        .maybeSingle(),
-      supabase
-        .from("exercise_user_preferences")
-        .select("original_exercise_name, preferred_exercise_name, preferred_weight")
-        .eq("user_id", targetUserId),
-    ]);
-    
-    const existingWorkouts = existingPlanResult.data?.workouts_json 
-      ? (existingPlanResult.data.workouts_json as unknown as DayPlan[])
-      : [];
+    const preferencesResult = await supabase
+      .from("exercise_user_preferences")
+      .select("original_exercise_name, preferred_exercise_name, preferred_weight")
+      .eq("user_id", targetUserId);
+
+    // Pesos de las sesiones anteriores del piloto (las rutinas del usuario no se regeneran).
+    const existingWorkouts = autopilotDays(currentPlan.days);
     
     // Build maps of user preferences
     const exerciseSwaps = new Map<string, string>();
@@ -1200,8 +1196,15 @@ serve(async (req) => {
       console.log(`[GENERATE-PLAN] Found ${existingExerciseMap.size} existing exercises in plan`);
     }
 
-    const gymSplit = getGymSplit(Math.min(daysAvailable, 6), skillProfile);
-    const weeklyPlan = buildWeeklyPlan(gymSplit, sports, Math.min(daysAvailable, 7), config, exerciseLib, rules, skillProfile, chosenDays);
+    // Las rutinas del usuario cuentan para sus días de entreno y para el máximo de 7: el piloto solo
+    // prepara las sesiones que faltan, en las claves libres (primero los días que eligió).
+    const frequency = Number.isFinite(daysAvailable) ? Math.min(daysAvailable, 7) : 4;
+    const run = planAutopilotRun(currentPlan.days, { frequency, chosenDays, force });
+    console.log(`[GENERATE-PLAN] ${run.kept.length} custom routines kept; autopilot sessions: ${run.slots} on keys ${run.keys.join(",") || "none"}`);
+    const gymSplit = getGymSplit(Math.min(Math.max(run.slots, 1), 6), skillProfile);
+    const weeklyPlan = run.slots > 0
+      ? buildWeeklyPlan(gymSplit, sports, run.slots, config, exerciseLib, rules, skillProfile, run.keys)
+      : [];
 
     // ─── APPLY USER PREFERENCES (SWAPS + WEIGHTS) ───
     // Priority: USER PREFERENCE > SCAN DATA > ONBOARDING
@@ -1365,11 +1368,33 @@ serve(async (req) => {
     const macroError = writeNutrition ? nutritionMacroError(macros) : null;
     if (macroError) throw new Error(macroError);
 
-    const { error: trainingError } = await supabase.from("training_plan").upsert(
-      { user_id: targetUserId, workouts_json: weeklyPlan },
-      { onConflict: "user_id", ignoreDuplicates: !paidCoaching && !adminSelf },
-    );
-    if (trainingError) throw trainingError;
+    // Se vuelve a leer el plan justo antes de guardar: una rutina que el usuario haya guardado
+    // mientras se preparaba el plan también se queda (mergePlan nunca la quita ni la mueve).
+    const latestPlan = await readPlan();
+    if (!paidCoaching && !adminSelf && latestPlan.exists && hasAutopilotSessions(latestPlan.days)) {
+      // Otra petición acaba de preparar la rutina inicial gratis: se conserva esa.
+      const { error: readyError } = await supabase.from("profiles").update({ plan_status: "plan_ready" }).eq("user_id", targetUserId);
+      if (readyError) throw readyError;
+      return existingResponse(latestPlan.days);
+    }
+    const mergedPlan = mergePlan(latestPlan.days, weeklyPlan as unknown as DayPlan[], frequency);
+    const finalRun = planAutopilotRun(latestPlan.days, { frequency });
+    const savedAt = new Date().toISOString();
+    if (latestPlan.exists) {
+      if (JSON.stringify(mergedPlan) !== JSON.stringify(latestPlan.days)) {
+        const { error: trainingError } = await supabase.from("training_plan")
+          .update({ workouts_json: mergedPlan, updated_at: savedAt }).eq("user_id", targetUserId);
+        if (trainingError) throw trainingError;
+      }
+    } else {
+      // Sin fila todavía: se crea. Si otra petición la creó un instante antes, no se pisa.
+      const { error: trainingError } = await supabase.from("training_plan").upsert(
+        { user_id: targetUserId, workouts_json: mergedPlan, updated_at: savedAt },
+        { onConflict: "user_id", ignoreDuplicates: true },
+      );
+      if (trainingError) throw trainingError;
+    }
+    const autopilotCount = autopilotDays(mergedPlan).length;
     if (writeNutrition) {
       const { error } = await supabase.from("nutrition_plan").upsert(
         { user_id: targetUserId, macros_json: macros, meals_json: meals, updated_at: new Date().toISOString() },
@@ -1380,7 +1405,7 @@ serve(async (req) => {
     const { error: readyError } = await supabase.from("profiles").update({ plan_status: "plan_ready" }).eq("user_id", targetUserId);
     if (readyError) throw readyError;
 
-    console.log(`[GENERATE-PLAN] Plan generated for ${targetUserId}: ${weeklyPlan.length} days, skill="${specificGoal}"`);
+    console.log(`[GENERATE-PLAN] Plan generated for ${targetUserId}: ${autopilotCount} autopilot sessions + ${finalRun.kept.length} custom routines kept${finalRun.full ? " (custom routines fill the week)" : ""}, skill="${specificGoal}"`);
 
     // Auto-sync Google Calendar (fire-and-forget) if user has connected
     try {
@@ -1406,7 +1431,10 @@ serve(async (req) => {
     }
 
     return new Response(JSON.stringify({
-      success: true, training_days: weeklyPlan.length, macros: includeNutrition ? macros : null, meals_count: includeNutrition ? meals.length : 0,
+      success: true, training_days: mergedPlan.length, macros: includeNutrition ? macros : null, meals_count: includeNutrition ? meals.length : 0,
+      // Rutinas del usuario respetadas, sesiones del piloto y si sus rutinas ya cubren sus días
+      // (entonces el piloto no añade nada). Los clientes dicen «Hemos respetado tus N rutinas».
+      kept_custom: finalRun.kept.length, autopilot_days: autopilotCount, custom_full: finalRun.full,
       skill_profile: skillProfile ? { muscles: skillProfile.priorityMuscles, patterns: skillProfile.priorityPatterns } : null,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (error) {

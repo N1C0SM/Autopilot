@@ -1,48 +1,48 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { ShieldCheck } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
-import ResponsiveSheet from "@/app/components/dashboard/ResponsiveSheet";
-import { registerShield, type ShieldChoice } from "@/shared/lib/planShield";
+import { Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from "@/shared/components/ui/drawer";
+import { keptRoutinesTitle, registerShield, SHIELD_COPY, type KeptRoutines } from "@/shared/lib/planShield";
 import { hapticTap } from "@/shared/lib/native";
 
-/** Se monta una vez en la app y responde a cualquier intento de sustituir una rutina hecha a mano. */
+/**
+ * Se monta una vez en la app. La primera vez que el piloto automático prepara sus sesiones alrededor
+ * de tus rutinas, explica que las tuyas siguen intactas (generate-plan nunca las pierde ni las
+ * reescribe). No hay nada que elegir: una hoja corta con un solo botón.
+ */
 const PlanShieldDialog = () => {
   const [open, setOpen] = useState(false);
-  const resolver = useRef<((c: ShieldChoice) => void) | null>(null);
+  // Se conserva al cerrar para que la hoja no cambie de texto mientras baja.
+  const [notice, setNotice] = useState<KeptRoutines>({ count: 0, full: false });
 
   useEffect(() => {
-    registerShield((resolve) => { resolver.current = resolve; setOpen(true); });
+    registerShield((next) => { setNotice(next); setOpen(true); });
     return () => registerShield(null);
   }, []);
 
-  const choose = (c: ShieldChoice) => {
+  const close = () => {
     void hapticTap();
-    resolver.current?.(c);
-    resolver.current = null;
     setOpen(false);
   };
 
   return (
-    <ResponsiveSheet
-      open={open}
-      onOpenChange={(o) => { if (!o) choose("keep"); }}
-      title="Tu plan tiene rutinas tuyas"
-      description="El piloto automático no cambia un plan con rutinas tuyas sin tu permiso."
-      desktopClassName="sm:max-w-md"
-    >
-      <div className="flex flex-1 flex-col justify-end gap-3 pb-4 md:justify-start md:pb-0">
-        {/* Lo que pasa de verdad (generate-plan): no adapta solo una parte; o se conserva todo o se cambia entero. */}
-        <div className="mb-2 flex items-start gap-3 rounded-card bg-primary/10 p-4">
-          <ShieldCheck className="mt-0.5 h-6 w-6 shrink-0 text-primary" aria-hidden />
-          <p className="type-subhead text-foreground/85">
-            Puedes conservar tu plan tal cual o cambiarlo entero por uno nuevo del piloto automático. Si lo cambias, tus rutinas salen del plan; con una copia, las recuperas desde «Editar mi rutina» en este dispositivo.
-          </p>
+    <Drawer open={open} onOpenChange={setOpen}>
+      <DrawerContent className="mx-auto max-w-md">
+        <DrawerHeader className="px-5 pt-4 text-left">
+          <DrawerTitle className="type-title3">{keptRoutinesTitle(notice.count)}</DrawerTitle>
+          <DrawerDescription>{SHIELD_COPY.description}</DrawerDescription>
+        </DrawerHeader>
+        <div className="px-5">
+          <div className="flex items-start gap-3 rounded-card bg-primary/10 p-4">
+            <ShieldCheck className="mt-0.5 h-6 w-6 shrink-0 text-primary" aria-hidden />
+            <p className="type-subhead text-foreground/85">{notice.full ? SHIELD_COPY.full : SHIELD_COPY.body}</p>
+          </div>
         </div>
-        <Button size="lg" variant="hero" className="min-h-12 w-full" onClick={() => choose("keep")}>Conservar mi plan</Button>
-        <Button size="lg" variant="secondary" className="min-h-12 w-full" onClick={() => choose("backup")}>Guardar copia y usar el nuevo</Button>
-        <Button size="lg" variant="ghost" className="min-h-12 w-full text-muted-foreground" onClick={() => choose("replace")}>Cambiarlo sin copia</Button>
-      </div>
-    </ResponsiveSheet>
+        <DrawerFooter className="px-5 pb-5 pt-4">
+          <Button size="lg" variant="hero" className="min-h-12 w-full" onClick={close}>{SHIELD_COPY.done}</Button>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   );
 };
 

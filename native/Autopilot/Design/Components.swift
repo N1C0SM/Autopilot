@@ -70,8 +70,10 @@ struct StarterRoutineCard: View {
         preparing = true
         failed = false
         defer { preparing = false }
-        if await TrainingRepo.generateStarterPlan(userId: userId) {
+        if let kept = await TrainingRepo.generateStarterPlan(userId: userId) {
             Haptics.success()
+            // Como la web: si el plan ya tenía rutinas tuyas, se dice que siguen intactas.
+            if kept > 0 { A11y.announce("\(PlanShield.keptTitle(kept)). \(PlanShield.description)") }
             await onReady()
         } else {
             failed = true

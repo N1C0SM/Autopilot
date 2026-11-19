@@ -394,8 +394,13 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
       return;
     }
     setGenerating(true);
-    const { data, error } = await generatePlanGuarded(supabase, { user_id: profile.user_id });
-    if (data?.protected) { setGenerating(false); toast.info("Se ha conservado la rutina personalizada del cliente."); return; }
+    const generated = await generatePlanGuarded(supabase, { user_id: profile.user_id });
+    const { data, error } = generated;
+    // generate-plan nunca pierde ni reescribe las rutinas del cliente: solo adapta las sesiones del piloto.
+    const keptNote = generated.keptCustom > 0
+      ? ` Se ${generated.keptCustom === 1 ? "ha respetado su rutina" : `han respetado sus ${generated.keptCustom} rutinas`}.`
+      : "";
+    if (generated.kept) { setGenerating(false); toast.info(`Su plan se queda tal cual.${keptNote}`); return; }
     const failMsg = String(error?.message || data?.error || "");
     if (error || !data?.success) {
       toast.error(
@@ -429,9 +434,11 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
     }
 
     onUpdate(profile.user_id, { plan_status: "plan_ready" });
-    toast.success(data.macros
-      ? `Plan generado: ${data.training_days} días de entrenamiento, macros: P${data.macros.protein}/C${data.macros.carbs}/F${data.macros.fats}`
-      : `Plan de entrenamiento generado para ${data.training_days} días. Faltan datos para calcular macros.`);
+    const days = Number(data.training_days ?? 0);
+    const daysLabel = `${days} ${days === 1 ? "día" : "días"}`;
+    toast.success((data.macros
+      ? `Plan generado: ${daysLabel} de entrenamiento, macros: P${data.macros.protein}/C${data.macros.carbs}/F${data.macros.fats}.`
+      : `Plan de entrenamiento generado para ${daysLabel}. Faltan datos para calcular macros.`) + keptNote);
     setGenerating(false);
   };
 

@@ -1,4 +1,4 @@
-import { generatePlanGuarded } from "@/shared/lib/planShield";
+import { generatePlanGuarded, keptRoutinesTitle, SHIELD_COPY } from "@/shared/lib/planShield";
 import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/shared/contexts/AuthContext";
@@ -69,6 +69,9 @@ const InsetRow = ({ children }: { children: ReactNode }) => (
     <div className="flex flex-wrap items-center gap-2 py-2 pr-4 sep-b">{children}</div>
   </div>
 );
+
+/** Qué pasa con el plan al guardar la semana: tus rutinas cuentan como días de entreno y no se tocan. */
+const SCHEDULE_PLAN_NOTE = "Tus rutinas cuentan como días de entreno y se quedan tal cual: el piloto automático solo adapta sus propias sesiones.";
 
 // El campo dentro de una ListRow mide los mismos 44 pt que su zona táctil: 36 + márgenes
 // negativos dejaba un objetivo de 36 px, por debajo del mínimo del sistema.
@@ -153,32 +156,28 @@ const MySchedule = () => {
         .eq("user_id", user.id)
         .maybeSingle();
 
-      const tasks = [generatePlanGuarded(supabase, {}, { userId: user.id })];
-      if (gcalTok) tasks.push(supabase.functions.invoke("gcal-sync"));
+      const [planRes, syncRes] = await Promise.all([
+        generatePlanGuarded(supabase, {}, { userId: user.id }),
+        gcalTok ? supabase.functions.invoke("gcal-sync") : Promise.resolve(null),
+      ]);
 
-      const [planRes, syncRes] = await Promise.all(tasks);
-
-      if (planRes?.error) {
+      if (planRes.error) {
         void hapticNotify("warning");
         toast.error("Guardado, pero no se pudo regenerar el plan", { id: toastId });
         return;
       }
 
-      // Plan con rutinas tuyas y «Conservar»: la semana queda guardada y el plan, tal cual (no en silencio).
-      if (planRes && "kept" in planRes && planRes.kept) {
-        void hapticNotify("success");
-        toast.info("Semana guardada. Tu plan tiene rutinas tuyas y se queda tal cual.", { id: toastId });
-        return;
-      }
-
-      if (gcalTok && syncRes?.data) {
-        const synced = syncRes.data?.synced ?? 0;
-        void hapticNotify("success");
-        toast.success(`Plan actualizado · ${synced} eventos en Google Calendar`, { id: toastId });
-      } else {
-        void hapticNotify("success");
-        toast.success("Plan actualizado a tu nueva semana", { id: toastId });
-      }
+      // El piloto automático solo adapta sus sesiones: tus rutinas se quedan tal cual y se dice.
+      const synced = syncRes?.data ? Number(syncRes.data.synced ?? 0) : null;
+      const calendar = synced === null ? "" : ` · ${synced} ${synced === 1 ? "evento" : "eventos"} en Google Calendar`;
+      const kept = planRes.keptCustom > 0 ? `${keptRoutinesTitle(planRes.keptCustom)}.` : undefined;
+      const unchanged = planRes.kept || planRes.data?.existing || planRes.customFull;
+      const description = planRes.data?.existing
+        ? "Tu plan gratuito mantiene su rutina."
+        : planRes.customFull ? SHIELD_COPY.full : kept;
+      const title = unchanged ? "Semana guardada" : calendar ? "Plan actualizado" : "Plan actualizado a tu nueva semana";
+      void hapticNotify("success");
+      toast.success(`${title}${calendar}`, { id: toastId, description });
     } catch (e) {
       void hapticNotify("error");
       toast.error("No se pudo guardar tu semana", { id: toastId });
@@ -229,6 +228,8 @@ const MySchedule = () => {
                 Tu plan de entrenos y tus comidas se sincronizarán a tu Google Calendar{" "}
                 <strong className="font-semibold text-foreground">respetando estos horarios</strong>.
               </p>
+              {/* Al guardar se llama a generate-plan, que nunca pierde ni reescribe una rutina tuya. */}
+              <p className="mt-2 type-subhead text-muted-foreground">{SCHEDULE_PLAN_NOTE}</p>
             </div>
           </div>
 

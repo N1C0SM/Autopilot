@@ -811,7 +811,10 @@ describe("paridad web ↔ apps nativas", () => {
     const gen = read("supabase/functions/generate-plan/index.ts");
     expect(gen).toContain("availabilityObj.training_days");
     expect(gen).toContain("(n + 6) % 7");
-    expect(gen).toContain("rules, skillProfile, chosenDays);");
+    // Las sesiones del piloto van a los días elegidos que no ocupan tus rutinas (`autopilotKeys` de planMerge).
+    expect(gen).toContain("planAutopilotRun(currentPlan.days, { frequency, chosenDays, force })");
+    expect(gen).toContain("rules, skillProfile, run.keys)");
+    expect(read("supabase/functions/_shared/planMerge.ts")).toContain("chosenDays.includes(index) && !taken.has(index)");
     expect(gen).toContain("for (const dayIdx of order)");
   });
 
@@ -1454,11 +1457,54 @@ describe("paridad web ↔ apps nativas", () => {
     // Borrar siempre pasa por la hoja de confirmación.
     expect(read("src/app/components/dashboard/MyRoutines.tsx")).toContain("<Drawer open={deleting !== null}");
     expect(read("native/Autopilot/Features/Train/RoutinesView.swift")).toContain('.sheet(item: $deleting) { routine in');
-    // Un plan con rutinas tuyas: el piloto automático no adapta solo una parte; se dice dónde se regenera.
-    expect(read("src/app/components/dashboard/PlanShieldDialog.tsx")).toContain("Tu plan tiene rutinas tuyas");
-    expect(read("src/app/pages/MySchedule.tsx")).toContain("Semana guardada. Tu plan tiene rutinas tuyas y se queda tal cual.");
+    // Un plan con rutinas tuyas: el piloto automático las respeta y solo adapta sus sesiones (siguiente prueba).
+    expect(read("src/app/components/dashboard/PlanShieldDialog.tsx")).toContain("keptRoutinesTitle(notice.count)");
+    expect(read("src/app/pages/MySchedule.tsx")).toContain("keptRoutinesTitle(planRes.keptCustom)");
     // Sin rutina en Hoy: la invitación con su botón, nunca un aviso de «tu entrenador».
     expect(read("src/app/components/dashboard/HomeOverview.tsx")).not.toContain("Tu entrenador está preparando tu plan");
+  });
+
+  it("Autopiloto con rutinas propias: nunca se pierde una rutina tuya y el piloto solo adapta sus sesiones, dicho igual en la web y en la app", () => {
+    const merge = read("supabase/functions/_shared/planMerge.ts");
+    const gen = read("supabase/functions/generate-plan/index.ts");
+    // El servidor mezcla: tus rutinas intactas y las del piloto en las claves libres (lógica pura, probada en planMerge.test.ts).
+    expect(gen).toContain('from "../_shared/planMerge.ts"');
+    expect(gen).toContain("planAutopilotRun(currentPlan.days, { frequency, chosenDays, force })");
+    expect(gen).toContain("mergePlan(latestPlan.days, weeklyPlan as unknown as DayPlan[], frequency)");
+    expect(gen).toContain("kept_custom: finalRun.kept.length, autopilot_days: autopilotCount, custom_full: finalRun.full");
+    expect(gen).not.toContain("protected: true");
+    // La cuenta gratis con solo rutinas propias (o vacía) recibe su rutina inicial alrededor de las suyas.
+    expect(gen).toContain("currentPlan.exists && hasAutopilotSessions(currentPlan.days)");
+    expect(merge).not.toMatch(/https:\/\/|npm:|Deno\./);
+    // Mismas claves de orden que la web y que el generador.
+    expect(merge).toContain('["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]');
+    expect(gen).toContain('const DAYS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];');
+    // Los clientes llaman una vez y nunca con `force`; ya no hay nada que elegir ni copias que guardar.
+    const shield = read("src/shared/lib/planShield.ts");
+    expect(shield).toContain('client.functions.invoke("generate-plan", { body })');
+    expect(shield).not.toMatch(/force:\s*true|saveBackup|askShield/);
+    const dialog = read("src/app/components/dashboard/PlanShieldDialog.tsx");
+    for (const gone of ["Conservar mi plan", "Guardar copia", "Cambiarlo sin copia", "salen del plan", "sin tu permiso"]) {
+      expect(dialog, gone).not.toContain(gone);
+      expect(shield, gone).not.toContain(gone);
+    }
+    // Con tus rutinas cubriendo tus días, el piloto puede quitar sus sesiones viejas: no se promete «tal cual».
+    expect(shield).toContain('full: "Tus rutinas ya cubren tus días de entreno, así que tu semana se hace con ellas."');
+    expect(dialog).toContain("SHIELD_COPY.description");
+    expect(dialog).toContain("notice.full ? SHIELD_COPY.full : SHIELD_COPY.body");
+    expect(dialog).toContain("{SHIELD_COPY.done}");
+    expect(read("src/app/pages/MySchedule.tsx")).not.toContain("Tu plan tiene rutinas tuyas y se queda tal cual");
+    // Mismos textos en la web y en la app: «Hemos respetado tus N rutinas» y lo que hace el piloto.
+    const core = read("native/Autopilot/Core/Training.swift");
+    expect(shield).toContain('count === 1 ? "Hemos respetado tu rutina" : `Hemos respetado tus ${count} rutinas`');
+    expect(core).toContain('count == 1 ? "Hemos respetado tu rutina" : "Hemos respetado tus \\(count) rutinas"');
+    const webDescription = shield.match(/description: "([^"]+)"/)?.[1];
+    expect(webDescription).toBe("El piloto automático solo adapta sus propias sesiones.");
+    expect(core).toContain(`static let description = "${webDescription}"`);
+    // La app lee la misma respuesta y lo dice al preparar la rutina (como la web).
+    expect(core).toContain("let kept_custom: Int?");
+    expect(core).toContain("return max(r.kept_custom ?? 0, 0)");
+    expect(read("native/Autopilot/Design/Components.swift")).toContain('if kept > 0 { A11y.announce("\\(PlanShield.keptTitle(kept)). \\(PlanShield.description)") }');
   });
 
   it("Admin → Biblioteca: el catálogo base se importa, redacta y publica igual en la web y en la app", () => {
