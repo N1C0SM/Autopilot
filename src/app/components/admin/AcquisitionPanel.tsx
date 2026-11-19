@@ -178,8 +178,8 @@ function ChannelRow({ row, tracking }: { row: ChannelFunnel; tracking: boolean }
   const stats = [
     { label: "Visitas", value: tracking ? row.visits : "—" },
     { label: "Scans", value: tracking ? row.scans : "—" },
-    { label: "1er entreno", value: row.firstWorkout },
-    { label: "Activos 2ª sem.", value: row.week2Eligible > 0 ? `${row.activeWeek2}/${row.week2Eligible}` : "—" },
+    { label: "Entrenó", value: row.firstWorkout },
+    { label: "2ª sem.", value: row.week2Eligible > 0 ? `${row.activeWeek2}/${row.week2Eligible}` : "—" },
     { label: "Plus", value: row.plus },
   ];
   return (

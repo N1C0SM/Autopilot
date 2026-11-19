@@ -354,12 +354,9 @@ const BlogPostsEditor = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="type-headline font-bold font-display">Blog</h2>
-          <p className="type-footnote text-muted-foreground">Artículos públicos en /blog. SEO orgánico a largo plazo.</p>
-        </div>
-        <Button variant="hero" onClick={createNew}>
+      <div className="flex items-center justify-between gap-4">
+        <p className="min-w-0 type-subhead text-muted-foreground">Artículos públicos en /blog.</p>
+        <Button variant="hero" className="shrink-0" onClick={createNew}>
           <Plus className="w-4 h-4 mr-1.5" /> Nuevo artículo
         </Button>
       </div>

@@ -72,17 +72,21 @@ export default function ProductsAdmin() {
     void load();
   };
 
-  const visible = rows.filter((r) => filter === "all" ? true : filter === "pending" ? r.plan === "coach" && !r.trainer : r.plan === filter);
+  
   const count = (p: ConsumerPlan) => rows.filter((r) => r.plan === p).length;
   const pendingCount = rows.filter((r) => r.plan === "coach" && !r.trainer).length;
 
+  const hasCoach = count("coach") > 0;
   const filters: Array<{ value: PlanFilter; label: string }> = [
-    { value: "pending", label: `Coach sin entrenador (${pendingCount})` },
+    ...(hasCoach ? [{ value: "pending" as const, label: `Coach sin entrenador (${pendingCount})` }] : []),
+    { value: "all", label: `Todos (${rows.length})` },
     { value: "free", label: `Free (${count("free")})` },
     { value: "plus", label: `Plus (${count("plus")})` },
-    { value: "coach", label: `Coach (${count("coach")})` },
-    { value: "all", label: "Todos" },
+    ...(hasCoach ? [{ value: "coach" as const, label: `Coach (${count("coach")})` }] : []),
   ];
+  // Sin clientes Coach, «Coach sin entrenador» no existe: se muestra Todos.
+  const activeFilter: PlanFilter = !hasCoach && (filter === "pending" || filter === "coach") ? "all" : filter;
+  const visible = rows.filter((r) => activeFilter === "all" ? true : activeFilter === "pending" ? r.plan === "coach" && !r.trainer : r.plan === activeFilter);
 
   return (
     <div className="space-y-8">
@@ -90,7 +94,7 @@ export default function ProductsAdmin() {
 
       <section className="space-y-3">
         <SectionHeader title="Usuarios por plan" />
-        <ChipBar<PlanFilter> options={filters} value={filter} onChange={setFilter} aria-label="Filtrar por plan" />
+        <ChipBar<PlanFilter> options={filters} value={activeFilter} onChange={setFilter} aria-label="Filtrar por plan" />
         {visible.length === 0 ? (
           <EmptyState icon={Users} title="No hay usuarios en este grupo" />
         ) : (

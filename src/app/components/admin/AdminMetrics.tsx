@@ -208,7 +208,7 @@ const AdminMetrics = ({ users, onRefresh }: { users: Profile[]; onRefresh: () =>
         <Card>
           <SectionHeader title="Clientes por plan" size="sm" className="mb-4" />
           <BarList
-            rows={plans.map((p) => ({
+            rows={plans.filter((p) => p.key !== "coach" || data.counts.coach > 0).map((p) => ({
               label: p.name,
               detail: p.price,
               value: data.counts[p.key],

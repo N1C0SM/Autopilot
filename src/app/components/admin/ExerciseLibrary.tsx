@@ -545,13 +545,13 @@ const ExerciseFormDialog = ({
                   e.target.value = "";
                 }}
               />
-              <div className="space-y-1.5 px-4">
-                <label htmlFor="exercise-drive-folder" className="block type-footnote text-muted-foreground">Guardar en la carpeta del Drive</label>
+              <div className="space-y-1.5">
+                <label htmlFor="exercise-drive-folder" className="block type-subhead text-muted-foreground">Carpeta del Drive</label>
                 <select
                   id="exercise-drive-folder"
                   value={driveFolder}
                   onChange={(e) => setDriveFolder(e.target.value)}
-                  className="h-11 w-full rounded-full bg-secondary px-4 type-body text-foreground"
+                  className={SELECT_CLASS}
                 >
                   <option value="auto">Automática: {autoFolderLabel}</option>
                   {driveFolders.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
@@ -581,7 +581,7 @@ const ExerciseFormDialog = ({
                 ) : null}
               </ListGroup>
               {driveFiles && (
-                <div className="space-y-2 px-4">
+                <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <p className="type-subhead">Imágenes en Drive · Ejercicios</p>
                     <button type="button" className="type-footnote text-muted-foreground" onClick={() => setDriveFiles(null)}>Cerrar</button>
@@ -625,7 +625,7 @@ const ExerciseFormDialog = ({
               value={form.video_url || ""}
               onChange={(e) => set("video_url", e.target.value)}
               placeholder="YouTube, Vimeo o MP4 directo (https://…)"
-              className="font-mono !type-footnote"
+              className="!type-footnote"
             />
             {initial?.id ? (
               <ListGroup inset>

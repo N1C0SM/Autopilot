@@ -79,7 +79,8 @@ const AdminStats = ({ users }: Props) => {
         items={[
           { label: "Clientes", value: total },
           { label: "Plus", value: counts.plus },
-          { label: "Coach", value: counts.coach },
+          // Coach está retirado del catálogo: solo aparece si aún queda algún cliente en él.
+          ...(counts.coach > 0 ? [{ label: "Coach", value: counts.coach }] : []),
         ]}
       />
       <p className="mt-3 type-footnote text-muted-foreground">{MONTHLY_ESTIMATE_NOTE}</p>
