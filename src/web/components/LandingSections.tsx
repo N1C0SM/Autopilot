@@ -3,7 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { storeLinksComplete, type StoreLinks } from "@/shared/lib/storeLinks";
 import { Link } from "react-router-dom";
-import { ArrowRight, Bell, Check, Play, Zap, Utensils, BarChart3, Layers, Target, TrendingUp, Infinity as InfinityIcon, ShieldCheck, Smartphone, Monitor, Gift, UserRound, House, Dumbbell, Apple, Flame, LogOut, PanelLeft, Settings } from "lucide-react";
+import { ArrowRight, Bell, Check, Play, TrendingUp, Smartphone, Monitor, House, Dumbbell, Apple, Flame, LogOut, PanelLeft, Settings } from "lucide-react";
 import { BrandMark } from "@/shared/components/ui/brand-mark";
 import { PhoneAppBar, PhoneFrame, PhoneHome, PhoneTabBar } from "@/web/components/PublicPhone";
 import { cn } from "@/shared/lib/utils";
@@ -25,32 +25,21 @@ const Kicker = ({ children, className = "" }: { children: React.ReactNode; class
 const cta = (source: string) => () => { void hapticTap(); track("cta_click", { cta: "free_signup", source }); };
 
 export function LandingHero({ ctaRef }: { ctaRef: React.Ref<HTMLDivElement> }) {
-  const pillars = [
-    { icon: Zap, t: "Plan personalizado", s: "según tu objetivo" },
-    { icon: Utensils, t: "Nutrición", s: "adaptada a ti" },
-    { icon: BarChart3, t: "Progreso", s: "real y medible" },
-    { icon: Layers, t: "Academia", s: "para aprender más" },
-  ];
   return <section className="relative overflow-hidden">
     <img src={heroAthlete} alt="" aria-hidden="true" width={1600} height={1008} {...{ fetchpriority: "high" }} className="absolute inset-y-0 right-0 h-full w-full object-cover object-[75%_20%] opacity-55 sm:w-[78%] sm:opacity-100" />
     <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-r from-background via-background/85 to-transparent sm:via-background/40" />
     <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-background to-transparent" />
-    <div className="relative mx-auto max-w-6xl px-5 pb-12 pt-10 sm:px-8 sm:pt-14">
+    <div className="relative mx-auto flex min-h-[min(720px,86svh)] max-w-6xl items-center px-5 pb-16 pt-10 sm:px-8 sm:pt-14">
       <div className="max-w-[560px]">
         <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-foreground sm:text-[12px]">Entrenamiento · Nutrición · Progreso</p>
-        <h1 className="mt-4 text-[40px] font-bold leading-[1.05] tracking-[-0.025em] sm:text-[52px]">Convierte la disciplina <span className="block">en <span className="text-primary">resultados.</span></span></h1>
-        <p className="mt-5 text-[17px] leading-[24px] text-foreground/90 sm:text-[18px]">Tu sistema de entrenamiento, nutrición y progreso.<br className="hidden sm:block" /> Simple, personal y basado en datos.</p>
+        <h1 className="mt-4 text-[40px] font-bold leading-[1.05] tracking-[-0.025em] sm:text-[52px] lg:text-[64px]">Convierte la disciplina <span className="block">en <span className="text-primary">resultados.</span></span></h1>
+        <p className="mt-5 text-[17px] leading-[24px] text-foreground/90 sm:text-[19px] sm:leading-[27px]">Tu entreno, tu comida y tu progreso, en una app.</p>
         <div ref={ctaRef} className="mt-7 flex flex-col gap-3 sm:flex-row sm:gap-4">
           <AppLink to="/onboarding" onClick={cta("hero")} className={pillGold}>Empezar gratis <ArrowRight className="h-4 w-4" /></AppLink>
           <Link to="/como-funciona#demo" onClick={() => { void hapticTap(); track("plan_preview_view", { source: "hero" }); }} className={`${pillLine} sm:min-w-[152px]`}><Play className="h-4 w-4 fill-current" />Ver demo</Link>
         </div>
-        <ul className="mt-6 flex flex-wrap gap-x-7 gap-y-2 text-[13px] text-foreground/85">
-          {["Gratis para siempre", "Sin tarjeta", "Sin compromiso"].map((t) => <li key={t} className="flex items-center gap-1.5"><Check className="h-3.5 w-3.5" strokeWidth={2.4} />{t}</li>)}
-        </ul>
+        <p className="mt-5 text-[13px] text-foreground/70">Gratis para siempre · Sin tarjeta</p>
       </div>
-      <ul className="mt-12 grid grid-cols-2 gap-6 lg:grid-cols-4">
-        {pillars.map(({ icon: I, t, s }) => <li key={t} className="flex items-center gap-4"><I className="h-7 w-7 shrink-0 text-primary" strokeWidth={1.5} /><div className="text-[14px] leading-[19px]"><p className="font-semibold">{t}</p><p className="text-foreground/80">{s}</p></div></li>)}
-      </ul>
     </div>
   </section>;
 }
@@ -149,7 +138,7 @@ export function LandingExperience() {
       <div className="pb-6">
         <Kicker>La app por dentro</Kicker>
         <h2 id="exp-t" className="mt-3 text-[30px] font-bold leading-[1.15] tracking-[-0.015em] sm:text-[36px]">Tu entreno de hoy,<br />en el móvil y en el ordenador.</h2>
-        <p className="mt-4 max-w-[400px] text-[16px] leading-[22px] text-foreground/85">Así se ve Autopilot: qué toca entrenar, qué toca comer y cómo vas. Mismo sistema en el móvil y en la web, sincronizado.</p>
+        <p className="mt-4 max-w-[400px] text-[16px] leading-[22px] text-foreground/85">La misma app, sincronizada.</p>
         {!stores && <AppLink to="/onboarding" onClick={cta("experience")} className={`${pillLine} mt-6`}>Probarla gratis <ArrowRight className="h-4 w-4" /></AppLink>}
         {stores && links && <><div className="mt-6 flex flex-wrap gap-3">
           <StoreButton href={links.ios.trim()} small="Descargar en" big="App Store"><Apple className="h-6 w-6 fill-current" /></StoreButton>
@@ -178,10 +167,10 @@ export function LandingProblem() {
 /** Historia real del origen: calistenia en casa, gym a los 14, apps que obligaban a elegir. */
 export function LandingOrigin() {
   const chapters = [
-    { k: "En casa", t: "Una barra de dominadas y unas anillas.", s: "Todo empezó con calistenia en casa, sin gimnasio ni plan: barra, anillas y ganas de mejorar." },
-    { k: "A los 14", t: "El gimnasio.", s: "Me apunté al gym y durante mucho tiempo estuve centrado en él, sin dejar nunca la calistenia." },
-    { k: "El problema", t: "Las apps me obligaban a elegir.", s: "Unas solo entendían de discos y máquinas; otras, solo de calistenia. Ninguna juntaba las dos cosas que hacía." },
-    { k: "La solución", t: "Me lo programé.", s: "Siempre me ha gustado emprender y los ordenadores. Así que monté Autopilot: tracker de gym y calistenia, nutrición y un scan del cuerpo para que todo sea medible." },
+    { k: "En casa", t: "Una barra de dominadas y unas anillas." },
+    { k: "A los 14", t: "El gimnasio." },
+    { k: "El problema", t: "Las apps me obligaban a elegir." },
+    { k: "La solución", t: "Me lo programé." },
   ];
   return <section aria-labelledby="origin-t" className="border-t border-border px-5 py-14 sm:px-8 sm:py-20">
     <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">
@@ -194,61 +183,14 @@ export function LandingOrigin() {
         {chapters.map((c) => <li key={c.k} className="relative">
           <span aria-hidden="true" className="absolute -left-[29px] top-1.5 h-2 w-2 rounded-full bg-primary" />
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-foreground/60">{c.k}</p>
-          <p className="mt-1.5 text-[19px] font-semibold leading-[1.25]">{c.t}</p>
-          <p className="mt-1.5 max-w-[520px] text-[15px] leading-[22px] text-foreground/80">{c.s}</p>
+          <p className="mt-1.5 text-[19px] font-semibold leading-[1.25] sm:text-[22px]">{c.t}</p>
         </li>)}
       </ol>
-    </div>
-  </section>;
-}
-
-export function LandingWhy() {
-  const items = [
-    { icon: Target, t: "Plan a tu medida", s: "Según tu nivel, objetivo y tiempo." },
-    { icon: Layers, t: "Todo conectado", s: "Entrenamiento, nutrición y progreso en un solo lugar." },
-    { icon: TrendingUp, t: "Decisiones con datos", s: "Sigue tu evolución y sabe qué hacer en cada momento." },
-    { icon: InfinityIcon, t: "Sostenible", s: "Sin extremismos. Hábitos que puedes mantener." },
-  ];
-  const trust = [
-    { icon: Gift, t: "Free para siempre", s: "Sin tarjeta y sin caducidad" },
-    { icon: UserRound, t: "Hecho por una persona", s: "Nicolás construye y responde" },
-    { icon: ShieldCheck, t: "Tus datos, siempre privados", s: "Cumplimos con la normativa RGPD." },
-  ];
-  return <section aria-labelledby="why-t" className="border-t border-border px-5 pt-6 sm:px-8">
-    <div className="mx-auto max-w-6xl">
-      <h2 id="why-t"><Kicker>Por qué funciona</Kicker></h2>
-      <ul className="mt-4 grid gap-7 sm:grid-cols-2 lg:grid-cols-4 lg:gap-0 lg:divide-x lg:divide-border">
-        {items.map(({ icon: I, t, s }) => <li key={t} className="lg:px-6 lg:first:pl-0"><I className="h-6 w-6 text-primary" strokeWidth={1.6} /><p className="mt-2.5 text-[17px] font-semibold">{t}</p><p className="mt-1 max-w-[220px] text-[14px] leading-[18px] text-foreground/80">{s}</p></li>)}
-      </ul>
-      <ul className="mt-6 grid gap-5 border-y border-border py-5 sm:grid-cols-3 sm:divide-x sm:divide-border">
-        {trust.map(({ icon: I, t, s }) => <li key={t} className="flex items-center gap-3 sm:justify-center sm:px-4"><I className="h-7 w-7 shrink-0 text-primary" strokeWidth={1.5} /><div className="leading-tight"><p className="text-[14px] font-semibold">{t}</p><p className="text-[12px] text-foreground/80">{s}</p></div></li>)}
-      </ul>
     </div>
   </section>;
 }
 
 /** Cómo funciona en 3 pasos: lo que la app hace de verdad, sin promesas. */
-export function LandingSteps() {
-  const steps = [
-    { n: "01", t: "Tu perfil en 2 minutos", s: "Objetivo, días y material: gimnasio completo, mancuernas o calistenia en casa." },
-    { n: "02", t: "Tu sistema al instante", s: "Rutina híbrida calculada para ti. En Plus, además, calorías y macros." },
-    { n: "03", t: "Entrena y apunta", s: "Registras kilos y repeticiones. En Plus, Autopilot calcula la carga de la siguiente sesión." },
-  ];
-  return <section aria-labelledby="steps-t" className="border-t border-border px-5 py-14 sm:px-8 sm:py-20">
-    <div className="mx-auto max-w-6xl">
-      <Kicker>Cómo funciona</Kicker>
-      <h2 id="steps-t" className="mt-3 max-w-[560px] text-[30px] font-bold leading-[1.1] tracking-[-0.02em] sm:text-[40px]">Tres pasos. Ninguno es rellenar un Excel.</h2>
-      <ol className="mt-10 grid gap-8 md:grid-cols-3 md:gap-0 md:divide-x md:divide-border">
-        {steps.map((s) => <li key={s.n} className="md:px-8 md:first:pl-0">
-          <p className="text-[13px] font-semibold tabular-nums text-primary">{s.n}</p>
-          <p className="mt-2 text-[19px] font-semibold leading-[1.25]">{s.t}</p>
-          <p className="mt-1.5 max-w-[320px] text-[15px] leading-[22px] text-foreground/80">{s.s}</p>
-        </li>)}
-      </ol>
-    </div>
-  </section>;
-}
-
 /** Dudas que frenan el registro, con las mismas respuestas que /preguntas-frecuentes. */
 export function LandingFaq({ faqs }: { faqs: { q: string; a: string }[] }) {
   if (!faqs.length) return null;
