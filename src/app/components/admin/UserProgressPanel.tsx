@@ -359,7 +359,7 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
                     title={pr.exercise_name}
                     subtitle={
                       <span className="tabular-nums">
-                        {pr.weight} kg × {pr.reps} · {new Date(pr.achieved_at).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "2-digit" })}
+                        {Number.isInteger(Number(pr.weight)) ? pr.weight : formatDecimal(pr.weight, 1)} kg × {pr.reps} · {new Date(pr.achieved_at).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "2-digit" })}
                       </span>
                     }
                     trailing={

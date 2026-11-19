@@ -1,4 +1,5 @@
 import { useState, useEffect, useId, forwardRef } from "react";
+import { SCAN_GOAL_LABELS } from "@/shared/lib/scanResultFormat";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -579,7 +580,7 @@ const TrainingPlanForm = forwardRef<HTMLDivElement, Props>(({ dayPlans, onChange
             </p>
             {(userGoal || activeDays || (userAge && userAge > 45)) && (
               <p className="type-footnote text-muted-foreground">
-                {[userGoal && `Objetivo: ${userGoal}`, activeDays && `Días disponibles: ${activeDays}`, userAge && userAge > 45 && "Más de 45 años: considerar volumen reducido"].filter(Boolean).join(" · ")}
+                {[userGoal && `Objetivo: ${(SCAN_GOAL_LABELS[userGoal] ?? userGoal).toLowerCase()}`, activeDays && `Días disponibles: ${activeDays}`, userAge && userAge > 45 && "Más de 45 años: considerar volumen reducido"].filter(Boolean).join(" · ")}
               </p>
             )}
           </div>

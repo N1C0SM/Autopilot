@@ -110,7 +110,7 @@ const MACRO_TEMPLATES: Record<string, { label: string; calc: (weight: number) =>
 
 // Pestañas de la ficha: los chips se reparten todo el ancho (2 → mitades, 3 → tercios);
 // si son tantos que no caben a su tamaño natural, la barra pasa a scroll horizontal.
-const CHIP_BAR = "no-scrollbar -mx-4 flex h-auto w-auto snap-x scroll-px-4 justify-start gap-2 overflow-x-auto rounded-none bg-transparent px-4 py-0 md:mx-0 md:scroll-px-0 md:px-0";
+const CHIP_BAR = "no-scrollbar -mx-4 flex h-auto w-auto snap-x scroll-px-4 justify-start gap-2 overflow-x-auto rounded-none border-0 bg-transparent px-4 py-0 md:mx-0 md:scroll-px-0 md:px-0";
 const CHIP = "h-11 flex-1 basis-0 min-w-fit snap-start rounded-full bg-secondary px-4 type-subhead font-medium text-foreground transition-[background-color,color,transform] duration-150 active:scale-[0.97] data-[state=active]:bg-primary/15 data-[state=active]:font-semibold data-[state=active]:text-primary data-[state=active]:shadow-none";
 
 /** Nombre visible del cliente: nunca el email completo como título. */
@@ -456,6 +456,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
     recomp: "Recomposición",
     improve_endurance: "Mejorar resistencia",
     general_health: "Salud general",
+    skill_based: "Habilidades",
   };
 
   const clientFeatures = resolveFeatures(getConsumerPlan(profile));
@@ -595,12 +596,13 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
           {!restricted && (
             <section className="space-y-3">
               <p className="type-subhead text-muted-foreground">Toca un plan para aplicarlo al instante. No genera ningún cobro.</p>
-              <div className="grid grid-cols-3 gap-2" role="group" aria-label="Plan del cliente">
+              {/* Coach está retirado: solo aparece para quien aún lo tiene, para poder pasarlo a Plus o Free. */}
+              <div className={cn("grid gap-2", hasAccess && hasCoachTier ? "grid-cols-3" : "grid-cols-2")} role="group" aria-label="Plan del cliente">
                 {([
                   { value: "free", name: "Free", price: TIERS.free.price },
                   { value: "training", name: "Plus", price: TIERS.training.price },
                   { value: "full", name: "Coach", price: TIERS.full.price },
-                ] as const).map((opt) => {
+                ] as const).filter((opt) => opt.value !== "full" || (hasAccess && hasCoachTier)).map((opt) => {
                   const active = opt.value === "free"
                     ? !hasAccess
                     : hasAccess && (opt.value === "full"
@@ -644,7 +646,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                       )}
                     >
                       <span className="type-headline">{opt.name}</span>
-                      <span className={cn("mt-0.5 type-footnote tabular-nums", active ? "text-primary" : "text-muted-foreground")}>{opt.price} €/mes</span>
+                      <span className={cn("mt-0.5 type-footnote tabular-nums", active ? "text-primary" : "text-muted-foreground")}>{opt.price.toLocaleString("es-ES")} €/mes</span>
                       {active && (
                         <span className="mt-1.5 inline-flex items-center gap-1 type-caption1 font-semibold">
                           <Check className="h-3.5 w-3.5" strokeWidth={3} aria-hidden="true" /> Actual
