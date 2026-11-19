@@ -83,6 +83,10 @@ describe("exerciseRecord", () => {
     expect(exerciseRecord([entry("2026-10-01", null), entry("2026-10-08", 65), entry("2026-10-15", 72.5), entry("2026-10-22", 70)]))
       .toEqual({ label: "72.5 kg × 8", gainKg: 7.5 });
   });
+  it("lee la coma decimal de la etiqueta («62,5 kg × 8»)", () => {
+    const comma = (date: string, kg: number) => ({ ...entry(date, kg), bestSetLabel: `${kg.toLocaleString("es-ES")} kg × 8` });
+    expect(exerciseRecord([comma("2026-10-01", 60), comma("2026-10-08", 62.5)])).toEqual({ label: "62,5 kg × 8", gainKg: 2.5 });
+  });
   it("no inventa subida con una sola sesión ni sin peso", () => {
     expect(exerciseRecord([entry("2026-10-08", 65)])).toEqual({ label: "65 kg × 8", gainKg: null });
     expect(exerciseRecord([entry("2026-10-08", null)])).toEqual({ label: null, gainKg: null });

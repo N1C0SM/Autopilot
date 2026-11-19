@@ -397,6 +397,15 @@ enum NumberText {
     static func integer(_ value: Int) -> String {
         value.formatted(.number.locale(Locale(identifier: "es_ES")))
     }
+    /// Entero con punto de miles siempre («2.366»; el formato de es_ES no agrupa cuatro cifras).
+    /// Igual que `groupedInt` en la web (`workoutSummaryFormat.ts`).
+    static func grouped(_ value: Double) -> String {
+        let n = Int(abs(value).rounded())
+        var digits = Array(String(n))
+        var i = digits.count - 3
+        while i > 0 { digits.insert(".", at: i); i -= 3 }
+        return (value < 0 && n != 0 ? "−" : "") + String(digits)
+    }
 }
 
 /// Interruptor a la derecha de su texto, como las filas de la web (en Mac el `.switch` se pega al texto).

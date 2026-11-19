@@ -128,8 +128,8 @@ export function ExerciseSwap({ original, current, movementPattern, muscleGroup, 
           ) : options?.length === 0 ? (
             <EmptyState
               icon={Dumbbell}
-              title="Sin alternativas"
-              description="No hay alternativas en la biblioteca."
+              title="Sigue con este ejercicio"
+              description="Aún no hay alternativas para este movimiento en la biblioteca."
               className="py-6 [&>div:first-child]:bg-secondary"
             />
           ) : options ? (

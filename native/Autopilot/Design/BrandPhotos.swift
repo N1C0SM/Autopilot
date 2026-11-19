@@ -36,8 +36,12 @@ final class BrandPhotos {
         }
     }
 
-    /// URL actual como texto ("" hasta saberla). Leerla en `body` repinta la vista cuando llega.
-    static func string(_ kind: Kind) -> String { shared.urls[kind.rawValue] ?? "" }
+    /// Foto incluida en la app (la misma que `hero-athlete.jpg` de la web): ninguna portada queda
+    /// vacía si la biblioteca no tiene foto para ese ejercicio o aún no ha llegado.
+    static let fallbackURL: URL? = Bundle.main.url(forResource: "brand-fallback", withExtension: "jpg")
+
+    /// URL actual como texto (la foto incluida hasta saberla). Leerla en `body` repinta la vista cuando llega.
+    static func string(_ kind: Kind) -> String { shared.urls[kind.rawValue] ?? fallbackURL?.absoluteString ?? "" }
     static func url(_ kind: Kind) -> URL? { URL(string: string(kind)) }
 
     /// Pide las URLs actuales: una vez por arranque y, si falta alguna, como mucho cada minuto

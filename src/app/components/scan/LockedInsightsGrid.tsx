@@ -1,5 +1,7 @@
-import { Lock } from "lucide-react";
+import { LockKeyhole } from "lucide-react";
+import { Button } from "@/shared/components/ui/button";
 import { hapticTap } from "@/shared/lib/native";
+import { cn } from "@/shared/lib/utils";
 
 type Insight = { label: string; teaser: string; category?: string };
 
@@ -32,42 +34,39 @@ export default function LockedInsightsGrid({
   };
 
   return (
-    <section>
+    <section className="flex flex-col gap-2.5">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="min-w-0 type-title2">
-          {hasRealInsights ? `${items.length} insights bloqueados` : "Ejemplos de lo que incluye tu plan"}
+        <h2 className="min-w-0 type-title3">
+          {hasRealInsights ? `Tus ${items.length} claves por desbloquear` : "Lo que incluye tu plan"}
         </h2>
-        <button
-          type="button"
-          onClick={handle}
-          className="-mr-3 min-h-[44px] shrink-0 px-3 type-body text-primary active:opacity-60 transition-opacity"
-        >
-          Desbloquear todos
-        </button>
+        <Button variant="plain" size="sm" className="-mr-3 shrink-0" onClick={handle}>
+          Desbloquear
+        </Button>
       </div>
       {!hasRealInsights && (
-        <p className="type-footnote text-muted-foreground mt-1">
+        <p className="type-footnote text-muted-foreground">
           Ejemplos del tipo de recomendaciones que recibes con un plan. Las tuyas se calculan con tu análisis.
         </p>
       )}
-      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-8">
+      <ul className="overflow-hidden rounded-card bg-card">
         {items.map((li, i) => (
-          <button
-            key={i}
-            type="button"
-            onClick={handle}
-            className="sep-b last:border-b-0 flex items-start gap-3 py-3 min-h-[44px] text-left active:opacity-60 transition-opacity"
-          >
-            <Lock className="w-5 h-5 mt-0.5 text-muted-foreground shrink-0" strokeWidth={2} />
-            <span className="min-w-0 flex-1">
-              <span className="type-headline block">{li.label}</span>
-              <span className="type-subhead block text-muted-foreground blur-[3px] select-none line-clamp-2 mt-0.5">
-                {li.teaser}
+          <li key={i} className={cn(i > 0 && "sep-t")}>
+            <button
+              type="button"
+              onClick={handle}
+              className="flex min-h-[56px] w-full items-start gap-3 px-4 py-3 text-left transition-opacity active:opacity-60"
+            >
+              <LockKeyhole className="mt-0.5 h-[18px] w-[18px] shrink-0 text-muted-foreground" strokeWidth={2} aria-hidden="true" />
+              <span className="min-w-0 flex-1">
+                <span className="block type-headline">{li.label}</span>
+                <span aria-hidden="true" className="mt-0.5 block line-clamp-2 select-none type-subhead text-muted-foreground blur-[3px]">
+                  {li.teaser}
+                </span>
               </span>
-            </span>
-          </button>
+            </button>
+          </li>
         ))}
-      </div>
+      </ul>
     </section>
   );
 }

@@ -1,5 +1,10 @@
 import { BookOpen, Play } from "lucide-react";
-import { generatePlanGuarded, isManualPlan } from "@/shared/lib/planShield";
+import { generatePlanGuarded } from "@/shared/lib/planShield";
+import {
+  addRoutine, canAddRoutine, commitRoutineChange, deleteRoutine, duplicateRoutine, FREE_WORKOUT_NAME, myRoutines, planModeCopy,
+  SESSION_LIMIT_MESSAGE, updateRoutine, type RoutineChange, type RoutineCommit,
+} from "@/shared/lib/customRoutines";
+import { routineSessions } from "@/shared/lib/routineOrder";
 import { withSessionIdentity } from "@/shared/lib/sessionIdentity";
 import type { Json } from "@/shared/integrations/supabase/types";
 import { DASHBOARD_CHAT_ENABLED } from "@/shared/lib/releaseScope";
@@ -56,6 +61,8 @@ const Recursos = lazy(() => import("@/web/pages/Recursos"));
 const ProgressScan = lazy(() => import("@/app/components/scan/ProgressScan"));
 const PlanEditor = lazy(() => import("@/app/components/dashboard/PlanEditor"));
 const FreeSessionBuilder = lazy(() => import("@/app/components/dashboard/FreeSessionBuilder"));
+const RoutineEditor = lazy(() => import("@/app/components/dashboard/RoutineEditor"));
+const MyRoutines = lazy(() => import("@/app/components/dashboard/MyRoutines"));
 const ExerciseLibrarySheet = lazy(() => import("@/app/components/library/ExerciseLibrarySheet"));
 const ExerciseLibraryPage = lazy(() => import("@/app/components/library/ExerciseLibrarySheet").then((m) => ({ default: m.ExerciseLibraryPage })));
 
@@ -180,11 +187,18 @@ const Dashboard = () => {
   // Al salir de Entrenar se limpia el día pedido: si se vuelve a tocar el mismo
   // día en «Hoy», la rutina semanal vuelve a abrirse en ese día.
   useEffect(() => {
-    if (section !== "training") setPlanFocusDay(undefined);
+    if (section !== "training") { setPlanFocusDay(undefined); setRoutinesFocus(false); }
   }, [section]);
   const [progressTab, setProgressTab] = useState<"evolution" | "photos" | "records" | "scan">("evolution");
   // Tras un scan, «Físico» vuelve a pedir las fotos (como la app).
   const [photosVersion, setPhotosVersion] = useState(0);
+  // «Scan» se monta la primera vez que se abre y queda oculto en las otras pestañas, como la app
+  // (`scanMounted` en ProgressScreen.swift): conserva las fotos elegidas, el análisis en curso y el resultado.
+  const [scanMounted, setScanMounted] = useState(false);
+  useEffect(() => {
+    if (section !== "progress") setScanMounted(false);
+    else if (progressTab === "scan") setScanMounted(true);
+  }, [section, progressTab]);
   const [completedThisWeek, setCompletedThisWeek] = useState(cached?.completedThisWeek ?? 0);
   const [completedDays, setCompletedDays] = useState<string[]>(cached?.completedDays ?? []);
   const [completedTodayDays, setCompletedTodayDays] = useState<string[]>(cached?.completedTodayDays ?? []);
@@ -201,6 +215,10 @@ const Dashboard = () => {
   const [planFocusDay, setPlanFocusDay] = useState<string | undefined>();
   const [editorOpen, setEditorOpen] = useState(false);
   const [freeOpen, setFreeOpen] = useState(false);
+  /** «Nueva rutina» (`day: null`) o «Editar» de una rutina de «Mis rutinas». */
+  const [routineEditor, setRoutineEditor] = useState<{ day: string | null } | null>(null);
+  /** «Ver todas» en «Mis rutinas» de Hoy: Entrenar se abre con «Mis rutinas» arriba. */
+  const [routinesFocus, setRoutinesFocus] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
   // Sección de Ajustes abierta: su nombre es el título grande y «Ajustes» pasa a ser el botón de volver.
   const [settingsPage, setSettingsPage] = useState<string | null>(null);
@@ -328,8 +346,10 @@ const Dashboard = () => {
         ? { calories: estimate.calories, protein: estimate.protein, carbs: estimate.carbs ?? 0, fats: estimate.fats ?? 0 }
         : null);
 
-      if (profile.plan_status === "plan_ready") {
-        const plans = tp?.workouts_json as unknown as DayPlan[] | undefined;
+      const storedPlans = Array.isArray(tp?.workouts_json) ? tp.workouts_json as unknown as DayPlan[] : undefined;
+      // Con rutinas propias guardadas (aunque no haya rutina inicial) también hay plan que pintar.
+      if (profile.plan_status === "plan_ready" || (storedPlans && routineSessions(storedPlans).length > 0)) {
+        const plans = storedPlans;
         if (plans) {
           setDayPlans(plans);
           try { localStorage.setItem(`autopilot_cached_routine_${user.id}`, JSON.stringify(plans)); } catch { /* sin espacio */ }
@@ -584,7 +604,50 @@ const Dashboard = () => {
     );
   }
 
-  const hasPlan = planStatus === "plan_ready";
+  // Hay plan si está listo o si ya hay sesiones guardadas (p. ej. una rutina creada antes de la inicial).
+  const hasPlan = planStatus === "plan_ready" || routineSessions(dayPlans).length > 0;
+  const routines = myRoutines(dayPlans);
+  const routineLimit = !canAddRoutine(dayPlans);
+
+  /**
+   * Rutinas propias: el cambio se aplica sobre el plan guardado y se guarda en `training_plan`
+   * (sin fila, se crea con la rutina). Lo que no cabe se dice; nunca falla en silencio.
+   */
+  const commitRoutine = async (change: (plans: DayPlan[]) => RoutineChange, done: string): Promise<RoutineCommit> => {
+    if (!user) return { ok: false, reason: "error" };
+    const result = await commitRoutineChange(supabase as unknown as Parameters<typeof commitRoutineChange>[0], user.id, change);
+    if (result.ok) {
+      setDayPlans(result.plans);
+      try { localStorage.setItem(`autopilot_cached_routine_${user.id}`, JSON.stringify(result.plans)); } catch { /* sin espacio */ }
+      void hapticTap();
+      toast.success(done);
+    } else if ("reason" in result && result.reason === "limit") {
+      toast.message(`${SESSION_LIMIT_MESSAGE}.`);
+    } else {
+      toast.error("No se pudo guardar. Comprueba la conexión e inténtalo de nuevo.");
+    }
+    return result;
+  };
+
+  /** «Empezar» una rutina: el mismo entreno que una sesión del plan (mismo tracker y mismo borrador). */
+  const startRoutine = (day: string) => {
+    if (!user) return;
+    const draft = readActiveWorkout(user.id);
+    if (draft?.plan.day === day) {
+      setFreePlans([draft.plan]);
+      setResumeWorkout(true);
+      setAutoStartWorkout(false);
+    } else {
+      setFreePlans(null);
+      setResumeWorkout(false);
+      setAutoStartWorkout(true);
+    }
+    setTrainingDay(day);
+    setTrainingView("tracker");
+    setRoutinesFocus(false);
+    setWorkoutMode(true);
+    setSection("training");
+  };
 
   const isTransform = subscriptionTier === "transform";
   const isFull = subscriptionTier === "full";
@@ -646,7 +709,7 @@ const Dashboard = () => {
     library: "Técnica, músculos y variantes de cada ejercicio",
     nutrition: "Tus macros y comidas del día",
     chat: "Habla con tu entrenador y envía fotos o vídeos",
-    progress: "Fotos, peso y evolución semanal",
+    progress: "Tu fuerza, tu físico y tus récords",
     settings: "Perfil, suscripción y notificaciones",
     resources: "Biblioteca, guías y recomendaciones",
   };
@@ -699,9 +762,15 @@ const Dashboard = () => {
             title="Prepara tu rutina inicial gratis"
             description="Te la preparamos en unos segundos."
           />
-          <Button size="lg" className="w-full md:w-auto md:self-center" disabled={preparingRoutine} onClick={() => void prepareRoutine()}>
-            {preparingRoutine ? "Preparando…" : "Preparar mi rutina gratis"}
-          </Button>
+          <div className="flex w-full flex-col gap-2 md:mx-auto md:max-w-sm">
+            <Button size="lg" className="w-full" disabled={preparingRoutine} onClick={() => void prepareRoutine()}>
+              {preparingRoutine ? "Preparando…" : "Preparar mi rutina gratis"}
+            </Button>
+            {/* O la tuya desde cero: se guarda en tu plan como cualquier rutina propia. */}
+            <Button type="button" variant="secondary" size="lg" className="w-full" onClick={() => { void hapticTap(); setRoutineEditor({ day: null }); }}>
+              Nueva rutina
+            </Button>
+          </div>
         </div>
       )}
       {!campaign && !coaching && section === "nutrition" && user && (
@@ -745,7 +814,6 @@ const Dashboard = () => {
             onPrepareRoutine={() => void prepareRoutine()}
             meals={meals}
             nutrition={nutrition || campaign}
-            planStatus={planStatus}
             dayPlans={dayPlans}
             onNavigate={(s, day) => {
               setAutoStartWorkout(false);
@@ -764,6 +832,14 @@ const Dashboard = () => {
               setSection(s as MobileTab);
             }}
             onEmptyWorkout={() => setFreeOpen(true)}
+            onNewRoutine={() => setRoutineEditor({ day: null })}
+            onOpenRoutines={() => {
+              setAutoStartWorkout(false);
+              setTrainingView("plan");
+              setPlanFocusDay(undefined);
+              setRoutinesFocus(true);
+              setSection("training");
+            }}
             onEditRoutine={() => setEditorOpen(true)}
             onStartWorkout={(day) => {
               setResumeWorkout(false);
@@ -834,17 +910,13 @@ const Dashboard = () => {
           <Suspense fallback={<SectionFallback />}>
               {trainingView === "plan" && !workoutMode && !autoStartWorkout ? (
                 <TrainingPlanView dayPlans={dayPlans} initialDay={planFocusDay} doneThisWeek={completedDays} doneToday={completedTodayDays} resumableDay={readActiveWorkout(user.id)?.plan.day} tools={(
-                // Cabecera de la rutina, arriba: el modo en dorado y de dónde sale con «Editar» a la derecha
-                // (como «Tu plan» en Hoy) y, debajo, «Entreno vacío» y «Ejercicios» con su nombre.
-                <div className="w-full rounded-[22px] bg-card p-5">
+                // Cabecera de la rutina, arriba: el modo y de dónde sale con «Editar» a la derecha (como
+                // «Tu plan» en Hoy) y, debajo, «Entreno vacío» y «Ejercicios» con su nombre.
+                <div className="w-full rounded-card bg-card p-5">
                   <div className="flex items-start gap-3">
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
-                        {isManualPlan(dayPlans) ? "Rutina personalizada" : "Piloto automático"}
-                      </p>
-                      <p className="mt-1 type-subhead text-muted-foreground">
-                        {isManualPlan(dayPlans) ? "Creada por ti." : "Preparada por Autopilot."}
-                      </p>
+                      <p className="type-footnote font-semibold text-primary">{planModeCopy(dayPlans).title}</p>
+                      <p className="mt-0.5 type-subhead text-muted-foreground">{planModeCopy(dayPlans).detail}</p>
                     </div>
                     <button
                       type="button"
@@ -855,7 +927,8 @@ const Dashboard = () => {
                       Editar
                     </button>
                   </div>
-                  <div className="mt-4 grid grid-cols-2 gap-2">
+                  {/* Lado a lado si caben enteros; si no (estrecho o letra grande), uno bajo otro, sin cortar. */}
+                  <div className="mt-4 flex flex-wrap gap-2">
                     {[
                       { label: "Entreno vacío", Icon: Play, on: () => setFreeOpen(true) },
                       { label: "Ejercicios", Icon: BookOpen, on: () => setLibraryOpen(true) },
@@ -864,15 +937,29 @@ const Dashboard = () => {
                         key={label}
                         type="button"
                         onClick={() => { void hapticTap(); on(); }}
-                        className="flex h-11 items-center justify-center gap-2 rounded-full bg-secondary px-3 type-subhead font-semibold transition-opacity active:opacity-60"
+                        className="btn-raised flex h-11 flex-[1_0_auto] items-center justify-center gap-2 whitespace-nowrap rounded-full bg-secondary px-4 type-subhead font-semibold transition-opacity active:opacity-60"
                       >
                         <Icon className="h-4 w-4 shrink-0 text-primary" strokeWidth={2} aria-hidden />
-                        <span className="truncate">{label}</span>
+                        {label}
                       </button>
                     ))}
                   </div>
                 </div>
+                )} routines={(
+                  <MyRoutines
+                    routines={routines}
+                    limitReached={routineLimit}
+                    resumableDay={readActiveWorkout(user.id)?.plan.day}
+                    doneToday={completedTodayDays}
+                    onNew={() => setRoutineEditor({ day: null })}
+                    onStart={startRoutine}
+                    onEdit={(day) => setRoutineEditor({ day })}
+                    onDuplicate={async (day) => (await commitRoutine((plans) => duplicateRoutine(plans, day), "Rutina duplicada")).ok}
+                    onDelete={async (day) => (await commitRoutine((plans) => deleteRoutine(plans, day), "Rutina borrada")).ok}
+                    focus={routinesFocus}
+                  />
                 )} onOpenWorkout={(day) => {
+                  setRoutinesFocus(false);
                   setResumeWorkout(readActiveWorkout(user.id)?.plan.day === day);
                   setAutoStartWorkout(false);
                   setTrainingDay(day);
@@ -919,6 +1006,14 @@ const Dashboard = () => {
                     setSection("home");
                     void fetchData();
                   }}
+                  // Entreno vacío: al terminar se puede guardar lo hecho como rutina («Mis rutinas»).
+                  onSaveAsRoutine={freePlans?.some((plan) => plan.day === trainingDay && plan.routine_name === FREE_WORKOUT_NAME)
+                    ? async (name, exercises) => {
+                      const result = await commitRoutine((plans) => addRoutine(plans, { name, exercises }), "Rutina guardada en Mis rutinas");
+                      return result.ok ? "ok" : "reason" in result && result.reason === "limit" ? "limit" : "error";
+                    }
+                    : undefined}
+                  routineLimitReached={routineLimit}
                 />
               )}
             </Suspense>
@@ -1038,9 +1133,9 @@ const Dashboard = () => {
             <TabsContent value="records" forceMount tabIndex={-1} className="mt-0 data-[state=inactive]:hidden">
               <PRsList userId={user.id} onGoTrain={() => setSection("training")} />
             </TabsContent>
-            <TabsContent value="scan" tabIndex={-1} className="mt-0">
+            <TabsContent value="scan" forceMount tabIndex={-1} className="mt-0 data-[state=inactive]:hidden">
               {/* Igual que la app (iPhone/Mac): el scan público de la landing es otra pantalla. */}
-              <ProgressScan onScanned={() => setPhotosVersion((v) => v + 1)} />
+              {(scanMounted || progressTab === "scan") && <ProgressScan onScanned={() => setPhotosVersion((v) => v + 1)} />}
             </TabsContent>
           </Suspense>
           </div>
@@ -1075,6 +1170,19 @@ const Dashboard = () => {
             onSaved={(p) => { setDayPlans(p); setTrainingView("plan"); }}
           />
           <ExerciseLibrarySheet open={libraryOpen} onOpenChange={setLibraryOpen} userId={user.id} />
+          <RoutineEditor
+            open={routineEditor !== null}
+            onOpenChange={(open) => { if (!open) setRoutineEditor(null); }}
+            routine={routineEditor?.day ? dayPlans.find((plan) => plan.day === routineEditor.day) ?? null : null}
+            limitReached={routineLimit}
+            onSave={async (routine) => {
+              const day = routineEditor?.day;
+              const result = day
+                ? await commitRoutine((plans) => updateRoutine(plans, day, routine), "Rutina guardada")
+                : await commitRoutine((plans) => addRoutine(plans, routine), "Rutina creada en Mis rutinas");
+              return result.ok;
+            }}
+          />
           <FreeSessionBuilder
             open={freeOpen}
             onOpenChange={setFreeOpen}

@@ -144,13 +144,15 @@ export const ExerciseFocus = ({
     <Dialog open={!!exercise} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="flex flex-col gap-0 overflow-hidden">
         {/* Bajo el botón de cerrar, no debajo de él: los controles del vídeo quedan libres. */}
-        <ExerciseMedia video={exercise?.video} image={exercise?.image} name={name} pattern={exercise?.pattern} stimulus={exercise?.stimulus} load={exercise?.load} className="mt-7 shrink-0 rounded-[14px] sm:mt-6" />
+        {/* Sin foto ni vídeo, la huella del ejercicio (la de la ficha o la deducida), nunca un cuadro vacío. */}
+        <ExerciseMedia key={name} video={exercise?.video} image={exercise?.image} name={name} pattern={exercise?.pattern} stimulus={exercise?.stimulus} load={exercise?.load} muscleGroup={exercise?.muscleGroup} className="mt-7 shrink-0 rounded-[14px] sm:mt-6" />
 
         {/* Solo el texto se desplaza: un vídeo dentro de una zona con scroll se queda clavado en WebKit de iOS. */}
         <div className="-mx-4 min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 sm:-mx-6 sm:px-6">
 
         <div className="mt-5 pr-8">
-          <DialogTitle className="type-title2 sm:type-title2">{name}</DialogTitle>
+          {/* Nombre grande, como la ficha de la biblioteca y `TechniqueSheet` en la app. */}
+          <DialogTitle className="break-words type-title1 sm:type-title1">{name}</DialogTitle>
           {(exercise?.muscleGroup || exercise?.exerciseType) && (
             <p className="mt-1 type-subhead text-muted-foreground">
               {[exercise?.muscleGroup, exercise?.exerciseType].filter(Boolean).join(" · ")}

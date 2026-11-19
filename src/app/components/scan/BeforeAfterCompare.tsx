@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
+import { ArrowUp } from "lucide-react";
 import { formatDecimal } from "@/shared/lib/numberFormat";
-import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { signedUrlFor } from "@/shared/lib/storageSign";
 import { ScanImage } from "@/app/components/scan/ScanResultParts";
@@ -10,18 +10,20 @@ type Prev = {
   taken_at: string;
   current_photo_url: string | null;
   physique: number | null;
-  attractiveness: number | null;
-  potential: number | null;
 };
 
+/**
+ * «Antes y ahora»: la foto del scan anterior y la de hoy, lado a lado, con su nota de físico en
+ * Big Shoulders. Solo se destaca lo que sube (en dorado); nunca una resta en rojo.
+ */
 export default function BeforeAfterCompare({
   userId,
   currentPhoto,
-  currentScores,
+  currentPhysique,
 }: {
   userId: string;
   currentPhoto: string | null;
-  currentScores: { physique: number; attractiveness: number; potential: number };
+  currentPhysique: number;
 }) {
   const [prev, setPrev] = useState<Prev | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
@@ -33,7 +35,7 @@ export default function BeforeAfterCompare({
       // Penúltimo scan: el actual aún puede no estar guardado, así que cogemos el más reciente existente.
       const { data } = await supabase
         .from("scan_history")
-        .select("id, taken_at, current_photo_url, physique, attractiveness, potential")
+        .select("id, taken_at, current_photo_url, physique")
         .eq("user_id", userId)
         .order("taken_at", { ascending: false })
         .limit(2);
@@ -58,37 +60,36 @@ export default function BeforeAfterCompare({
     };
   }, [userId]);
 
-  if (loading || !prev || !photoUrl) return null;
+  if (loading || !prev || !photoUrl || prev.physique == null) return null;
 
-  const pPhys = Number(prev.physique ?? 0);
-  const delta = currentScores.physique - pPhys;
-  const TrendIcon = delta > 0.1 ? TrendingUp : delta < -0.1 ? TrendingDown : Minus;
-  const trendColor = delta > 0.1 ? "text-success" : delta < -0.1 ? "text-destructive" : "text-muted-foreground";
-  const dateLabel = new Date(prev.taken_at).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" });
+  const before = Number(prev.physique);
+  const gain = currentPhysique - before;
+  // «12 nov 2026», sin el punto de la abreviatura (como el resto del scan).
+  const dateLabel = new Date(prev.taken_at).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" }).replace(/\./g, "");
 
   return (
-    <section aria-labelledby="scan-before-after" className="w-full text-left">
-      <div className="mb-4 flex items-end justify-between gap-3">
-        <h2 id="scan-before-after" className="type-title2">Antes vs. ahora</h2>
-        <p className={`flex items-center gap-1 type-subhead font-semibold tabular-nums ${trendColor}`}>
-          <TrendIcon className="h-5 w-5" aria-hidden="true" />
-          {delta > 0 ? "+" : ""}
-          {formatDecimal(delta, 1)} físico
-        </p>
+    <section aria-labelledby="scan-before-after" className="flex flex-col gap-2.5">
+      <div className="flex items-center justify-between gap-3">
+        <h2 id="scan-before-after" className="type-title3">Antes y ahora</h2>
+        {gain >= 0.1 && (
+          <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-primary/15 px-2.5 py-1 type-footnote font-semibold tabular-nums text-primary">
+            <ArrowUp className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden="true" />+{formatDecimal(gain, 1)} de físico
+          </span>
+        )}
       </div>
       <div className="grid grid-cols-2 gap-3">
         <figure className="min-w-0">
-          <ScanImage src={photoUrl} alt="Scan anterior" className="aspect-[3/4] w-full rounded-media" />
+          <ScanImage src={photoUrl} alt={`Scan del ${dateLabel}`} className="aspect-[3/4] w-full rounded-card" />
           <figcaption className="mt-2">
-            <span className="block type-subhead text-muted-foreground">Antes · {dateLabel}</span>
-            <span className="mt-0.5 block type-figure text-[34px] font-bold leading-none tabular-nums">{formatDecimal(pPhys, 1)}</span>
+            <span className="block truncate type-footnote text-muted-foreground">Antes · {dateLabel}</span>
+            <span className="mt-1 block type-figure text-[34px] leading-none">{formatDecimal(before, 1)}</span>
           </figcaption>
         </figure>
         <figure className="min-w-0">
-          <ScanImage src={currentPhoto} alt="Scan actual" className="aspect-[3/4] w-full rounded-media" />
+          <ScanImage src={currentPhoto} alt="Scan de hoy" className="aspect-[3/4] w-full rounded-card" />
           <figcaption className="mt-2">
-            <span className="block type-subhead font-semibold text-primary">Ahora</span>
-            <span className="mt-0.5 block type-figure text-[34px] font-bold leading-none tabular-nums">{formatDecimal(currentScores.physique, 1)}</span>
+            <span className="block type-footnote font-semibold text-primary">Ahora</span>
+            <span className="mt-1 block type-figure text-[34px] leading-none">{formatDecimal(currentPhysique, 1)}</span>
           </figcaption>
         </figure>
       </div>

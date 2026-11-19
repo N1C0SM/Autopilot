@@ -4,20 +4,25 @@ import { Button } from "@/shared/components/ui/button";
 import { hapticTap } from "@/shared/lib/native";
 import { isIOSNative } from "@/shared/lib/platform";
 
+/** Lo que recorta el scan básico si el servidor no lo dice (`locked_sections`). */
+const SCAN_PLUS_FALLBACK = ["Composición corporal", "Puntuación por músculo", "Postura y proporciones", "Protocolo personalizado", "Tu yo futuro"];
+
 /**
- * Scan básico (Free y visitantes): lo que se desbloquea con Plus, en una sola tarjeta.
- * La lista llega del servidor (`locked_sections`), que es quien recorta el análisis.
+ * Scan básico (Free y visitantes): lo que se desbloquea con Plus, en un solo grupo sin borde con
+ * una fila por sección y la insignia Plus (como `plusCard` en ScanView.swift). La lista llega del
+ * servidor (`locked_sections`), que es quien recorta el análisis. En iOS no se vende nada.
  */
-export default function ScanPlusCard({ sections, onUpgrade }: { sections?: string[]; onUpgrade?: () => void }) {
-  const items = sections?.length ? sections : ["Composición corporal", "Puntuación por músculo", "Postura y proporciones", "Protocolo personalizado", "Tu yo futuro"];
+export default function ScanPlusCard({ sections, onUpgrade }: { sections?: string[] | null; onUpgrade?: () => void }) {
+  const items = sections?.length ? sections : SCAN_PLUS_FALLBACK;
   return (
-    // Maqueta de ChatGPT: «Análisis completo (Plus)» con cada sección bloqueada en su tarjeta.
-    <section aria-labelledby="scan-plus-title">
-      <h3 id="scan-plus-title" className="type-title2">Análisis completo (Plus)</h3>
-      <p className="mt-0.5 type-subhead text-muted-foreground">Este es tu scan básico. Desbloquea el análisis avanzado de tu físico con recomendaciones personalizadas:</p>
-      <ul className="mt-3 space-y-2.5">
-        {items.map((item) => (
-          <li key={item} className="flex min-h-14 items-center gap-3 rounded-[22px] border border-border bg-card px-4 py-3">
+    <section aria-labelledby="scan-plus-title" className="flex flex-col gap-2.5">
+      <header>
+        <h3 id="scan-plus-title" className="type-title3">Análisis completo (Plus)</h3>
+        <p className="mt-0.5 type-subhead text-muted-foreground">Este es tu scan básico. Desbloquea el análisis avanzado de tu físico con recomendaciones personalizadas:</p>
+      </header>
+      <ul className="overflow-hidden rounded-card bg-card">
+        {items.map((item, i) => (
+          <li key={item} className={`flex min-h-14 items-center gap-3 px-4 py-3 ${i > 0 ? "sep-t" : ""}`}>
             <LockKeyhole className="h-[18px] w-[18px] shrink-0 text-muted-foreground" strokeWidth={2} aria-hidden="true" />
             <span className="min-w-0 flex-1 type-subhead font-medium">{item}</span>
             <PlusBadge />
@@ -25,8 +30,8 @@ export default function ScanPlusCard({ sections, onUpgrade }: { sections?: strin
         ))}
       </ul>
       {onUpgrade && !isIOSNative()
-        ? <Button size="lg" className="mt-4 w-full" onClick={() => { void hapticTap(); onUpgrade(); }}>Ver mi scan completo con Plus</Button>
-        : <p className="mt-4 type-footnote font-semibold text-primary">Incluido en Plus</p>}
+        ? <Button size="lg" variant="tinted" className="mt-1.5 w-full" onClick={() => { void hapticTap(); onUpgrade(); }}>Ver mi scan completo con Plus</Button>
+        : <p className="type-footnote font-semibold text-primary">Incluido en Plus</p>}
     </section>
   );
 }

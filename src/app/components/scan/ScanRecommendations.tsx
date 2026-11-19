@@ -6,8 +6,8 @@ import { isIOSNative } from "@/shared/lib/platform";
 import { hapticTap } from "@/shared/lib/native";
 
 type Props = {
-  /** Published plans; Coach is never recommended while it is hidden in Admin. */
-  plans?: Pick<PlanAvailability, "coach" | "plus" | "coachName" | "plusName" | "coachPrice" | "plusPrice">;
+  /** Planes publicados: solo Gratis y Plus (Plus no se recomienda si está oculto en Admin). */
+  plans?: Pick<PlanAvailability, "plus" | "plusName" | "plusPrice">;
   bottleneck?: string;
   improvements?: { label: string; priority: string }[];
   monthsWithPlan?: number;
@@ -49,36 +49,25 @@ const GUIDES: Record<string, Item> = {
   },
 };
 
-const DEFAULT_PLANS: NonNullable<Props["plans"]> = { coach: true, plus: true, coachName: "Coach", plusName: "Plus", coachPrice: 49, plusPrice: 29 };
+const DEFAULT_PLANS: NonNullable<Props["plans"]> = { plus: true, plusName: "Plus", plusPrice: 29 };
 
-const plansFor = (p: NonNullable<Props["plans"]>): Record<"training" | "full", Item> => ({
-  training: {
-    name: p.plusName,
-    price: `${euro(p.plusPrice)}/mes`,
-    why: "Autopilot genera tu entrenamiento, calcula la progresión de cargas con tus registros y añade tu plan de nutrición.",
-    to: "/signup?plan=training",
-    cta: `Empezar con ${p.plusName}`,
-    kind: "plan",
-  },
-  full: {
-    name: p.coachName,
-    price: `${euro(p.coachPrice)}/mes`,
-    why: `Todo lo de ${p.plus ? p.plusName : "Free"} y, además, Nicolás revisa tu plan y te responde por chat.`,
-    to: "/signup?plan=full",
-    cta: `Empezar con ${p.coachName}`,
-    kind: "plan",
-  },
+const plusFor = (p: NonNullable<Props["plans"]>): Item => ({
+  name: p.plusName,
+  price: `${euro(p.plusPrice)}/mes`,
+  why: "Autopilot genera tu entrenamiento, calcula la progresión de cargas con tus registros y añade tu plan de nutrición.",
+  to: "/signup?plan=training",
+  cta: `Empezar con ${p.plusName}`,
+  kind: "plan",
 });
 
-// Una sola recomendación: el plan que encaja, y si no toca plan, un libro.
+// Una sola recomendación: Plus si encaja (y está publicado) y, si no toca plan, una guía.
 const pick = (text: string, _monthsWithPlan: number | undefined, p: NonNullable<Props["plans"]>): Item => {
-  const PLANS = plansFor(p);
-  const paid = p.coach ? PLANS.full : PLANS.training;
-  const base = p.plus ? PLANS.training : p.coach ? PLANS.full : GUIDES.blueprint;
+  const plus = plusFor(p);
+  const base = p.plus ? plus : GUIDES.blueprint;
   const t = text.toLowerCase();
   const nutrition = /(grasa|graso|abdomen|cintura|definic|peso|dieta|nutric|aliment|barriga)/.test(t);
 
-  if (nutrition && (p.plus || p.coach)) return paid;
+  if (nutrition && p.plus) return plus;
   if (/(técnica|tecnica|básic|basic|postura|principiante|empez)/.test(t)) return GUIDES.base;
   if (/(estanc|plateau|progres|variant)/.test(t)) return GUIDES.atlas;
   if (/(organiz|planific|constan|rutina|frecuenc|volumen)/.test(t)) return GUIDES.blueprint;
@@ -93,6 +82,7 @@ export function recommendFor({ bottleneck, improvements, monthsWithPlan, plans =
   return { priority, limitation, rec: pick(`${limitation} ${priority}`, monthsWithPlan, plans) };
 }
 
+/** «Lo que te recomendamos»: lo que más te limita y una sola recomendación en una tarjeta sin borde. */
 function Recommendations({ bottleneck, improvements, monthsWithPlan }: Props) {
   const plans = usePlanAvailability();
   const { priority, limitation, rec } = recommendFor({ bottleneck, improvements, monthsWithPlan, plans });
@@ -101,41 +91,36 @@ function Recommendations({ bottleneck, improvements, monthsWithPlan }: Props) {
   const first = priority && clean(priority) !== clean(limitation) ? clean(priority) : "";
 
   return (
-    <section>
-      <h2 className="type-title2">Lo que te recomendamos</h2>
-      <p className="type-subhead text-muted-foreground mt-2">Lo que más te limita ahora</p>
-      <p className="type-body mt-0.5">{clean(limitation)}.</p>
-      {first && (
-        <>
-          <p className="type-subhead text-muted-foreground mt-3">Lo primero que deberías trabajar</p>
-          <p className="type-body mt-0.5">{first}.</p>
-        </>
-      )}
-
-      <Link
-        to={rec.to}
-        onClick={() => void hapticTap()}
-        className="flex items-start gap-4 mt-6 min-h-[44px] active:opacity-60 transition-opacity"
-      >
-        <div className="flex w-10 shrink-0 items-center justify-center pt-0.5">
-          {rec.kind === "guia" ? (
-            <IconTile icon={BookOpen} />
-          ) : (
-            <IconTile icon={Dumbbell} />
-          )}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="type-headline">
-            {rec.name}{rec.price ? ` · ${rec.price}` : ""}
+    <section className="flex flex-col gap-2.5">
+      <h2 className="type-title3">Lo que te recomendamos</h2>
+      <div className="rounded-card bg-card p-4">
+        <p className="type-footnote text-muted-foreground">Lo que más te limita ahora</p>
+        <p className="mt-0.5 type-body">{clean(limitation)}.</p>
+        {first && (
+          <>
+            <p className="mt-3 type-footnote text-muted-foreground">Lo primero que deberías trabajar</p>
+            <p className="mt-0.5 type-body">{first}.</p>
+          </>
+        )}
+        <Link
+          to={rec.to}
+          onClick={() => void hapticTap()}
+          className="mt-4 flex min-h-[44px] items-start gap-3.5 sep-t pt-4 transition-opacity active:opacity-60"
+        >
+          <IconTile icon={rec.kind === "guia" ? BookOpen : Dumbbell} size="md" />
+          <div className="min-w-0 flex-1">
+            <div className="type-headline">
+              {rec.name}{rec.price ? <span className="whitespace-nowrap"> · {rec.price}</span> : null}
+            </div>
+            <div className="mt-0.5 type-subhead text-muted-foreground">{rec.why}</div>
+            <div className="mt-2 type-headline text-primary">{rec.cta}</div>
           </div>
-          <div className="type-subhead text-muted-foreground mt-0.5">{rec.why}</div>
-          <div className="type-headline text-primary mt-2">{rec.cta}</div>
-        </div>
-      </Link>
+        </Link>
+      </div>
 
-      <p className="mt-6 type-footnote text-muted-foreground">
+      <p className="type-footnote text-muted-foreground">
         {rec.kind === "guia"
-          ? plans.coach ? "Si prefieres que Autopilot adapte tu plan, o que además lo revise Nicolás, mira los planes." : "Si prefieres que Autopilot adapte tu plan y tu nutrición, mira los planes."
+          ? "Si prefieres que Autopilot adapte tu plan y tu nutrición, mira los planes."
           : "Si por ahora prefieres ir por tu cuenta, tienes las guías en PDF en Recursos."}{" "}
         <Link
           to={rec.kind === "guia" ? "/planes" : "/recursos"}

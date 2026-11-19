@@ -4,7 +4,8 @@ import Foundation
 /// Secciones de la app. Admin usa los mismos grupos que `src/app/components/admin/adminNav.ts`.
 enum AppSection: String, CaseIterable, Identifiable, Hashable {
     // Usuario
-    case home, library, progress, nutrition, scan, settings
+    // `train` (Entrenar) no es pestaña ni fila de la barra lateral, como en la web: se llega desde Hoy.
+    case home, train, library, progress, nutrition, scan, settings
     // Entrenador
     case trainerClients, trainerProfile
     // Admin
@@ -41,6 +42,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
     var title: String {
         switch self {
         case .home: "Inicio"
+        case .train: "Entrenar"
         case .library: "Ejercicios"
         case .progress: "Mi progreso"
         case .nutrition: "Nutrición"
@@ -71,6 +73,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
     var symbol: String {
         switch self {
         case .home: "house.fill"
+        case .train: "figure.strengthtraining.traditional"
         case .library: "dumbbell.fill"
         case .progress: "chart.line.uptrend.xyaxis"
         case .nutrition: "fork.knife"
@@ -288,9 +291,14 @@ struct MainShell: View {
         .onChange(of: session.role) { _, _ in selection = nil; adminMenuOpen = false }
         .onReceive(NotificationCenter.default.publisher(for: .startTodayWorkout)) { _ in
             if session.role == .user {
-                // Inicio abre el entreno de hoy directamente (sin la pestaña Entrenar).
-                HomeView.pendingStartToday = true
-                selection = .home
+                if selection == .train {
+                    // Entrenar delante: lo abre él mismo, sin cambiar de pantalla.
+                    TrainView.pendingStart = true
+                } else {
+                    // Inicio abre el entreno de hoy directamente.
+                    HomeView.pendingStartToday = true
+                    selection = .home
+                }
             }
         }
     }
@@ -486,6 +494,7 @@ struct SectionView: View {
         Group {
             switch section {
             case .home: HomeView(onNavigate: onNavigate)
+            case .train: TrainView(userId: session.userId, onNavigate: onNavigate)
             case .library: ExerciseLibraryView(userId: session.userId, embedded: true)
             case .progress: ProgressScreen(onNavigate: onNavigate)
             case .nutrition: NutritionView()
@@ -532,6 +541,7 @@ extension AppSection {
     var lucide: String? {
         switch self {
         case .home: "lu-house"
+        case .train: "lu-dumbbell"
         case .library: "lu-dumbbell"
         case .nutrition: "lu-apple"
         case .progress: "lu-sparkles"
@@ -550,9 +560,10 @@ extension AppSection {
     var deskHint: String? {
         switch self {
         case .home: "Tu entreno de hoy y lo que toca comer"
+        case .train: "Tus sesiones en orden, el día que te venga bien"
         case .library: "Técnica, músculos y variantes de cada ejercicio"
         case .nutrition: "Tus macros y comidas del día"
-        case .progress: "Fotos, peso y evolución semanal"
+        case .progress: "Tu fuerza, tu físico y tus récords"
         case .settings: "Perfil, suscripción y notificaciones"
         default: nil
         }

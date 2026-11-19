@@ -179,7 +179,8 @@ export interface ExerciseRecordSummary {
   gainKg: number | null;
 }
 
-const setWeightKg = (entry: ExerciseHistoryEntry) => (entry.bestSetLabel ? Number.parseFloat(entry.bestSetLabel) : Number.NaN);
+// La etiqueta lleva coma decimal («62,5 kg × 5»): se lee como 62.5, no como 62 (igual que `bestKg` en la app).
+const setWeightKg = (entry: ExerciseHistoryEntry) => (entry.bestSetLabel ? Number.parseFloat(entry.bestSetLabel.replace(",", ".")) : Number.NaN);
 
 /** Récord del ejercicio y su subida en kg, solo con series reales (Progreso → «Tu fuerza»). */
 export function exerciseRecord(entries: ExerciseHistoryEntry[]): ExerciseRecordSummary {

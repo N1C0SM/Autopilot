@@ -32,10 +32,10 @@ export function PublicProgressScreen() {
         <div className="min-w-0">
           <p className="truncate type-headline">Sentadilla goblet</p>
           <p className="type-footnote text-muted-foreground">Mejor marca</p>
-          <p className="text-[22px] font-bold leading-tight tabular-nums">20 kg × 10</p>
+          <p className="mt-1 whitespace-nowrap type-figure text-[34px] leading-none">20 kg × 10</p>
         </div>
       </div>
-      <div className="mt-4 h-56"><ExerciseProgressChart exerciseName="Sentadilla goblet" history={previewHistory} metric="bestEstimated1RmKg" onMetricChange={() => undefined} compact /></div>
+      <div className="mt-4 h-72"><ExerciseProgressChart exerciseName="Sentadilla goblet" history={previewHistory} metric="bestEstimated1RmKg" onMetricChange={() => undefined} compact /></div>
     </div>
     <p className="mt-4 type-footnote text-muted-foreground">Datos de ejemplo</p>
   </div>;

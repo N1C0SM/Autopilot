@@ -76,7 +76,7 @@ describe("exercise progress chart", () => {
       />,
     );
 
-    expect(screen.getByText("Sin carga registrada")).toBeVisible();
+    expect(screen.getByText("Añade peso a tus series")).toBeVisible();
     expect(screen.queryByText(/Punto de partida/)).not.toBeInTheDocument();
     expect(screen.queryByRole("img", { name: "Gráfica de Press banca" })).not.toBeInTheDocument();
   });

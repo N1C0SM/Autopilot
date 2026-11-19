@@ -20,6 +20,8 @@ import { nextPendingSession, routineSessions } from "@/shared/lib/routineOrder";
 import ResponsiveSheet from "@/app/components/dashboard/ResponsiveSheet";
 import { ExerciseThumb } from "@/app/components/ExerciseMedia";
 import { ListGroup, ListRow } from "@/shared/components/ui/list";
+import { RoutinesPreview } from "@/app/components/dashboard/MyRoutines";
+import { myRoutines } from "@/shared/lib/customRoutines";
 
 interface Macros {
   protein: number;
@@ -49,6 +51,10 @@ interface Props {
   onResumeWorkout?: () => void;
   /** «Entreno vacío»: eliges los ejercicios y empiezas, sin rutina (como en el iPhone). */
   onEmptyWorkout?: () => void;
+  /** «Nueva rutina»: crea una rutina propia (también sin plan todavía). */
+  onNewRoutine?: () => void;
+  /** «Ver todas» en «Mis rutinas»: abre Entrenar, donde están todas con sus acciones. */
+  onOpenRoutines?: () => void;
   /** «Editar» en «Tu programa»: abre el editor de la rutina. */
   onEditRoutine?: () => void;
   profileName?: string;
@@ -60,7 +66,6 @@ interface Props {
   /** Fechas locales (AAAA-MM-DD) de esta semana con algún entreno o actividad hecha: la tira de días. */
   trainedDates?: string[];
   nutrition?: boolean;
-  planStatus?: string;
 }
 
 const WEEKDAYS = [["L", "lunes"], ["M", "martes"], ["X", "miércoles"], ["J", "jueves"], ["V", "viernes"], ["S", "sábado"], ["D", "domingo"]] as const;
@@ -157,6 +162,8 @@ const HomeOverview = ({
   onCompleteActivity,
   onResumeWorkout,
   onEmptyWorkout,
+  onNewRoutine,
+  onOpenRoutines,
   onEditRoutine,
   profileName,
   macros,
@@ -165,7 +172,6 @@ const HomeOverview = ({
   completedToday = false,
   trainedDates = [],
   nutrition = true,
-  planStatus,
 }: Props) => {
   useBrandPhotos(); // repinta las fotos de marca cuando llega su URL actual
   const [activeWorkout, setActiveWorkout] = useState<ActiveWorkout | null>(() => userId ? readActiveWorkout(userId) : null);
@@ -327,17 +333,8 @@ const HomeOverview = ({
     return () => window.removeEventListener("autopilot:meals-updated", readMealsDone);
   }, [readMealsDone]);
 
-  if (planStatus === "plan_pending") {
-    return (
-      <EmptyState
-        className="flex-1"
-        icon={Clock}
-        title="Tu entrenador está preparando tu plan"
-        description="Te avisaremos cuando esté listo."
-      />
-    );
-  }
-
+  // Sin rutina todavía (también si la inicial quedó pendiente): la invitación con su botón, nunca un aviso
+  // de espera. Es la misma tarjeta que Entrenar y que `StarterRoutineCard` en la app.
   const sessionName = String(sessionTitle).split(" · ")[0];
   // El foco tal cual (como en «Tu plan»); sin él, lo que el título lleva tras el «·».
   const sessionFocus = todayPlan?.muscle_focus?.trim() || (String(sessionTitle).includes(" · ") ? String(sessionTitle).split(" · ").slice(1).join(" · ") : "");
@@ -606,12 +603,27 @@ const HomeOverview = ({
         </section>
       )}
 
-      {onEmptyWorkout && (
-        <Button type="button" variant="secondary" size="lg" className="w-full" onClick={() => { void hapticTap(); onEmptyWorkout(); }}>
-          <Plus className="h-5 w-5" strokeWidth={2.25} aria-hidden="true" />
-          Entreno vacío
-        </Button>
+      {/* Entrenar sin la sesión de hoy: «Entreno vacío» o una rutina propia, lado a lado si caben enteros
+          y, si no (pantalla estrecha o letra grande), uno bajo otro: nunca cortados (`ViewThatFits` en la app). */}
+      {(onEmptyWorkout || onNewRoutine) && (
+        <div className="flex flex-wrap gap-3">
+          {onEmptyWorkout && (
+            <Button type="button" variant="secondary" size="lg" className="flex-[1_0_auto]" onClick={() => { void hapticTap(); onEmptyWorkout(); }}>
+              <Play className="h-[18px] w-[18px] text-primary" fill="currentColor" strokeWidth={0} aria-hidden="true" />
+              Entreno vacío
+            </Button>
+          )}
+          {onNewRoutine && (
+            <Button type="button" variant="secondary" size="lg" className="flex-[1_0_auto]" onClick={() => { void hapticTap(); onNewRoutine(); }}>
+              <Plus className="h-5 w-5 text-primary" strokeWidth={2.25} aria-hidden="true" />
+              Nueva rutina
+            </Button>
+          )}
+        </div>
       )}
+
+      {/* Mis rutinas: las tuyas, a un toque de Entrenar (donde se empiezan, editan, duplican o borran). */}
+      {hasPlan && onOpenRoutines && <RoutinesPreview routines={myRoutines(dayPlans)} onOpen={onOpenRoutines} />}
 
       {discardDialog}
       <ResponsiveSheet
@@ -647,7 +659,7 @@ const HomeOverview = ({
                 return (
                   <ListRow
                     key={`${previewPlan.day}-${exercise.exercise_id || exercise.name}-${index}`}
-                    leading={<ExerciseThumb image={image} name={exercise.name} size="md" />}
+                    leading={<ExerciseThumb image={image} name={exercise.name} muscleGroup={exercise.muscle_group || metadata?.muscle_group} size="md" />}
                     title={exercise.name}
                     subtitle={info || undefined}
                     value={`${exercise.series} × ${exercise.reps}`}

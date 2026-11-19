@@ -121,6 +121,32 @@ enum ExerciseMotion {
         )
     }
 
+    /// Pistas para deducir el patrón cuando la ficha aún no lo trae (ejercicios sin foto ni
+    /// patrón en el entreno). Mismo orden y mismas palabras que `PATTERN_HINTS` en la web.
+    static let patternHints: [(pattern: String, hints: [String])] = [
+        ("Core", ["abdom", "core", "oblicu", "plancha", "crunch"]),
+        ("Bisagra", ["femoral", "isquio", "glute", "peso muerto", "hip thrust", "puente", "bisagra"]),
+        ("Sentadilla", ["sentadilla", "cuadricep", "pierna", "zancada", "prensa", "gemelo", "pantorrilla"]),
+        ("Tirón", ["espalda", "dorsal", "remo", "dominada", "jalon", "biceps", "curl", "trapecio", "pull"]),
+        ("Empuje", ["pecho", "pectoral", "press", "hombro", "deltoid", "triceps", "fondos", "flexion", "elevacion"]),
+    ]
+
+    /// Sin pista reconocible, el arco neutro del core: nunca un hueco vacío.
+    static let fallbackPattern = "Core"
+
+    /// Patrón deducido del nombre y del grupo muscular (o el arco neutro si no hay pista).
+    static func inferPattern(name: String, muscleGroup: String?) -> String {
+        let text = "\(name) \(muscleGroup ?? "")".folding(options: [.diacriticInsensitive, .caseInsensitive], locale: nil).lowercased()
+        return patternHints.first { entry in entry.hints.contains { text.contains($0) } }?.pattern ?? fallbackPattern
+    }
+
+    /// La huella siempre: con el patrón de la ficha si lo tiene y, si no, con el deducido
+    /// (como `exerciseMotionFor` en la web). Para el entreno, donde cada ejercicio necesita su visual.
+    static func specFor(name: String, pattern: String?, stimulus: String?, load: String?, muscleGroup: String?) -> Spec {
+        if let spec = spec(name: name, pattern: pattern, stimulus: stimulus, load: load) { return spec }
+        return spec(name: name, pattern: inferPattern(name: name, muscleGroup: muscleGroup), stimulus: stimulus, load: load)!
+    }
+
     /// Dónde está el punto en un instante: sube rápido, baja despacio y descansa.
     static func position(spec: Spec, time: Double) -> Double {
         let cycle = Swift.max(spec.duration, 0.01)

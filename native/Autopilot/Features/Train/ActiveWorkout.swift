@@ -37,6 +37,11 @@ final class ActiveWorkout: ObservableObject {
     @Published var swaps: [String: String] = [:]
     /// Récords batidos al terminar.
     @Published var records: [String] = []
+    /// Momento en que se guardó la sesión: la duración del resumen no sigue corriendo al mirarlo.
+    @Published var finishedAt: Date?
+
+    /// Duración real (sin pausas: al reanudar, el inicio ya se desplazó lo que duró la pausa).
+    var duration: TimeInterval { max(0, (finishedAt ?? draft.pausedAt ?? Date()).timeIntervalSince(draft.startedAt)) }
 
     private nonisolated static func key(_ userId: String) -> String { "active-workout.\(userId)" }
 
@@ -416,6 +421,7 @@ final class ActiveWorkout: ObservableObject {
         do {
             try await TrainingRepo.saveLogs(userId: userId, day: draft.day.day, date: draft.date, logs: done, rpe: rpe)
             try await TrainingRepo.complete(userId: userId, day: draft.day.day, date: draft.date, rpe: rpe)
+            finishedAt = Date()
             records = await detectRecords(userId: userId)
             skipRest()
             // El borrador ya no hace falta: se cancela el guardado diferido y se borra el de disco.

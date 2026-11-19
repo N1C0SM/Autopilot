@@ -19,6 +19,7 @@
 		38108789AEF99008A7016FDA /* NutritionSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94FDE3BFE671B103E0039E96 /* NutritionSetupView.swift */; };
 		39012991BB9D556B10C68E0C /* AdminViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 215885F8A59B676130290EEB /* AdminViews.swift */; };
 		3CD2ECE76B612C811CF540BA /* Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9E053FD3BBE7DBA136AACF9 /* Session.swift */; };
+		40E128686442FD8358557317 /* brand-fallback.jpg in Resources */ = {isa = PBXBuildFile; fileRef = F78CB5E03275A5F00797F420 /* brand-fallback.jpg */; };
 		42B37E40810ED706D583D9A5 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2087F6E61B3A0D2AD7B75E7A /* LoginView.swift */; };
 		445258069304B4AF9A7AB111 /* ScanShareCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A89DEAE73DCF19644F3BDEC6 /* ScanShareCardView.swift */; };
 		45C59E19DE5DBDD2398090D4 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 922D1242F803ABF9EC7B42D3 /* Theme.swift */; };
@@ -32,6 +33,7 @@
 		57B02A075F88DC56F40180DC /* AdminProducts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 853847766E839A5A319D2EB4 /* AdminProducts.swift */; };
 		5FDD42D966E843635893C724 /* InterFont.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EF43ECE1DCA7DF46622829D /* InterFont.swift */; };
 		642DC69615ED6F9C9C49CE51 /* ProgressScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 853B2DAC8254F0DD0241B738 /* ProgressScreen.swift */; };
+		6735C26A62352008CEB87B2C /* RoutinesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88D5A20CFD78754B444CC005 /* RoutinesView.swift */; };
 		6AF473D054AE230F2A3D39E0 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE889BC545E5693DEA12E35E /* OnboardingView.swift */; };
 		7407111E1A4E7EA1161EEB24 /* WhoIsTrainingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2B6432A97E06E936915D024 /* WhoIsTrainingView.swift */; };
 		84D2950407D627971026844C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9FD92FC3A4FA899A9AF2A41F /* Assets.xcassets */; };
@@ -54,6 +56,7 @@
 		D6DA59DC5917CE17B6D42958 /* InterVariable.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 523B49FFF874D33F1F331FA9 /* InterVariable.ttf */; };
 		DDEB07BF5162DA692EE1F4F6 /* MuscleMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 736261749DDF4F29B5E99A13 /* MuscleMapView.swift */; };
 		DE5E50505FB213A9666E7902 /* AdminAcquisition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BF4A6FB7014FD1B1927D2F6 /* AdminAcquisition.swift */; };
+		DF8BBEBB678636895C8BB363 /* BrandPhotos.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78CAA41A1F20BD34ED3CA4C3 /* BrandPhotos.swift */; };
 		E3C379D882AD856AB8A82CA5 /* Backend.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D06C6CE81D75452F06C8802 /* Backend.swift */; };
 		E7B7C480EF9B7EDCA868C500 /* ExerciseMotion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18372D90ACEF551F883409B3 /* ExerciseMotion.swift */; };
 		E846B74C254E4DB014DFB90C /* BigShoulders-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 833844952D3321A1BE6A4ADD /* BigShoulders-Bold.ttf */; };
@@ -72,7 +75,7 @@
 		18372D90ACEF551F883409B3 /* ExerciseMotion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseMotion.swift; sourceTree = "<group>"; };
 		18F52B91A212936EB6B6D716 /* AdminBlog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminBlog.swift; sourceTree = "<group>"; };
 		1BF4A6FB7014FD1B1927D2F6 /* AdminAcquisition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminAcquisition.swift; sourceTree = "<group>"; };
-		1E2CBD0297E5F8BCF017644D /* Autopilot.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Autopilot.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		1E2CBD0297E5F8BCF017644D /* Autopilot.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Autopilot.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2087F6E61B3A0D2AD7B75E7A /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		215885F8A59B676130290EEB /* AdminViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminViews.swift; sourceTree = "<group>"; };
 		2ABEA2EE0F4882F9B05D3C21 /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
@@ -82,7 +85,7 @@
 		3DC0DEEDEC81345BD48108A7 /* WorkoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutView.swift; sourceTree = "<group>"; };
 		3EF43ECE1DCA7DF46622829D /* InterFont.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterFont.swift; sourceTree = "<group>"; };
 		4F040E4F2B840DC88A30CD7D /* PlanEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanEditorView.swift; sourceTree = "<group>"; };
-		5020C97FAD7768B09C004CD2 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		5020C97FAD7768B09C004CD2 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		523B49FFF874D33F1F331FA9 /* InterVariable.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = InterVariable.ttf; sourceTree = "<group>"; };
 		54840FD78B7470F1A4A687B3 /* RoadmapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoadmapView.swift; sourceTree = "<group>"; };
 		5D06C6CE81D75452F06C8802 /* Backend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Backend.swift; sourceTree = "<group>"; };
@@ -91,11 +94,13 @@
 		6AB2F8559DD0B658B4DA48C0 /* AdminTrainers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminTrainers.swift; sourceTree = "<group>"; };
 		736261749DDF4F29B5E99A13 /* MuscleMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MuscleMapView.swift; sourceTree = "<group>"; };
 		74B2604636425A7A76330A3C /* AutopilotApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutopilotApp.swift; sourceTree = "<group>"; };
+		78CAA41A1F20BD34ED3CA4C3 /* BrandPhotos.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrandPhotos.swift; sourceTree = "<group>"; };
 		80424D4030A49FC7F8638EEF /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		833844952D3321A1BE6A4ADD /* BigShoulders-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "BigShoulders-Bold.ttf"; sourceTree = "<group>"; };
 		853847766E839A5A319D2EB4 /* AdminProducts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminProducts.swift; sourceTree = "<group>"; };
 		853B2DAC8254F0DD0241B738 /* ProgressScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressScreen.swift; sourceTree = "<group>"; };
 		87BC260CE2642615E55007E6 /* Snapshots.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snapshots.swift; sourceTree = "<group>"; };
+		88D5A20CFD78754B444CC005 /* RoutinesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutinesView.swift; sourceTree = "<group>"; };
 		8A8C9FF8A9F9707540345088 /* OtherViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OtherViews.swift; sourceTree = "<group>"; };
 		922D1242F803ABF9EC7B42D3 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		92E329249B146C8FEF5E45AF /* TrainView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainView.swift; sourceTree = "<group>"; };
@@ -121,6 +126,7 @@
 		F14D950EBE35D6E5D364A520 /* LoopingVideo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoopingVideo.swift; sourceTree = "<group>"; };
 		F4D7A51FF897F39CC070F086 /* Progression.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Progression.swift; sourceTree = "<group>"; };
 		F4E7B8525054278D389D0B59 /* ScanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanView.swift; sourceTree = "<group>"; };
+		F78CB5E03275A5F00797F420 /* brand-fallback.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = "brand-fallback.jpg"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -233,6 +239,7 @@
 				B9E855A95CA7F59CEC743EDB /* ActiveWorkout.swift */,
 				668CF450ED8BDDB4165C8A45 /* ExerciseLibraryView.swift */,
 				4F040E4F2B840DC88A30CD7D /* PlanEditorView.swift */,
+				88D5A20CFD78754B444CC005 /* RoutinesView.swift */,
 				92E329249B146C8FEF5E45AF /* TrainView.swift */,
 				3DC0DEEDEC81345BD48108A7 /* WorkoutView.swift */,
 			);
@@ -267,6 +274,7 @@
 				8ED96A3628DDCEE39E99CDA8 /* Core */,
 				EED37997280EAC3134344A5E /* Design */,
 				3F1FFDFFFF626911D41BF766 /* Features */,
+				B766E76F597CC7185B6BA645 /* Resources */,
 			);
 			path = Autopilot;
 			sourceTree = "<group>";
@@ -303,6 +311,14 @@
 			path = App;
 			sourceTree = "<group>";
 		};
+		B766E76F597CC7185B6BA645 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				F78CB5E03275A5F00797F420 /* brand-fallback.jpg */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
 		CD72E4CD24376B8573E995E9 /* Shared */ = {
 			isa = PBXGroup;
 			children = (
@@ -324,6 +340,7 @@
 		EED37997280EAC3134344A5E /* Design */ = {
 			isa = PBXGroup;
 			children = (
+				78CAA41A1F20BD34ED3CA4C3 /* BrandPhotos.swift */,
 				B1837043D6026822C99B027E /* Components.swift */,
 				18372D90ACEF551F883409B3 /* ExerciseMotion.swift */,
 				F14D950EBE35D6E5D364A520 /* LoopingVideo.swift */,
@@ -402,6 +419,7 @@
 				E846B74C254E4DB014DFB90C /* BigShoulders-Bold.ttf in Resources */,
 				D6DA59DC5917CE17B6D42958 /* InterVariable.ttf in Resources */,
 				022673AFB045A59ACCDA5275 /* PrivacyInfo.xcprivacy in Resources */,
+				40E128686442FD8358557317 /* brand-fallback.jpg in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -433,6 +451,7 @@
 				39012991BB9D556B10C68E0C /* AdminViews.swift in Sources */,
 				FE5FFFEBFADDA7C63208E610 /* AutopilotApp.swift in Sources */,
 				E3C379D882AD856AB8A82CA5 /* Backend.swift in Sources */,
+				DF8BBEBB678636895C8BB363 /* BrandPhotos.swift in Sources */,
 				57465A2CCC8862B96537FE2C /* Components.swift in Sources */,
 				A6E13AE092205191FF9B2177 /* ExerciseLibraryView.swift in Sources */,
 				E7B7C480EF9B7EDCA868C500 /* ExerciseMotion.swift in Sources */,
@@ -453,6 +472,7 @@
 				B303B7824C6D835D37EB539F /* RoadmapView.swift in Sources */,
 				EB35510AE5F8A100568AEED6 /* RootView.swift in Sources */,
 				CDC65C8AAD8F8F7358F3D540 /* RoutineDetailSheet.swift in Sources */,
+				6735C26A62352008CEB87B2C /* RoutinesView.swift in Sources */,
 				445258069304B4AF9A7AB111 /* ScanShareCardView.swift in Sources */,
 				87E60DB75F6066D44856E541 /* ScanView.swift in Sources */,
 				3CD2ECE76B612C811CF540BA /* Session.swift in Sources */,
@@ -479,13 +499,6 @@
 				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES;
 				"ENABLE_OUTGOING_NETWORK_CONNECTIONS[sdk=macosx*]" = YES;
 				"ENABLE_USER_SELECTED_FILES[sdk=macosx*]" = readwrite;
-				INFOPLIST_KEY_CFBundleDisplayName = Autopilot;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
-				INFOPLIST_KEY_NSCameraUsageDescription = "Para hacer las fotos de progreso y del escáner.";
-				INFOPLIST_KEY_NSHealthShareUsageDescription = "Para leer tu peso corporal y calibrar automáticamente tu progreso y requerimientos nutricionales.";
-				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Para guardar tus entrenamientos y gasto calórico completados en Apple Salud.";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Para elegir fotos de progreso y del escáner.";
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -666,13 +679,6 @@
 				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES;
 				"ENABLE_OUTGOING_NETWORK_CONNECTIONS[sdk=macosx*]" = YES;
 				"ENABLE_USER_SELECTED_FILES[sdk=macosx*]" = readwrite;
-				INFOPLIST_KEY_CFBundleDisplayName = Autopilot;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
-				INFOPLIST_KEY_NSCameraUsageDescription = "Para hacer las fotos de progreso y del escáner.";
-				INFOPLIST_KEY_NSHealthShareUsageDescription = "Para leer tu peso corporal y calibrar automáticamente tu progreso y requerimientos nutricionales.";
-				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Para guardar tus entrenamientos y gasto calórico completados en Apple Salud.";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Para elegir fotos de progreso y del escáner.";
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

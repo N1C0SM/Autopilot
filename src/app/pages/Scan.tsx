@@ -1,15 +1,12 @@
-import { errorMessage, errorStatus } from "@/shared/lib/runtimeValues";
+import { errorMessage } from "@/shared/lib/runtimeValues";
 import { scanErrorMessage } from "@/shared/lib/scanErrors";
-import { scanProgressAt } from "@/shared/lib/scanLoading";
+import { SCAN_REVEAL_MS, type ScanStage } from "@/shared/lib/scanLoading";
 import { dashboardDestination } from "@/shared/lib/dashboardDestination";
 import ScanAnalyzing from "@/app/components/scan/ScanAnalyzing";
 import { formatDecimal } from "@/shared/lib/numberFormat";
 import { compressImage, toBrowserFriendlyImage } from "@/shared/lib/imageCompression";
-import { IconTile } from "@/shared/components/ui/icon-tile";
-import { INK } from "@/shared/lib/palette";
 import React, { useState, useRef, useEffect } from "react";
-import { toPng } from "html-to-image";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Helmet } from "react-helmet-async";
 import { Link, useNavigate, useParams, useLocation } from "react-router-dom";
 import UserSidebar from "@/app/components/UserSidebar";
@@ -18,61 +15,54 @@ import { useIsMobile } from "@/shared/hooks/use-mobile";
 import { SidebarProvider, SidebarTrigger } from "@/shared/components/ui/sidebar";
 import { recordAcquisitionEvent } from "@/shared/lib/acquisition";
 import {
-  Upload,
+  ArrowRight,
   Sparkles,
-  Check,
   CheckCircle2,
   ChevronLeft,
-  TrendingUp,
   Target,
-  X,
   Lock,
   AlertTriangle,
-  Eye,
-  Shield,
   Dumbbell,
   Flame,
   RefreshCw,
   Activity,
   Sprout,
-  Ruler,
-  ClipboardList,
-  Share2,
 } from "lucide-react";
+import { IconTile } from "@/shared/components/ui/icon-tile";
+import { cn } from "@/shared/lib/utils";
+import { SCAN_GOAL_LABELS, improvementList, monthsText, objectiveMonths, scoreText } from "@/shared/lib/scanResultFormat";
+import { groupedInt } from "@/shared/lib/workoutSummaryFormat";
 import { Button } from "@/shared/components/ui/button";
 import { Spinner } from "@/shared/components/ui/spinner";
-import { ProgressRing } from "@/shared/components/ui/progress-ring";
 import { Tabs, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { Checkbox } from "@/shared/components/ui/checkbox";
-import { ListGroup, ListRow } from "@/shared/components/ui/list";
 import NavBar from "@/shared/components/native/NavBar";
-import { hapticTap, hapticSelection, shareFileOrImage } from "@/shared/lib/native";
+import { hapticNotify, hapticTap, hapticSelection } from "@/shared/lib/native";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { applyScanPlan, canApplyScanToPlan, hasScanInferences, parseScanProtocol, scanPriorities, userSpecificGoal, type ScanApplyResult } from "@/shared/lib/scanApply";
 import { toast } from "sonner";
 import { useAuth } from "@/shared/contexts/AuthContext";
-import poseFrontImg from "@/shared/assets/pose-front.png";
-import poseBackImg from "@/shared/assets/pose-back.png";
 import ProjectionTimeline from "@/app/components/scan/ProjectionTimeline";
 import LockedInsightsGrid from "@/app/components/scan/LockedInsightsGrid";
-import ScanPlusCard from "@/app/components/scan/ScanPlusCard";
 import ScanApplyPlanCard from "@/app/components/scan/ScanApplyPlanCard";
 import StickyConversionBar from "@/app/components/scan/StickyConversionBar";
 import ScanCoverageCard from "@/app/components/scan/ScanCoverageCard";
-import ScanShareCard from "@/app/components/scan/ScanShareCard";
+import ScanResultView from "@/app/components/scan/ScanResultView";
+import { ScanShareButton, renderScanStoryDataUrl } from "@/app/components/scan/ScanShareCard";
+import { ScanErrorNotice, ScanObjectivePicker, ScanPhotoTile, ScanPrivacyNote, ScanTips } from "@/app/components/scan/ScanUploadParts";
 import ScanRecommendations, { recommendFor } from "@/app/components/scan/ScanRecommendations";
 import { usePlanAvailability } from "@/shared/lib/planCatalog";
 import SocialProofStrip from "@/app/components/scan/SocialProofStrip";
 import ScanProgressPanel from "@/app/components/scan/ScanProgressPanel";
 import BeforeAfterCompare from "@/app/components/scan/BeforeAfterCompare";
-import { FindingRow, MeterRow, ScanImage, StatRow, type Stat } from "@/app/components/scan/ScanResultParts";
+import { FindingRow, ScanImage } from "@/app/components/scan/ScanResultParts";
 import { signedUrlFor, signedUrlsFor } from "@/shared/lib/storageSign";
 import { toLocalDateString } from "@/shared/lib/localDates";
 import { clearAnonScanId, getOrCreateAnonScanId } from "@/shared/lib/scanAttribution";
 import { useConfirm } from "@/app/components/admin/content/useConfirm";
 import { clearPendingScanContext, markPendingScanRestored, readPendingScanContext } from "@/shared/lib/pendingScan";
 
-type Phase = "upload" | "goal" | "analyzing" | "lead";
+type Phase = "upload" | "analyzing" | "lead";
 
 const COUNTRIES: { code: string; dial: string; flag: string; name: string }[] = [
   { code: "ES", dial: "+34", flag: "🇪🇸", name: "España" },
@@ -119,8 +109,9 @@ const GOALS = [
   { id: "from_zero", label: "Empezar desde cero", icon: Sprout, desc: "Llevo tiempo parado o nunca entrené" },
 ] as const;
 
-// El objetivo se guarda por id ("gain_muscle"): en pantalla siempre su nombre.
-const goalLabel = (value: string | null) => GOALS.find((goal) => goal.id === value)?.label ?? value;
+// El objetivo se guarda por id ("gain_muscle", "lose_weight"…): en pantalla siempre su nombre, nunca el id.
+const goalLabel = (value: string | null) =>
+  GOALS.find((goal) => goal.id === value)?.label ?? (value ? SCAN_GOAL_LABELS[value] : undefined) ?? value;
 
 type Result = {
   attractiveness: number;
@@ -199,81 +190,6 @@ const fileToDataUrl = async (input: File): Promise<string> => {
   });
 };
 
-const Dropzone = ({
-  label,
-  hint,
-  image,
-  onFile,
-  onClear,
-  placeholder,
-}: {
-  label: string;
-  hint: string;
-  image: string | null;
-  onFile: (f: File) => void;
-  onClear: () => void;
-  placeholder?: string;
-}) => {
-  const inputRef = useRef<HTMLInputElement>(null);
-  return (
-    <div className="relative">
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (f) onFile(f);
-        }}
-      />
-      {image ? (
-        <div className="relative aspect-[3/4] rounded-media overflow-hidden bg-card">
-          <ScanImage src={image} alt={label} className="w-full h-full" />
-          <button
-            onClick={() => { void hapticTap(); onClear(); }}
-            aria-label="Quitar foto"
-            className="absolute top-1 right-1 w-11 h-11 flex items-center justify-center active:opacity-60"
-          >
-            <span className="w-8 h-8 rounded-full material flex items-center justify-center">
-              <X className="w-4 h-4" strokeWidth={2.5} />
-            </span>
-          </button>
-          <div className="absolute bottom-0 inset-x-0 material px-3 py-2.5 flex items-center gap-1.5">
-            <CheckCircle2 className="w-4 h-4 shrink-0 text-success" aria-hidden="true" />
-            <div className="type-subhead font-semibold truncate">
-              {label}
-            </div>
-          </div>
-        </div>
-      ) : (
-        <button
-          type="button"
-          onClick={() => { void hapticTap(); inputRef.current?.click(); }}
-          className="relative aspect-[3/4] w-full rounded-media bg-card transition-colors active:bg-accent flex flex-col items-center justify-center gap-3 p-3 sm:p-6 overflow-hidden"
-        >
-          {placeholder && (
-            <img
-              src={placeholder}
-              alt=""
-              aria-hidden
-              loading="lazy"
-              className="absolute inset-0 w-full h-full object-contain opacity-15 pointer-events-none select-none"
-            />
-          )}
-          <div className="relative w-14 h-14 rounded-[22%] bg-secondary flex items-center justify-center">
-            <Upload className="w-7 h-7 text-primary" strokeWidth={1.75} />
-          </div>
-          <div className="relative text-center">
-            <div className="type-headline">{label}</div>
-            <div className="type-subhead text-muted-foreground mt-0.5">{hint}</div>
-          </div>
-        </button>
-      )}
-    </div>
-  );
-};
-
 const sentenceCase = (text: string) => (text ? text.charAt(0).toUpperCase() + text.slice(1) : text);
 
 /** «Ahora prioriza hombros y pecho.» con los grupos que se aplicaron. */
@@ -317,7 +233,11 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
   const [backImg, setBackImg] = useState<string | null>(null);
   const [objectiveImg, setObjectiveImg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [scanProgress, setScanProgress] = useState(0);
+  const [scanStage, setScanStage] = useState<ScanStage>("analyzing");
+  const [scanError, setScanError] = useState<string | null>(null);
+  // Con «reducir movimiento», sin pausa antes del resultado ni deslizamiento (como Progreso → Scan y la app).
+  const reduceMotion = useReducedMotion();
+  const revealMs = reduceMotion ? 0 : SCAN_REVEAL_MS;
   const [result, setResult] = useState<Result | null>(null);
   const [futureImgs, setFutureImgs] = useState<{ front?: string; back?: string }>({});
   const [simPoseChoice, setSimPose] = useState<"front" | "back">("front");
@@ -326,8 +246,6 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
   const simBase = simPose === "back" ? backImg : currentImg;
   const futureImg = futureImgs[simPose] ?? null;
   const [genLoading, setGenLoading] = useState(false);
-  const shareRef = useRef<HTMLDivElement>(null);
-  const [sharing, setSharing] = useState(false);
   const [planApplyState, setPlanApplyState] = useState<"idle" | "applying" | "done" | "sent" | "error">("idle");
   const [planApplyCopy, setPlanApplyCopy] = useState<PlanApplyCopy | null>(null);
   // Cada aplicación lleva un número: si entretanto empieza otro scan, su resultado ya no se pinta.
@@ -458,86 +376,11 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
     loadGoalPresets();
   }, [user?.id]);
 
-  const handleShare = async () => {
-    if (!shareRef.current) return;
-    setSharing(true);
+  // Sube la imagen del scan (la misma de «Compartir resumen») vía edge function y devuelve una
+  // URL firmada temporal: vive en un bucket privado y el enlace del email caduca a los 7 días.
+  const uploadScanCard = async (r: Result): Promise<string | null> => {
     try {
-      const dataUrl = await renderScanCardDataUrl();
-      if (!dataUrl) throw new Error("no card");
-
-      // Liberar el botón antes de abrir el menú nativo (iOS puede no resolver nunca)
-      setSharing(false);
-      shareFileOrImage({
-        dataUrl,
-        filename: `autopilot-scan-${Date.now()}.png`,
-        title: "Mi AI Physique Scan",
-        text: "Mi físico analizado por IA en autopilotplan.com/scan",
-      }).then((res) => {
-        if (res.downloaded) toast.success("Tarjeta descargada");
-      }).catch((e: unknown) => {
-        console.error("[SCAN-SHARE]", e);
-        toast.error("No se pudo compartir");
-      });
-    } catch (e: unknown) {
-      console.error(e);
-      toast.error("No se pudo generar la tarjeta");
-    } finally {
-      setSharing(false);
-    }
-  };
-
-  // Render the share card (offscreen) to a PNG data URL. Returns null if not mounted.
-  const renderScanCardDataUrl = async (): Promise<string | null> => {
-    // Esperar a que React monte la tarjeta offscreen (puede tardar varios ticks tras setResult)
-    for (let i = 0; i < 30; i++) {
-      if (shareRef.current) break;
-      await new Promise<void>((r) => setTimeout(r, 100));
-    }
-    if (!shareRef.current) return null;
-    // Extra tick para que fuentes/layout se asienten
-    await new Promise<void>((r) => setTimeout(r, 150));
-    // Asegurar que el logotipo de la tarjeta se haya decodificado antes de capturarla.
-    try {
-      const imgs = Array.from(shareRef.current.querySelectorAll("img"));
-      // En iOS las imágenes "lazy" fuera de pantalla nunca se cargan: forzamos carga inmediata.
-      imgs.forEach((img) => { img.loading = "eager"; });
-      await Promise.all(
-        imgs.map((img) => {
-          if (img.complete && img.naturalWidth > 0) return Promise.resolve();
-          return new Promise<void>((resolve) => {
-            img.onload = () => resolve();
-            img.onerror = () => resolve();
-            setTimeout(resolve, 4000);
-          });
-        })
-      );
-      await Promise.all(
-        imgs.map((img) => (img.decode ? img.decode().catch(() => {}) : Promise.resolve()))
-      );
-    } catch { /* Best-effort browser feature; the primary flow remains available. */ }
-    try {
-      // skipFonts: en la app de iPhone descargar fuentes externas bloquea la captura.
-      const opts = { cacheBust: false, skipFonts: true, backgroundColor: INK.scanCanvas };
-      await toPng(shareRef.current, { ...opts, pixelRatio: 1 }).catch(() => null);
-      for (const ratio of [1, 0.85, 0.75]) {
-        const url = await toPng(shareRef.current, { ...opts, pixelRatio: ratio });
-        const approxBytes = (url.length - (url.indexOf(",") + 1)) * 0.75;
-        if (approxBytes < 3.5 * 1024 * 1024 || ratio === 0.75) return url;
-      }
-      return null;
-    } catch (e) {
-      console.warn("renderScanCardDataUrl failed", e);
-      return null;
-    }
-  };
-
-  // Sube la tarjeta PNG vía edge function y devuelve una URL firmada temporal.
-  // La tarjeta incluye la foto del usuario, así que el objeto vive en un bucket
-  // privado y el enlace del email caduca a los 7 días.
-  const uploadScanCard = async (): Promise<string | null> => {
-    try {
-      const dataUrl = await renderScanCardDataUrl();
-      if (!dataUrl) return null;
+      const dataUrl = await renderScanStoryDataUrl(r);
       const pngBase64 = dataUrl.replace(/^data:image\/png;base64,/, "");
       // Sin sesión no hay user_id: enviamos el id anónimo de la pestaña para que
       // la tarjeta quede atribuida y se pueda borrar al eliminar la cuenta (RGPD).
@@ -662,15 +505,37 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
     };
   }, []);
 
+  // Foto elegida: HEIC a JPEG y reducida a 1600 px; si no se puede abrir, se dice (sin dejar la anterior).
+  const pickPhoto = async (file: File, set: (v: string | null) => void) => {
+    try {
+      set(await fileToDataUrl(file));
+      setScanError(null);
+    } catch {
+      setScanError("No se pudo abrir esa foto. Prueba con otra.");
+    }
+  };
+
+  const pickObjective = async (file: File) => {
+    void hapticTap();
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      setObjectiveImg(dataUrl);
+      setSelectedPresetId(null);
+      setScanError(null);
+      if (user && routeUserId) await saveCustomGoalPreset(dataUrl);
+    } catch {
+      setScanError("No se pudo abrir esa foto. Prueba con otra.");
+    }
+  };
+
   const handleAnalyze = async () => {
     if (!currentImg && !backImg) {
       toast.error("Sube al menos una foto: de delante, de atrás o las dos");
       return;
     }
     setLoading(true);
-    setScanProgress(0);
-    const started = performance.now();
-    const interval = setInterval(() => setScanProgress(scanProgressAt(performance.now() - started)), 250);
+    setScanStage("analyzing");
+    setScanError(null);
     try {
       const { data, error } = await supabase.functions.invoke("analyze-physique", {
         body: {
@@ -685,7 +550,8 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      setScanProgress(100);
+      // Todos los pasos marcados: el último check se ve un instante antes del resultado (como la app).
+      setScanStage("done");
       const r = data as Result;
       try {
         sessionStorage.setItem(
@@ -700,28 +566,23 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
       } catch { /* Best-effort browser feature; the primary flow remains available. */ }
       setPendingResult(r);
       void recordAcquisitionEvent("scan");
-      // Si está logueado saltamos el formulario de lead (ya tenemos su email)
-      if (user && isPaid) {
+      // Con cuenta se salta el formulario (ya tenemos su email): resultado y, detrás, historial y email.
+      // El plan NUNCA se toca solo: lo aplica el usuario con «Aplicar a mi plan».
+      if (user) {
         setTimeout(() => {
+          void hapticNotify("success");
           setResult(r);
-          // El plan NUNCA se toca solo: lo aplica el usuario con «Aplicar a mi plan».
-          saveAndEmailScan(r, { silent: false });
-        }, 400);
-      } else if (user) {
-        // Logueado no pagado: muestra resultado y envía email a la cuenta
-        setTimeout(() => {
-          setResult(r);
-          saveAndEmailScan(r, { silent: true });
-        }, 400);
+          saveAndEmailScan(r, { silent: !isPaid });
+        }, revealMs);
       }
-      // En caso contrario, el efecto del paso "analyzing" hará la transición a "lead"
+      // Sin cuenta, el efecto del paso "analyzing" pasa a "lead".
     } catch (e: unknown) {
       console.error(e);
+      void hapticNotify("error");
       // El motivo del servidor solo elige el aviso (igual que en la app): nunca se enseña tal cual.
-      toast.error(await scanErrorMessage(e));
+      setScanError(await scanErrorMessage(e));
       setPhase("upload");
     } finally {
-      clearInterval(interval);
       setLoading(false);
     }
   };
@@ -734,13 +595,13 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
-  // Transition analyzing -> lead once analysis is ready (min 3s for UX)
+  // Sin cuenta, del análisis al formulario con la misma pausa que el resultado de la app.
   useEffect(() => {
     if (phase !== "analyzing" || !pendingResult) return;
     if (user) return; // logueados van directos al resultado, sin formulario de lead
-    const t = setTimeout(() => setPhase("lead"), 1200);
+    const t = setTimeout(() => { void hapticNotify("success"); setPhase("lead"); }, revealMs);
     return () => clearTimeout(t);
-  }, [phase, pendingResult, user]);
+  }, [phase, pendingResult, user, revealMs]);
 
   const submitLead = async () => {
     if (!leadName.trim() || leadName.trim().length < 2) {
@@ -782,7 +643,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
         const r = pendingResult;
         if (r) {
           const recipient = leadEmail.trim();
-          const cardImageUrl = await uploadScanCard();
+          const cardImageUrl = await uploadScanCard(r);
           const { error: emailError } = await supabase.functions.invoke("send-scan-diagnosis", {
             body: {
               recipientEmail: recipient,
@@ -926,7 +787,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
         break;
       case "sent_to_coach":
         setPlanApplyState("sent");
-        toast.success("Guardado para tu entrenador");
+        toast.success("Scan guardado en tu historial");
         break;
       case "no_changes":
         setPlanApplyState("idle");
@@ -1066,7 +927,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
       }
 
       const firstName = (userName || user.email?.split("@")[0] || "atleta").split(" ")[0];
-      const cardImageUrl = await uploadScanCard();
+      const cardImageUrl = await uploadScanCard(r);
       await supabase.functions.invoke("send-scan-diagnosis", {
         body: {
           recipientEmail: userEmail,
@@ -1123,7 +984,8 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
     setCurrentImg(null);
     setBackImg(null);
     setObjectiveImg(null);
-    setScanProgress(0);
+    setScanStage("analyzing");
+    setScanError(null);
     setPhase("upload");
     setGoal(null);
     setPendingResult(null);
@@ -1273,7 +1135,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
         />
       )}
 
-      <main className={embedded ? "w-full pb-6" : "w-full px-4 pt-2 pb-24"}>
+      <main className={cn("mx-auto w-full max-w-[680px]", embedded ? "pb-6" : "px-4 pb-24 pt-2")}>
         <AnimatePresence mode="wait">
           {!result && phase === "upload" ? (
             <motion.div
@@ -1282,319 +1144,146 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="w-full space-y-10"
+              className="flex w-full flex-col gap-8"
             >
               <header>
                 {!inline && (
-                  <h1 data-nav-title className="type-large-title mb-1">Análisis físico con IA</h1>
+                  <h1 data-nav-title className="type-large-title">Análisis físico con IA</h1>
                 )}
-                <p className="type-subhead text-muted-foreground">
-                  Sube tu foto frontal o de espalda para actualizar tu análisis
+                <p className="mt-1 type-subhead text-muted-foreground">
+                  {routeUserId
+                    ? "Sube tu foto de delante o de espalda para actualizar tu análisis."
+                    : "Sube tus fotos y la IA analiza tu físico, tu potencial y por dónde empezar."}
                 </p>
               </header>
 
               {user && routeUserId && !inline && <ScanProgressPanel userId={user.id} />}
 
-              <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                <Dropzone
-                  label="Foto de delante"
+              <div className="grid grid-cols-2 gap-3">
+                <ScanPhotoTile
+                  title="Foto de delante"
                   hint="Cuerpo completo"
+                  badge="Recomendada"
                   image={currentImg}
-                  onFile={async (f) => setCurrentImg(await fileToDataUrl(f))}
+                  onFile={(f) => void pickPhoto(f, setCurrentImg)}
                   onClear={() => setCurrentImg(null)}
-                  placeholder={poseFrontImg}
                 />
-                <Dropzone
-                  label="Foto de atrás"
-                  hint="Opcional"
+                <ScanPhotoTile
+                  title="Foto de atrás"
+                  hint="Cuerpo completo"
+                  badge="Opcional"
                   image={backImg}
-                  onFile={async (f) => setBackImg(await fileToDataUrl(f))}
+                  onFile={(f) => void pickPhoto(f, setBackImg)}
                   onClear={() => setBackImg(null)}
-                  placeholder={poseBackImg}
                 />
               </div>
 
-              {/* Físico objetivo: presets del admin + opción de subir foto propia */}
+              {/* Físico objetivo: el guardado, la pregunta o la tira de referencias y foto propia */}
               {user && savedObjectiveUrl && !editingObjective ? (
-                <div className="flex items-center gap-4">
-                  <ScanImage
-                    src={savedObjectiveUrl}
-                    alt="Tu objetivo"
-                    className="h-24 w-20 shrink-0 rounded-[10px]"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <h2 className="type-headline truncate">
-                      {goalPresets.find((p) => p.storage_path === savedObjectivePath || p.image_url === savedObjectiveUrl)?.name || goalLabel(savedGoalText) || "Tu objetivo actual"}
-                    </h2>
-                    <p className="type-subhead text-muted-foreground mt-0.5">
-                      La IA lo usará para estimar cuántos meses te faltan.
-                    </p>
-                    <div className="flex flex-wrap items-center mt-1 -ml-3">
-                      <Button
-                        variant="plain"
-                        size="sm"
-                        onClick={() => { void hapticTap(); setEditingObjective(true); }}
-                      >
-                        Cambiar objetivo
+                <section className="flex flex-col gap-2.5">
+                  <h2 className="type-title3">Tu físico objetivo</h2>
+                  <div className="flex items-center gap-4 rounded-card bg-card p-4">
+                    <ScanImage src={savedObjectiveUrl} alt="Tu objetivo" className="h-[88px] w-[66px] shrink-0 rounded-chip" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate type-headline">
+                        {goalPresets.find((p) => p.storage_path === savedObjectivePath || p.image_url === savedObjectiveUrl)?.name || goalLabel(savedGoalText) || "Tu objetivo actual"}
+                      </p>
+                      <p className="mt-0.5 type-footnote text-muted-foreground">La IA lo usará para estimar cuántos meses te faltan.</p>
+                      <div className="-ml-3 mt-1 flex flex-wrap items-center">
+                        <Button variant="plain" size="sm" onClick={() => { void hapticTap(); setEditingObjective(true); }}>
+                          Cambiar objetivo
+                        </Button>
+                        <Button
+                          variant="plain"
+                          size="sm"
+                          className="text-muted-foreground"
+                          onClick={() => {
+                            void hapticTap();
+                            setObjectiveImg(null);
+                            setSelectedPresetId(null);
+                            setEditingObjective(true);
+                          }}
+                        >
+                          Quitar para este scan
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              ) : user && routeUserId && !savedObjectiveUrl && !editingObjective ? (
+                <div className="flex items-center gap-3.5 rounded-card bg-card p-[18px]">
+                  <IconTile icon={Target} size="md" />
+                  <div className="min-w-0 flex-1">
+                    <p className="type-headline">Tu objetivo</p>
+                    <p className="truncate type-subhead text-muted-foreground">{goalLabel(savedGoalText) || "Sin definir"}</p>
+                  </div>
+                  <Button variant="plain" size="sm" className="-mr-2 shrink-0" onClick={() => { void hapticTap(); setEditingObjective(true); }}>
+                    Cambiar
+                  </Button>
+                </div>
+              ) : user && !savedObjectiveUrl && !editingObjective && hasObjectiveChoice === "unset" ? (
+                <div className="flex items-start gap-3.5 rounded-card bg-card p-[18px]">
+                  <IconTile icon={Target} size="md" />
+                  <div className="min-w-0 flex-1">
+                    <p className="type-headline">¿Tienes un físico objetivo?</p>
+                    <p className="mt-0.5 type-subhead text-muted-foreground">Con un objetivo te calculamos cuántos meses tardarás en llegar.</p>
+                    <div className="-ml-3 mt-1 flex flex-wrap items-center">
+                      <Button variant="plain" size="sm" onClick={() => { void hapticTap(); setHasObjectiveChoice("yes"); setEditingObjective(true); }}>
+                        Sí, elegir uno
                       </Button>
-                      <Button
-                        variant="plain"
-                        size="sm"
-                        className="text-muted-foreground"
-                        onClick={() => {
-                          void hapticTap();
-                          setObjectiveImg(null);
-                          setSelectedPresetId(null);
-                          setEditingObjective(true);
-                        }}
-                      >
-                        Quitar para este scan
+                      <Button variant="plain" size="sm" className="text-muted-foreground" onClick={() => { void hapticTap(); setHasObjectiveChoice("no"); }}>
+                        Ahora no
                       </Button>
                     </div>
                   </div>
                 </div>
-              ) : user && routeUserId && !savedObjectiveUrl && !editingObjective ? (
-                <div className="rounded-media bg-card p-4">
-                <FindingRow
-                  icon={Target}
-                  title="Tu objetivo"
-                  description={<span className="block truncate">{goalLabel(savedGoalText) || "Sin objetivo definido"}</span>}
-                  action={
-                    <Button variant="plain" size="sm" onClick={() => { void hapticTap(); setEditingObjective(true); }}>
-                      Cambiar objetivo
-                    </Button>
-                  }
-                />
-                </div>
-              ) : user && !savedObjectiveUrl && !editingObjective && hasObjectiveChoice === "unset" ? (
-                <FindingRow
-                  icon={Target}
-                  title="¿Tienes un físico objetivo?"
-                  description="Solo si pones un objetivo te calculamos cuántos meses tardarás en llegar."
-                  action={
-                    <div className="flex flex-wrap items-center">
-                      <Button
-                        variant="plain"
-                        size="sm"
-                        onClick={() => { void hapticTap(); setHasObjectiveChoice("yes"); setEditingObjective(true); }}
-                      >
-                        Sí, elegir uno
-                      </Button>
-                      <Button
-                        variant="plain"
-                        size="sm"
-                        className="text-muted-foreground"
-                        onClick={() => { void hapticTap(); setHasObjectiveChoice("no"); }}
-                      >
-                        No, sin objetivo
-                      </Button>
-                    </div>
-                  }
-                />
               ) : user && !savedObjectiveUrl && !editingObjective && hasObjectiveChoice === "no" ? (
                 <div className="flex items-center justify-between gap-3">
-                  <p className="type-subhead text-muted-foreground">
-                    Sin objetivo · el análisis se centra en tu físico actual.
-                  </p>
+                  <p className="type-subhead text-muted-foreground">El análisis se centra en tu físico actual.</p>
                   <Button variant="plain" size="sm" className="shrink-0" onClick={() => { void hapticTap(); setHasObjectiveChoice("yes"); setEditingObjective(true); }}>
                     Añadir objetivo
                   </Button>
                 </div>
               ) : (
-              <div>
-                <FindingRow
-                  icon={Target}
-                  title="Tu físico objetivo"
-                  description="Elige una referencia o sube tu foto. Solo con objetivo calculamos cuántos meses te faltan."
-                  action={
-                    objectiveImg ? (
-                      <Button
-                        variant="plain"
-                        size="sm"
-                        onClick={() => { void hapticTap(); setObjectiveImg(null); setSelectedPresetId(null); }}
-                      >
-                        Quitar
-                      </Button>
-                    ) : undefined
-                  }
-                />
-
-                {/* Un objetivo sin foto es una caja vacía con un nombre: no aporta nada */}
-                {goalPresets.some((p) => p.image_url) && (
-                  <div className="mt-5 grid grid-cols-3 gap-3 sm:grid-cols-4">
-                    {goalPresets.filter((p) => p.image_url).map((p) => {
-                      const isSel = selectedPresetId === p.id;
-                      return (
-                        <button
-                          key={p.id}
-                          type="button"
-                          aria-pressed={isSel}
-                          onClick={() => {
-                            void hapticSelection();
-                            setObjectiveImg(p.image_url);
-                            setSelectedPresetId(p.id);
-                          }}
-                          className={`relative aspect-[3/4] overflow-hidden rounded-media bg-card transition-transform duration-150 active:scale-[0.97] ${
-                            isSel ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""
-                          }`}
-                        >
-                          <ScanImage src={p.image_url} alt={p.name} className="h-full w-full" />
-                          <div className="absolute inset-x-0 bottom-0 material p-2">
-                            <div className="line-clamp-2 type-caption1 font-semibold">
-                              {p.name}
-                            </div>
-                          </div>
-                          {isSel && (
-                            <div className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-primary flex items-center justify-center">
-                              <Check className="w-3.5 h-3.5 text-primary-foreground" strokeWidth={3} />
-                            </div>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-
-                <label className="mt-4 block cursor-pointer">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={async (e) => {
-                      const f = e.target.files?.[0];
-                      if (!f) return;
-                      void hapticTap();
-                      const dataUrl = await fileToDataUrl(f);
-                      setObjectiveImg(dataUrl);
-                      setSelectedPresetId(null);
-                      if (user && routeUserId) await saveCustomGoalPreset(dataUrl);
-                    }}
+                <div className="flex flex-col gap-2.5">
+                  <ScanObjectivePicker
+                    presets={goalPresets.filter((p) => !!p.image_url)}
+                    objective={objectiveImg}
+                    presetId={selectedPresetId}
+                    onPick={(f) => void pickObjective(f)}
+                    onPreset={(p) => { setObjectiveImg(p.image_url); setSelectedPresetId(p.id); }}
+                    onClear={() => { setObjectiveImg(null); setSelectedPresetId(null); }}
                   />
-                  {objectiveImg && !selectedPresetId ? (
-                    <ScanImage
-                      src={objectiveImg}
-                      alt="tu objetivo"
-                      className="aspect-[3/4] w-28 rounded-media ring-2 ring-primary ring-offset-2 ring-offset-background"
-                    />
-                  ) : (
-                    <div className="flex min-h-[72px] items-center gap-4 rounded-media bg-card px-4 py-3 transition-colors active:bg-accent">
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[22%] bg-secondary">
-                        <Upload className="h-6 w-6 text-primary" strokeWidth={1.75} />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="type-headline">O sube tu propia foto</div>
-                        <div className="type-subhead text-muted-foreground">JPG / PNG</div>
-                      </div>
-                    </div>
+                  {savingCustomGoal && (
+                    <p className="flex items-center gap-2 type-footnote text-muted-foreground"><Spinner size="sm" label="Guardando" />Guardando tu objetivo…</p>
                   )}
-                </label>
-                <p className="mt-3 type-footnote text-muted-foreground">
-                  {objectiveImg
-                    ? "Objetivo seleccionado. La IA comparará tu físico con esta referencia y estimará cuántos meses te faltan."
-                    : "Sin objetivo el análisis se centra en tu físico actual, fortalezas y mejoras prioritarias — sin estimación de tiempo."}
-                </p>
-              </div>
+                  <p className="type-footnote text-muted-foreground">
+                    {objectiveImg
+                      ? "Objetivo elegido: la IA comparará tu físico con esta referencia y estimará cuántos meses te faltan."
+                      : "Sin objetivo, el análisis se centra en tu físico actual, tus fortalezas y lo que más te conviene mejorar."}
+                  </p>
+                </div>
               )}
 
-              {/* Guía para tomar las fotos */}
-              <section>
-                <h2 className="type-title3 mb-3">Cómo tomar las fotos</h2>
-                <div className="space-y-5 rounded-media bg-card p-4">
-                  <FindingRow
-                    icon={Ruler}
-                    title="Distancia"
-                    description="Cámara a 2-3 m, a la altura del ombligo, con el cuerpo entero y el móvil en vertical y bien apoyado."
-                  />
-                  <FindingRow
-                    icon={Eye}
-                    title="Luz y fondo"
-                    description="Luz natural frontal y uniforme, sin contraluz ni flash, con un fondo liso y claro."
-                  />
-                  <FindingRow
-                    icon={Activity}
-                    title="Postura y ropa"
-                    description="Ropa ajustada, pies a la anchura de los hombros y brazos relajados a los lados. Para la de atrás, date la vuelta sin moverte de sitio."
-                  />
-                </div>
-              </section>
+              <ScanTips />
 
-              <div className="mx-auto w-full max-w-sm space-y-3">
+              <div className="flex flex-col gap-3">
+                {scanError && <ScanErrorNotice message={scanError} />}
                 <Button
                   size="lg"
-                  className="w-full"
+                  className="h-14 w-full"
                   onClick={() => { void hapticTap(); setPhase("analyzing"); }}
                   disabled={!currentImg && !backImg}
                 >
                   Analizar mi físico
+                  <ArrowRight className="h-5 w-5" aria-hidden="true" />
                 </Button>
-                <p className="type-footnote text-muted-foreground text-center">
-                  Con una sola foto ya podemos analizarte: valoraremos solo lo que se vea en esa vista. Con las dos
-                  fotos el análisis es más completo.
+                <p className="type-footnote text-muted-foreground">
+                  Con una sola foto ya podemos analizarte: valoraremos solo lo que se vea en esa vista. Con las dos fotos el análisis es más completo.
                 </p>
-                <p className="type-footnote text-muted-foreground text-center">
-                  Privado: solo para tu análisis · Sin registro · Menos de 1 minuto
-                </p>
-              </div>
-            </motion.div>
-          ) : !result && phase === "goal" ? (
-            <motion.div
-              key="goal"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="w-full"
-            >
-              <div className="text-center mb-8">
-                <div className="mx-auto w-[72px] h-[72px] rounded-[22%] bg-card flex items-center justify-center mb-5">
-                  <Target className="w-8 h-8 text-primary" strokeWidth={1.75} />
-                </div>
-                <p className="type-subhead text-muted-foreground mb-1">Paso 2 · Tu objetivo</p>
-                <h1 data-nav-title={inline ? undefined : true} className="type-title1">
-                  ¿Cuál es tu <span className="text-primary">objetivo principal</span>?
-                </h1>
-                <p className="type-subhead text-muted-foreground mt-2">
-                  La IA prioriza tu diagnóstico en función de lo que más te importa.
-                </p>
-              </div>
-
-              <div className="overflow-hidden rounded-media bg-card">
-                {GOALS.map((g) => {
-                  const Icon = g.icon;
-                  const active = goal === g.id;
-                  return (
-                    <button
-                      key={g.id}
-                      type="button"
-                      onClick={() => { void hapticSelection(); setGoal(g.id); }}
-                      aria-pressed={active}
-                      className="group/row flex w-full items-center gap-3 px-4 text-left transition-colors duration-150 active:bg-accent"
-                    >
-                      <IconTile icon={Icon} />
-                      <span className="flex min-h-[60px] min-w-0 flex-1 items-center gap-3 py-2.5 group-[:not(:last-child)]/row:sep-b">
-                        <span className="min-w-0 flex-1">
-                          <span className="block type-body">{g.label}</span>
-                          <span className="mt-0.5 block type-footnote text-muted-foreground">{g.desc}</span>
-                        </span>
-                        {active && <Check className="h-5 w-5 shrink-0 text-primary" strokeWidth={2.5} aria-hidden="true" />}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="mx-auto mt-8 w-full max-w-sm space-y-2">
-                <Button
-                  size="lg"
-                  disabled={!goal}
-                  onClick={() => { void hapticTap(); setPhase("analyzing"); }}
-                  className="w-full"
-                >
-                  Analizar mi físico
-                </Button>
-                <Button variant="plain" className="w-full" onClick={() => { void hapticTap(); setPhase("upload"); }}>
-                  Volver
-                </Button>
+                <ScanPrivacyNote
+                  text={user ? "Privado: solo para tu análisis · Menos de 1 minuto" : "Privado: solo para tu análisis · Sin registro · Menos de 1 minuto"}
+                />
               </div>
             </motion.div>
           ) : !result && phase === "analyzing" ? (
@@ -1604,9 +1293,9 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="mx-auto flex min-h-[60dvh] max-w-md flex-col items-center justify-center py-12 text-center"
+              className="w-full"
             >
-              <ScanAnalyzing progress={scanProgress} navTitle={!inline} />
+              <ScanAnalyzing photo={currentImg ?? backImg} stage={scanStage} navTitle={!inline} />
             </motion.div>
           ) : !result && phase === "lead" ? (
             <motion.div
@@ -1615,46 +1304,49 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="mx-auto w-full max-w-md"
+              className="flex w-full flex-col gap-6"
             >
-              <div className="text-center mb-6">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary mb-2">Diagnóstico listo</p>
-                <h1 className="type-title1">Este es tu adelanto.</h1>
-              </div>
+              <header>
+                <h1 data-nav-title={inline ? undefined : true} className="type-large-title">Tu diagnóstico está listo</h1>
+                <p className="mt-1 type-subhead text-muted-foreground">Este es tu adelanto. Déjanos tu email para ver el diagnóstico completo.</p>
+              </header>
 
-              {pendingResult && (
-                <div className="mb-6 rounded-[22px] border border-foreground/[0.08] bg-card p-5">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Potencial</p>
-                      <p className="mt-1 text-[40px] font-semibold leading-none tabular-nums">
-                        {formatDecimal(pendingResult.potential, 1)}<span className="text-base text-muted-foreground">/10</span>
-                      </p>
-                    </div>
-                    {(pendingResult.months_with_plan ?? pendingResult.estimated_months) !== undefined && (
-                      <div>
-                        <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Meses estimados</p>
-                        <p className="mt-1 text-[40px] font-semibold leading-none tabular-nums">
-                          {pendingResult.months_with_plan ?? pendingResult.estimated_months}
+              {pendingResult && (() => {
+                const months = objectiveMonths(pendingResult);
+                return (
+                  <section className="rounded-sheet bg-card p-5">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="min-w-0">
+                        <p className="type-footnote text-muted-foreground">Potencial</p>
+                        <p className="mt-1 whitespace-nowrap">
+                          <span className="type-figure text-[44px] leading-none text-primary">{scoreText(pendingResult.potential)}</span>
+                          <span className="ml-1 type-subhead text-muted-foreground">/10</span>
                         </p>
                       </div>
-                    )}
-                  </div>
-                  {pendingResult.bottleneck && (
-                    <div className="mt-5 border-t border-foreground/[0.08] pt-4">
-                      <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Prioridad detectada</p>
-                      <p className="mt-1 text-[15px] text-foreground">{pendingResult.bottleneck}</p>
+                      {months && (
+                        <div className="min-w-0">
+                          <p className="type-footnote text-muted-foreground">Hasta tu físico objetivo</p>
+                          <p className="mt-1 whitespace-nowrap">
+                            <span className="type-figure text-[44px] leading-none">{groupedInt(months.withPlan)}</span>
+                            <span className="ml-1.5 type-subhead text-muted-foreground">{months.withPlan === 1 ? "mes" : "meses"}</span>
+                          </p>
+                        </div>
+                      )}
                     </div>
-                  )}
-                  <p className="mt-4 text-xs text-muted-foreground">Estimación orientativa a partir de tus fotos.</p>
-                </div>
-              )}
+                    {pendingResult.bottleneck && (
+                      <div className="mt-4 sep-t pt-4">
+                        <p className="type-footnote text-muted-foreground">Lo que más te frena</p>
+                        <p className="mt-0.5 type-headline">{sentenceCase(pendingResult.bottleneck)}</p>
+                      </div>
+                    )}
+                    <p className="mt-4 type-footnote text-muted-foreground">Estimación orientativa a partir de tus fotos.</p>
+                  </section>
+                );
+              })()}
 
-              <p className="mb-5 text-center type-footnote text-muted-foreground">Déjanos tu email para ver el diagnóstico completo.</p>
-
-              <div className="space-y-5">
+              <div className="flex flex-col gap-5">
                 <div>
-                  <label htmlFor="scan-lead-name" className="type-subhead text-muted-foreground mb-1.5 block">
+                  <label htmlFor="scan-lead-name" className="mb-1.5 block type-subhead text-muted-foreground">
                     Nombre
                   </label>
                   <input
@@ -1668,7 +1360,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                   />
                 </div>
                 <div>
-                  <label htmlFor="scan-lead-email" className="type-subhead text-muted-foreground mb-1.5 block">
+                  <label htmlFor="scan-lead-email" className="mb-1.5 block type-subhead text-muted-foreground">
                     Email
                   </label>
                   <input
@@ -1678,9 +1370,10 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                     onChange={(e) => setLeadEmail(e.target.value)}
                     maxLength={255}
                     placeholder="tu@email.com"
+                    aria-describedby="scan-lead-email-hint"
                     className="field w-full" inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} autoComplete="email" enterKeyHint="done"
                   />
-                  <p className="type-footnote text-muted-foreground mt-1.5">
+                  <p id="scan-lead-email-hint" className="mt-1.5 type-footnote text-muted-foreground">
                     Te enviamos una copia aquí. Sin tarjeta y sin compromiso.
                   </p>
                 </div>
@@ -1710,123 +1403,55 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                 >
                   {submittingLead ? (
                     <>
-                      <Spinner />
+                      <Spinner size="sm" label="Enviando" className="text-primary-foreground" />
                       Enviando…
                     </>
                   ) : !pendingResult ? (
                     <>
-                      <Spinner />
-                      Generando tu diagnóstico…
+                      <Spinner size="sm" label="Preparando tu diagnóstico" className="text-primary-foreground" />
+                      Preparando tu diagnóstico…
                     </>
                   ) : (
-                    <>
-                      Ver mi diagnóstico ahora
-                    </>
+                    "Ver mi diagnóstico ahora"
                   )}
                 </Button>
 
-                <div className="flex items-start gap-2 pt-1">
-                  <Shield className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" aria-hidden="true" />
-                  <p className="type-footnote text-muted-foreground">
-                    Tu foto no se publica ni se comparte con otros usuarios. Se usa para tu análisis y se guarda en tu
-                    cuenta privada; puedes eliminarla cuando quieras.
-                  </p>
-                </div>
+                <ScanPrivacyNote text="Tu foto no se publica ni se comparte con otros usuarios. Se usa para tu análisis y puedes eliminarla cuando quieras." />
               </div>
             </motion.div>
-          ) : (
+          ) : result ? (
             <motion.div
               key="result"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
+              initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="w-full space-y-10"
+              transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
+              className="flex w-full flex-col gap-8"
             >
-              {/* Protagonista: la puntuación de físico en un anillo, como Actividad */}
-              <section>
+              <header>
                 {inline ? (
                   <h2 className="type-title2">Tu análisis físico</h2>
                 ) : (
                   <h1 data-nav-title className="type-large-title">Tu análisis físico</h1>
                 )}
-                {result.basic ? (
-                  <p className="mt-1 type-subhead text-muted-foreground">Scan básico · gratis</p>
-                ) : (
-                  <p className="mt-1 flex items-center gap-1.5 type-subhead text-success">
-                    <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
-                    Análisis completo
-                  </p>
-                )}
+                <p className="mt-1 type-subhead text-muted-foreground">{result.basic ? "Scan básico · gratis" : "Análisis completo"}</p>
+              </header>
 
-                <div className="mt-8 flex flex-col items-center text-center">
-                  <ProgressRing value={result.physique * 10} size={200} stroke={14} label="Puntuación de físico">
-                    <div className="flex flex-col items-center">
-                      <span className="type-figure text-[56px] font-bold leading-none tabular-nums min-[390px]:text-[64px]">
-                        {formatDecimal(result.physique, 1)}
-                      </span>
-                      <span className="mt-1.5 type-footnote text-muted-foreground">Físico · de 10</span>
-                    </div>
-                  </ProgressRing>
-                  {result.headline_diagnosis ? (
-                    <p className="mt-6 max-w-md type-title3">"{result.headline_diagnosis}"</p>
-                  ) : (
-                    <p className="mt-6 max-w-md type-body text-muted-foreground">{result.summary}</p>
-                  )}
-                </div>
-
-                {(() => {
-                  const hasObjective = !!objectiveImg || !!savedObjectiveUrl;
-                  const showMonths = hasObjective && result.months_with_plan !== undefined;
-                  const stats: Stat[] = [
-                    { label: "Atractivo", value: formatDecimal(result.attractiveness, 1), unit: "/10" },
-                    { label: "Potencial", value: formatDecimal(result.potential, 1), unit: "/10", tone: "text-primary" },
-                    { label: "Estilo", value: formatDecimal(result.style, 1), unit: "/10" },
-                  ];
-                  if (showMonths) {
-                    stats.push({ label: "A tu objetivo", value: Math.max(1, result.months_with_plan!), unit: "meses" });
-                  }
-                  return (
-                    <>
-                      <StatRow stats={stats} className="mt-8" />
-                      {showMonths && result.months_without_plan !== undefined && (
-                        <p className="mt-2 type-footnote text-muted-foreground tabular-nums">
-                          Con plan, frente a unos {Math.max(2, result.months_without_plan)} meses sin plan.
-                        </p>
-                      )}
-                    </>
-                  );
-                })()}
-                <p className="mt-2 type-footnote text-muted-foreground">
+              {/* El mismo resultado que la app y Progreso → Scan, en el mismo orden. */}
+              <div className="flex flex-col gap-[18px]">
+                <ScanResultView
+                  result={result}
+                  photo={currentImg ?? backImg}
+                  objectivePhoto={objectiveImg}
+                  onUpgrade={plans.plus ? () => navigate(user ? "/planes" : signupWithPlan) : undefined}
+                />
+                <ScanShareButton result={result} variant="secondary" />
+                <p className="type-footnote text-muted-foreground">
                   Orientación visual aproximada. No sustituye una valoración profesional.
                 </p>
+              </div>
 
-                <div className="mt-6 overflow-hidden rounded-[22px] bg-card p-4 sm:p-5">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <Sparkles className="size-4 text-primary" aria-hidden="true" />
-                        <h4 className="type-headline font-semibold text-foreground">Comparte tu diagnóstico</h4>
-                      </div>
-                      <p className="mt-1 type-footnote text-muted-foreground">
-                        Genera una Story para Instagram con tu análisis, fotos y objetivos.
-                      </p>
-                    </div>
-                    <Button
-                      variant="secondary"
-                      size="default"
-                      className="shrink-0"
-                      onClick={() => { void hapticTap(); void handleShare(); }}
-                      disabled={sharing}
-                    >
-                      {sharing ? <Spinner size="sm" /> : <Share2 className="size-4" aria-hidden="true" />}
-                      Compartir en Stories
-                    </Button>
-                  </div>
-                </div>
-              </section>
-
-              {/* Estado de aplicación al plan: patrón de la bienvenida, sin caja */}
+              {/* Aplicar al plan: la tarjeta y su estado */}
               {(user || routeUserId) && (
                 <section aria-label="Tu plan">
                   {planApplyState === "idle" && (
@@ -1835,95 +1460,70 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                       priorities={scanPriorities(result)}
                       canApply={canApplyPlan}
                       hasChanges={hasScanInferences(result, scanOnboarding)}
-                      canUpgrade={plans.plus || plans.coach}
-                      plusName={plans.plus ? plans.plusName : plans.coachName}
+                      canUpgrade={plans.plus}
+                      plusName={plans.plusName}
                       onApply={() => applyScanToPlan(result)}
                       onUpgrade={() => navigate("/planes")}
                     />
                   )}
-                  {planApplyState === "applying" && (
-                    <FindingRow
-                      leading={<Spinner size="md" />}
-                      title="Aplicando el scan a tu plan…"
-                      description="Recalculando entrenamiento y nutrición con los datos del scan."
-                    />
-                  )}
-                  {planApplyState === "done" && planApplyCopy && (
-                    <FindingRow
-                      icon={planApplyCopy.tone === "warn" ? AlertTriangle : CheckCircle2}
-                      iconClassName={planApplyCopy.tone === "warn" ? "text-muted-foreground" : "text-success"}
-                      title={planApplyCopy.title}
-                      description={planApplyCopy.description}
-                      action={
-                        <div className="flex items-center">
-                          {planApplyCopy.tone === "warn" && (
+                  {planApplyState !== "idle" && (
+                    <div className="rounded-card bg-card p-4">
+                      {planApplyState === "applying" && (
+                        <FindingRow
+                          leading={<Spinner size="md" label="Aplicando" className="text-primary" />}
+                          title="Aplicando el scan a tu plan…"
+                          description="Recalculando entrenamiento y nutrición con los datos del scan."
+                        />
+                      )}
+                      {planApplyState === "done" && planApplyCopy && (
+                        <FindingRow
+                          icon={planApplyCopy.tone === "warn" ? AlertTriangle : CheckCircle2}
+                          iconClassName={planApplyCopy.tone === "warn" ? "text-muted-foreground" : "text-success"}
+                          title={planApplyCopy.title}
+                          description={planApplyCopy.description}
+                          action={
+                            <div className="flex items-center">
+                              {planApplyCopy.tone === "warn" && (
+                                <Button variant="plain" size="sm" onClick={() => { void hapticTap(); applyScanToPlan(result, true); }}>
+                                  Reintentar
+                                </Button>
+                              )}
+                              <Button variant="plain" size="sm" onClick={openPlan}>
+                                Ver mi plan
+                              </Button>
+                            </div>
+                          }
+                        />
+                      )}
+                      {planApplyState === "sent" && (
+                        <FindingRow
+                          icon={CheckCircle2}
+                          iconClassName="text-success"
+                          title="Scan guardado"
+                          description="Queda en tu historial con lo que propone para tu plan."
+                        />
+                      )}
+                      {planApplyState === "error" && (
+                        <FindingRow
+                          icon={AlertTriangle}
+                          iconClassName="text-destructive"
+                          title="No se pudo aplicar al plan"
+                          description="Tu plan sigue como estaba. Vuelve a intentarlo cuando quieras."
+                          action={
                             <Button variant="plain" size="sm" onClick={() => { void hapticTap(); applyScanToPlan(result, true); }}>
                               Reintentar
                             </Button>
-                          )}
-                          <Button variant="plain" size="sm" onClick={openPlan}>
-                            Ver mi plan
-                          </Button>
-                        </div>
-                      }
-                    />
-                  )}
-                  {planApplyState === "sent" && (
-                    <FindingRow
-                      icon={CheckCircle2}
-                      iconClassName="text-success"
-                      title="Guardado para tu entrenador"
-                      description="Verá en tu ficha lo que propone el scan cuando ajuste tu plan."
-                    />
-                  )}
-                  {planApplyState === "error" && (
-                    <FindingRow
-                      icon={AlertTriangle}
-                      iconClassName="text-destructive"
-                      title="No se pudo aplicar al plan"
-                      description="Tu plan no ha cambiado. Vuelve a intentarlo cuando quieras."
-                      action={
-                        <Button variant="plain" size="sm" onClick={() => { void hapticTap(); applyScanToPlan(result, true); }}>
-                          Reintentar
-                        </Button>
-                      }
-                    />
+                          }
+                        />
+                      )}
+                    </div>
                   )}
                 </section>
               )}
 
               {user && routeUserId && !inline && <ScanProgressPanel userId={user.id} compact />}
-              {user && routeUserId && !inline && !result.basic && (
-                <BeforeAfterCompare
-                  userId={user.id}
-                  currentPhoto={currentImg}
-                  currentScores={{
-                    physique: result.physique,
-                    attractiveness: result.attractiveness,
-                    potential: result.potential,
-                  }}
-                />
-              )}
-
-              {/* Hallazgos: icono + título + descripción, como la lista de la bienvenida */}
-              {(result.bottleneck || (result.improvements?.length ?? 0) > 0) && (
-                <section>
-                  <h2 className="type-title2">Diagnóstico</h2>
-                  <div className="mt-5 space-y-6">
-                    {result.bottleneck && (
-                      <FindingRow icon={AlertTriangle} title="Lo que más te frena" description={result.bottleneck} />
-                    )}
-                    {(result.improvements ?? []).filter((m) => m.label.trim() !== result.bottleneck?.trim()).map((m, i) => (
-                      <FindingRow
-                        key={i}
-                        icon={TrendingUp}
-                        iconClassName={m.priority === "Alta" ? "text-primary" : "text-muted-foreground"}
-                        title={m.label}
-                        description={m.priority ? `Prioridad ${String(m.priority).toLowerCase()}` : undefined}
-                      />
-                    ))}
-                  </div>
-                </section>
+              {user && routeUserId && !inline && !result.basic && typeof result.physique === "number" && (
+                <BeforeAfterCompare userId={user.id} currentPhoto={currentImg} currentPhysique={result.physique} />
               )}
 
               <ScanCoverageCard
@@ -1939,128 +1539,77 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                 monthsWithPlan={result.months_with_plan}
               />
 
-              {/* Fotos y similitud al objetivo */}
-              {(() => {
-                const shots: { src: string; label: string; primary?: boolean }[] = [];
-                if (currentImg) shots.push({ src: currentImg, label: "Actual" });
-                if (objectiveImg) shots.push({ src: objectiveImg, label: "Objetivo", primary: true });
-                else if (backImg) shots.push({ src: backImg, label: "Espalda" });
-                if (shots.length === 0 && !objectiveImg) return null;
-                return (
-                  <section>
-                    <h2 className="type-title2">Tus fotos</h2>
-                    <div className={`mt-4 grid gap-3 ${shots.length > 1 ? "grid-cols-2" : "grid-cols-1 max-w-[240px]"}`}>
-                      {shots.map((p) => (
-                        <figure key={p.label} className="min-w-0">
-                          <ScanImage src={p.src} alt={p.label.toLowerCase()} className="aspect-[3/4] w-full rounded-media" />
-                          <figcaption className={`mt-2 type-subhead ${p.primary ? "font-semibold text-primary" : "text-muted-foreground"}`}>
-                            {p.label}
-                          </figcaption>
-                        </figure>
-                      ))}
-                    </div>
-                    {objectiveImg && (
-                      <div className="mt-4">
-                        <MeterRow
-                          label="Similitud al objetivo"
-                          value={`${result.similarity}%`}
-                          pct={result.similarity}
-                          hint={
-                            <>
-                              Tiempo estimado:{" "}
-                              <span className="font-semibold text-foreground tabular-nums">
-                                ~{result.estimated_months ?? result.months_with_plan ?? "—"} meses
-                              </span>{" "}
-                              con plan personalizado y constancia.
-                            </>
-                          }
-                        />
-                      </div>
+              {/* Yo futuro (Plus): la foto propia transformada con IA */}
+              {!result.basic && simBase && (
+                <section className="flex flex-col gap-2.5">
+                  <h2 className="type-title3">
+                    {result.months_with_plan ?? result.estimated_months
+                      ? <>Tu yo en {monthsText(result.months_with_plan ?? result.estimated_months ?? 0)}</>
+                      : <>Tu yo transformado</>}
+                  </h2>
+                  {currentImg && backImg && (
+                    <Tabs value={simPose} onValueChange={(v) => { void hapticSelection(); setSimPose(v as "front" | "back"); }}>
+                      <TabsList aria-label="Vista de la simulación" className="w-full max-w-xs">
+                        <TabsTrigger value="front">Frente</TabsTrigger>
+                        <TabsTrigger value="back">Espalda</TabsTrigger>
+                      </TabsList>
+                    </Tabs>
+                  )}
+                  <div className="relative aspect-[4/5] overflow-hidden rounded-sheet bg-card sm:aspect-[3/2]">
+                    {futureImg ? (
+                      <ScanImage src={futureImg} alt="Tu físico simulado con IA" className="h-full w-full" />
+                    ) : (
+                      <ScanImage
+                        src={simBase}
+                        alt=""
+                        className="h-full w-full"
+                        imgClassName="scale-110"
+                        style={{
+                          filter: isPaid && !genLoading
+                            ? "brightness(1.05) contrast(1.05)"
+                            : "blur(18px) brightness(1.1) contrast(1.1)",
+                        }}
+                      />
                     )}
-                  </section>
-                );
-              })()}
-
-              {/* Scan básico: lo de Plus en una tarjeta, en lugar del yo futuro y el detalle */}
-              {result.basic && (
-                <ScanPlusCard sections={result.locked_sections} onUpgrade={() => navigate(user ? "/planes" : signupWithPlan)} />
-              )}
-
-              {/* Yo futuro: contenido rico, una sola superficie */}
-              {!result.basic && (
-              <section>
-                <h2 className="type-title2">
-                  {result.months_with_plan ?? result.estimated_months
-                    ? <>Tu yo en {result.months_with_plan ?? result.estimated_months} meses</>
-                    : <>Tu yo transformado</>}
-                </h2>
-                {currentImg && backImg && (
-                  <Tabs
-                    value={simPose}
-                    onValueChange={(v) => { void hapticSelection(); setSimPose(v as "front" | "back"); }}
-                    className="mt-4"
-                  >
-                    <TabsList aria-label="Vista de la simulación" className="w-full max-w-xs">
-                      <TabsTrigger value="front">Frente</TabsTrigger>
-                      <TabsTrigger value="back">Espalda</TabsTrigger>
-                    </TabsList>
-                  </Tabs>
-                )}
-                <div className="relative mt-4 aspect-[3/2] overflow-hidden rounded-media bg-card">
-                  {futureImg ? (
-                    <ScanImage src={futureImg} alt="futuro IA" className="h-full w-full" />
-                  ) : simBase ? (
-                    <ScanImage
-                      src={simBase}
-                      alt="futuro"
-                      className="w-full h-full"
-                      imgClassName="scale-110"
-                      style={{
-                        filter: isPaid && !genLoading
-                          ? "brightness(1.05) contrast(1.05)"
-                          : "blur(18px) brightness(1.1) contrast(1.1)",
-                      }}
-                    />
-                  ) : null}
-                  {!futureImg && (
-                    <>
-                      <div className="absolute inset-0 bg-background/70" />
-                      <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
-                        <div className="flex h-14 w-14 items-center justify-center rounded-[22%] bg-card">
+                    {!futureImg && (
+                      <>
+                        <div className="absolute inset-0 bg-background/70" />
+                        <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
+                          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/15 text-primary">
+                            {isPaid ? (
+                              genLoading ? <Spinner size="lg" label="Generando" className="text-primary" /> : <Sparkles className="h-6 w-6" strokeWidth={2} aria-hidden="true" />
+                            ) : (
+                              <Lock className="h-6 w-6" strokeWidth={2} aria-hidden="true" />
+                            )}
+                          </span>
                           {isPaid ? (
-                            genLoading ? <Spinner /> : <Sparkles className="h-7 w-7 text-primary" strokeWidth={1.75} />
+                            <>
+                              <p className="mt-3 max-w-xs type-footnote text-muted-foreground">
+                                Tarda unos 15 s. Tu misma cara y tu físico transformado.
+                              </p>
+                              <Button
+                                variant="tinted"
+                                size="sm"
+                                className="mt-3"
+                                onClick={() => { void hapticTap(); generateFuture(); }}
+                                disabled={genLoading}
+                              >
+                                {genLoading ? "Generando con IA…" : "Generar simulación con IA"}
+                              </Button>
+                            </>
                           ) : (
-                            <Lock className="h-7 w-7 text-primary" strokeWidth={1.75} />
+                            <>
+                              <p className="mt-3 type-headline">Visualiza tu transformación</p>
+                              <p className="mt-0.5 max-w-xs type-footnote text-muted-foreground">
+                                Simulación generada con IA al activar tu plan
+                              </p>
+                            </>
                           )}
                         </div>
-                        {isPaid ? (
-                          <>
-                            <p className="mt-3 max-w-xs type-footnote text-muted-foreground">
-                              Tarda ~15s. Misma identidad, físico transformado.
-                            </p>
-                            <Button
-                              variant="tinted"
-                              size="sm"
-                              className="mt-3"
-                              onClick={() => { void hapticTap(); generateFuture(); }}
-                              disabled={genLoading}
-                            >
-                              {genLoading ? "Generando con IA…" : "Generar simulación IA"}
-                            </Button>
-                          </>
-                        ) : (
-                          <>
-                            <p className="mt-3 type-headline">Visualiza tu transformación</p>
-                            <p className="mt-0.5 max-w-xs type-footnote text-muted-foreground">
-                              Simulación generada con IA al activar tu plan
-                            </p>
-                          </>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </div>
-              </section>
+                      </>
+                    )}
+                  </div>
+                </section>
               )}
 
               {!isPaid && !user && (
@@ -2070,277 +1619,60 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                 />
               )}
 
-              {/* === CAPA DE DETALLE — lectura estimada por IA === */}
-              {(result.body_composition || result.muscle_breakdown?.length || result.posture || result.proportions || result.genetic_markers?.length || result.protocol) && (
-                <section className="space-y-10">
-                  <header>
-                    <h2 className="type-title2">Lectura estimada por IA</h2>
-                    <p className="mt-1 type-subhead text-muted-foreground">
-                      Lectura por grupo muscular, composición, postura, proporciones y protocolo accionable a partir de tus
-                      fotos. Es una estimación visual, no un diagnóstico médico.
-                    </p>
-                  </header>
-
-                  {/* Composición corporal */}
-                  {result.body_composition && (() => {
-                    const bc = result.body_composition;
-                    const stats: Stat[] = [];
-                    if (bc.body_fat_pct !== undefined) stats.push({ label: "Grasa", value: bc.body_fat_pct, unit: "%", tone: "text-primary" });
-                    if (bc.lean_mass_kg !== undefined) stats.push({ label: "Masa magra", value: bc.lean_mass_kg, unit: "kg" });
-                    if (bc.weight_kg !== undefined) stats.push({ label: "Peso est.", value: bc.weight_kg, unit: "kg" });
-                    return (
-                      <div>
-                        <h3 className="type-title3">Composición corporal estimada</h3>
-                        <StatRow stats={stats} className="mt-2" />
-                        {(bc.somatotype || bc.frame_size || bc.fat_distribution) && (
-                          <ListGroup className="mt-4">
-                            {bc.somatotype && <ListRow title="Somatotipo" value={sentenceCase(bc.somatotype)} />}
-                            {bc.frame_size && <ListRow title="Estructura" value={sentenceCase(bc.frame_size)} />}
-                            {bc.fat_distribution && (
-                              <ListRow title="Distribución de grasa" subtitle={sentenceCase(bc.fat_distribution)} />
-                            )}
-                          </ListGroup>
-                        )}
-                      </div>
-                    );
-                  })()}
-
-                  {/* Proporciones */}
-                  {result.proportions && (
-                    <div>
-                      <h3 className="type-title3">Proporciones y simetría</h3>
-                      <div className="mt-1">
-                        {result.proportions.shoulder_to_waist_ratio !== undefined && (
-                          <MeterRow
-                            label="Ratio hombro/cintura"
-                            value={formatDecimal(result.proportions.shoulder_to_waist_ratio, 2)}
-                            hint="Ideal ~1.60"
-                            pct={(result.proportions.shoulder_to_waist_ratio / 1.8) * 100}
-                          />
-                        )}
-                        {result.proportions.v_taper_score !== undefined && (
-                          <MeterRow
-                            label="V-taper"
-                            value={`${result.proportions.v_taper_score}/10`}
-                            pct={result.proportions.v_taper_score * 10}
-                          />
-                        )}
-                        {result.proportions.symmetry_score !== undefined && (
-                          <MeterRow
-                            label="Simetría"
-                            value={`${result.proportions.symmetry_score}/10`}
-                            pct={result.proportions.symmetry_score * 10}
-                          />
-                        )}
-                      </div>
-                      {(result.proportions.upper_lower_balance || result.proportions.weakest_link) && (
-                        <div className="mt-5 space-y-6">
-                          {result.proportions.upper_lower_balance && (
-                            <FindingRow
-                              icon={Ruler}
-                              iconClassName="text-muted-foreground"
-                              title="Balance"
-                              description={result.proportions.upper_lower_balance}
-                            />
-                          )}
-                          {result.proportions.weakest_link && (
-                            <FindingRow icon={Target} title="Eslabón más débil" description={result.proportions.weakest_link} />
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Breakdown por grupo muscular */}
-                  {result.muscle_breakdown && result.muscle_breakdown.length > 0 && (
-                    <div>
-                      <h3 className="type-title3">Lectura por grupo muscular</h3>
-                      <div className="mt-1 grid md:grid-cols-2 md:gap-x-8">
-                        {result.muscle_breakdown.map((m, i) => (
-                          <MeterRow
-                            key={i}
-                            label={m.group}
-                            value={
-                              <span className={m.score >= 7 ? "text-primary" : m.score >= 5 ? "text-foreground" : "text-muted-foreground"}>
-                                {formatDecimal(m.score, 1)}
-                                <span className="type-footnote font-normal text-muted-foreground">/10</span>
-                              </span>
-                            }
-                            pct={m.score * 10}
-                            dim={m.score < 7}
-                            hint={m.verdict}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Postura */}
-                  {result.posture && (result.posture.issues?.length || result.posture.note) && (
-                    <div>
-                      <div className="flex items-baseline justify-between gap-3">
-                        <h3 className="type-title3">Postura</h3>
-                        {result.posture.severity && (
-                          <span className={`type-subhead font-semibold ${
-                            result.posture.severity === "severa" ? "text-destructive" :
-                            result.posture.severity === "moderada" ? "text-primary" :
-                            "text-muted-foreground"
-                          }`}>{sentenceCase(result.posture.severity)}</span>
-                        )}
-                      </div>
-                      {result.posture.issues && result.posture.issues.length > 0 && (
-                        <ul className="mt-1">
-                          {result.posture.issues.map((iss, i) => (
-                            <li key={i} className="sep-b last:border-b-0 py-3 type-body">{iss}</li>
-                          ))}
-                        </ul>
-                      )}
-                      {result.posture.note && (
-                        <p className="mt-2 type-footnote text-muted-foreground">{result.posture.note}</p>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Marcadores visuales (no genéticos) */}
-                  {result.genetic_markers && result.genetic_markers.length > 0 && (
-                    <div>
-                      <h3 className="type-title3">Rasgos visuales que juegan a tu favor (o en contra)</h3>
-                      <ul className="mt-1">
-                        {result.genetic_markers.map((g, i) => (
-                          <li key={i} className="sep-b last:border-b-0 py-3 type-body">{g}</li>
-                        ))}
-                      </ul>
-                      <p className="mt-2 type-footnote text-muted-foreground">
-                        Señales observadas en tus fotos: no es un estudio genético.
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Protocolo accionable */}
-                  {result.protocol && (
-                    <div>
-                      <h3 className="type-title3">Protocolo recomendado por la IA</h3>
-                      {(result.protocol.training_days_per_week !== undefined ||
-                        result.protocol.weekly_sets_priority !== undefined ||
-                        result.protocol.protein_g_per_kg !== undefined ||
-                        result.protocol.calorie_adjustment_kcal !== undefined ||
-                        result.protocol.cardio_minutes_per_week !== undefined) && (
-                        <ListGroup className="mt-3">
-                          {result.protocol.training_days_per_week !== undefined && (
-                            <ListRow title="Días de entreno por semana" value={<span className="tabular-nums">{result.protocol.training_days_per_week}</span>} />
-                          )}
-                          {result.protocol.weekly_sets_priority !== undefined && (
-                            <ListRow title="Series del grupo prioritario" value={<span className="tabular-nums">{result.protocol.weekly_sets_priority}</span>} />
-                          )}
-                          {result.protocol.protein_g_per_kg !== undefined && (
-                            <ListRow title="Proteína por kg" value={<span className="tabular-nums">{result.protocol.protein_g_per_kg} g</span>} />
-                          )}
-                          {result.protocol.calorie_adjustment_kcal !== undefined && (
-                            <ListRow
-                              title="Calorías frente a mantenimiento"
-                              value={
-                                <span className="tabular-nums">
-                                  {result.protocol.calorie_adjustment_kcal > 0 ? "+" : ""}{result.protocol.calorie_adjustment_kcal} kcal
-                                </span>
-                              }
-                            />
-                          )}
-                          {result.protocol.cardio_minutes_per_week !== undefined && (
-                            <ListRow title="Cardio por semana" value={<span className="tabular-nums">{result.protocol.cardio_minutes_per_week} min</span>} />
-                          )}
-                        </ListGroup>
-                      )}
-                      {result.protocol.key_lifts && result.protocol.key_lifts.length > 0 && (
-                        <div className="mt-6">
-                          <h4 className="type-headline">Ejercicios clave</h4>
-                          <div className="mt-2 flex flex-wrap gap-2">
-                            {result.protocol.key_lifts.map((l, i) => (
-                              <span key={i} className="rounded-full bg-secondary px-3 py-1.5 type-subhead">
-                                {l}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {result.protocol.avoid && result.protocol.avoid.length > 0 && (
-                        <div className="mt-6">
-                          <h4 className="type-headline">Evita</h4>
-                          <ul className="mt-1">
-                            {result.protocol.avoid.map((a, i) => (
-                              <li key={i} className="flex items-start gap-3 py-2 type-subhead text-muted-foreground">
-                                <X className="mt-0.5 h-4 w-4 shrink-0 text-destructive" aria-hidden="true" />
-                                <span>{a}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </section>
-              )}
-
               {/* Proyección + prueba social — antes del CTA final. El básico no la lleva: sin
                   objetivo ni protocolo serían meses inventados, y «tu yo futuro» es de Plus. */}
-              {!isPaid && !user && !result.basic && (
+              {!isPaid && !user && !result.basic && typeof result.physique === "number" && (
                 <ProjectionTimeline
                   currentScore={result.physique}
-                  monthsWithPlan={result.months_with_plan ?? result.estimated_months}
-                  monthsWithoutPlan={result.months_without_plan}
-                  priorities={(result.improvements || []).slice(0, 3).map((i) => i.label)}
-                  bottleneck={result.bottleneck}
+                  monthsWithPlan={result.months_with_plan ?? result.estimated_months ?? undefined}
+                  monthsWithoutPlan={result.months_without_plan ?? undefined}
+                  priorities={improvementList(result).slice(0, 3).map((i) => i.label)}
+                  bottleneck={result.bottleneck ?? undefined}
                   onCta={() => navigate(signupWithPlan)}
                 />
               )}
               {!isPaid && !user && <SocialProofStrip />}
 
-              {/* FUNNEL CTA — cierre al estilo de la bienvenida: una sola acción dorada */}
+              {/* Cierre: una sola acción dorada */}
               {!isPaid && !user ? (
-                <section className="pt-4 text-center">
+                <section className="flex flex-col gap-3 pt-2">
                   <h2 className="type-title1">
-                    {(result.months_with_plan ?? result.estimated_months) ? (
-                      <>
-                        Llega ahí en{" "}
-                        <span className="text-primary">
-                          {result.months_with_plan ?? result.estimated_months} meses
-                        </span>
-                        {result.months_without_plan !== undefined && (
-                          <>, no en {result.months_without_plan}</>
-                        )}
-                      </>
-                    ) : (
-                      <>
-                        Convierte el diagnóstico en{" "}
-                        <span className="text-primary">resultados reales</span>
-                      </>
-                    )}
+                    {(() => {
+                      const months = objectiveMonths(result);
+                      // En positivo: los meses con plan (la comparación sin plan ya está en el resultado).
+                      return months ? (
+                        <>Llega ahí en <span className="whitespace-nowrap text-primary">{monthsText(months.withPlan)}</span></>
+                      ) : (
+                        <>Convierte el diagnóstico en <span className="text-primary">resultados reales</span></>
+                      );
+                    })()}
                   </h2>
-                  <p className="mx-auto mt-3 max-w-md type-subhead text-muted-foreground">
+                  <p className="type-subhead text-muted-foreground">
                     Crea tu cuenta gratis y Autopilot te monta una rutina para tu objetivo, tus días y tu material,
                     con este scan guardado para comparar el siguiente.
                   </p>
                   {/* Primero que la gente lo use: la acción principal es la cuenta gratis, no el pago. */}
-                  <div className="mx-auto mt-6 max-w-sm space-y-2">
+                  <div className="mt-3 flex flex-col gap-2">
                     <Button size="lg" className="w-full" onClick={() => { void hapticTap(); navigate(freeSignup); }}>
                       Crear mi cuenta gratis
                     </Button>
-                    {(plans.plus || plans.coach) && (
+                    {plans.plus && (
                       <Button variant="plain" className="w-full" onClick={() => { void hapticTap(); navigate(signupWithPlan); }}>
-                        Ver el scan completo con {plans.plus ? plans.plusName : plans.coachName}
+                        Ver el scan completo con {plans.plusName}
                       </Button>
                     )}
                     <Button variant="plain" className="w-full" onClick={() => { void hapticTap(); reset(); }}>
                       Hacer otro scan
                     </Button>
                   </div>
-                  <p className="mt-3 type-footnote text-muted-foreground">Gratis · Sin tarjeta</p>
+                  <p className="text-center type-footnote text-muted-foreground">Gratis · Sin tarjeta</p>
                 </section>
               ) : (
-                <section className="mx-auto w-full max-w-sm space-y-2">
+                <section className="flex w-full flex-col gap-2">
                   {(user || routeUserId) && (
                     <>
-                      <Button size="lg" variant="hero" className="w-full gap-2 shadow-sm" onClick={startWorkoutFromScan}>
-                        <Dumbbell className="h-4 w-4" aria-hidden="true" />
+                      <Button size="lg" className="w-full" onClick={startWorkoutFromScan}>
+                        <Dumbbell aria-hidden="true" />
                         Comenzar entrenamiento de hoy
                       </Button>
                       <Button size="lg" variant="secondary" className="w-full" onClick={openPlan}>
@@ -2363,27 +1695,14 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                       onClick={() => { void hapticTap(); resetProgress(); }}
                       disabled={resettingProgress}
                     >
-                      {resettingProgress && <Spinner size="sm" />}
+                      {resettingProgress && <Spinner size="sm" label="Borrando" />}
                       Resetear progreso
                     </Button>
                   )}
                 </section>
               )}
-
-              {/* Tarjeta compartible (oculta off-screen) */}
-              <div
-                style={{
-                  position: "fixed",
-                  top: 0,
-                  left: -9999,
-                  pointerEvents: "none",
-                }}
-                aria-hidden
-              >
-                <ScanShareCard ref={shareRef} result={result} />
-              </div>
             </motion.div>
-          )}
+          ) : null}
         </AnimatePresence>
       </main>
     </>

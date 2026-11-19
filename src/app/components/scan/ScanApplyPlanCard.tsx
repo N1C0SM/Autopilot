@@ -6,6 +6,7 @@ import { formatDecimal } from "@/shared/lib/numberFormat";
 import { hapticTap } from "@/shared/lib/native";
 import { isIOSNative } from "@/shared/lib/platform";
 import { parseScanProtocol, type ScanProtocolInput } from "@/shared/lib/scanApply";
+import { signedKcal } from "@/shared/lib/scanResultFormat";
 
 function PlanRow({
   icon,
@@ -23,8 +24,8 @@ function PlanRow({
       <IconTile icon={icon} />
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline justify-between gap-3">
-          <p className="type-headline font-semibold">{title}</p>
-          <p className="shrink-0 type-subhead tabular-nums text-muted-foreground">{value}</p>
+          <p className="type-headline">{title}</p>
+          <p className="min-w-0 truncate text-right type-subhead tabular-nums text-muted-foreground">{value}</p>
         </div>
         <p className="mt-0.5 type-footnote text-muted-foreground">{detail}</p>
       </div>
@@ -34,7 +35,7 @@ function PlanRow({
 
 /**
  * «Aplicar el scan a mi plan»: la rutina y la nutrición que propone el análisis,
- * en una sola tarjeta. Plus (y Coach) pueden aplicarlo; Free ve la misma opción
+ * en una sola tarjeta sin borde. Plus puede aplicarlo; Free ve la misma opción
  * bloqueada hasta tener Plus — nunca desaparece, para que sepa qué se está
  * perdiendo y pueda decidir.
  */
@@ -51,7 +52,7 @@ export default function ScanApplyPlanCard({
   protocol?: ScanProtocolInput | null;
   /** Grupos atrasados que el scan priorizaría en la rutina. */
   priorities?: string[];
-  /** Plus, Coach o admin: puede aplicar el scan. */
+  /** Plus o admin: puede aplicar el scan. */
   canApply: boolean;
   /** El scan propone algo nuevo para este usuario. */
   hasChanges: boolean;
@@ -78,9 +79,8 @@ export default function ScanApplyPlanCard({
         ? "Se recalcula con tu objetivo y tu semana."
         : "Tu rutina se ajusta a lo que ve el análisis.";
 
-  const calorieValue = calorieAdjustment === undefined
-    ? undefined
-    : `${calorieAdjustment > 0 ? "+" : calorieAdjustment < 0 ? "−" : ""}${Math.abs(calorieAdjustment)} kcal/día`;
+  // «−300 kcal/día» con el signo menos tipográfico y punto de miles (`signedKcal`, como el resultado).
+  const calorieValue = calorieAdjustment === undefined ? undefined : `${signedKcal(calorieAdjustment)}/día`;
   const nutritionValue = calorieValue
     ?? (proteinPerKg !== undefined ? `${formatDecimal(proteinPerKg, 1)} g/kg` : "A tu medida");
   const nutritionDetail = proteinPerKg !== undefined && calorieValue !== undefined
@@ -97,11 +97,11 @@ export default function ScanApplyPlanCard({
   const sellUpgrade = canUpgrade && !iosNative;
 
   return (
-    <section aria-labelledby="scan-apply-title" className="overflow-hidden rounded-[22px] bg-card p-4 sm:p-5">
+    <section aria-labelledby="scan-apply-title" className="overflow-hidden rounded-card bg-card p-4 sm:p-5">
       <header className="flex items-start gap-3">
         <IconTile icon={Sparkles} />
         <div className="min-w-0 flex-1">
-          <h3 id="scan-apply-title" className="type-headline font-semibold">Aplicar el scan a mi plan</h3>
+          <h3 id="scan-apply-title" className="type-headline">Aplicar el scan a mi plan</h3>
           <p className="mt-0.5 type-footnote text-muted-foreground">
             {!canApply
               ? "Lleva a tu plan la rutina y la nutrición que recomienda este scan."
@@ -142,9 +142,9 @@ export default function ScanApplyPlanCard({
         )
       ) : hasChanges ? (
         <Button
-          variant="hero"
+          variant="tinted"
           size="lg"
-          className="mt-4 w-full gap-2 shadow-sm"
+          className="mt-4 w-full"
           onClick={onApply}
         >
           <Sparkles className="size-4" aria-hidden="true" />

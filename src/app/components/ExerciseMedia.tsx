@@ -1,23 +1,33 @@
 import { useMemo, useState } from "react";
-import { Dumbbell, Video } from "lucide-react";
+import { Check } from "lucide-react";
 import VideoEmbed, { toEmbedUrl } from "@/web/components/VideoEmbed";
 import { cn } from "@/shared/lib/utils";
 import { BrandMark } from "@/shared/components/ui/brand-mark";
 import { fastImage } from "@/shared/lib/fastImage";
-import { exerciseMotion } from "@/shared/lib/exerciseMotion";
+import { exerciseMotion, exerciseMotionFor } from "@/shared/lib/exerciseMotion";
 import { ExerciseMotion, ExerciseMotionGlyph } from "@/app/components/ExerciseMotion";
 
 export const isDirectFile = (url: string) => /\.(mp4|webm|mov|m4v)(\?|$)/i.test(url);
 
-/** Datos de la ficha que dibujan la huella de movimiento. Sin patrón no hay huella. */
+/** Datos de la ficha que dibujan la huella de movimiento. */
 type MotionProps = {
   pattern?: string | null;
   stimulus?: string | null;
   load?: string | null;
+  /** Grupo muscular: sin patrón en la ficha, deduce la huella (nunca un hueco vacío). */
+  muscleGroup?: string | null;
 };
 
+/** La huella con el patrón de la ficha, o `null` si no lo tiene (no hay «Ritmo» que enseñar). */
 const useMotion = (name: string | null | undefined, { pattern, stimulus, load }: MotionProps) =>
   useMemo(() => exerciseMotion({ name: name ?? "", pattern, stimulus, load }), [name, pattern, stimulus, load]);
+
+/** La huella siempre: la de la ficha o la deducida del nombre y el grupo (`ExerciseMotion.specFor` en la app). */
+const useGlyph = (name: string | null | undefined, { pattern, stimulus, load, muscleGroup }: MotionProps) =>
+  useMemo(
+    () => exerciseMotionFor({ name: name ?? "", pattern, stimulus, load, muscleGroup }),
+    [name, pattern, stimulus, load, muscleGroup],
+  );
 
 /** Escala única de miniaturas. No inventar tamaños fuera de esta lista. */
 const THUMB_SIZES = {
@@ -46,9 +56,9 @@ type ThumbProps = MotionProps & {
  * Miniatura de ejercicio. Única en toda la app: mismo tamaño, mismo radio y
  * mismo placeholder, tanto en administración como en usuario y entrenador.
  *
- * Qué se ve, en este orden: la huella de movimiento del ejercicio (su patrón,
- * su ritmo y su carga) → la foto → hueco. La administración no pasa el patrón a
- * propósito: allí se gestiona la foto, así que allí se sigue viendo la foto.
+ * Qué se ve, en este orden: la foto → la huella de movimiento del ejercicio (su
+ * patrón, su ritmo y su carga; sin patrón, la deducida del nombre y el grupo).
+ * Nunca un cuadro vacío ni un icono suelto.
  */
 export const ExerciseThumb = ({
   image,
@@ -56,22 +66,20 @@ export const ExerciseThumb = ({
   pattern,
   stimulus,
   load,
+  muscleGroup,
   size = "md",
   aspect = "square",
   completed = false,
   className = "",
 }: ThumbProps) => {
   const box = aspect === "video" ? "aspect-video w-28" : THUMB_SIZES[size];
-  const spec = useMotion(name, { pattern, stimulus, load });
+  const spec = useGlyph(name, { pattern, stimulus, load, muscleGroup });
   const [broken, setBroken] = useState<string | null>(null);
   const showImage = image && broken !== image;
 
   return (
-    <div
-      className={`relative ${box} shrink-0 overflow-hidden rounded-[10px] ${
-        completed ? "bg-success/15" : "bg-secondary"
-      } ${className}`}
-    >
+    // 12 px, como `ExerciseThumbView` / `ExerciseThumb` en la app.
+    <div className={cn("relative shrink-0 overflow-hidden rounded-[12px] bg-secondary", box, className)}>
       {showImage ? (
         <img
           src={fastImage(image, 192)}
@@ -79,16 +87,18 @@ export const ExerciseThumb = ({
           loading="lazy"
           decoding="async"
           onError={() => setBroken(image)}
-          className={`h-full w-full object-cover ${completed ? "opacity-70" : ""}`}
+          className={cn("h-full w-full object-cover", completed && "opacity-70")}
         />
       ) : spec ? (
         <div className="h-full w-full p-1.5">
           <ExerciseMotionGlyph spec={spec} className={completed ? "opacity-60" : ""} />
         </div>
-      ) : (
-        <div className="flex h-full w-full items-center justify-center">
-          <Dumbbell className={`h-4 w-4 ${completed ? "text-success" : "text-muted-foreground"}`} />
-        </div>
+      ) : null}
+      {/* Hecho: atenuada y con el check dorado (un solo dorado, como `WorkoutThumb` en la app). */}
+      {completed && (
+        <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center bg-black/50">
+          <Check className="!size-5 text-primary" strokeWidth={2.75} />
+        </span>
       )}
     </div>
   );
@@ -99,21 +109,23 @@ type Props = MotionProps & {
   image?: string | null;
   name?: string | null;
   className?: string;
-  emptyLabel?: string;
 };
 
 /**
  * Media principal de un ejercicio. Una sola regla de precedencia para toda la
- * app: vídeo (con la imagen de póster) → huella de movimiento → imagen → hueco.
- * El contenedor es siempre 16:9 y con el mismo radio, así que nunca hay saltos
- * de layout. Si el ejercicio tiene foto además de huella, se cambia entre las
- * dos con una píldora discreta: nada de capas ni de botones sueltos.
+ * app: vídeo (con la imagen de póster) → foto → huella de movimiento. Sin foto
+ * ni vídeo se ve la huella (la de la ficha o la deducida), nunca un cuadro de
+ * «próximamente». El contenedor es siempre 16:9 y con el mismo radio, así que
+ * nunca hay saltos de layout. Si el ejercicio tiene foto y patrón, se cambia
+ * entre las dos con una píldora discreta (igual que `hero` en la app).
  */
-const ExerciseMedia = ({ video, image, name, pattern, stimulus, load, className = "", emptyLabel = "Sin vídeo de técnica todavía" }: Props) => {
+const ExerciseMedia = ({ video, image, name, pattern, stimulus, load, muscleGroup, className = "" }: Props) => {
   // Intro de marca de 1 s al reproducir (la «A» con el rayo latiendo sobre negro) y marca de agua fija.
   const [intro, setIntro] = useState(false);
-  const spec = useMotion(name, { pattern, stimulus, load });
-  const [photo, setPhoto] = useState(Boolean(image));
+  const rhythm = useMotion(name, { pattern, stimulus, load });
+  const glyph = useGlyph(name, { pattern, stimulus, load, muscleGroup });
+  const [photo, setPhoto] = useState(true);
+  const [broken, setBroken] = useState<string | null>(null);
 
   if (video && isDirectFile(video)) {
     return (
@@ -146,50 +158,40 @@ const ExerciseMedia = ({ video, image, name, pattern, stimulus, load, className 
 
   if (video && toEmbedUrl(video)) return <VideoEmbed url={video} className={className} />;
 
-  if (spec && !(photo && image)) {
-    return (
-      <div className={cn("relative aspect-video w-full overflow-hidden rounded-media bg-background", className)}>
-        <ExerciseMotion spec={spec} className="p-3" />
-        {image && (
-          <div className="absolute bottom-3 left-3 flex items-center gap-0.5 rounded-full bg-secondary/90 p-0.5">
-            {[
-              { label: "Ritmo", on: !photo, show: () => setPhoto(false) },
-              { label: "Foto", on: photo, show: () => setPhoto(true) },
-            ].map((tab) => (
-              <button
-                key={tab.label}
-                type="button"
-                aria-pressed={tab.on}
-                onClick={tab.show}
-                className={cn(
-                  "h-7 rounded-full px-3 type-footnote font-semibold transition active:opacity-60",
-                  tab.on ? "bg-primary/15 text-primary" : "text-muted-foreground",
-                )}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  if (image) {
-    return (
-      <div className={cn("aspect-video w-full overflow-hidden rounded-media bg-background", className)}>
-        {/* cover: mismo encuadre exacto que el vídeo, para que toda la biblioteca
-            se vea igual. El prompt de generación compone dentro de la banda 16:9,
-            así que este recorte no corta al atleta. */}
-        <img src={fastImage(image, 1000)} alt={name ?? ""} loading="lazy" decoding="async" className="h-full w-full object-cover" />
-      </div>
-    );
-  }
+  const usable = image && broken !== image ? image : null;
+  const showPhoto = Boolean(usable) && (photo || !rhythm);
 
   return (
-    <div className={cn("flex aspect-video w-full flex-col items-center justify-center gap-2 overflow-hidden rounded-media bg-secondary px-6 text-center", className)}>
-      <Video className="h-7 w-7 text-muted-foreground/60" strokeWidth={1.75} aria-hidden="true" />
-      <p className="type-footnote text-muted-foreground">{emptyLabel}</p>
+    <div className={cn("relative aspect-video w-full overflow-hidden rounded-media bg-background", className)}>
+      {showPhoto ? (
+        // cover: mismo encuadre exacto que el vídeo, para que toda la biblioteca
+        // se vea igual. El prompt de generación compone dentro de la banda 16:9,
+        // así que este recorte no corta al atleta.
+        <img src={fastImage(usable!, 1000)} alt={name ?? ""} loading="lazy" decoding="async" onError={() => setBroken(usable)} className="h-full w-full object-cover" />
+      ) : (
+        <ExerciseMotion spec={rhythm ?? glyph} className="p-3" />
+      )}
+      {rhythm && usable && (
+        <div className="absolute bottom-3 left-3 flex items-center gap-0.5 rounded-full bg-secondary/90 p-0.5 backdrop-blur-sm">
+          {[
+            { label: "Ritmo", on: !showPhoto, show: () => setPhoto(false) },
+            { label: "Foto", on: showPhoto, show: () => setPhoto(true) },
+          ].map((tab) => (
+            <button
+              key={tab.label}
+              type="button"
+              aria-pressed={tab.on}
+              onClick={tab.show}
+              className={cn(
+                "h-7 rounded-full px-3 type-footnote font-semibold transition active:opacity-60",
+                tab.on ? "bg-primary/15 text-primary" : "text-muted-foreground",
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

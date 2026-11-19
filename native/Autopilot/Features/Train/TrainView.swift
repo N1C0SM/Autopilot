@@ -2,6 +2,348 @@ import SwiftUI
 import Supabase
 import PhotosUI
 
+/// Entrenar (`TrainingPlanView` + la sección «training» de la web): la cabecera de la rutina, las
+/// sesiones en orden («Sesión 1, 2…», la siguiente destacada) y «Mis rutinas». No es una pestaña,
+/// como en la web: se llega desde Hoy («Ver todas» en «Mis rutinas»). En iPad y Mac, la misma
+/// columna centrada de 680 que Hoy y Nutrición.
+struct TrainView: View {
+    /// «Empezar entreno de hoy» (menú del Mac) con Entrenar delante: lo abre aquí, sin cambiar de pantalla.
+    static var pendingStart = false
+    /// «Ver todas» en «Mis rutinas» de Hoy: Entrenar se abre con «Mis rutinas» arriba.
+    static var focusRoutines = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @EnvironmentObject private var session: SessionModel
+    #if !os(macOS)
+    @Environment(\.horizontalSizeClass) private var sizeClass
+    #endif
+    @StateObject private var model: PlanModel
+    @State private var active: ActiveWorkout?
+    @State private var starting = false
+    /// Sesión con un entreno a medias guardado (su acción pasa a ser «Continuar entreno»).
+    @State private var resumableDay: String?
+    @State private var editing = false
+    @State private var library = false
+    @State private var pickingEmpty = false
+    /// «Nueva rutina» (`day == nil`) o «Editar» de una rutina de «Mis rutinas».
+    @State private var routineEditor: RoutineEditorTarget?
+    var onNavigate: (AppSection) -> Void = { _ in }
+
+    struct RoutineEditorTarget: Identifiable { let day: String?; var id: String { day ?? "nueva" } }
+
+    private var wideLayout: Bool {
+        #if os(macOS)
+        return true
+        #else
+        return sizeClass == .regular
+        #endif
+    }
+
+    /// Márgenes laterales como `p-4 md:p-8` de la web. En Mac el padding lo pone `SectionView`.
+    private var pagePadding: CGFloat {
+        #if os(macOS)
+        return 0
+        #else
+        return wideLayout ? 32 : 16
+        #endif
+    }
+
+    /// La rutina, lo hecho y el entreno a medias salen de la caché ya en el init: el primer
+    /// fotograma es la pantalla final, nunca la tarjeta de «sin rutina» un instante.
+    init(userId: UUID? = nil, onNavigate: @escaping (AppSection) -> Void = { _ in }) {
+        _model = StateObject(wrappedValue: PlanModel(userId: userId))
+        _resumableDay = State(initialValue: userId.flatMap { ActiveWorkout.restore(userId: $0.uuidString.lowercased())?.day.day })
+        self.onNavigate = onNavigate
+    }
+
+    private var routines: [DayPlan] { CustomRoutines.mine(model.days) }
+    private var limitReached: Bool { !CustomRoutines.canAdd(model.days) }
+
+    var body: some View {
+        ScrollViewReader { proxy in
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                // Sin respuesta todavía (ni caché): cargando con el AP, nunca «sin rutina».
+                if model.days.isEmpty && model.error == nil && (model.loading || !model.loaded) {
+                    VStack(spacing: 12) {
+                        BrandLoader()
+                        Text("Cargando tu rutina…").font(.apSubhead).foregroundStyle(Palette.muted)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 300)
+                    .accessibilityElement(children: .combine)
+                } else if let error = model.error, model.days.isEmpty {
+                    EmptyStateView(symbol: "wifi.exclamationmark", title: error,
+                                   message: "Desliza hacia abajo para volver a intentarlo.")
+                } else if model.days.isEmpty {
+                    // Sin rutina: la misma invitación que Inicio y la web, con su botón, y la tuya desde cero.
+                    VStack(spacing: 12) {
+                        StarterRoutineCard { await load() }
+                        Button { Haptics.tap(); routineEditor = RoutineEditorTarget(day: nil) } label: { Text("Nueva rutina") }
+                            .buttonStyle(.pillSecondary)
+                    }
+                    .padding(20)
+                    .surface(Radius.hero)
+                } else {
+                    // Bajo el título grande «Entrenar»; en Mac la barra ya lleva su pista.
+                    if !wideLayout {
+                        Text("Tus sesiones en orden. Hazlas el día que te venga bien.").font(.apSubhead).foregroundStyle(Palette.muted)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    RoutineListView(days: model.days,
+                                    doneThisWeek: model.doneThisWeek,
+                                    doneToday: model.doneTodayKeys,
+                                    resumableDay: resumableDay,
+                                    routineBar: AnyView(routineBar),
+                                    routines: AnyView(routinesSection),
+                                    onPersonalize: { day, name, icon, _ in await personalize(day: day, name: name, icon: icon) }) { day in
+                        Task { await open(day) }
+                    }
+                }
+            }
+            .frame(maxWidth: 680, alignment: .leading)
+            .padding(.horizontal, pagePadding)
+            .padding(.top, wideLayout ? 24 : 8)
+            .frame(maxWidth: .infinity)
+            .padding(.bottom, 40)
+        }
+        .screenBackground()
+        .refreshable { await load() }
+        .task {
+            if Self.pendingStart {
+                Self.pendingStart = false
+                await openToday()
+            }
+            if Self.focusRoutines, !model.days.isEmpty { scrollToRoutines(proxy) }
+            await load()
+            if Self.focusRoutines { scrollToRoutines(proxy) }
+        }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .refreshSection)) { _ in Task { await load() } }
+        .onReceive(NotificationCenter.default.publisher(for: .startTodayWorkout)) { _ in
+            // RootView marca `pendingStart` en este mismo aviso: se lee al terminar de repartirlo.
+            Task { @MainActor in
+                await Task.yield()
+                guard Self.pendingStart else { return }
+                Self.pendingStart = false
+                await openToday()
+            }
+        }
+        .sheet(isPresented: $editing) {
+            PlanEditorView(original: model.days) { saved in model.days = saved }
+                .presentationBackground(Palette.background)
+        }
+        .sheet(isPresented: $library) {
+            ExerciseLibraryView(userId: session.userId)
+                .presentationBackground(Palette.background)
+                #if os(macOS)
+                .frame(minWidth: 680, minHeight: 720)
+                #endif
+        }
+        .sheet(isPresented: $pickingEmpty) {
+            ExercisePickerView(existing: []) { picked in Task { await startEmpty(picked) } }
+                .presentationBackground(Palette.background)
+        }
+        .sheet(item: $routineEditor) { target in
+            RoutineEditorView(routine: target.day.flatMap { day in model.days.first { $0.day == day } },
+                              limitReached: limitReached) { name, exercises in
+                if let day = target.day {
+                    return await commit("Rutina guardada") { CustomRoutines.update($0, day: day, name: name, exercises: exercises) }
+                }
+                return await commit("Rutina creada en Mis rutinas") { CustomRoutines.add($0, name: name, exercises: exercises) }
+            }
+            .presentationBackground(Palette.background)
+        }
+        .fullScreenCoverCompat(item: $active) { workout in
+            NavigationStack {
+                WorkoutView(workout: workout, userId: session.userId ?? UUID()) { finished in
+                    active = nil
+                    if finished { Task { await load() } }
+                }
+            }
+        }
+    }
+
+    /// Cabecera de la rutina (como la web): el modo y de dónde sale con «Editar» a la derecha y,
+    /// debajo, «Entreno vacío» y «Ejercicios» con su nombre.
+    private var routineBar: some View {
+        let mode = CustomRoutines.mode(model.days)
+        return VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(mode.title).font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.gold)
+                    Text(mode.detail).font(.apSubhead).foregroundStyle(Palette.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityElement(children: .combine)
+                Button { Haptics.tap(); editing = true } label: {
+                    Text("Editar").font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.gold)
+                        .frame(minHeight: 44).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .padding(.vertical, -8)
+                .accessibilityLabel("Editar rutina")
+            }
+            // Lado a lado si caben enteros; si no (estrecho o letra grande), uno bajo otro, sin cortar.
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) { emptyBarButton; libraryBarButton }
+                VStack(spacing: 8) { emptyBarButton; libraryBarButton }
+            }
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .surface()
+    }
+
+    private var emptyBarButton: some View {
+        barButton("Entreno vacío", icon: "play.fill") {
+            // Con un entreno a medias se continúa ese: empezar otro borraría sus series.
+            if let id = session.userIdString, let draft = ActiveWorkout.restore(userId: id) {
+                active = ActiveWorkout(draft: draft)
+            } else {
+                pickingEmpty = true
+            }
+        }
+    }
+
+    private var libraryBarButton: some View { barButton("Ejercicios", icon: "book") { library = true } }
+
+    private func barButton(_ title: String, icon: String, action: @escaping () -> Void) -> some View {
+        Button { Haptics.tap(); action() } label: {
+            Label { Text(title) } icon: { Image(systemName: icon).foregroundStyle(Palette.gold) }
+                .font(.apSubhead.weight(.semibold))
+        }
+        .buttonStyle(PillButtonStyle(kind: .secondary, height: 44))
+    }
+
+    /// Lleva «Mis rutinas» arriba (una sola vez por llegada desde Hoy).
+    private func scrollToRoutines(_ proxy: ScrollViewProxy) {
+        Self.focusRoutines = false
+        withAnimation(reduceMotion ? nil : .snappy) { proxy.scrollTo("mis-rutinas", anchor: .top) }
+    }
+
+    private var routinesSection: some View {
+        MyRoutinesSection(routines: routines, limitReached: limitReached, resumableDay: resumableDay,
+                          doneToday: model.doneTodayKeys,
+                          onNew: { routineEditor = RoutineEditorTarget(day: nil) },
+                          onStart: { day in Task { await open(day) } },
+                          onEdit: { day in routineEditor = RoutineEditorTarget(day: day) },
+                          onDuplicate: { day in await commit("Rutina duplicada") { CustomRoutines.duplicate($0, day: day) } },
+                          onDelete: { day in await commit("Rutina borrada") { CustomRoutines.delete($0, day: day) } })
+            .id("mis-rutinas")
+    }
+
+    // MARK: Cargar, guardar y abrir
+
+    private func load() async {
+        await model.load(userId: session.userId)
+        // Entreno a medias guardado: la rutina lo ofrece como «Continuar entreno».
+        resumableDay = session.userIdString.flatMap { ActiveWorkout.restore(userId: $0)?.day.day }
+        let urls = model.days.flatMap { ($0.exercises ?? []).compactMap(\.image_url) }.compactMap(URL.init(string:))
+        ImageCache.shared.prefetch(urls, maxSide: 140)
+    }
+
+    /// Rutinas propias: el cambio se guarda sobre el plan guardado y la pantalla se pone al día.
+    /// Lo que no cabe se dice (anuncio y nota en «Mis rutinas»); nunca falla en silencio.
+    private func commit(_ done: String, _ change: @escaping ([DayPlan]) -> CustomRoutines.Change) async -> Bool {
+        guard let userId = session.userId else { return false }
+        switch await TrainingRepo.commitRoutine(userId: userId, change) {
+        case .ok(let plans, _):
+            model.days = plans
+            Haptics.success()
+            A11y.announce(done)
+            return true
+        case .limit:
+            Haptics.warning()
+            A11y.announce(CustomRoutines.limitMessage)
+            return false
+        case .missing, .failed:
+            Haptics.error()
+            A11y.announce("No se pudo guardar. Comprueba la conexión e inténtalo de nuevo.")
+            return false
+        }
+    }
+
+    private func personalize(day: String, name: String, icon: String?) async -> Bool {
+        guard let userId = session.userId else { return false }
+        do {
+            model.days = try await TrainingRepo.saveSessionIdentity(userId: userId, plans: model.days, day: day, name: name, icon: icon)
+            Haptics.success()
+            return true
+        } catch {
+            Haptics.error()
+            return false
+        }
+    }
+
+    /// Abre la sesión o la rutina elegida: reanuda el entreno a medias, empieza uno nuevo (el mismo
+    /// entreno que en Hoy: `ActiveWorkout` y su borrador) o, si es una actividad, la marca como hecha.
+    private func open(_ day: String) async {
+        guard let plan = model.days.first(where: { $0.day == day }) else { return }
+        if let idString = session.userIdString,
+           let draft = ActiveWorkout.restore(userId: idString), draft.day.day == plan.day {
+            Haptics.tap()
+            starting = false
+            active = ActiveWorkout(draft: draft)
+            return
+        }
+        guard !starting, !model.completedToday(plan.day) else { return }
+        if plan.isGym {
+            guard !(plan.exercises ?? []).isEmpty else { return }
+            await start(plan)
+        } else {
+            guard let id = session.userId else { return }
+            starting = true
+            defer { starting = false }
+            Haptics.success()
+            try? await TrainingRepo.complete(userId: id, day: plan.day, date: LocalDate.string(), rpe: nil)
+            await load()
+        }
+    }
+
+    /// «Empezar entreno de hoy»: la siguiente sesión que falta esta semana, la misma que propone Hoy.
+    private func openToday() async {
+        guard active == nil else { return }
+        if model.days.isEmpty { await load() }
+        guard let next = RoutineOrder.nextPending(model.sessions, done: model.doneThisWeek), next.isGym,
+              !model.completedToday(next.day) else { return }
+        await open(next.day)
+    }
+
+    private func start(_ day: DayPlan) async {
+        guard let id = session.userId, let idString = session.userIdString else { return }
+        Haptics.tap()
+        starting = true
+        defer { starting = false }
+        let names = (day.exercises ?? []).map(\.name)
+        let previous = await TrainingRepo.previousSets(userId: id, exercises: names)
+        let workout = ActiveWorkout(userId: idString, day: day, previous: previous)
+        workout.previous = previous
+        workout.previousRpe = await TrainingRepo.previousRpe(userId: id, exercises: names)
+        struct Pref: Decodable { let original_exercise_name: String; let preferred_exercise_name: String? }
+        let prefs: [Pref] = (try? await Backend.client.from("exercise_user_preferences").select("original_exercise_name, preferred_exercise_name")
+            .eq("user_id", value: id).execute().value) ?? []
+        for p in prefs { if let r = p.preferred_exercise_name, names.contains(p.original_exercise_name) { workout.swaps[p.original_exercise_name] = r } }
+        workout.draft.currentExercise = 0
+        workout.openExercises = [0]
+        active = workout
+    }
+
+    /// Entreno vacío desde la cabecera: el mismo que en Hoy (`routine_name` «Entrenamiento libre»).
+    private func startEmpty(_ exercises: [GymExercise]) async {
+        guard !exercises.isEmpty, let id = session.userId, let idString = session.userIdString else { return }
+        let day = DayPlan(day: DayNames.today, type: "gimnasio", routine_name: CustomRoutines.freeWorkoutName, muscle_focus: "", exercises: exercises)
+        let previous = await TrainingRepo.previousSets(userId: id, exercises: exercises.map(\.name))
+        let workout = ActiveWorkout(userId: idString, day: day, previous: previous)
+        workout.previous = previous
+        workout.previousRpe = await TrainingRepo.previousRpe(userId: id, exercises: exercises.map(\.name))
+        workout.draft.currentExercise = 0
+        workout.openExercises = [0]
+        // La hoja del selector se cierra antes de abrir el entreno a pantalla completa.
+        try? await Task.sleep(for: .milliseconds(350))
+        active = workout
+    }
+}
+
 extension ActiveWorkout: Identifiable { nonisolated var id: ObjectIdentifier { ObjectIdentifier(self) } }
 
 /// Fila de ejercicio de la lista (miniatura, nombre, «N series · R reps · descanso»).
@@ -12,7 +354,7 @@ struct ExerciseListRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            ExerciseThumb(url: exercise.image_url, completed: done)
+            ExerciseThumb(url: exercise.image_url, completed: done, name: exercise.name, muscleGroup: exercise.muscle_group)
             VStack(alignment: .leading, spacing: 2) {
                 Text(exercise.name).font(.apHeadline).lineLimit(2).foregroundStyle(done ? Palette.muted : Palette.foreground)
                 Text("\(exercise.series) series · \(exercise.reps) reps · \(exercise.rest)").font(.apFootnote.monospacedDigit())
@@ -27,19 +369,29 @@ struct ExerciseListRow: View {
     }
 }
 
-/// Miniatura única de ejercicio (como `ExerciseThumb` en la web).
+/// Miniatura única de ejercicio (como `ExerciseThumb` en la web): la foto y, sin foto (o mientras
+/// carga), la huella del ejercicio, la de su patrón o la deducida del nombre y el grupo. Nunca un
+/// cuadro gris vacío.
 struct ExerciseThumb: View {
     let url: String?
     var completed = false
     var size: CGFloat = 52
+    /// Nombre y datos de la ficha para dibujar la huella. Sin nombre (administración) queda el hueco.
+    var name: String = ""
+    var muscleGroup: String? = nil
+    var pattern: String? = nil
+    var stimulus: String? = nil
+    var load: String? = nil
 
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Palette.secondary)
             if let url, let u = URL(string: url) {
-                CachedAsyncImage(url: u, maxSide: max(140, size * 2)) { $0.resizable().scaledToFill() } placeholder: { Color.clear }
-            } else {
+                CachedAsyncImage(url: u, maxSide: max(140, size * 2)) { $0.resizable().scaledToFill() } placeholder: { glyph }
+            } else if name.isEmpty {
                 Image(systemName: "dumbbell").foregroundStyle(Palette.muted)
+            } else {
+                glyph
             }
             if completed {
                 Color.black.opacity(0.5)
@@ -49,6 +401,13 @@ struct ExerciseThumb: View {
         .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .accessibilityHidden(true)
+    }
+
+    @ViewBuilder private var glyph: some View {
+        if !name.isEmpty {
+            ExerciseMotionGlyph(spec: ExerciseMotion.specFor(name: name, pattern: pattern, stimulus: stimulus, load: load, muscleGroup: muscleGroup))
+                .padding(6).opacity(completed ? 0.6 : 1)
+        }
     }
 }
 
@@ -137,6 +496,8 @@ struct RoutineListView: View {
     var resumableDay: String? = nil
     /// Cabecera de la rutina (modo, Ejercicios, Editar): va arriba, como en la web.
     var routineBar: AnyView? = nil
+    /// «Mis rutinas» (rutinas propias con Empezar, Editar, Duplicar y Borrar): va bajo las sesiones.
+    var routines: AnyView? = nil
     /// Guarda el nombre y el icono de una sesión; false si no se pudo.
     var onPersonalize: ((String, String, String?, String?) async -> Bool)? = nil
     var onOpen: (String) -> Void
@@ -163,20 +524,28 @@ struct RoutineListView: View {
                 emptyCard(icon: "lu-calendar", title: "Tu plan aún no tiene sesiones",
                           message: "Edita tu rutina para añadir tus sesiones.")
             } else {
-                weekProgress
-                VStack(spacing: 12) {
-                    ForEach(Array(sessions.enumerated()), id: \.element.day) { index, plan in
-                        sessionRow(index + 1, plan)
-                        if openKey == plan.day { session(plan) }
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Tu plan").font(.apTitle3).accessibilityAddTraits(.isHeader)
+                    weekProgress
+                    VStack(spacing: 12) {
+                        ForEach(Array(sessions.enumerated()), id: \.element.day) { index, plan in
+                            sessionRow(index + 1, plan)
+                            if openKey == plan.day { session(plan) }
+                        }
                     }
                 }
             }
+            if let routines { routines }
             (Text("Análisis asistido por IA · tu plan se adapta a ti · ") + Text("[no sustituye consejo médico](https://autopilotplan.com/legal/disclaimer-medico)"))
                 .tint(Palette.gold)
                 .font(.apFootnote).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity).padding(.horizontal, 16)
         }
-        .sheet(item: $detail) { TechniqueSheet(exercise: $0).presentationBackground(Palette.card) }
+        .sheet(item: $detail) { ex in
+            // Sin foto, la ficha abre con la huella del ejercicio (nunca un hueco).
+            TechniqueSheet(exercise: ex, motion: ExerciseMotion.specFor(name: ex.name, pattern: nil, stimulus: nil, load: nil, muscleGroup: ex.muscle_group))
+                .presentationBackground(Palette.card)
+        }
         .sheet(item: $personalizing) { plan in
             SessionIdentitySheet(plan: plan, number: (sessions.firstIndex { $0.day == plan.day } ?? 0) + 1) { name, icon, image in
                 await onPersonalize?(plan.day, name, icon, image) ?? false
@@ -220,9 +589,10 @@ struct RoutineListView: View {
                     HStack(spacing: 4) {
                         Text("Sesión \(number)").foregroundStyle(Palette.muted)
                         if done {
+                            // El entrenamiento no usa verde: su estado «hecho» es dorado (tokens.md).
                             Text("·").foregroundStyle(Palette.muted)
-                            Image(systemName: "checkmark").font(.system(size: 11, weight: .bold)).foregroundStyle(Palette.success)
-                            Text("Hecha").foregroundStyle(Palette.success)
+                            Image(systemName: "checkmark").font(.system(size: 11, weight: .bold)).foregroundStyle(Palette.gold)
+                            Text("Hecha").foregroundStyle(Palette.gold)
                         } else if isNext {
                             Text("· Siguiente").foregroundStyle(Palette.gold)
                         }
@@ -240,8 +610,9 @@ struct RoutineListView: View {
             }
             .padding(.leading, 12).padding(.trailing, 16).padding(.vertical, 12)
             .frame(maxWidth: .infinity, minHeight: 88, alignment: .leading)
-            .background(Palette.card, in: shape)
-            .overlay(shape.strokeBorder(isExpanded ? Palette.gold.opacity(0.6) : Palette.foreground.opacity(0.08), lineWidth: 1))
+            .background(SurfaceBackground(shape: shape))
+            // Sin borde; la abierta, con el filo dorado tenue de «activo» (tokens.md).
+            .overlay(shape.strokeBorder(Palette.gold.opacity(isExpanded ? 0.3 : 0), lineWidth: 1))
             .contentShape(shape)
         }
         .buttonStyle(.plain)
@@ -309,11 +680,13 @@ struct RoutineListView: View {
                             Button { detail = ex } label: {
                                 HStack(spacing: 12) {
                                     // Miniaturas uniformes (44) y mismo padding en todas las filas.
-                                    ExerciseThumb(url: ex.image_url, size: 44)
+                                    ExerciseThumb(url: ex.image_url, size: 44, name: ex.name, muscleGroup: ex.muscle_group)
                                     VStack(alignment: .leading, spacing: 3) {
                                         Text(ex.name).font(.apHeadline).lineLimit(2)
                                             .fixedSize(horizontal: false, vertical: true)
-                                        let info = [ex.rest, ex.muscle_group].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · ")
+                                        // Descanso con su unidad («90 s», «2 min»), como la web.
+                                        let rest = ex.rest.trimmingCharacters(in: .whitespaces).isEmpty ? nil : PlanEditorValues.restLabel(ex.rest)
+                                        let info = [rest, ex.muscle_group, ex.exercise_type].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · ")
                                         if !info.isEmpty {
                                             Text(info).font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(1)
                                         }

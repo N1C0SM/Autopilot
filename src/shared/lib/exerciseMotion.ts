@@ -145,6 +145,40 @@ export function exerciseMotion(input: MotionInput): MotionSpec | null {
 }
 
 /**
+ * Pistas para deducir el patrón cuando la ficha aún no lo trae (ejercicios sin foto ni
+ * patrón en el entreno). Se buscan, en este orden, en el nombre y el grupo muscular sin
+ * tildes: «Curl femoral» es bisagra antes que tirón y «Press de pierna», sentadilla antes
+ * que empuje. Mismo orden y mismas palabras en `ExerciseMotion.swift`.
+ */
+export const PATTERN_HINTS: ReadonlyArray<readonly [MotionPattern, readonly string[]]> = [
+  ["Core", ["abdom", "core", "oblicu", "plancha", "crunch"]],
+  ["Bisagra", ["femoral", "isquio", "glute", "peso muerto", "hip thrust", "puente", "bisagra"]],
+  ["Sentadilla", ["sentadilla", "cuadricep", "pierna", "zancada", "prensa", "gemelo", "pantorrilla"]],
+  ["Tirón", ["espalda", "dorsal", "remo", "dominada", "jalon", "biceps", "curl", "trapecio", "pull"]],
+  ["Empuje", ["pecho", "pectoral", "press", "hombro", "deltoid", "triceps", "fondos", "flexion", "elevacion"]],
+];
+
+/** Sin pista reconocible, el arco neutro del core: nunca un hueco vacío. */
+export const FALLBACK_PATTERN: MotionPattern = "Core";
+
+const plain = (text: string) => text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+/** Patrón deducido del nombre y del grupo muscular (o el arco neutro si no hay pista). */
+export function inferMotionPattern(name: string, muscleGroup?: string | null): MotionPattern {
+  const text = plain(`${name} ${muscleGroup ?? ""}`);
+  return PATTERN_HINTS.find(([, hints]) => hints.some((hint) => text.includes(hint)))?.[0] ?? FALLBACK_PATTERN;
+}
+
+/**
+ * La huella del ejercicio siempre: con el patrón de la ficha si lo tiene y, si no, con el
+ * deducido. Para el entreno, donde cada ejercicio necesita su visual aunque no haya foto.
+ */
+export function exerciseMotionFor(input: MotionInput & { muscleGroup?: string | null }): MotionSpec {
+  return exerciseMotion(input)
+    ?? exerciseMotion({ ...input, pattern: inferMotionPattern(input.name, input.muscleGroup) })!;
+}
+
+/**
  * Tiempos del bucle para `<animateMotion>`: sube rápido (concentric), baja
  * despacio (excéntrica) y descansa. Con `hold`, viaja una vez y aguanta arriba.
  */

@@ -1,15 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Heart, Search, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Heart, Search, WifiOff } from "lucide-react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import ResponsiveSheet from "@/app/components/dashboard/ResponsiveSheet";
 import ExerciseMedia, { ExerciseThumb } from "@/app/components/ExerciseMedia";
-import { MuscleMapFigure } from "@/app/components/dashboard/MuscleMapFigure";
+import { ExerciseMotionGlyph } from "@/app/components/ExerciseMotion";
+import { Button } from "@/shared/components/ui/button";
 import { ChipGroup } from "@/shared/components/ui/chip-group";
+import { EmptyState } from "@/shared/components/ui/empty-state";
+import { SearchPill } from "@/shared/components/ui/search-pill";
+import { Spinner } from "@/shared/components/ui/spinner";
 import { useExerciseLibrary } from "@/shared/hooks/useExerciseLibrary";
 import {
-  EMPTY_FILTERS, EQUIPMENT, FILTER_GROUPS, MODALITIES, activeFilterCount, attribution, filterLibrary, groupFigure,
+  EMPTY_FILTERS, EQUIPMENT, FILTER_GROUPS, MODALITIES, activeFilterCount, attribution, exerciseCount, filterLibrary,
   similarExercises, subtitle, type LibraryExercise, type LibraryFilters,
 } from "@/shared/lib/exerciseLibrary";
+import { exerciseMotionFor } from "@/shared/lib/exerciseMotion";
+import { fastImage } from "@/shared/lib/fastImage";
 import { hapticSelection, hapticTap } from "@/shared/lib/native";
 import { cn } from "@/shared/lib/utils";
 import { LEVELS } from "@/shared/types/training";
@@ -20,6 +26,9 @@ const FACETS: { key: Facet; label: string; options: readonly string[] }[] = [
   { key: "equipment", label: "Equipo", options: EQUIPMENT },
   { key: "modalities", label: "Modalidad", options: MODALITIES },
 ];
+
+/** «Grupo · 2» se lee «Grupo: 2 filtros» (igual que `facetRow` en la app). */
+const facetLabel = (label: string, count: number) => (count ? `${label}: ${count} ${count === 1 ? "filtro" : "filtros"}` : label);
 
 /** Biblioteca de ejercicios: lista con buscador y filtros, y la ficha de cada ejercicio. */
 const ExerciseLibraryBody = ({ open, userId, page }: { open: boolean; userId: string; page?: boolean }) => {
@@ -34,6 +43,7 @@ const ExerciseLibraryBody = ({ open, userId, page }: { open: boolean; userId: st
   const results = useMemo(() => filterLibrary(items, filters), [items, filters]);
   const byId = useMemo(() => new Map(items.map((e) => [e.id, e])), [items]);
   const browsing = !filters.query.trim() && activeFilterCount(filters) === 0;
+  const clearFilters = () => setFilters((f) => ({ ...EMPTY_FILTERS, query: f.query }));
 
   const openExercise = (e: LibraryExercise) => {
     void hapticTap();
@@ -49,6 +59,7 @@ const ExerciseLibraryBody = ({ open, userId, page }: { open: boolean; userId: st
         <ExerciseDetail
           exercise={selected}
           all={items}
+          favorites={lib.favorites}
           favorite={lib.favorites.has(selected.id)}
           canFavorite={lib.personal}
           onFavorite={() => void lib.toggleFavorite(selected.id)}
@@ -60,23 +71,9 @@ const ExerciseLibraryBody = ({ open, userId, page }: { open: boolean; userId: st
         <div className="flex min-h-0 flex-1 flex-col">
           {/* Subtítulo bajo el título grande, como en el iPhone (en escritorio la barra lleva su pista). */}
           {page && <p className="-mt-3 mb-4 type-subhead text-muted-foreground md:hidden">Técnica, músculos y variantes de cada ejercicio.</p>}
-          <label className="flex h-11 shrink-0 items-center gap-2 rounded-full bg-card px-4">
-            <Search className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-            <input
-              value={filters.query}
-              onChange={(e) => setFilters((f) => ({ ...f, query: e.target.value }))}
-              placeholder="Buscar ejercicio"
-              aria-label="Buscar ejercicio"
-              className="min-w-0 flex-1 bg-transparent type-body outline-none placeholder:text-muted-foreground"
-            />
-            {filters.query && (
-              <button type="button" aria-label="Borrar búsqueda" onClick={() => setFilters((f) => ({ ...f, query: "" }))}>
-                <X className="h-4 w-4 text-muted-foreground" aria-hidden />
-              </button>
-            )}
-          </label>
+          <SearchPill value={filters.query} onChange={(query) => setFilters((f) => ({ ...f, query }))} placeholder="Buscar ejercicio" />
 
-          <div className="mt-3 flex shrink-0 gap-2 overflow-x-auto pb-1">
+          <div className="mt-3 flex shrink-0 gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
             {FACETS.map(({ key, label }) => {
               const count = filters[key].length;
               return (
@@ -84,9 +81,10 @@ const ExerciseLibraryBody = ({ open, userId, page }: { open: boolean; userId: st
                   key={key}
                   type="button"
                   aria-expanded={facet === key}
+                  aria-label={facetLabel(label, count)}
                   onClick={() => { void hapticSelection(); setFacet((f) => (f === key ? null : key)); }}
                   className={cn(
-                    "flex h-9 shrink-0 items-center gap-1.5 rounded-full px-4 type-footnote font-semibold transition active:opacity-60",
+                    "flex h-10 shrink-0 items-center gap-1.5 rounded-full px-4 type-footnote font-semibold tabular-nums transition active:opacity-60",
                     count ? "bg-primary/15 text-primary" : "bg-secondary text-foreground",
                   )}
                 >
@@ -95,7 +93,7 @@ const ExerciseLibraryBody = ({ open, userId, page }: { open: boolean; userId: st
               );
             })}
             {activeFilterCount(filters) > 0 && (
-              <button type="button" onClick={() => setFilters((f) => ({ ...EMPTY_FILTERS, query: f.query }))} className="h-9 shrink-0 px-2 type-footnote font-semibold text-muted-foreground">
+              <button type="button" onClick={clearFilters} className="h-10 shrink-0 px-3 type-footnote font-semibold text-muted-foreground active:opacity-60">
                 Quitar filtros
               </button>
             )}
@@ -111,15 +109,18 @@ const ExerciseLibraryBody = ({ open, userId, page }: { open: boolean; userId: st
             </div>
           )}
 
-          <div className="-mx-1 mt-4 min-h-0 flex-1 overflow-y-auto px-1 pb-6">
+          <div className="-mx-1 mt-5 min-h-0 flex-1 overflow-y-auto px-1 pb-6">
             {lib.error ? (
-              <div className="py-10 text-center">
-                <p className="type-subhead text-muted-foreground">No se pudo cargar la biblioteca.</p>
-                <button type="button" onClick={lib.retry} className="mt-3 h-10 rounded-full bg-secondary px-5 type-subhead font-semibold text-primary">Reintentar</button>
-              </div>
+              <EmptyState
+                icon={WifiOff}
+                title="No hemos podido cargar los ejercicios"
+                description="Revisa tu conexión y vuelve a intentarlo."
+                action={<Button type="button" variant="secondary" size="lg" onClick={lib.retry}>Reintentar</Button>}
+              />
             ) : !lib.items ? (
-              <div className="space-y-3" aria-busy="true">
-                {Array.from({ length: 6 }, (_, i) => <div key={i} className="h-14 animate-pulse rounded-2xl bg-card" />)}
+              // Carga con la firma de marca (el AP latiendo), nunca bloques grises.
+              <div className="flex justify-center py-16" aria-busy="true">
+                <Spinner size="lg" label="Cargando ejercicios" />
               </div>
             ) : browsing ? (
               <Browse
@@ -130,10 +131,17 @@ const ExerciseLibraryBody = ({ open, userId, page }: { open: boolean; userId: st
                 onGroup={(g) => { void hapticSelection(); setFilters((f) => ({ ...f, groups: [g] })); }}
               />
             ) : results.length === 0 ? (
-              <p className="py-10 text-center type-subhead text-muted-foreground">Ningún ejercicio coincide. Prueba con otro nombre o quita algún filtro.</p>
+              <EmptyState
+                icon={Search}
+                title="Prueba con otro nombre"
+                description="Busca por ejercicio o músculo, o quita algún filtro."
+                action={activeFilterCount(filters) > 0
+                  ? <Button type="button" variant="secondary" size="lg" onClick={clearFilters}>Quitar filtros</Button>
+                  : undefined}
+              />
             ) : (
               <>
-                <p className="mb-2 px-1 type-footnote text-muted-foreground">{results.length} {results.length === 1 ? "ejercicio" : "ejercicios"}</p>
+                <p role="status" className="mb-2.5 px-1 type-footnote tabular-nums text-muted-foreground">{exerciseCount(results.length)}</p>
                 <ExerciseList items={results} favorites={lib.favorites} onOpen={openExercise} />
               </>
             )}
@@ -173,7 +181,7 @@ const ExerciseList = ({ items, favorites, onOpen }: {
     {items.map((e) => (
       <li key={e.id} className="group/row">
         <button type="button" onClick={() => onOpen(e)} className="flex w-full items-center gap-3 pl-3 text-left transition-colors duration-150 active:bg-accent">
-          <span className="py-2.5"><ExerciseThumb image={e.image} name={e.name} pattern={e.pattern} stimulus={e.stimulus} load={e.load} size="md" /></span>
+          <span className="py-2.5"><ExerciseThumb image={e.image} name={e.name} pattern={e.pattern} stimulus={e.stimulus} load={e.load} muscleGroup={e.groups[0]} size="md" /></span>
           {/* El separador nace donde empieza el texto, como en ListRow. */}
           <span className="flex min-w-0 flex-1 items-center gap-2 self-stretch py-2.5 pr-3 group-[:not(:last-child)]/row:sep-b">
             <span className="min-w-0 flex-1">
@@ -193,7 +201,42 @@ const SectionTitle = ({ children }: { children: string }) => (
   <h3 className="mb-2.5 type-title3">{children}</h3>
 );
 
-/** Sin búsqueda: recientes, favoritos y los grupos musculares con foto real. */
+/** La huella de un grupo muscular (la deducida de su nombre): el visual de la tarjeta sin foto. */
+const groupGlyph = (group: string) => exerciseMotionFor({ name: group, muscleGroup: group });
+
+/**
+ * Tarjeta de grupo muscular: la foto real de uno de sus ejercicios con su degradado o, si el
+ * grupo aún no tiene ninguna, su huella dorada en el centro. Nunca un bloque vacío.
+ */
+const GroupTile = ({ group, count, image, onSelect }: { group: string; count: number; image: string | null; onSelect: () => void }) => {
+  const [broken, setBroken] = useState(false);
+  const photo = image && !broken ? image : null;
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-label={`${group}, ${exerciseCount(count)}`}
+      className="relative aspect-[4/3] overflow-hidden rounded-[22px] bg-card text-left transition-transform duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      {photo ? (
+        <>
+          <img src={fastImage(photo, 500)} alt="" loading="lazy" decoding="async" onError={() => setBroken(true)} className="absolute inset-0 h-full w-full object-cover opacity-70" />
+          <span className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" aria-hidden />
+        </>
+      ) : (
+        <span aria-hidden className="absolute inset-x-0 top-0 bottom-12 flex items-center justify-center">
+          <span className="h-[54px] w-24"><ExerciseMotionGlyph spec={groupGlyph(group)} /></span>
+        </span>
+      )}
+      <span aria-hidden className="absolute bottom-3 left-3 right-3">
+        <span className={cn("block truncate type-headline", photo ? "text-white" : "text-foreground")}>{group}</span>
+        <span className={cn("block truncate type-footnote tabular-nums", photo ? "text-white/75" : "text-muted-foreground")}>{exerciseCount(count)}</span>
+      </span>
+    </button>
+  );
+};
+
+/** Sin búsqueda: recientes, favoritos y los grupos musculares con foto real o su huella. */
 const Browse = ({ items, recent, favorites, onOpen, onGroup }: {
   items: LibraryExercise[];
   recent: LibraryExercise[];
@@ -210,10 +253,10 @@ const Browse = ({ items, recent, favorites, onOpen, onGroup }: {
       {recent.length > 0 && (
         <section>
           <SectionTitle>Recientes</SectionTitle>
-          <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-1">
+          <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
             {recent.map((e) => (
-              <button key={e.id} type="button" onClick={() => onOpen(e)} className="w-28 shrink-0 text-left transition active:opacity-60">
-                <ExerciseThumb image={e.image} name={e.name} pattern={e.pattern} stimulus={e.stimulus} load={e.load} aspect="video" className="w-28" />
+              <button key={e.id} type="button" onClick={() => onOpen(e)} className="w-28 shrink-0 text-left transition-opacity active:opacity-60">
+                <ExerciseThumb image={e.image} name={e.name} pattern={e.pattern} stimulus={e.stimulus} load={e.load} muscleGroup={e.groups[0]} aspect="video" className="w-28" />
                 <span className="mt-1.5 line-clamp-2 type-footnote font-medium">{e.name}</span>
               </button>
             ))}
@@ -230,21 +273,7 @@ const Browse = ({ items, recent, favorites, onOpen, onGroup }: {
         <SectionTitle>Grupos musculares</SectionTitle>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {groups.map(({ g, count, image }) => (
-            <button key={g} type="button" onClick={() => onGroup(g)} className="relative aspect-[4/3] overflow-hidden rounded-[22px] bg-card text-left transition active:scale-[0.98]">
-              {image ? <>
-                <img src={image} alt="" loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover opacity-70" />
-                <span className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" aria-hidden />
-              </> : (
-                // Sin foto, el propio cuerpo con el grupo en dorado: nunca una tarjeta vacía.
-                <span aria-hidden className="absolute inset-y-3 right-3 w-[38%]">
-                  <MuscleMapFigure {...groupFigure(g)} intensityFor={() => "hsl(var(--primary))"} />
-                </span>
-              )}
-              <span className="absolute bottom-3 left-3 right-3">
-                <span className="block type-headline font-semibold text-white">{g}</span>
-                <span className="block type-footnote text-white/70">{count} {count === 1 ? "ejercicio" : "ejercicios"}</span>
-              </span>
-            </button>
+            <GroupTile key={g} group={g} count={count} image={image} onSelect={() => onGroup(g)} />
           ))}
         </div>
       </section>
@@ -269,11 +298,12 @@ const Bullets = ({ items, numbered }: { items: string[]; numbered?: boolean }) =
   );
 };
 
-/** Ficha: héroe (clip, foto o placeholder), datos clave y secciones con contenido. */
-const ExerciseDetail = ({ exercise: e, all, byId, favorite, canFavorite, onFavorite, onBack, onOpen }: {
+/** Ficha: héroe (clip, foto o la huella del ejercicio), datos clave y secciones con contenido. */
+const ExerciseDetail = ({ exercise: e, all, byId, favorites, favorite, canFavorite, onFavorite, onBack, onOpen }: {
   exercise: LibraryExercise;
   all: LibraryExercise[];
   byId: Map<string, LibraryExercise>;
+  favorites: Set<string>;
   favorite: boolean;
   canFavorite: boolean;
   onFavorite: () => void;
@@ -298,13 +328,15 @@ const ExerciseDetail = ({ exercise: e, all, byId, favorite, canFavorite, onFavor
 
   return (
     <div className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1 pb-8 motion-safe:animate-fade-in">
-      <button type="button" onClick={onBack} className="mb-3 flex h-9 items-center gap-1 rounded-full pr-3 type-subhead font-semibold text-primary active:opacity-60">
+      <button type="button" onClick={onBack} className="mb-3 flex h-11 items-center gap-1 rounded-full pr-3 type-subhead font-semibold text-primary active:opacity-60">
         <ChevronLeft className="h-5 w-5" aria-hidden /> Ejercicios
       </button>
-      <ExerciseMedia video={e.video} image={e.image} name={e.name} pattern={e.pattern} stimulus={e.stimulus} load={e.load} emptyLabel="Demostración en preparación" className="rounded-[22px]" />
-      <div className="mt-4 flex items-start gap-3">
+      {/* Con foto, la foto (y «Ritmo» si tiene patrón); sin foto, su huella a todo el héroe. */}
+      <ExerciseMedia key={e.id} video={e.video} image={e.image} name={e.name} pattern={e.pattern} stimulus={e.stimulus} load={e.load} muscleGroup={e.groups[0]} className="rounded-sheet bg-card" />
+      <div className="mt-5 flex items-start gap-3">
         <div className="min-w-0 flex-1">
-          <h2 className="text-[28px] font-bold leading-tight tracking-tight">{e.name}</h2>
+          {/* Title 1 (28) con el tamaño de letra del usuario, como `.apTitle1` en la app. */}
+          <h2 className="break-words type-title1">{e.name}</h2>
           {e.altNames.length > 0 && <p className="mt-0.5 type-subhead text-muted-foreground">{e.altNames.join(" · ")}</p>}
         </div>
         {canFavorite && (
@@ -313,7 +345,7 @@ const ExerciseDetail = ({ exercise: e, all, byId, favorite, canFavorite, onFavor
             aria-pressed={favorite}
             aria-label={favorite ? "Quitar de favoritos" : "Añadir a favoritos"}
             onClick={() => { void hapticSelection(); onFavorite(); }}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary transition active:scale-95"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-secondary transition active:scale-95"
           >
             <Heart className={cn("h-5 w-5", favorite ? "fill-primary text-primary" : "text-foreground")} aria-hidden />
           </button>
@@ -354,10 +386,11 @@ const ExerciseDetail = ({ exercise: e, all, byId, favorite, canFavorite, onFavor
         {e.mistakes.length > 0 && <section><SectionTitle>Errores frecuentes</SectionTitle><Bullets items={e.mistakes} /></section>}
         {e.tips.length > 0 && <section><SectionTitle>Consejos</SectionTitle><Bullets items={e.tips} /></section>}
         {e.safety.length > 0 && <section><SectionTitle>Seguridad</SectionTitle><Bullets items={e.safety} /></section>}
-        {variants.length > 0 && <section><SectionTitle>Variantes</SectionTitle><ExerciseList items={variants} onOpen={onOpen} /></section>}
-        {alternatives.length > 0 && <section><SectionTitle>Alternativas</SectionTitle><ExerciseList items={alternatives} onOpen={onOpen} /></section>}
+        {variants.length > 0 && <section><SectionTitle>Variantes</SectionTitle><ExerciseList items={variants} favorites={favorites} onOpen={onOpen} /></section>}
+        {alternatives.length > 0 && <section><SectionTitle>Alternativas</SectionTitle><ExerciseList items={alternatives} favorites={favorites} onOpen={onOpen} /></section>}
+        {/* Autor y licencia solo cuando la licencia lo exige (CC BY / BY-SA). */}
         {credit && (
-          <p className="px-1 type-caption1 text-muted-foreground">
+          <p className="px-1 type-footnote text-muted-foreground">
             {e.sourceUrl ? <a href={e.sourceUrl} target="_blank" rel="noreferrer" className="underline-offset-2 hover:underline">{credit}</a> : credit}
           </p>
         )}

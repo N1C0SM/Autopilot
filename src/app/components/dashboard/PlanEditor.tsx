@@ -6,7 +6,9 @@ import type { Json } from "@/shared/integrations/supabase/types";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { hapticSelection, hapticTap } from "@/shared/lib/native";
-import { clearBackup, markManual, readBackup } from "@/shared/lib/planShield";
+import { clearBackup, readBackup } from "@/shared/lib/planShield";
+import { normalizePlan, planToSave, rowKeys } from "@/shared/lib/planEditorValues";
+import { exerciseCount } from "@/shared/lib/exerciseLibrary";
 import { cn } from "@/shared/lib/utils";
 import { DAYS, type DayPlan, type GymExerciseEntry } from "@/shared/types/training";
 import ExercisePicker from "@/app/components/dashboard/ExercisePicker";
@@ -24,20 +26,14 @@ interface Props {
 }
 
 const clone = (p: DayPlan[]) => JSON.parse(JSON.stringify(p)) as DayPlan[];
-const dayIdx = (d: string) => DAYS.indexOf(d as (typeof DAYS)[number]);
-
-/** Orden lunes→domingo y fuera los días de gimnasio vacíos (son descanso). */
-export const normalizePlan = (plans: DayPlan[]): DayPlan[] =>
-  plans
-    .filter((p) => p.type === "actividad" || (p.exercises?.length ?? 0) > 0)
-    .sort((a, b) => dayIdx(a.day) - dayIdx(b.day));
 
 const daySummary = (p?: DayPlan) => {
   if (!p) return "Descanso";
   if (p.type === "actividad") return p.sport || "Actividad";
   const n = p.exercises?.length ?? 0;
   if (!n) return "Descanso";
-  return `${n} ejerc. · ${p.exercises!.reduce((a, e) => a + e.series, 0)} series`;
+  const sets = p.exercises!.reduce((a, e) => a + e.series, 0);
+  return `${exerciseCount(n)} · ${sets} ${sets === 1 ? "serie" : "series"}`;
 };
 
 const PlanEditor = ({ open, onOpenChange, userId, dayPlans, initialDay, onSaved }: Props) => {
@@ -62,6 +58,8 @@ const PlanEditor = ({ open, onOpenChange, userId, dayPlans, initialDay, onSaved 
 
   const plan = draft.find((p) => p.day === day);
   const exercises = plan?.type === "gimnasio" ? plan.exercises ?? [] : [];
+  // Clave por ejercicio, no por posición: al subir o bajar una fila abierta, sigue abierta.
+  const keys = rowKeys(exercises);
   const dirty = JSON.stringify(normalizePlan(draft)) !== JSON.stringify(normalizePlan(dayPlans));
 
   // Cerrar con swipe, overlay o Escape no debe tirar el trabajo: si hay cambios sin
@@ -101,7 +99,9 @@ const PlanEditor = ({ open, onOpenChange, userId, dayPlans, initialDay, onSaved 
 
   const save = async () => {
     setSaving(true);
-    const clean = markManual(normalizePlan(draft));
+    // Se guarda el borrador tal cual (reps «8-12» o descanso «75 s» intactos), ordenado y marcado como
+    // tuyo solo en los días que cambiaste: las sesiones del piloto automático que no tocas siguen siendo suyas.
+    const clean = planToSave(draft, dayPlans);
     const { error } = await supabase
       .from("training_plan")
       .upsert({ user_id: userId, workouts_json: clean as unknown as Json, updated_at: new Date().toISOString() }, { onConflict: "user_id" });
@@ -124,8 +124,9 @@ const PlanEditor = ({ open, onOpenChange, userId, dayPlans, initialDay, onSaved 
       return (
         <button key={d} type="button" role="tab" aria-selected={active}
           onClick={() => { void hapticSelection(); setDay(d); setCopyOpen(false); }}
+          aria-label={`${d}${has ? `: ${daySummary(p)}` : ", sin sesión"}`}
           className={cn(
-            "flex min-w-[52px] shrink-0 flex-col items-center gap-1 rounded-media px-2 py-2 transition-colors",
+            "flex min-h-11 min-w-[52px] flex-1 shrink-0 flex-col items-center justify-center gap-1 rounded-media px-2 py-2 transition-colors",
             active ? "bg-primary/15 text-foreground" : "bg-secondary text-muted-foreground",
           )}>
           <span className="type-footnote font-semibold">{d.slice(0, 3)}</span>
@@ -138,7 +139,7 @@ const PlanEditor = ({ open, onOpenChange, userId, dayPlans, initialDay, onSaved 
         onClick={() => { setDay(d); setCopyOpen(false); }}
         className={cn(
           "flex w-full items-center gap-3 rounded-media px-3 py-2.5 text-left transition-colors",
-          active ? "bg-primary/12 text-foreground" : "text-muted-foreground hover:bg-muted/40",
+          active ? "bg-primary/15 text-foreground" : "text-muted-foreground hover:bg-secondary",
         )}>
         <span className={cn("h-2 w-2 shrink-0 rounded-full", has ? "bg-primary" : "bg-border")} aria-hidden />
         <span className="min-w-0 flex-1">
@@ -152,9 +153,9 @@ const PlanEditor = ({ open, onOpenChange, userId, dayPlans, initialDay, onSaved 
   const detail = (
     <div className="flex min-h-0 flex-1 flex-col">
       {plan?.type === "actividad" ? (
-        <div className="space-y-3 rounded-media bg-card p-4">
-          <p className="type-subhead text-muted-foreground">{day}: {plan.sport || "Actividad"} {plan.duration ? `· ${plan.duration}` : ""}</p>
-          <Button type="button" variant="outline" onClick={() => update(() => ({ day, type: "gimnasio", routine_name: "", muscle_focus: "", exercises: [] }))}>
+        <div className="space-y-3 rounded-[22px] bg-card p-4">
+          <p className="type-subhead text-muted-foreground">{[`${day}: ${plan.sport || "Actividad"}`, plan.duration].filter(Boolean).join(" · ")}</p>
+          <Button type="button" variant="secondary" size="lg" className="w-full" onClick={() => update(() => ({ day, type: "gimnasio", routine_name: "", muscle_focus: "", exercises: [] }))}>
             Convertir en día de fuerza
           </Button>
         </div>
@@ -175,31 +176,32 @@ const PlanEditor = ({ open, onOpenChange, userId, dayPlans, initialDay, onSaved 
             )}
           </div>
           {copyOpen && (
-            <div className="mt-2 flex flex-wrap gap-1.5 rounded-media/70 p-2">
+            <div className="mt-2 flex flex-wrap gap-2 py-1" role="group" aria-label="Copiar la sesión a">
               {DAYS.filter((d) => d !== day).map((d) => (
-                <button key={d} type="button" onClick={() => copyTo(d)} className="rounded-full bg-secondary px-3 py-2 type-footnote hover:border-primary/50">{d}</button>
+                <button key={d} type="button" onClick={() => copyTo(d)} className="h-10 rounded-full bg-secondary px-4 type-footnote font-semibold transition active:opacity-60">{d}</button>
               ))}
             </div>
           )}
           <div className="mt-3 min-h-0 flex-1 overflow-y-auto overscroll-contain pb-2">
             {exercises.length === 0 ? (
+              // Día sin ejercicios: una tarjeta grande que invita a añadirlos (como `PlanEditorView`).
               <button type="button" onClick={() => setPicker(true)}
-                className="flex min-h-[200px] w-full flex-col items-center justify-center gap-2 rounded-card text-muted-foreground hover:border-primary/50">
-                <Plus className="h-6 w-6 text-primary" />
-                <span className="type-subhead font-medium text-foreground">Día de descanso</span>
+                className="flex min-h-[200px] w-full flex-col items-center justify-center gap-2 rounded-[28px] bg-card px-6 text-center text-muted-foreground transition-transform duration-150 active:scale-[0.985]">
+                <span aria-hidden className="mb-1 grid h-12 w-12 place-items-center rounded-full bg-primary/15 text-primary"><Plus className="h-6 w-6" /></span>
+                <span className="type-headline text-foreground">Día de descanso</span>
                 <span className="type-footnote">Añade ejercicios para entrenar el {day.toLowerCase()}</span>
               </button>
             ) : (
               <>
-                <ul className="space-y-2">
+                <ul className="space-y-3">
                   {exercises.map((ex, i) => (
-                    <ExerciseRowEditor key={`${ex.exercise_id}-${i}`} ex={ex} index={i} total={exercises.length}
+                    <ExerciseRowEditor key={keys[i]} ex={ex} index={i} total={exercises.length}
                       onChange={(e) => setExercises((l) => l.map((x, k) => (k === i ? e : x)))}
                       onMove={(d) => move(i, d)}
                       onRemove={() => setExercises((e) => e.filter((_, k) => k !== i))} />
                   ))}
                 </ul>
-                <Button type="button" variant="outline" className="mt-3 min-h-12 w-full" onClick={() => setPicker(true)}>
+                <Button type="button" variant="secondary" size="lg" className="mt-3 w-full" onClick={() => setPicker(true)}>
                   <Plus className="h-4 w-4" /> Añadir ejercicios
                 </Button>
               </>

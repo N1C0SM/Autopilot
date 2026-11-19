@@ -667,6 +667,37 @@ private struct BrandShape: Shape {
     }
 }
 
+/// Buscador en píldora, plano (sin relieve): lupa, texto y «Borrar» con zona táctil de 44. Lo usan
+/// la biblioteca de ejercicios y los buscadores de ejercicios; es `SearchPill` en la web
+/// (`search-pill.tsx`), con el mismo alto, los mismos márgenes y las mismas etiquetas.
+struct SearchPill: View {
+    let prompt: String
+    @Binding var text: String
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image("lu-search").resizable().frame(width: 16, height: 16).foregroundStyle(Palette.muted)
+                .accessibilityHidden(true)
+            TextField(prompt, text: $text)
+                .font(.apBody).textFieldStyle(.plain).autocorrectionDisabled()
+                #if os(iOS)
+                .textInputAutocapitalization(.never)
+                .submitLabel(.search)
+                #endif
+                .accessibilityLabel(prompt)
+            if !text.isEmpty {
+                Button { text = "" } label: {
+                    Image("lu-x").resizable().frame(width: 16, height: 16).foregroundStyle(Palette.muted)
+                        .frame(width: 44, height: 44).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain).accessibilityLabel("Borrar búsqueda")
+            }
+        }
+        .padding(.leading, 16).padding(.trailing, text.isEmpty ? 16 : 4).frame(height: 44)
+        .background(Palette.card, in: Capsule())
+    }
+}
+
 /// Carga con la firma de marca en lugar del `ProgressView` genérico.
 struct BrandLoader: View {
     var size: CGFloat = 20

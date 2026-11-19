@@ -18,7 +18,8 @@ export const ExerciseMotion = ({ spec, className }: { spec: MotionSpec; classNam
     <svg
       viewBox={MOTION_VIEWBOX}
       preserveAspectRatio="xMidYMid meet"
-      className={cn("h-full w-full text-primary", className)}
+      // `!`: dentro de un `Button` (que fija los SVG a 16 px) la huella sigue llenando su cuadro.
+      className={cn("!h-full !w-full text-primary", className)}
       role="img"
       aria-label={`Ritmo de ${spec.label}`}
     >
@@ -52,7 +53,7 @@ export const ExerciseMotion = ({ spec, className }: { spec: MotionSpec; classNam
  * en un cuadro tan pequeño una línea fina se convierte en polvo.
  */
 export const ExerciseMotionGlyph = ({ spec, className }: { spec: MotionSpec; className?: string }) => (
-  <svg viewBox={MOTION_VIEWBOX} preserveAspectRatio="xMidYMid meet" aria-hidden className={cn("h-full w-full text-primary", className)}>
+  <svg viewBox={MOTION_VIEWBOX} preserveAspectRatio="xMidYMid meet" aria-hidden className={cn("!h-full !w-full text-primary", className)}>
     <path d={spec.d} fill="none" stroke="currentColor" strokeOpacity="0.42" strokeWidth={spec.stroke + 6} strokeLinecap="round" />
     <circle cx={spec.start.x} cy={spec.start.y} r="3.4" fill="currentColor" fillOpacity="0.5" />
     {spec.hold ? (

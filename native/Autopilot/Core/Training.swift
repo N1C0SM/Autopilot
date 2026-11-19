@@ -12,12 +12,20 @@ struct GymExercise: Codable, Hashable, Identifiable {
     var rest: String
     var image_url: String?
     var muscle_group: String?
+    /// Datos del plan que la app no edita pero que guardar la rutina no puede perder (`training-types.ts`).
+    var tracking_mode: String?
+    var video_url: String?
+    var exercise_type: String?
+    var fatigue_level: String?
     var id: String { exercise_id + name }
 
     /// Primer número de las repeticiones, para proponer la serie.
     var repsTarget: Int { reps.split(whereSeparator: { !$0.isNumber }).compactMap { Int($0) }.first ?? 10 }
 
-    enum CodingKeys: String, CodingKey { case exercise_id, name, series, reps, weight, rest, image_url, muscle_group }
+    enum CodingKeys: String, CodingKey {
+        case exercise_id, name, series, reps, weight, rest, image_url, muscle_group
+        case tracking_mode, video_url, exercise_type, fatigue_level
+    }
 
     init(exercise_id: String, name: String, series: Int, reps: String, weight: String, rest: String,
          image_url: String? = nil, muscle_group: String? = nil) {
@@ -35,6 +43,10 @@ struct GymExercise: Codable, Hashable, Identifiable {
         rest = FlexibleValue.string(c, .rest) ?? "90s"
         image_url = try? c.decodeIfPresent(String.self, forKey: .image_url)
         muscle_group = try? c.decodeIfPresent(String.self, forKey: .muscle_group)
+        tracking_mode = try? c.decodeIfPresent(String.self, forKey: .tracking_mode)
+        video_url = try? c.decodeIfPresent(String.self, forKey: .video_url)
+        exercise_type = try? c.decodeIfPresent(String.self, forKey: .exercise_type)
+        fatigue_level = try? c.decodeIfPresent(String.self, forKey: .fatigue_level)
     }
 
     /// «90 s», «2 min», «60-90 s» → segundos (como `parseRestSeconds` en la web).
@@ -228,6 +240,139 @@ enum SessionIdentity {
             var next = plan
             if plan.isGym { next.routine_name = name.trimmingCharacters(in: .whitespaces) }
             next.session_icon = clean(icon)
+            return next
+        }
+    }
+}
+
+/// Rutinas propias («Nueva rutina», «Mis rutinas», «Duplicar», «Borrar» y «Guardar como rutina»),
+/// igual que `customRoutines.ts` de la web. No hay tabla aparte: cada rutina es una sesión más de
+/// `training_plan.workouts_json`, con la siguiente clave libre del orden y `custom: true`. Solo la
+/// rutina creada o editada por el usuario lleva `custom: true`; las del piloto automático no se tocan.
+enum CustomRoutines {
+    /// Lo que se dice cuando no cabe otra sesión (nunca se falla en silencio).
+    static let limitMessage = "Tienes 7 sesiones: borra o edita una para añadir otra"
+    static let defaultName = "Mi rutina"
+    /// Nombre del entreno vacío (`routine_name`), el mismo en la web.
+    static let freeWorkoutName = "Entrenamiento libre"
+
+    enum Change { case ok([DayPlan], day: String), limit, missing }
+
+    private static func clean(_ text: String?) -> String { (text ?? "").trimmingCharacters(in: .whitespacesAndNewlines) }
+    private static func sorted(_ plans: [DayPlan]) -> [DayPlan] {
+        plans.sorted { (DayNames.all.firstIndex(of: $0.day) ?? 7) < (DayNames.all.firstIndex(of: $1.day) ?? 7) }
+    }
+
+    /// Rutinas del usuario: las sesiones de gimnasio marcadas `custom`, en el orden de la rutina.
+    static func mine(_ plans: [DayPlan]) -> [DayPlan] { RoutineOrder.sessions(plans).filter { $0.isGym && $0.custom == true } }
+    /// Primera clave del orden que no usa ninguna entrada del plan; nil si están las siete.
+    static func nextFreeKey(_ plans: [DayPlan]) -> String? { DayNames.all.first { key in !plans.contains { $0.day == key } } }
+    static func canAdd(_ plans: [DayPlan]) -> Bool { nextFreeKey(plans) != nil }
+    /// «Pierna pesada (copia)».
+    static func copyName(_ name: String?) -> String { "\(clean(name).isEmpty ? defaultName : clean(name)) (copia)" }
+    static func name(_ plan: DayPlan) -> String { clean(plan.routine_name).isEmpty ? defaultName : clean(plan.routine_name) }
+
+    /// «Pecho, espalda y hombros» (y «… y 2 más»): los músculos de sus ejercicios, sin repetir.
+    static func muscles(_ plan: DayPlan) -> String {
+        var seen: [String] = []
+        var names: [String] = []
+        for exercise in plan.exercises ?? [] {
+            let muscle = clean(exercise.muscle_group)
+            guard !muscle.isEmpty, !seen.contains(muscle.lowercased()) else { continue }
+            seen.append(muscle.lowercased())
+            names.append(names.isEmpty ? muscle : muscle.lowercased())
+        }
+        switch names.count {
+        case 0: return ""
+        case 1: return names[0]
+        case 2...3: return "\(names.dropLast().joined(separator: ", ")) y \(names.last!)"
+        default: return "\(names.prefix(3).joined(separator: ", ")) y \(names.count - 3) más"
+        }
+    }
+
+    /// «4 ejercicios · Pecho, espalda y hombros».
+    static func meta(_ plan: DayPlan) -> String {
+        let count = plan.exercises?.count ?? 0
+        return ["\(count) \(count == 1 ? "ejercicio" : "ejercicios")", muscles(plan)].filter { !$0.isEmpty }.joined(separator: " · ")
+    }
+
+    /// Nueva rutina en la siguiente clave libre, marcada como tuya.
+    static func add(_ plans: [DayPlan], name: String, exercises: [GymExercise]) -> Change {
+        guard let day = nextFreeKey(plans) else { return .limit }
+        let routine = DayPlan(day: day, type: "gimnasio", routine_name: clean(name).isEmpty ? defaultName : clean(name),
+                              muscle_focus: "", exercises: exercises, custom: true)
+        return .ok(sorted(plans + [routine]), day: day)
+    }
+
+    /// Cambia nombre y ejercicios de una sesión: solo esa pasa a ser tuya.
+    static func update(_ plans: [DayPlan], day: String, name: String, exercises: [GymExercise]) -> Change {
+        guard plans.contains(where: { $0.day == day }) else { return .missing }
+        return .ok(plans.map { plan in
+            guard plan.day == day else { return plan }
+            var next = plan
+            next.type = "gimnasio"
+            next.routine_name = clean(name).isEmpty ? self.name(plan) : clean(name)
+            next.exercises = exercises
+            next.custom = true
+            return next
+        }, day: day)
+    }
+
+    /// Copia «<nombre> (copia)» en la siguiente clave libre; la original no cambia.
+    static func duplicate(_ plans: [DayPlan], day: String) -> Change {
+        guard let source = plans.first(where: { $0.day == day }) else { return .missing }
+        guard let free = nextFreeKey(plans) else { return .limit }
+        var copy = source
+        copy.day = free
+        copy.routine_name = copyName(source.routine_name)
+        copy.custom = true
+        return .ok(sorted(plans + [copy]), day: free)
+    }
+
+    /// Quita la rutina del plan. El historial y los récords siguen en sus tablas.
+    static func delete(_ plans: [DayPlan], day: String) -> Change {
+        guard plans.contains(where: { $0.day == day }) else { return .missing }
+        return .ok(plans.filter { $0.day != day }, day: day)
+    }
+
+    /// Editor de rutina: solo los días nuevos o cambiados pasan a `custom: true` (`markEditedDays`).
+    static func markEdited(original: [DayPlan], next: [DayPlan]) -> [DayPlan] {
+        next.map { plan in
+            var bare = plan; bare.custom = nil
+            guard var before = original.first(where: { $0.day == plan.day }) else { var p = plan; p.custom = true; return p }
+            before.custom = nil
+            if before != bare { var p = plan; p.custom = true; return p }
+            return plan
+        }
+    }
+
+    /// Cabecera de Entrenar: el modo y de dónde sale («Piloto automático · 2 rutinas tuyas»).
+    static func mode(_ plans: [DayPlan]) -> (title: String, detail: String) {
+        let sessions = RoutineOrder.sessions(plans)
+        let mine = sessions.filter { $0.custom == true }.count
+        if mine == 0 { return ("Piloto automático", "Preparada por Autopilot.") }
+        if mine == sessions.count { return ("Rutina personalizada", "Creada por ti.") }
+        let own = self.mine(plans).count
+        return ("Piloto automático", "Preparada por Autopilot, con \(own) \(own == 1 ? "rutina tuya" : "rutinas tuyas").")
+    }
+
+    /// «Guardar como rutina» tras un entreno vacío: cada ejercicio con series hechas pasa con esas
+    /// series, sus repeticiones (un número o el rango hecho, «8-12») y el peso más alto.
+    static func fromWorkout(_ exercises: [GymExercise], logs: [String: [SetLog]]) -> [GymExercise] {
+        exercises.compactMap { exercise in
+            let done = (logs[exercise.name] ?? []).filter { $0.done && $0.isWarmup != true }
+            guard !done.isEmpty else { return nil }
+            var next = exercise
+            next.series = done.count
+            let reps = done.map(\.reps).filter { $0 > 0 }
+            let seconds = exercise.reps.trimmingCharacters(in: .whitespaces).lowercased().hasSuffix("s")
+            if !seconds, let low = reps.min(), let high = reps.max() {
+                next.reps = low == high ? "\(low)" : "\(low)-\(high)"
+            }
+            let weights = done.compactMap { Double($0.weight.replacingOccurrences(of: ",", with: ".")) }.filter { $0 > 0 }
+            if let top = weights.max() {
+                next.weight = top.rounded() == top ? String(Int(top)) : String(top)
+            }
             return next
         }
     }
@@ -493,6 +638,30 @@ enum TrainingRepo {
               r.success == true || r.protected == true else { return false }
         _ = try? await plan(userId: userId, force: true)
         return true
+    }
+
+    enum RoutineCommit { case ok([DayPlan], day: String), limit, missing, failed }
+
+    /// Rutinas propias (`commitRoutineChange` en la web): el cambio se aplica sobre el plan GUARDADO
+    /// y se guarda; sin fila todavía (sin plan), se crea solo con la rutina (el dueño puede insertarla).
+    static func commitRoutine(userId: UUID, _ change: ([DayPlan]) -> CustomRoutines.Change) async -> RoutineCommit {
+        let current: [DayPlan]
+        do { current = try await fetchPlan(userId: userId) } catch { return .failed }
+        switch change(current) {
+        case .limit: return .limit
+        case .missing: return .missing
+        case .ok(let plans, let day):
+            struct Row: Encodable { let user_id: UUID; let workouts_json: [DayPlan]; let updated_at: String }
+            do {
+                try await Backend.client.from("training_plan")
+                    .upsert(Row(user_id: userId, workouts_json: plans, updated_at: ISO8601DateFormatter().string(from: Date())), onConflict: "user_id")
+                    .execute()
+            } catch { return .failed }
+            // Inicio y Entrenar leen la caché: se pone al día para que no vuelva el plan viejo.
+            let withPhotos = await withImages(plans)
+            storePlanLocally(userId: userId, withPhotos)
+            return .ok(withPhotos, day: day)
+        }
     }
 
     /// Rellena la foto de los ejercicios que no la traen en el plan (p. ej. rutinas creadas a

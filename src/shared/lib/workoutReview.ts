@@ -6,6 +6,8 @@ export interface WorkoutReviewItem {
   proposal: string;
   /** Cambio en corto para una etiqueta ("+2,5 kg", "+2 reps", "Nuevo"). */
   change: string;
+  /** La cifra de hoy en corto ("62,5 kg", "24 reps"): lo que se enseña cuando no hay mejora. */
+  today: string;
   trend: "up" | "down" | "same" | "new";
 }
 
@@ -55,12 +57,13 @@ export function buildWorkoutReview(current: ReviewExercise[], previous: ReviewEx
     const proposal = rpe != null && rpe >= 9
       ? "Revisar esfuerzo y recuperación antes de aumentar la carga."
       : delta !== null && delta < 0
-      ? "Revisar descanso, técnica y sensaciones antes de cambiar la carga."
+      ? "Mantén la carga y cuida descanso y técnica: la próxima sesión es para subir."
       : delta !== null && delta > 0
       ? "Si la técnica fue sólida, sube un poco la carga en la próxima sesión."
       : "Mantener el plan como referencia y reunir otra sesión comparable.";
     const trend = delta === null ? "new" : delta > 0 ? "up" : delta < 0 ? "down" : "same";
     if (trend === "same") change = "=";
-    return [{ name: ex.name, observation, proposal, change, trend }];
+    const today = weighted(now) && top(now) > 0 ? `${fmt(top(now))} kg` : `${reps(now)} reps`;
+    return [{ name: ex.name, observation, proposal, change, today, trend }];
   });
 }

@@ -1,7 +1,9 @@
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 import type { TrainingOverview } from "@/shared/lib/workoutMetrics";
+import { groupedInt } from "@/shared/lib/workoutSummaryFormat";
 
-const fmt = (n: number) => Math.round(n).toLocaleString("es-ES");
+/** Enteros con punto de miles siempre («2.366»), como `NumberText.grouped` en la app. */
+const fmt = (n: number) => groupedInt(n);
 const weekLabel = (weekStart: string) => {
   const [y, m, d] = weekStart.split("-").map(Number);
   return new Date(y, m - 1, d).toLocaleDateString("es-ES", { day: "numeric", month: "short" }).replace(".", "");
@@ -21,19 +23,30 @@ export function TrainingOverviewCard({ overview }: { overview: TrainingOverview 
   // Sin series con peso, «0 kg» desanimaba: se cuentan los entrenos (como la app).
   const hasKg = overview.last4WeeksVolumeKg > 0;
 
+  // Cifras pequeñas en tres columnas (valor arriba, etiqueta debajo), como `stat` en la app.
+  const stats = [
+    ...(hasKg ? [{ value: fmt(overview.totalSessions), label: overview.totalSessions === 1 ? "entreno" : "entrenos" }] : []),
+    { value: fmt(overview.streakWeeks), label: overview.streakWeeks === 1 ? "semana de racha" : "semanas de racha" },
+    ...(hasKg ? [{ value: fmt(thisWeek), label: "kg esta semana" }] : []),
+  ];
+
   return (
-    <section aria-label="Resumen de tu entrenamiento" className="relative overflow-hidden rounded-[22px] border border-border bg-card p-5">
-      <p className="relative text-xs font-semibold uppercase tracking-[0.16em] text-primary">Últimas 4 semanas</p>
-      <p className="relative mt-2 text-[52px] font-semibold leading-none tracking-tight tabular-nums">
-        {hasKg ? fmt(overview.last4WeeksVolumeKg) : fmt(overview.totalSessions)}
-        <span className="ml-1.5 type-title3 text-muted-foreground">{hasKg ? "kg levantados" : overview.totalSessions === 1 ? "entreno" : "entrenos"}</span>
+    <section aria-label="Resumen de tu entrenamiento" className="relative overflow-hidden rounded-[28px] bg-card p-5">
+      <p className="type-subhead text-muted-foreground">Últimas 4 semanas</p>
+      {/* Cifra protagonista en Big Shoulders; la unidad baja entera si no cabe. */}
+      <p className="mt-2 flex flex-wrap items-baseline gap-x-1.5">
+        <span className="type-figure text-[52px] leading-none">{hasKg ? fmt(overview.last4WeeksVolumeKg) : fmt(overview.totalSessions)}</span>
+        <span className="whitespace-nowrap type-title3 text-muted-foreground">{hasKg ? "kg levantados" : overview.totalSessions === 1 ? "entreno" : "entrenos"}</span>
       </p>
-      <div className="relative mt-4 flex flex-wrap gap-x-6 gap-y-1">
-        {hasKg && <div className="flex items-baseline gap-1.5"><span className="text-[20px] font-semibold tabular-nums">{fmt(overview.totalSessions)}</span><span className="type-subhead text-muted-foreground">{overview.totalSessions === 1 ? "entreno" : "entrenos"}</span></div>}
-        <div className="flex items-baseline gap-1.5"><span className="text-[20px] font-semibold tabular-nums">{fmt(overview.streakWeeks)}</span><span className="type-subhead text-muted-foreground">{overview.streakWeeks === 1 ? "semana de racha" : "semanas de racha"}</span></div>
-        {hasKg && <div className="flex items-baseline gap-1.5"><span className="text-[20px] font-semibold tabular-nums">{fmt(thisWeek)}</span><span className="type-subhead text-muted-foreground">kg esta semana</span></div>}
+      <div className="mt-4 grid grid-cols-3 gap-3">
+        {stats.map((stat) => (
+          <div key={stat.label} className="min-w-0">
+            <p className="truncate type-title3 tabular-nums">{stat.value}</p>
+            <p className="type-footnote text-muted-foreground">{stat.label}</p>
+          </div>
+        ))}
       </div>
-      {!hasKg && <p className="relative mt-4 type-subhead text-muted-foreground">Registra series con peso y aquí verás tus kilos de cada semana.</p>}
+      {!hasKg && <p className="mt-4 type-subhead text-muted-foreground">Registra series con peso y aquí verás tus kilos de cada semana.</p>}
       {hasKg && <div className="relative">
         <div className="mt-5 h-40" role="img" aria-label={`Volumen de las últimas ${data.length} semanas: ${data.map((w) => `${w.label} ${fmt(w.volumeKg)} kg`).join(", ")}`}>
           <ResponsiveContainer width="100%" height="100%">

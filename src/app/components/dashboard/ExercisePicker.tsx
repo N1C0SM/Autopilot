@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { Check, Search } from "lucide-react";
+import { Search, WifiOff } from "lucide-react";
 import { supabase } from "@/shared/integrations/supabase/client";
-import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
+import { EmptyState } from "@/shared/components/ui/empty-state";
+import { SearchPill } from "@/shared/components/ui/search-pill";
+import { Spinner } from "@/shared/components/ui/spinner";
 import { ExerciseThumb } from "@/app/components/ExerciseMedia";
+import { exerciseCount } from "@/shared/lib/exerciseLibrary";
 import { hapticSelection, hapticTap } from "@/shared/lib/native";
 import { cn } from "@/shared/lib/utils";
 import type { GymExerciseEntry } from "@/shared/types/training";
@@ -25,6 +28,7 @@ interface Row {
 
 let cache: Row[] | null = null;
 
+/** Modalidad y grupo, en el mismo orden que `ExercisePickerView.types` y `.groups` en la app. */
 const GROUPS = ["Todos", "Pecho", "Espalda", "Hombros", "Piernas", "Glúteos", "Isquiotibiales", "Bíceps", "Tríceps", "Core", "Gemelos"];
 const TYPES = ["Todo", "Gimnasio", "Calistenia"];
 
@@ -60,20 +64,27 @@ const ExercisePicker = ({ open, onOpenChange, onPick, existing = [] }: Props) =>
   const [group, setGroup] = useState("Todos");
   const [type, setType] = useState("Todo");
   const [picked, setPicked] = useState<Row[]>([]);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => { if (open) { setPicked([]); setQ(""); } }, [open]);
 
   useEffect(() => {
     if (!open || cache) return;
+    let alive = true;
+    setFailed(false);
     void supabase
       .from("exercises")
       .select("id,name,muscle_group,exercise_type,movement_pattern,stimulus_type,load_level,image_url,video_url,tracking_mode,fatigue_level")
       .order("name")
-      .then(({ data }) => {
-        cache = (data as Row[]) ?? [];
+      .then(({ data, error }) => {
+        if (!alive) return;
+        if (error || !data) { setFailed(true); return; }
+        cache = data as Row[];
         setRows(cache);
       });
-  }, [open]);
+    return () => { alive = false; };
+  }, [open, attempt]);
 
   const list = useMemo(() => {
     const term = norm(q.trim());
@@ -96,10 +107,11 @@ const ExercisePicker = ({ open, onOpenChange, onPick, existing = [] }: Props) =>
     onOpenChange(false);
   };
 
+  // Mismo chip que los filtros de la biblioteca: dorado suave el activo, gris el resto.
   const chip = (active: boolean) =>
     cn(
-      "shrink-0 rounded-full px-3.5 py-2 type-footnote font-medium transition-colors md:py-1.5",
-      active ? "bg-primary/15 text-foreground" : "bg-secondary text-muted-foreground hover:text-foreground",
+      "flex h-10 shrink-0 items-center rounded-full px-4 type-footnote font-semibold transition active:opacity-60",
+      active ? "bg-primary/15 text-primary" : "bg-secondary text-foreground",
     );
 
   return (
@@ -108,65 +120,84 @@ const ExercisePicker = ({ open, onOpenChange, onPick, existing = [] }: Props) =>
       onOpenChange={onOpenChange}
       title="Añadir ejercicios"
       description="Toca todos los que quieras y añádelos de una vez."
-      desktopClassName="sm:max-w-3xl"
+      desktopClassName="sm:max-w-2xl"
       footer={
+        // La única acción dorada: «Añadir 3 ejercicios» (o «Elige ejercicios» mientras no hay ninguno).
         <Button type="button" variant="hero" size="lg" className="min-h-12 w-full" disabled={!picked.length} onClick={confirm}>
-          {picked.length ? `Añadir ${picked.length} ${picked.length === 1 ? "ejercicio" : "ejercicios"}` : "Elige ejercicios"}
+          {picked.length ? `Añadir ${exerciseCount(picked.length)}` : "Elige ejercicios"}
         </Button>
       }
     >
-      <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por nombre o músculo" className="h-11 pl-9" aria-label="Buscar ejercicio" />
-      </div>
-      <div className="-mx-1 mt-3 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none]" role="tablist" aria-label="Material">
+      <SearchPill value={q} onChange={setQ} placeholder="Buscar por nombre o músculo" />
+      <div className="-mx-1 mt-3 flex shrink-0 items-center gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none]" role="group" aria-label="Filtros">
         {TYPES.map((t) => (
-          <button key={t} type="button" role="tab" aria-selected={type === t} onClick={() => { void hapticSelection(); setType(t); }} className={chip(type === t)}>{t}</button>
+          <button key={t} type="button" aria-pressed={type === t} onClick={() => { void hapticSelection(); setType(t); }} className={chip(type === t)}>{t}</button>
         ))}
-        <span className="mx-1 w-px shrink-0 bg-border" aria-hidden />
+        <span className="mx-0.5 h-6 w-px shrink-0 bg-border" aria-hidden />
         {GROUPS.map((g) => (
-          <button key={g} type="button" role="tab" aria-selected={group === g} onClick={() => { void hapticSelection(); setGroup(g); }} className={chip(group === g)}>{g}</button>
+          <button key={g} type="button" aria-pressed={group === g} onClick={() => { void hapticSelection(); setGroup(g); }} className={chip(group === g)}>{g}</button>
         ))}
       </div>
-      <ul className="-mx-2 mt-2 grid min-h-0 flex-1 auto-rows-min grid-cols-1 gap-0.5 overflow-y-auto overscroll-contain md:grid-cols-2 md:gap-1">
-        {rows.length === 0 && Array.from({ length: 8 }).map((_, i) => (
-          <li key={i} className="m-2 h-12 animate-pulse rounded-media bg-muted/40" />
-        ))}
-        {list.map((r) => {
-          const sel = picked.findIndex((x) => x.id === r.id);
-          const inSession = existing.includes(r.name);
-          return (
-            <li key={r.id}>
-              <button
-                type="button"
-                aria-pressed={sel >= 0}
-                onClick={() => toggle(r)}
-                className={cn(
-                  "flex min-h-[60px] w-full items-center gap-3 rounded-media px-2 py-2 text-left transition-colors",
-                  sel >= 0 ? "bg-primary/10" : "hover:bg-muted/50 active:bg-muted/60",
-                )}
-              >
-                <ExerciseThumb image={r.image_url ?? undefined} video={r.video_url ?? undefined} name={r.name} pattern={r.movement_pattern} stimulus={r.stimulus_type} load={r.load_level} size="sm" />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate type-subhead font-medium">{r.name}</span>
-                  <span className="block truncate type-footnote text-muted-foreground">
-                    {[r.muscle_group, r.exercise_type, inSession ? "Ya en la sesión" : null].filter(Boolean).join(" · ")}
-                  </span>
-                </span>
-                <span className={cn(
-                  "grid h-7 w-7 shrink-0 place-items-center rounded-full border type-footnote font-semibold tabular-nums",
-                  sel >= 0 ? "border-primary bg-primary text-primary-foreground" : "border-border text-transparent",
-                )}>
-                  {sel >= 0 ? sel + 1 : <Check className="h-3.5 w-3.5" aria-hidden />}
-                </span>
-              </button>
-            </li>
-          );
-        })}
-        {rows.length > 0 && list.length === 0 && (
-          <li className="col-span-full py-10 text-center type-subhead text-muted-foreground">Sin resultados. Prueba otro nombre o quita filtros.</li>
+      <div className="-mx-1 mt-4 min-h-0 flex-1 overflow-y-auto overscroll-contain px-1 pb-2">
+        {failed ? (
+          <EmptyState
+            icon={WifiOff}
+            title="No hemos podido cargar los ejercicios"
+            description="Revisa tu conexión y vuelve a intentarlo."
+            action={<Button type="button" variant="secondary" size="lg" onClick={() => setAttempt((n) => n + 1)}>Reintentar</Button>}
+          />
+        ) : rows.length === 0 && !cache ? (
+          // La firma de marca (el AP latiendo), nunca bloques grises.
+          <div className="flex flex-col items-center gap-3 py-12" aria-busy="true">
+            <Spinner size="lg" label="Cargando ejercicios" />
+            <p className="type-footnote text-muted-foreground" aria-hidden>Cargando ejercicios…</p>
+          </div>
+        ) : list.length === 0 ? (
+          <EmptyState icon={Search} title="Prueba con otro nombre" description="Busca por ejercicio o músculo, o quita algún filtro." />
+        ) : (
+          // Filas en un grupo sin borde, como la biblioteca.
+          <ul className="overflow-hidden rounded-[22px] bg-card">
+            {list.map((r) => {
+              const sel = picked.findIndex((x) => x.id === r.id);
+              const inSession = existing.includes(r.name);
+              const info = [r.muscle_group, r.exercise_type, inSession ? "Ya en la sesión" : null].filter(Boolean).join(" · ");
+              return (
+                <li key={r.id} className="group/row">
+                  <button
+                    type="button"
+                    aria-pressed={sel >= 0}
+                    aria-label={info ? `${r.name}, ${info}` : r.name}
+                    disabled={inSession}
+                    onClick={() => toggle(r)}
+                    className={cn(
+                      "flex w-full items-center gap-3 pl-3 text-left transition-colors duration-150 disabled:opacity-50",
+                      sel >= 0 ? "bg-primary/10" : "active:bg-accent",
+                    )}
+                  >
+                    <span className="py-2.5">
+                      <ExerciseThumb image={r.image_url ?? undefined} name={r.name} pattern={r.movement_pattern} stimulus={r.stimulus_type} load={r.load_level} muscleGroup={r.muscle_group} size="md" />
+                    </span>
+                    {/* El separador nace donde empieza el texto, como en la biblioteca. */}
+                    <span className="flex min-w-0 flex-1 items-center gap-3 self-stretch py-2.5 pr-3 group-[:not(:last-child)]/row:sep-b">
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate type-headline">{r.name}</span>
+                        {info && <span className="block truncate type-footnote text-muted-foreground">{info}</span>}
+                      </span>
+                      {/* Círculo de selección: dorado con el orden en que se tocó, o un aro gris. */}
+                      <span aria-hidden className={cn(
+                        "grid h-7 w-7 shrink-0 place-items-center rounded-full type-footnote font-bold tabular-nums",
+                        sel >= 0 ? "bg-primary text-primary-foreground" : "border-[1.5px] border-muted-foreground/40",
+                      )}>
+                        {sel >= 0 ? sel + 1 : null}
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
         )}
-      </ul>
+      </div>
     </ResponsiveSheet>
   );
 };

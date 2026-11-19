@@ -1,6 +1,7 @@
-import { TrendingUp, TrendingDown } from "lucide-react";
+import { Button } from "@/shared/components/ui/button";
 import { formatDecimal } from "@/shared/lib/numberFormat";
 import { hapticTap } from "@/shared/lib/native";
+import { monthsText } from "@/shared/lib/scanResultFormat";
 
 type Props = {
   currentScore: number; // 0-10 (physique)
@@ -14,15 +15,19 @@ type Props = {
 const milestonesFor = (priorities: string[], monthsWithPlan: number) => {
   const base = [
     "Primera ganancia visible (energía, postura, definición)",
-    priorities[0] ? `${priorities[0]}: cambio claro en espejo` : "Cambio claro en espejo",
-    priorities[1] ? `${priorities[1]}: simetría restaurada` : "Composición corporal en objetivo",
-    "Físico objetivo bloqueado",
+    priorities[0] ? `${priorities[0]}: cambio claro en el espejo` : "Cambio claro en el espejo",
+    priorities[1] ? `${priorities[1]}: más simetría` : "Composición corporal en objetivo",
+    "Tu físico objetivo, a tu alcance",
   ];
   const m = Math.max(2, monthsWithPlan || 4);
-  const points = [1, Math.round(m / 3), Math.round((m * 2) / 3), m];
+  const points = [1, Math.max(1, Math.round(m / 3)), Math.max(1, Math.round((m * 2) / 3)), m];
   return base.map((label, i) => ({ month: points[i], label }));
 };
 
+/**
+ * Proyección del scan público (visitantes): por tu cuenta frente a con plan, en dos tarjetas sin
+ * borde. Orientativa y dicho así; nada de cifras inventadas fuera de lo que da el análisis.
+ */
 export default function ProjectionTimeline({
   currentScore,
   monthsWithPlan,
@@ -32,69 +37,57 @@ export default function ProjectionTimeline({
   onCta,
 }: Props) {
   const target = Math.min(10, currentScore + 2.5);
-  const without = currentScore; // sin plan: mismo punto
-  const m = monthsWithPlan ?? 4;
-  const mNo = monthsWithoutPlan ?? Math.max(m + 6, 12);
+  const m = Math.max(1, Math.round(monthsWithPlan ?? 4));
+  const mNo = Math.max(m + 1, Math.round(monthsWithoutPlan ?? Math.max(m + 6, 12)));
   const milestones = milestonesFor(priorities, m);
 
   return (
-    <section>
-      <h2 className="type-title2">Proyección a {m} meses</h2>
-      <p className="type-subhead text-muted-foreground mt-1">
-        Mismo punto de partida, dos escenarios. Proyección orientativa: no es una promesa de resultados.
-      </p>
+    <section className="flex flex-col gap-2.5">
+      <header>
+        <h2 className="type-title3">Tu proyección a {monthsText(m)}</h2>
+        <p className="mt-0.5 type-footnote text-muted-foreground">
+          Mismo punto de partida, dos caminos. Proyección orientativa: no es una promesa de resultados.
+        </p>
+      </header>
 
-      <div className="grid md:grid-cols-2 gap-10 md:gap-12 mt-6">
-        <div>
-          <div className="flex items-center gap-3">
-            <TrendingDown className="w-7 h-7 text-muted-foreground shrink-0" strokeWidth={1.75} />
-            <div className="min-w-0 flex-1">
-              <div className="type-headline">Sin plan · {mNo} meses</div>
-              <div className="type-subhead text-muted-foreground tabular-nums">Puntuación {formatDecimal(without, 1)}</div>
-            </div>
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="rounded-card bg-card p-4">
+          <p className="type-headline">Por tu cuenta</p>
+          <p className="mt-0.5 type-footnote tabular-nums text-muted-foreground">Unos {monthsText(mNo)} · hoy {formatDecimal(currentScore, 1)}</p>
+          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-secondary" aria-hidden="true">
+            <div className="h-full rounded-full bg-foreground/40" style={{ width: `${currentScore * 10}%` }} />
           </div>
-          <div className="h-1 rounded-full bg-secondary overflow-hidden mt-4 mb-5">
-            <div className="h-full bg-muted-foreground/60" style={{ width: `${without * 10}%` }} />
-          </div>
-          <ul className="space-y-3 type-subhead text-muted-foreground">
-            <li>
-              Mismo cuello de botella: <span className="text-foreground">{bottleneck || "falta de estructura"}</span>
-            </li>
-            <li>Volumen mal distribuido: fatiga sin progreso</li>
+          <ul className="mt-4 flex flex-col gap-2.5 type-subhead text-muted-foreground">
+            <li>Lo que más te frena: <span className="text-foreground">{bottleneck || "la falta de estructura"}</span></li>
+            <li>Volumen a ojo: progreso más lento</li>
             <li>Macros a ojo: recomposición más lenta</li>
-            <li>Probablemente el siguiente scan seguiría igual</li>
           </ul>
         </div>
 
-        <div>
-          <div className="flex items-center gap-3">
-            <TrendingUp className="w-7 h-7 text-primary shrink-0" strokeWidth={1.75} />
-            <div className="min-w-0 flex-1">
-              <div className="type-headline">Con plan · {m} meses</div>
-              <div className="type-subhead text-muted-foreground">Objetivo orientativo</div>
-            </div>
+        <div className="rounded-card bg-card p-4">
+          <p className="type-headline">Con tu plan</p>
+          <p className="mt-0.5 type-footnote tabular-nums text-muted-foreground">{monthsText(m)} · objetivo orientativo</p>
+          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-secondary" aria-hidden="true">
+            <div className="h-full rounded-full bg-primary" style={{ width: `${target * 10}%` }} />
           </div>
-          <div className="h-1 rounded-full bg-secondary overflow-hidden mt-4 mb-5">
-            <div className="h-full bg-primary" style={{ width: `${target * 10}%` }} />
-          </div>
-          <ol className="space-y-3">
+          <ol className="mt-4 flex flex-col gap-2.5">
             {milestones.map((mile, i) => (
               <li key={i} className="flex items-start gap-3">
-                <span className="w-14 shrink-0 type-subhead font-semibold text-primary tabular-nums">Mes {mile.month}</span>
+                <span className="w-14 shrink-0 whitespace-nowrap type-subhead font-semibold tabular-nums text-primary">Mes {mile.month}</span>
                 <span className="type-subhead text-muted-foreground">{mile.label}</span>
               </li>
             ))}
           </ol>
-          <button
-            type="button"
+          <Button
+            variant="plain"
+            className="-ml-3 mt-2"
             onClick={() => {
               void hapticTap();
               onCta();
             }}
-            className="mt-4 -ml-3 min-h-[44px] px-3 type-headline text-primary active:opacity-60 transition-opacity"
           >
             Empezar mi plan
-          </button>
+          </Button>
         </div>
       </div>
     </section>

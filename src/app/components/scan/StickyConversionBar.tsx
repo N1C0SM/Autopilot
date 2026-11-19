@@ -30,7 +30,7 @@ function StickyBar({ onCta }: { onCta: () => void }) {
           className="fixed inset-x-4 mx-auto z-40 max-w-xl"
           style={{ bottom: "calc(var(--safe-bottom, 0px) + 12px)" }}
         >
-          <div className="material rounded-media shadow-2xl p-2 pl-4 flex items-center gap-3">
+          <div className="nav-chrome flex items-center gap-3 rounded-full bg-card/90 p-2 pl-5 backdrop-blur-xl">
             <div className="min-w-0 flex-1">
               <div className="type-headline truncate">Tu rutina a medida</div>
               <div className="type-footnote text-muted-foreground truncate">Gratis · Sin tarjeta</div>

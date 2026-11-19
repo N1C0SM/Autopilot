@@ -26,6 +26,8 @@ struct HomeView: View {
     /// Editor de la rutina («Editar» en «Tu programa») y selector del entreno vacío.
     @State private var planEditorOpen = false
     @State private var pickingEmpty = false
+    /// «Nueva rutina»: crea una rutina propia (también sin plan todavía).
+    @State private var newRoutineOpen = false
     /// Confeti de «día completado»: se enciende una sola vez al día (ver `celebrateIfNeeded`).
     @State private var celebrating = false
     /// Instante de inicio del confeti: se guarda aquí para que un redibujado de Inicio no
@@ -205,8 +207,17 @@ struct HomeView: View {
         .accessibilityAddTraits(.isButton)
     }
 
-    /// «Entreno vacío» (como en Hevy y en la web): se eligen los ejercicios y se empieza, sin rutina.
+    /// «Entreno vacío» (como en Hevy y en la web): se eligen los ejercicios y se empieza, sin rutina; a su
+    /// lado, «Nueva rutina» para crear una propia (también sin plan). Lado a lado si caben enteros y, si
+    /// no (iPhone estrecho o letra grande), uno bajo otro: nunca cortados (`flex-wrap` en la web).
     private var emptyWorkoutButton: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) { emptyButton; newRoutineButton }
+            VStack(spacing: 12) { emptyButton; newRoutineButton }
+        }
+    }
+
+    private var emptyButton: some View {
         Button {
             Haptics.tap()
             // Con un entreno a medias se continúa ese: empezar otro borraría sus series.
@@ -216,10 +227,32 @@ struct HomeView: View {
                 pickingEmpty = true
             }
         } label: {
-            Label { Text("Entreno vacío") } icon: { Image(systemName: "plus").font(.inter(.body).weight(.semibold)) }
+            Label { Text("Entreno vacío") } icon: {
+                Image(systemName: "play.fill").font(.inter(.subheadline).weight(.semibold)).foregroundStyle(Palette.gold)
+            }
         }
         .buttonStyle(.pillSecondary)
         .accessibilityHint("Eliges los ejercicios y empiezas a entrenar")
+    }
+
+    private var newRoutineButton: some View {
+        Button { Haptics.tap(); newRoutineOpen = true } label: {
+            Label { Text("Nueva rutina") } icon: {
+                Image(systemName: "plus").font(.inter(.body).weight(.semibold)).foregroundStyle(Palette.gold)
+            }
+        }
+        .buttonStyle(.pillSecondary)
+        .accessibilityHint("Crea una rutina con tus ejercicios y guárdala en tu plan")
+    }
+
+    /// «Mis rutinas»: las tuyas, a un toque de Entrenar (donde se empiezan, editan, duplican o borran).
+    @ViewBuilder private var routinesSection: some View {
+        if snapshot?.noPlan != true {
+            RoutinesPreview(routines: CustomRoutines.mine(snapshot?.scheduled ?? [])) {
+                TrainView.focusRoutines = true
+                onNavigate(.train)
+            }
+        }
     }
 
     /// «Tu plan»: lo hecho esta semana con su barra dorada y, debajo, una fila por sesión de la rutina
@@ -351,6 +384,7 @@ struct HomeView: View {
                 dayFigures
                 planSection
                 emptyWorkoutButton
+                routinesSection
             }
             .frame(maxWidth: 680, alignment: .leading)
             .padding(.horizontal, horizontalPadding)
@@ -387,6 +421,23 @@ struct HomeView: View {
         .sheet(isPresented: $pickingEmpty) {
             ExercisePickerView(existing: []) { picked in Task { await startEmptyWorkout(picked) } }
                 .presentationBackground(Palette.background)
+        }
+        .sheet(isPresented: $newRoutineOpen) {
+            RoutineEditorView(limitReached: !CustomRoutines.canAdd(model.days)) { name, exercises in
+                guard let id = session.userId else { return false }
+                switch await TrainingRepo.commitRoutine(userId: id, { CustomRoutines.add($0, name: name, exercises: exercises) }) {
+                case .ok:
+                    A11y.announce("Rutina creada en Mis rutinas")
+                    Task { await load() }
+                    return true
+                case .limit:
+                    A11y.announce(CustomRoutines.limitMessage)
+                    return false
+                case .missing, .failed:
+                    return false
+                }
+            }
+            .presentationBackground(Palette.background)
         }
         .sheet(isPresented: $planEditorOpen) {
             PlanEditorView(original: model.days) { saved in
@@ -1176,7 +1227,7 @@ private struct TodaySessionSheet: View {
         VStack(spacing: 0) {
             ForEach(Array(exercises.enumerated()), id: \.offset) { i, ex in
                 HStack(spacing: 12) {
-                    ExerciseThumb(url: ex.image_url, size: 48)
+                    ExerciseThumb(url: ex.image_url, size: 48, name: ex.name, muscleGroup: ex.muscle_group)
                     VStack(alignment: .leading, spacing: 3) {
                         Text(ex.name).font(.apHeadline).lineLimit(2)
                             .fixedSize(horizontal: false, vertical: true)

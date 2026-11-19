@@ -20,7 +20,7 @@ function TestimonialAvatar({ name, photoUrl }: { name: string; photoUrl: string 
         src={photoUrl}
         alt={name}
         onError={() => setFailed(true)}
-        className="w-11 h-11 shrink-0 rounded-full bg-secondary object-cover"
+        className="h-11 w-11 shrink-0 rounded-full bg-secondary object-cover"
       />
     );
   }
@@ -49,11 +49,11 @@ export default function SocialProofStrip() {
   if (items.length === 0) return null;
 
   return (
-    <section>
-      <h2 className="type-title2">Otros con tu mismo punto de partida</h2>
-      <div className="grid sm:grid-cols-3 gap-8 mt-6">
+    <section className="flex flex-col gap-2.5">
+      <h2 className="type-title3">Otros con tu mismo punto de partida</h2>
+      <div className="grid gap-3 sm:grid-cols-3">
         {items.map((t) => (
-          <figure key={t.id}>
+          <figure key={t.id} className="rounded-card bg-card p-4">
             <div className="flex items-center gap-3 mb-3">
               <TestimonialAvatar name={t.name} photoUrl={t.photo_url} />
               <figcaption className="min-w-0">

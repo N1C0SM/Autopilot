@@ -460,6 +460,27 @@ struct MuscleMapView: View {
     }
 }
 
+/// Una cara del cuerpo (delante o detrás) sin giro ni puntos: para el resumen del entreno, que
+/// enseña las dos a la vez como `MuscleMapFigure` en la web. `primary` en dorado pleno (3+ series)
+/// y `synergists` en dorado suave.
+struct MuscleBodyFigure: View {
+    let back: Bool
+    let primary: [String]
+    var synergists: [String] = []
+
+    var body: some View {
+        Group {
+            if back {
+                BackBodyShape(primary: primary, synergists: synergists)
+            } else {
+                FrontBodyShape(primary: primary, synergists: synergists)
+            }
+        }
+        .aspectRatio(1 / 1.55, contentMode: .fit)
+        .accessibilityHidden(true)
+    }
+}
+
 // MARK: - Preview
 
 #Preview {
@@ -479,28 +500,4 @@ struct MuscleMapView: View {
     }
     .padding(32)
     .background(Palette.background)
-}
-
-// MARK: - Figura quieta de un grupo (biblioteca)
-
-/// Grupos que se ven de espaldas (como `BACK_GROUPS` en la web).
-let libraryBackGroups: Set<String> = ["Espalda", "Isquiotibiales", "Glúteos", "Gemelos"]
-
-/// El cuerpo con un grupo muscular en dorado, sin indicadores ni giro: la tarjeta de un grupo
-/// de la biblioteca cuando ninguno de sus ejercicios tiene foto (igual que `groupFigure` en la web).
-struct MuscleGroupFigure: View {
-    let group: String
-
-    var body: some View {
-        let primary = normalizeMuscle(group == "Cuerpo completo" ? "Pecho Hombros Core Piernas Bíceps" : group)
-        Group {
-            if libraryBackGroups.contains(group) {
-                BackBodyShape(primary: primary, synergists: [])
-            } else {
-                FrontBodyShape(primary: primary, synergists: [])
-            }
-        }
-        .aspectRatio(200 / 310, contentMode: .fit)
-        .accessibilityHidden(true)
-    }
 }

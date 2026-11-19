@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MOTION_FLOOR, exerciseMotion, motionKeyTimes } from "./exerciseMotion";
+import { MOTION_FLOOR, exerciseMotion, exerciseMotionFor, inferMotionPattern, motionKeyTimes } from "./exerciseMotion";
 
 const numbers = (d: string): number[] => d.match(/-?\d+(\.\d+)?/g)?.map(Number) ?? [];
 
@@ -82,6 +82,18 @@ describe("huella de movimiento", () => {
       const ys = nums.filter((_, i) => i % 2 === 1);
       expect(Math.max(...xs) - Math.min(...xs) + (Math.max(...ys) - Math.min(...ys))).toBeGreaterThanOrEqual(40);
     }
+  });
+
+  it("en el entreno, sin patrón en la ficha se deduce del nombre y del músculo (nunca un hueco)", () => {
+    expect(inferMotionPattern("Curl femoral tumbado", "Isquiotibiales")).toBe("Bisagra");
+    expect(inferMotionPattern("Press de pierna", null)).toBe("Sentadilla");
+    expect(inferMotionPattern("Curl de bíceps", "Bíceps")).toBe("Tirón");
+    expect(inferMotionPattern("Press banca", "Pecho")).toBe("Empuje");
+    expect(inferMotionPattern("Plancha", "Abdomen")).toBe("Core");
+    expect(inferMotionPattern("Burpees")).toBe("Core");
+    expect(exerciseMotionFor({ name: "Remo con barra", muscleGroup: "Espalda" }).pattern).toBe("Tirón");
+    // El patrón real de la ficha manda sobre la pista.
+    expect(exerciseMotionFor({ name: "Remo con barra", pattern: "Bisagra" }).pattern).toBe("Bisagra");
   });
 
   it("la etiqueta se lee en voz alta y dice la verdad", () => {

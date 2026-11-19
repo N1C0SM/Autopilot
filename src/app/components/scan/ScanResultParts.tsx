@@ -5,7 +5,7 @@ import { cn } from "@/shared/lib/utils";
 
 type IconType = ComponentType<{ className?: string; strokeWidth?: number | string }>;
 
-/** Content image with a composed fallback (grey square + icon) when the URL is missing or fails. */
+/** Content image with a composed fallback (card + icon, never an empty box) when the URL is missing or fails. */
 export function ScanImage({
   src,
   alt,
@@ -24,8 +24,8 @@ export function ScanImage({
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
   if (!src || failedSrc === src) {
     return (
-      <div role="img" aria-label={alt || undefined} className={cn("flex items-center justify-center bg-secondary", className)}>
-        <ImageOff className="h-6 w-6 text-muted-foreground/60" strokeWidth={1.75} aria-hidden="true" />
+      <div role="img" aria-label={alt || undefined} className={cn("flex items-center justify-center bg-card shadow-none", className)}>
+        <ImageOff className="h-6 w-6 text-muted-foreground" strokeWidth={2} aria-hidden="true" />
       </div>
     );
   }
@@ -44,7 +44,7 @@ export function ScanImage({
 
 export type Stat = { label: string; value: ReactNode; unit?: string; tone?: string };
 
-/** Health-style stats row: figure + label, separated by hairlines. Four stats wrap to 2 × 2 under 390 px. */
+/** Health-style stats row: Big Shoulders figure + label, separated by hairlines. Four stats wrap to 2 × 2 under 390 px. */
 export function StatRow({ stats, className }: { stats: Stat[]; className?: string }) {
   if (stats.length === 0) return null;
   const four = stats.length === 4;
@@ -65,9 +65,9 @@ export function StatRow({ stats, className }: { stats: Stat[]; className?: strin
       {stats.map((s, i) => (
         <div key={s.label} className={cn("flex min-w-0 flex-col-reverse py-2", cell(i))}>
           <dt className="truncate type-footnote text-muted-foreground">{s.label}</dt>
-          <dd className="flex flex-wrap items-baseline gap-x-0.5">
-            <span className={cn(" type-title2 font-bold tabular-nums", s.tone)}>{s.value}</span>
-            {s.unit ? <span className="type-footnote text-muted-foreground">{s.unit}</span> : null}
+          <dd className="whitespace-nowrap">
+            <span className={cn("type-figure text-[28px] leading-none", s.tone)}>{s.value}</span>
+            {s.unit ? <span className="ml-1 type-footnote text-muted-foreground">{s.unit}</span> : null}
           </dd>
         </div>
       ))}
@@ -107,35 +107,6 @@ export function FindingRow({
         {description ? <div className="mt-0.5 type-subhead text-muted-foreground">{description}</div> : null}
         {action ? <div className="-ml-3 mt-1">{action}</div> : null}
       </div>
-    </div>
-  );
-}
-
-/** Label + figure + thin bar, on black. `pct` is 0–100. */
-export function MeterRow({
-  label,
-  value,
-  hint,
-  pct,
-  dim,
-}: {
-  label: ReactNode;
-  value: ReactNode;
-  hint?: ReactNode;
-  pct: number;
-  dim?: boolean;
-}) {
-  const width = Math.max(0, Math.min(100, Number.isFinite(pct) ? pct : 0));
-  return (
-    <div className="py-3">
-      <div className="flex items-baseline justify-between gap-3">
-        <span className="min-w-0 type-body">{label}</span>
-        <span className="shrink-0 type-headline font-bold tabular-nums">{value}</span>
-      </div>
-      <div className="mt-2 h-1 overflow-hidden rounded-full bg-secondary">
-        <div className={cn("h-full rounded-full", dim ? "bg-primary/50" : "bg-primary")} style={{ width: `${width}%` }} />
-      </div>
-      {hint ? <div className="mt-1.5 type-footnote text-muted-foreground">{hint}</div> : null}
     </div>
   );
 }

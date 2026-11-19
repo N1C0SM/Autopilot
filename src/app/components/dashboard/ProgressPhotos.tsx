@@ -8,7 +8,7 @@ import { ProgressHero } from "@/app/components/progress/ProgressHero";
 import BeforeAfterCompare from "@/app/components/dashboard/BeforeAfterCompare";
 import { Button } from "@/shared/components/ui/button";
 import { EmptyState } from "@/shared/components/ui/empty-state";
-import { Skeleton } from "@/shared/components/ui/skeleton";
+import { Spinner } from "@/shared/components/ui/spinner";
 import { hapticTap } from "@/shared/lib/native";
 import {
   AlertDialog,
@@ -606,8 +606,9 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
   return (
     <div className="w-full space-y-8">
       {loading && (
-        <div className="grid grid-cols-3 gap-2" role="status" aria-label="Cargando fotos de progreso">
-          {[0, 1, 2, 3, 4, 5].map((item) => <Skeleton key={item} className="aspect-[3/4] rounded-[10px]" />)}
+        // Carga con la firma de marca (el AP latiendo), nunca bloques grises.
+        <div className="flex justify-center py-16">
+          <Spinner size="lg" label="Cargando tus fotos" />
         </div>
       )}
 
@@ -615,13 +616,13 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
         <div role="alert">
           <EmptyState
             icon={WifiOff}
-            title="No se han podido cargar tus fotos"
-            description="Tus fotos no se han modificado."
-            className="min-h-[55dvh]"
+            title="No hemos podido cargar tus fotos"
+            description="Revisa tu conexión y vuelve a intentarlo. Tus fotos siguen guardadas."
             action={
               <Button
                 type="button"
-                variant="plain"
+                variant="secondary"
+                size="lg"
                 onClick={() => {
                   void hapticTap();
                   void loadPhotos();
@@ -649,19 +650,19 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
       {/* Protagonista: el antes y el ahora del mismo ángulo */}
       {ready && heroBefore && heroAfter && heroBefore.id !== heroAfter.id && (
         <section aria-labelledby="progress-photos-evolution">
-          <h2 id="progress-photos-evolution" className="type-title2">
+          <h2 id="progress-photos-evolution" className="type-title3">
             {heroBefore.taken_at === heroAfter.taken_at ? "Tu evolución" : evolutionLabel(heroBefore.taken_at, heroAfter.taken_at)}
           </h2>
           <button
             type="button"
             onClick={openCompare}
             aria-label="Abrir comparación"
-            className="mt-4 grid w-full grid-cols-2 lg:grid-cols-2 lg:max-w-xl gap-3 text-left transition-opacity duration-150 active:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="mt-3 grid w-full grid-cols-2 gap-3 text-left transition-opacity duration-150 active:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {heroPhoto(heroBefore, "Antes")}
             {heroPhoto(heroAfter, "Ahora")}
           </button>
-          <Button size="lg" className="mt-6 w-full" onClick={openCompare}>
+          <Button size="lg" className="mt-5 w-full" onClick={openCompare}>
             Comparar antes y después
           </Button>
         </section>
@@ -673,7 +674,7 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
         const latest = photos[0];
         const latestUrl = signed.get(latest.photo_url);
         return (
-          <section className="flex gap-4 rounded-[22px] border border-border bg-card p-4">
+          <section className="flex gap-4 rounded-[22px] bg-card p-4">
             <button
               type="button"
               onClick={() => {
@@ -688,14 +689,13 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
                 : <PhotoPlaceholder />}
             </button>
             <div className="flex min-w-0 flex-1 flex-col">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Tu último scan</p>
+              <p className="type-footnote font-semibold uppercase tracking-[0.16em] text-primary">Tu último scan</p>
               <p className="mt-1 type-footnote tabular-nums text-muted-foreground">{latest.taken_at ? longDate(latest.taken_at) : "Sin fecha"}</p>
               <h2 className="mt-3 type-headline">Compara tu evolución</h2>
               <p className="mt-1 type-subhead text-muted-foreground">Con otro scan del mismo ángulo verás el antes y el ahora, lado a lado.</p>
               {onGoScan && (
                 <Button
-                  variant="outline"
-                  size="sm"
+                  variant="secondary"
                   className="mt-4 self-start"
                   onClick={() => {
                     void hapticTap();
@@ -717,7 +717,7 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
       {/* Photo grid by month */}
       {ready && Object.entries(grouped).map(([month, monthPhotos]) => (
         <section key={month}>
-          <h3 className="mb-3 type-headline first-letter:uppercase">{monthLabel(month)}</h3>
+          <h3 className="mb-2.5 type-title3 first-letter:uppercase">{monthLabel(month)}</h3>
           <div className="grid grid-cols-3 gap-2 md:grid-cols-4 lg:grid-cols-6">
             {monthPhotos.map((photo) => {
               const photoUrl = signed.get(photo.photo_url);

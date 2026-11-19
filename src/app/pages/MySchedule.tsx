@@ -164,6 +164,13 @@ const MySchedule = () => {
         return;
       }
 
+      // Plan con rutinas tuyas y «Conservar»: la semana queda guardada y el plan, tal cual (no en silencio).
+      if (planRes && "kept" in planRes && planRes.kept) {
+        void hapticNotify("success");
+        toast.info("Semana guardada. Tu plan tiene rutinas tuyas y se queda tal cual.", { id: toastId });
+        return;
+      }
+
       if (gcalTok && syncRes?.data) {
         const synced = syncRes.data?.synced ?? 0;
         void hapticNotify("success");

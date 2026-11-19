@@ -1,122 +1,84 @@
 import SwiftUI
 
-/// Shareable scan summary. It deliberately omits the user's source photos.
+/// Imagen del scan para compartir (historia 9:16, 360 × 640 a ×3 = 1080 × 1920), espejo de
+/// `drawScanStory` en la web (ScanShareCard.tsx) y con la firma del entreno (`WorkoutShareCard`):
+/// la fecha arriba, «Mi análisis físico», la nota de físico en Big Shoulders, el foco en dorado,
+/// la frase del diagnóstico, tres cifras y el AP con autopilotplan.com al pie. Nunca lleva tus fotos.
 struct ScanShareCardView: View {
     let result: ScanResult
+    var date = Date()
 
-    private var summary: String? {
-        [result.headline_diagnosis, result.summary]
-            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .first { !$0.isEmpty }
-    }
-
-    private var focus: String? {
-        result.improvements?.compactMap(\.label).first { !$0.isEmpty }
-    }
+    private let secondary = Color(red: 0.659, green: 0.659, blue: 0.682)
+    private let ink = Color(red: 0.961, green: 0.961, blue: 0.969)
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 8) {
-                BrandMark(size: 22)
-                Text("Autopilot")
-                    .font(.apHeadline)
-                    .foregroundStyle(Palette.foreground)
-                Spacer()
-                Text(Date().formatted(.dateTime.day().month(.abbreviated).locale(Locale(identifier: "es_ES"))))
-                    .font(.apFootnote)
-                    .foregroundStyle(Palette.muted)
-            }
-
-            Spacer(minLength: 28)
-
-            Text("Tu análisis corporal")
-                .font(.apTitle1)
-                .foregroundStyle(Palette.foreground)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Text("Físico")
-                .font(.apSubhead)
-                .foregroundStyle(Palette.muted)
-                .padding(.top, 24)
-
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(result.physique.map { NumberText.decimal($0) } ?? "—")
-                    .font(.figure(size: 80))
-                    .foregroundStyle(Palette.foreground)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                Text("/ 10")
-                    .font(.apTitle2)
-                    .foregroundStyle(Palette.muted)
-            }
-            .padding(.top, 2)
-
-            HStack(spacing: 10) {
-                if let potential = result.potential {
-                    metric("Potencial", NumberText.decimal(potential), accent: true)
+        ZStack(alignment: .top) {
+            Color.black
+            RadialGradient(colors: [Palette.gold.opacity(0.14), .clear], center: UnitPoint(x: 0.5, y: 0.052), startRadius: 0, endRadius: 217)
+            VStack(spacing: 0) {
+                Text(ScanFormat.shareDate(date))
+                    .font(.inter(size: 13, weight: .medium)).foregroundStyle(secondary)
+                    .padding(.top, 36)
+                VStack(spacing: 4) {
+                    Text(ScanFormat.shareTitle)
+                        .font(.inter(size: 28, weight: .heavy)).foregroundStyle(.white)
+                        .lineLimit(1).minimumScaleFactor(0.5)
+                    Text(ScanFormat.shareSubtitle)
+                        .font(.inter(size: 15, weight: .medium)).foregroundStyle(secondary)
+                        .lineLimit(1).minimumScaleFactor(0.7)
                 }
-                if let bodyFat = result.body_composition?.body_fat_pct {
-                    metric("Grasa est.", "\(NumberText.decimal(bodyFat))%")
+                .padding(.top, 96)
+                Text(ScanFormat.shareHero)
+                    .font(.inter(size: 11.5, weight: .semibold)).foregroundStyle(secondary)
+                    .padding(.top, 52)
+                // La nota y su «/10» siempre en una línea.
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text(ScanFormat.score(result.physique)).font(.figure(size: 80)).foregroundStyle(.white)
+                    if result.physique != nil {
+                        Text("/10").font(.inter(size: 21.6, weight: .semibold)).foregroundStyle(secondary)
+                    }
                 }
-            }
-            .padding(.top, 18)
-
-            if let summary {
-                Text(summary)
-                    .font(.apBody)
-                    .foregroundStyle(Palette.muted)
-                    .lineLimit(5)
-                    .fixedSize(horizontal: false, vertical: true)
+                .lineLimit(1).minimumScaleFactor(0.5)
+                if let focus = ScanFormat.shareFocus(result) {
+                    Text("\(ScanFormat.shareFocus) · \(focus)")
+                        .font(.inter(size: 11.5, weight: .semibold)).foregroundStyle(Palette.gold)
+                        .lineLimit(1).minimumScaleFactor(0.65).truncationMode(.tail)
+                        .padding(.horizontal, 12).frame(height: 23)
+                        .background(Palette.gold.opacity(0.14), in: Capsule())
+                        .padding(.top, 8)
+                }
+                if let headline = ScanFormat.shareHeadline(result) {
+                    Text(headline)
+                        .font(.inter(size: 14, weight: .medium)).foregroundStyle(ink)
+                        .multilineTextAlignment(.center).lineLimit(3).lineSpacing(2.5)
+                        .padding(.top, 24)
+                }
+                Spacer(minLength: 0)
+                let stats = ScanFormat.shareStats(result)
+                if !stats.isEmpty {
+                    HStack(spacing: 0) {
+                        ForEach(Array(stats.enumerated()), id: \.offset) { index, stat in
+                            if index > 0 { Rectangle().fill(.white.opacity(0.12)).frame(width: 0.7, height: 43) }
+                            VStack(spacing: 4) {
+                                Text(stat.1).font(.figure(size: 32))
+                                    .foregroundStyle(index == 0 ? Palette.gold : .white)
+                                    .lineLimit(1).minimumScaleFactor(0.5)
+                                Text(stat.0).font(.inter(size: 13, weight: .medium)).foregroundStyle(secondary)
+                                    .lineLimit(1).minimumScaleFactor(0.8)
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                    }
+                }
+                BrandMark(size: 24)
                     .padding(.top, 24)
+                Text("autopilotplan.com")
+                    .font(.inter(size: 13, weight: .medium)).foregroundStyle(secondary)
+                    .padding(.top, 10).padding(.bottom, 34)
             }
-
-            if let focus {
-                Text(focus)
-                    .font(.apSubhead.weight(.semibold))
-                    .foregroundStyle(Palette.gold)
-                    .lineLimit(2)
-                    .padding(.top, 16)
-            }
-
-            Spacer(minLength: 24)
-
-            VStack(spacing: 8) {
-                Text("Lectura orientativa con IA")
-                    .font(.apFootnote)
-                    .foregroundStyle(Palette.muted)
-                Text("autopilotplan.com/scan")
-                    .font(.apFootnote.weight(.medium))
-                    .foregroundStyle(Palette.foreground)
-            }
-            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 25)
         }
-        .padding(28)
         .frame(width: 360, height: 640)
-        .background(alignment: .topTrailing) {
-            RadialGradient(
-                colors: [Palette.gold.opacity(0.14), .clear],
-                center: .topTrailing,
-                startRadius: 0,
-                endRadius: 260
-            )
-        }
-        .background(Palette.background)
-        .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
-    }
-
-    private func metric(_ title: String, _ value: String, accent: Bool = false) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title)
-                .font(.apFootnote)
-                .foregroundStyle(Palette.muted)
-            Text(value)
-                .font(.figure(size: 28))
-                .foregroundStyle(accent ? Palette.gold : Palette.foreground)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .surface()
+        .environment(\.colorScheme, .dark)
     }
 }

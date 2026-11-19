@@ -4,8 +4,8 @@ import UIKit
 #endif
 import Supabase
 
-/// Detalle y edición de una rutina desde Inicio, estilo Hevy: nombre arriba, ejercicios en
-/// columna con sus series, añadir ejercicio, empezar. Iconos minimalistas (SF Symbols), sin emojis.
+/// «Editar sesión» desde Inicio: portada, nombre, día e icono arriba y, debajo, los ejercicios con
+/// la misma fila plegable que «Editar mi rutina» (`PlanExerciseRow`). Una sola acción dorada: Guardar.
 struct RoutineDetailSheet: View {
     @EnvironmentObject private var session: SessionModel
     @Environment(\.dismiss) private var dismiss
@@ -47,70 +47,65 @@ struct RoutineDetailSheet: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 24) {
                     // Portada + nombre
-                    HStack(alignment: .top, spacing: 14) {
+                    HStack(alignment: .center, spacing: 14) {
                         Button { Task { await generateCover() } } label: {
-                            ZStack {
-                                if let url = coverUrl, let u = URL(string: url) {
-                                    CachedAsyncImage(url: u) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
-                                } else if let icon, !icon.isEmpty, !icon.hasPrefix("http") {
-                                    Image(systemName: icon).font(.inter(size: 28, weight: .semibold)).foregroundStyle(Palette.gold)
-                                } else {
-                                    Image(systemName: "dumbbell").font(.inter(size: 24, weight: .semibold)).foregroundStyle(Palette.muted)
+                            cover
+                                .frame(width: 88, height: 88)
+                                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                                .overlay(alignment: .bottomTrailing) {
+                                    Image(systemName: "sparkles").font(.system(size: 11, weight: .bold)).foregroundStyle(Palette.background)
+                                        .frame(width: 24, height: 24).background(Palette.gold, in: Circle())
+                                        .overlay(Circle().strokeBorder(Palette.background, lineWidth: 2))
+                                        .offset(x: 6, y: 6)
                                 }
-                                if generatingCover {
-                                    Palette.card.opacity(0.6)
-                                    BrandLoader().tint(Palette.gold)
-                                }
-                            }
-                            .frame(width: 88, height: 88)
-                            .background(Palette.secondary, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Palette.foreground.opacity(0.08), lineWidth: 1))
-                            .overlay(alignment: .bottomTrailing) {
-                                Image(systemName: "camera.fill").font(.system(size: 11, weight: .bold)).foregroundStyle(Palette.background)
-                                    .padding(5).background(Palette.gold, in: Circle()).offset(x: 4, y: 4)
-                            }
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel("Portada. Tocar para generar con IA")
+                        .accessibilityLabel("Portada de la sesión")
+                        .accessibilityHint("Genera una portada nueva con IA")
 
                         VStack(alignment: .leading, spacing: 6) {
-                            Text("Nombre").font(.apCaption).foregroundStyle(Palette.muted)
+                            Text("Nombre").font(.apFootnote).foregroundStyle(Palette.muted).padding(.leading, 4)
+                                .accessibilityHidden(true)
                             TextField("Nombre de la sesión", text: $name)
-                                .font(.apTitle2.weight(.bold))
-                                .padding(12)
-                                .background(Palette.secondary, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                .font(.apHeadline).textFieldStyle(.plain)
+                                .padding(.horizontal, 18).frame(height: 52)
+                                .background(Palette.secondary, in: Capsule())
+                                .accessibilityLabel("Nombre de la sesión")
                         }
                     }
 
                     // Día de la semana
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Día").font(.apCaption).foregroundStyle(Palette.muted)
-                    Menu {
-                        ForEach(0..<DayNames.all.count, id: \.self) { i in
-                            let d = DayNames.all[i]
-                            Button {
-                                Haptics.selection()
-                                selectedDay = d
-                            } label: {
-                                if selectedDay == d { Label(d, systemImage: "checkmark") } else { Text(d) }
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Día").font(.apFootnote).foregroundStyle(Palette.muted).padding(.leading, 4)
+                            .accessibilityHidden(true)
+                        Menu {
+                            ForEach(0..<DayNames.all.count, id: \.self) { i in
+                                let d = DayNames.all[i]
+                                Button {
+                                    Haptics.selection()
+                                    selectedDay = d
+                                } label: {
+                                    if selectedDay == d { Label(d, systemImage: "checkmark") } else { Text(d) }
+                                }
                             }
+                        } label: {
+                            HStack {
+                                Text(selectedDay).font(.apBody.weight(.semibold))
+                                Spacer()
+                                Image(systemName: "chevron.up.chevron.down").font(.system(size: 12, weight: .semibold)).foregroundStyle(Palette.muted)
+                            }
+                            .padding(.horizontal, 18).frame(height: 52)
+                            .background(Palette.secondary, in: Capsule())
+                            .contentShape(Capsule())
                         }
-                    } label: {
-                        HStack {
-                            Text(selectedDay).font(.apBody.weight(.semibold))
-                            Spacer()
-                            Image(systemName: "chevron.up.chevron.down").font(.system(size: 12, weight: .semibold)).foregroundStyle(Palette.muted)
-                        }
-                        .padding(14)
-                        .background(Palette.secondary, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Día: \(selectedDay)")
                     }
-                    .buttonStyle(.plain)
-                }
 
-                // Icono (colapsable)
-                    DisclosureGroup("Icono (SF Symbols)", isExpanded: $showIcons) {
+                    // Icono (plegado)
+                    DisclosureGroup(isExpanded: $showIcons) {
                         FlowRow(spacing: 8) {
                             ForEach(icons, id: \.self) { symbol in
                                 Button {
@@ -121,46 +116,47 @@ struct RoutineDetailSheet: View {
                                     Image(systemName: symbol)
                                         .font(.inter(size: 18, weight: .semibold))
                                         .frame(width: 44, height: 44)
-                                        .foregroundStyle(icon == symbol ? Color.black : Palette.foreground)
-                                        .background(icon == symbol ? Palette.gold : Palette.secondary, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                        .foregroundStyle(icon == symbol ? Palette.gold : Palette.foreground)
+                                        .background(icon == symbol ? Palette.gold.opacity(0.15) : Palette.secondary,
+                                                    in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                                 }
                                 .buttonStyle(.plain)
+                                .accessibilityAddTraits(icon == symbol ? .isSelected : [])
                             }
                         }
-                        .padding(.top, 8)
+                        .padding(.top, 12)
+                    } label: {
+                        Text("Icono").font(.apHeadline).foregroundStyle(Palette.foreground)
                     }
-                    .font(.apCaption).foregroundStyle(Palette.muted)
+                    .tint(Palette.muted)
 
-                    // Generar portada
+                    // Portada con IA: secundaria (la acción dorada es «Guardar»).
                     Button { Task { await generateCover() } } label: {
-                        HStack {
-                            if generatingCover { BrandLoader().tint(.black) }
+                        HStack(spacing: 8) {
+                            if generatingCover { BrandLoader() }
                             else { Image(systemName: "sparkles").font(.inter(size: 14, weight: .semibold)) }
                             Text(generatingCover ? "Generando…" : "Generar portada con IA")
-                                .font(.apSubhead.weight(.semibold))
                         }
-                        .foregroundStyle(Palette.background)
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                        .background(Palette.gold, in: Capsule())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pillSecondary)
                     .disabled(generatingCover || exerciseIds.isEmpty)
 
-                    // Ejercicios: edición completa (series, reps, kg, descanso), como en Entrenar.
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("Ejercicios").font(.apHeadline)
+                    // Ejercicios: edición completa (series, reps, peso, descanso), como «Editar mi rutina».
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(alignment: .firstTextBaseline) {
+                            Text("Ejercicios").font(.apTitle3).accessibilityAddTraits(.isHeader)
                             Spacer()
-                            Text("\(exercises.count)").font(.apSubhead.monospacedDigit()).foregroundStyle(Palette.muted)
+                            if !exercises.isEmpty {
+                                Text(ExerciseLibraryCatalog.count(exercises.count)).font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted)
+                            }
                         }
                         if exercises.isEmpty {
-                            Text("Sin ejercicios. Añade el primero.")
-                                .font(.apFootnote).foregroundStyle(Palette.muted)
-                                .padding(.vertical, 8)
+                            Text("Añade el primer ejercicio de esta sesión.")
+                                .font(.apSubhead).foregroundStyle(Palette.muted)
                         } else {
-                            VStack(spacing: 10) {
+                            VStack(spacing: 12) {
                                 ForEach(Array(exercises.enumerated()), id: \.offset) { index, ex in
-                                    ExerciseEditRow(exercise: ex, index: index, total: exercises.count,
+                                    PlanExerciseRow(exercise: ex, index: index, total: exercises.count,
                                         onChange: { updated in exercises[index] = updated },
                                         onMove: { dir in
                                             let target = index + dir
@@ -168,34 +164,31 @@ struct RoutineDetailSheet: View {
                                             exercises.swapAt(index, target)
                                             Haptics.selection()
                                         },
-                                        onRemove: { Haptics.tap(); exercises.remove(at: index) })
+                                        onRemove: { exercises.remove(at: index) })
                                 }
                             }
                         }
-                        Button { addingExercise = true } label: {
-                            Label("Añadir ejercicio", systemImage: "plus")
-                                .font(.apSubhead.weight(.medium))
-                                .foregroundStyle(Palette.foreground)
-                                .frame(maxWidth: .infinity, minHeight: 44)
-                                .background(Palette.secondary, in: Capsule())
-                        }
-                        .buttonStyle(.plain)
+                        Button { addingExercise = true } label: { Label("Añadir ejercicios", systemImage: "plus") }
+                            .buttonStyle(.pillSecondary)
                     }
 
                     if let error { Text(error).font(.apFootnote).foregroundStyle(Palette.destructive) }
 
-                    // Guardar
+                    // Guardar: la única acción dorada.
                     Button {
                         Task { await save() }
                     } label: {
-                        if saving { BrandLoader().tint(.black) } else { Text("Guardar") }
+                        if saving { BrandLoader().accessibilityLabel("Guardando") } else { Text("Guardar") }
                     }
                     .buttonStyle(.pill)
                     .disabled(saving || name.trimmingCharacters(in: .whitespaces).isEmpty)
                     .frame(maxWidth: .infinity)
                 }
                 .padding(20)
+                .frame(maxWidth: 680)
+                .frame(maxWidth: .infinity)
             }
+            .scrollDismissesKeyboard(.interactively)
             .screenBackground()
             .navigationTitle(name.isEmpty ? "Rutina" : name)
             #if os(iOS)
@@ -211,7 +204,35 @@ struct RoutineDetailSheet: View {
             }
         }
         .presentationDetents([.large])
-        .presentationBackground(Palette.card)
+        .presentationBackground(Palette.background)
+    }
+
+    /// Portada: la generada, el icono elegido o, si no hay, la foto del primer ejercicio (o la de
+    /// marca) con la huella mientras carga. Nunca un cuadro gris con una mancuerna.
+    @ViewBuilder private var cover: some View {
+        ZStack {
+            Palette.secondary
+            if let url = coverUrl, let u = URL(string: url) {
+                CachedAsyncImage(url: u) { $0.resizable().scaledToFill() } placeholder: { coverGlyph }
+            } else if let icon, !icon.isEmpty, !icon.hasPrefix("http") {
+                Image(systemName: icon).font(.inter(size: 28, weight: .semibold)).foregroundStyle(Palette.gold)
+            } else if let photo = URL(string: exercises.compactMap(\.image_url).first(where: { !$0.isEmpty }) ?? BrandPhotos.string(.gym)) {
+                CachedAsyncImage(url: photo, maxSide: 300) { $0.resizable().scaledToFill() } placeholder: { coverGlyph }
+            } else {
+                coverGlyph
+            }
+            if generatingCover {
+                Palette.card.opacity(0.6)
+                BrandLoader()
+            }
+        }
+    }
+
+    @ViewBuilder private var coverGlyph: some View {
+        if let first = exercises.first {
+            ExerciseMotionGlyph(spec: ExerciseMotion.specFor(name: first.name, pattern: nil, stimulus: nil, load: nil, muscleGroup: first.muscle_group))
+                .padding(12)
+        }
     }
 
     private func generateCover() async {
@@ -249,6 +270,11 @@ struct RoutineDetailSheet: View {
             updated[idx].session_icon = icon
             updated[idx].cover_url = coverUrl
             updated[idx].exercises = exercises.isEmpty ? nil : exercises
+            // Editada a mano: solo esta sesión pasa a ser tuya (el piloto automático no la sustituye).
+            // El icono y la portada no cuentan: como «Personalizar» en la web, no cambian el modo del plan.
+            var before = day; before.custom = nil; before.session_icon = nil; before.cover_url = nil
+            var after = updated[idx]; after.custom = nil; after.session_icon = nil; after.cover_url = nil
+            if before != after { updated[idx].custom = true }
         }
         let clean = updated.filter { $0.type == "actividad" || !($0.exercises ?? []).isEmpty }
             .sorted { (DayNames.all.firstIndex(of: $0.day) ?? 0) < (DayNames.all.firstIndex(of: $1.day) ?? 0) }
@@ -265,61 +291,5 @@ struct RoutineDetailSheet: View {
             Haptics.error()
             self.error = "No se pudo guardar. Inténtalo de nuevo."
         }
-    }
-}
-
-
-/// Fila editable de un ejercicio de la rutina (igual que en PlanEditorView).
-private struct ExerciseEditRow: View {
-    let exercise: GymExercise
-    let index: Int
-    let total: Int
-    var onChange: (GymExercise) -> Void
-    var onMove: (Int) -> Void
-    var onRemove: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 10) {
-                CachedAsyncImage(url: exercise.image_url.flatMap(URL.init(string:))) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
-                    .frame(width: 44, height: 44).clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                Text(exercise.name).font(.apHeadline).lineLimit(2).frame(maxWidth: .infinity, alignment: .leading)
-                iconButton("lu-chevron-left", rotation: 90, label: "Subir", disabled: index == 0) { onMove(-1) }
-                iconButton("lu-chevron-left", rotation: -90, label: "Bajar", disabled: index == total - 1) { onMove(1) }
-                iconButton("lu-x", rotation: 0, label: "Quitar", disabled: false, action: onRemove)
-            }
-            HStack(spacing: 8) {
-                field("Series", Binding(get: { String(exercise.series) }, set: { var e = exercise; e.series = Int($0) ?? e.series; onChange(e) }), numeric: true)
-                field("Reps", Binding(get: { exercise.reps }, set: { var e = exercise; e.reps = $0; onChange(e) }))
-                field("Kg", Binding(get: { exercise.weight }, set: { var e = exercise; e.weight = $0; onChange(e) }))
-                field("Descanso", Binding(get: { exercise.rest }, set: { var e = exercise; e.rest = $0; onChange(e) }))
-            }
-        }
-        .padding(12)
-        .surface(12)
-        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Color.white.opacity(0.06), lineWidth: 1))
-    }
-
-    private func field(_ label: String, _ text: Binding<String>, numeric: Bool = false) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(label).font(.apCaption).foregroundStyle(Palette.muted)
-            TextField(label, text: text)
-                .font(.apSubhead.monospacedDigit())
-                #if os(iOS)
-                .keyboardType(numeric ? .numberPad : .default)
-                #endif
-                .padding(.horizontal, 10).frame(height: 38)
-                .background(Palette.secondary, in: Capsule())
-        }
-    }
-
-    private func iconButton(_ icon: String, rotation: Double, label: String, disabled: Bool, action: @escaping () -> Void) -> some View {
-        Button { Haptics.tap(); action() } label: {
-            Image(icon).renderingMode(.template).resizable().frame(width: 14, height: 14)
-                .rotationEffect(.degrees(rotation))
-                .frame(width: 30, height: 30).background(Palette.secondary, in: Circle())
-        }
-        .buttonStyle(.plain).foregroundStyle(Palette.muted).disabled(disabled).opacity(disabled ? 0.4 : 1)
-        .accessibilityLabel(label)
     }
 }

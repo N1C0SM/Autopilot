@@ -27,13 +27,14 @@ interface Props {
 export function ProgressHero({ photo, eyebrow, title, message, perks, action, photoPosition = "50% 35%" }: Props) {
   const titleId = `progress-hero-${eyebrow.toLowerCase().replace(/\s+/g, "-")}`;
   return (
-    <section aria-labelledby={titleId} className="overflow-hidden rounded-[28px] bg-card ring-1 ring-primary/15">
+    // Portada sin borde: la tarjeta se separa del fondo por su luz y su sombra (tokens de profundidad).
+    <section aria-labelledby={titleId} className="overflow-hidden rounded-[28px] bg-card">
       <div className="relative h-52">
         <img src={photo} alt="" decoding="async" style={{ objectPosition: photoPosition }} className="absolute inset-0 h-full w-full object-cover" />
         <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-card via-black/45 to-black/10" />
         <div className="absolute inset-x-5 bottom-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">{eyebrow}</p>
-          <h2 id={titleId} className="mt-1 text-[26px] font-bold leading-tight tracking-tight text-white">{title}</h2>
+          <p className="type-footnote font-semibold uppercase tracking-[0.16em] text-primary">{eyebrow}</p>
+          <h2 id={titleId} className="mt-1 type-title1 text-white">{title}</h2>
         </div>
       </div>
       <div className="px-5 pb-5 pt-2">

@@ -4,10 +4,10 @@ import { Button } from "@/shared/components/ui/button";
 import { Spinner } from "@/shared/components/ui/spinner";
 import { hapticSelection, hapticTap, isNative, shareFileOrImage } from "@/shared/lib/native";
 import { toast } from "sonner";
-import autopilotLogo from "@/shared/assets/autopilot-logo.png";
 import { BRAND_A, BRAND_P, BRAND_VIEWBOX } from "@/shared/components/ui/brand-mark";
 import { bodyRegions, regionMuscles, smoothPath } from "@/app/components/dashboard/MuscleMapFigure";
 import { BRAND_GOLD, INK, INK_TEXT, MUSCLE_HEAT } from "@/shared/lib/palette";
+import { groupedInt, muscleLine, sessionHighlight } from "@/shared/lib/workoutSummaryFormat";
 
 interface Props {
   /** Imagen que se comparte. Si se indica, no se muestra el selector. */
@@ -22,14 +22,6 @@ interface Props {
   muscleSetCounts?: Record<string, number>;
   previousVolumeKg?: number;
 }
-
-const loadImage = (src: string) => new Promise<HTMLImageElement>((res, rej) => {
-  const img = new Image();
-  const t = setTimeout(() => rej(new Error("image timeout")), 5000);
-  img.onload = () => { clearTimeout(t); res(img); };
-  img.onerror = (e) => { clearTimeout(t); rej(e); };
-  img.src = src;
-});
 
 // Dibuja el mismo cuerpo vectorial que el mapa de la app, coloreado por series.
 function drawFigure(ctx: CanvasRenderingContext2D, side: "front" | "back", p: Props, x: number, y: number, scale: number) {
@@ -56,7 +48,7 @@ type Variant = "resumen" | "musculos";
 const F = "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', system-ui, sans-serif";
 // Cifras con la firma de marca (Big Shoulders, .claude/design/marca.md).
 const FIG = `"Big Shoulders", ${F}`;
-const fmt = (n: number) => Math.round(n).toLocaleString("es-ES");
+const fmt = groupedInt;
 
 // Monograma AP de la marca, a lo ancho del cuadro (x, y, size) y centrado en vertical.
 export function drawBrandA(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, color = BRAND_GOLD) {
@@ -87,67 +79,52 @@ function drawBackdrop(ctx: CanvasRenderingContext2D, W: number, H: number) {
   ctx.fillRect(0, 0, W, H);
 }
 
-// The most share-worthy fact of this session: PR > progress vs last time > nothing.
-function highlight(p: Props): { type: "pr" | "progress"; label: string } | null {
-  if (p.records.length) {
-    return { type: "pr", label: `Nuevo récord · ${p.records[0]}` };
-  }
-  const prev = p.previousVolumeKg || 0, diff = p.volumeKg - prev;
-  if (prev > 0 && diff > 0) {
-    return {
-      type: "progress",
-      label: `+${fmt(diff)} kg vs. la última sesión (+${Math.round((diff / prev) * 100)} %)`,
-    };
-  }
-  return null;
+// Cabecera sin el nombre de la marca (marca.md): solo la fecha; el AP firma al pie.
+function drawHeader(ctx: CanvasRenderingContext2D, W: number, p: Props) {
+  ctx.textBaseline = "middle"; ctx.textAlign = "center";
+  ctx.fillStyle = INK_TEXT.secondary; ctx.font = `500 39px ${F}`;
+  ctx.fillText(`Completado · ${p.date}`, W / 2, 130);
 }
 
-function drawHeader(ctx: CanvasRenderingContext2D, W: number, p: Props, logo?: HTMLImageElement | null) {
-  ctx.textBaseline = "middle"; ctx.textAlign = "left";
-  let x = 76;
-  if (logo) { ctx.drawImage(logo, x, 82, 66, 66); x += 82; }
-  ctx.fillStyle = INK_TEXT.primary; ctx.font = `700 50px ${F}`;
-  ctx.fillText("Autopilot", x, 115);
-  ctx.textAlign = "right"; ctx.fillStyle = INK_TEXT.secondary; ctx.font = `500 39px ${F}`;
-  ctx.fillText(p.date, W - 76, 115);
-}
-
-// Logro de la sesión como cápsula centrada, en el único acento de marca.
+// Logro de la sesión como cápsula centrada, en el único acento de marca (solo lo que sube).
 function drawHighlight(ctx: CanvasRenderingContext2D, p: Props, W: number, y: number) {
-  const hi = highlight(p);
-  if (!hi) return;
-  const color = BRAND_GOLD;
+  const label = sessionHighlight(p);
+  if (!label) return;
   let fs = 34;
   ctx.font = `600 ${fs}px ${F}`;
-  while (ctx.measureText(hi.label).width + 72 > W - 152 && fs > 20) { fs -= 1; ctx.font = `600 ${fs}px ${F}`; }
-  const bw = ctx.measureText(hi.label).width + 72, bh = 68, bx = (W - bw) / 2;
+  while (ctx.measureText(label).width + 72 > W - 152 && fs > 20) { fs -= 1; ctx.font = `600 ${fs}px ${F}`; }
+  const bw = ctx.measureText(label).width + 72, bh = 68, bx = (W - bw) / 2;
   ctx.fillStyle = "rgba(216,178,94,0.14)";
   ctx.beginPath(); ctx.roundRect(bx, y, bw, bh, bh / 2); ctx.fill();
-  ctx.fillStyle = color; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.fillText(hi.label, W / 2, y + bh / 2 + 1);
+  ctx.fillStyle = BRAND_GOLD; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText(label, W / 2, y + bh / 2 + 1);
 }
 
-function drawBigKg(ctx: CanvasRenderingContext2D, value: string, cx: number, baseline: number, maxW: number, size: number) {
+// Cifra protagonista con su unidad al lado («12.450 kg», «18 series»), siempre en una línea.
+function drawBigFigure(ctx: CanvasRenderingContext2D, value: string, unit: string, cx: number, baseline: number, maxW: number, size: number) {
   ctx.textBaseline = "alphabetic";
   let s = size;
-  const measure = () => { ctx.font = `800 ${s}px ${FIG}`; const a = ctx.measureText(value).width; ctx.font = `600 ${s * 0.27}px ${F}`; return a + ctx.measureText("kg").width + 18; };
+  const measure = () => { ctx.font = `800 ${s}px ${FIG}`; const a = ctx.measureText(value).width; ctx.font = `600 ${s * 0.27}px ${F}`; return a + ctx.measureText(unit).width + 18; };
   while (measure() > maxW && s > 80) s -= 8;
   ctx.font = `800 ${s}px ${FIG}`; const nw = ctx.measureText(value).width;
-  ctx.font = `600 ${s * 0.27}px ${F}`; const kw = ctx.measureText("kg").width;
+  ctx.font = `600 ${s * 0.27}px ${F}`; const kw = ctx.measureText(unit).width;
   const x0 = cx - (nw + kw + 18) / 2;
   ctx.textAlign = "left";
   ctx.font = `800 ${s}px ${FIG}`; ctx.fillStyle = INK_TEXT.primary;
   ctx.fillText(value, x0, baseline);
   ctx.font = `600 ${s * 0.27}px ${F}`; ctx.fillStyle = INK_TEXT.secondary;
-  ctx.fillText("kg", x0 + nw + 18, baseline);
+  ctx.fillText(unit, x0 + nw + 18, baseline);
   return s;
 }
 
+/** Volumen de hoy, o las series si la sesión es de peso corporal: nunca «0 kg». */
+function heroFigure(p: Props): { label: string; value: string; unit: string } {
+  if (p.volumeKg > 0) return { label: "Volumen total", value: fmt(p.volumeKg), unit: "kg" };
+  return { label: "Series completadas", value: fmt(p.sets), unit: p.sets === 1 ? "serie" : "series" };
+}
+
 function muscleSubtitle(p: Props) {
-  const top = [...p.muscles].sort((a, b) => (p.muscleSetCounts?.[b] || 0) - (p.muscleSetCounts?.[a] || 0)).slice(0, 3);
-  if (!top.length) return "Sesión completada";
-  const low = top.map((m, i) => (i ? m.toLowerCase() : m));
-  return low.length > 1 ? `${low.slice(0, -1).join(", ")} y ${low[low.length - 1]}` : low[0];
+  return muscleLine(p.muscles, p.muscleSetCounts) || "Sesión completada";
 }
 
 function drawTitle(ctx: CanvasRenderingContext2D, p: Props, y: number, W: number) {
@@ -172,15 +149,16 @@ function drawStats(ctx: CanvasRenderingContext2D, stats: [string, string][], W: 
   });
 }
 
-function drawResumen(ctx: CanvasRenderingContext2D, p: Props, W: number, H: number, logo?: HTMLImageElement | null) {
+function drawResumen(ctx: CanvasRenderingContext2D, p: Props, W: number, H: number) {
   drawBackdrop(ctx, W, H);
-  drawHeader(ctx, W, p, logo);
+  drawHeader(ctx, W, p);
   drawTitle(ctx, p, 600, W);
 
+  const hero = heroFigure(p);
   ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
-  ctx.fillStyle = INK_TEXT.secondary; ctx.font = `600 28px ${F}`;
-  ctx.fillText(p.volumeKg > 0 ? "Volumen total" : "Series", W / 2, 830);
-  drawBigKg(ctx, p.volumeKg > 0 ? fmt(p.volumeKg) : String(p.sets), W / 2, 1050, W - 190, 240);
+  ctx.fillStyle = INK_TEXT.secondary; ctx.font = `600 34px ${F}`;
+  ctx.fillText(hero.label, W / 2, 830);
+  drawBigFigure(ctx, hero.value, hero.unit, W / 2, 1050, W - 190, 240);
   drawHighlight(ctx, p, W, 1120);
 
   drawStats(ctx, [
@@ -191,19 +169,20 @@ function drawResumen(ctx: CanvasRenderingContext2D, p: Props, W: number, H: numb
   drawSignature(ctx, W, H);
 }
 
-function drawMusculos(ctx: CanvasRenderingContext2D, p: Props, W: number, H: number, logo?: HTMLImageElement | null) {
+function drawMusculos(ctx: CanvasRenderingContext2D, p: Props, W: number, H: number) {
   drawBackdrop(ctx, W, H);
-  drawHeader(ctx, W, p, logo);
+  drawHeader(ctx, W, p);
   drawTitle(ctx, p, 330, W);
   drawHighlight(ctx, p, W, 420);
   const scale = 3.3, fw = 100 * scale, fy = 570;
   drawFigure(ctx, "front", p, W / 2 - fw - 30, fy, scale);
   drawFigure(ctx, "back", p, W / 2 + 30, fy, scale);
-  ctx.textAlign = "center"; ctx.textBaseline = "alphabetic"; ctx.fillStyle = INK_TEXT.secondary; ctx.font = `600 28px ${F}`;
-  ctx.fillText(p.volumeKg > 0 ? "Volumen total" : "Series", W / 2, 1330);
-  const s = drawBigKg(ctx, p.volumeKg > 0 ? fmt(p.volumeKg) : String(p.sets), W / 2, 1510, W - 240, 190);
+  const hero = heroFigure(p);
+  ctx.textAlign = "center"; ctx.textBaseline = "alphabetic"; ctx.fillStyle = INK_TEXT.secondary; ctx.font = `600 34px ${F}`;
+  ctx.fillText(hero.label, W / 2, 1330);
+  const s = drawBigFigure(ctx, hero.value, hero.unit, W / 2, 1510, W - 240, 190);
   ctx.textAlign = "center"; ctx.fillStyle = INK_TEXT.secondary; ctx.font = `500 34px ${F}`;
-  ctx.fillText(`${p.sets} series · ${p.exercises} ejercicios`, W / 2, 1510 + Math.min(90, s * 0.45));
+  ctx.fillText(`${p.sets} ${p.sets === 1 ? "serie" : "series"} · ${p.exercises} ${p.exercises === 1 ? "ejercicio" : "ejercicios"}`, W / 2, 1510 + Math.min(90, s * 0.45));
   drawSignature(ctx, W, H);
 }
 
@@ -213,12 +192,11 @@ export async function renderStory(p: Props, variant: Variant): Promise<Blob> {
   c.width = W; c.height = H;
   const ctx = c.getContext("2d");
   if (!ctx) throw new Error("canvas unavailable");
-  const logo = await loadImage(autopilotLogo).catch(() => null);
   await document.fonts?.load(`800 120px "Big Shoulders"`).catch(() => undefined);
   if (variant === "resumen") {
-    drawResumen(ctx, p, W, H, logo);
+    drawResumen(ctx, p, W, H);
   } else {
-    drawMusculos(ctx, p, W, H, logo);
+    drawMusculos(ctx, p, W, H);
   }
   const blob = await new Promise<Blob | null>((res) => {
     try { c.toBlob((b) => res(b), "image/png"); } catch { res(null); }
@@ -245,8 +223,8 @@ export function WorkoutStoryShare(props: Props) {
   const shareText = () => {
     const lines: string[] = [];
     if (props.records.length) lines.push(`Nuevo récord: ${props.records[0]}`);
-    if (props.volumeKg > 0) lines.push(`Carga total: ${Math.round(props.volumeKg).toLocaleString("es-ES")} kg`);
-    lines.push(`${props.sets} series · ${props.exercises} ejercicios`);
+    if (props.volumeKg > 0) lines.push(`Volumen total: ${fmt(props.volumeKg)} kg`);
+    lines.push(`${props.sets} ${props.sets === 1 ? "serie" : "series"} · ${props.exercises} ${props.exercises === 1 ? "ejercicio" : "ejercicios"}`);
     if (props.muscles.length) lines.push(props.muscles.slice(0, 3).join(", "));
     lines.push("Autopilot — autopilotplan.com");
     return lines.join("\n");
@@ -293,11 +271,8 @@ export function WorkoutStoryShare(props: Props) {
         }
       });
       
-    } catch (e: unknown) {
-      const name = (e as Error)?.name || "";
-      const msg = (e as Error)?.message || "";
-      
-      toast.error("No se pudo crear la imagen");
+    } catch {
+      toast.error("No se pudo crear la imagen. Inténtalo de nuevo.");
       setBusy(false);
     }
   };

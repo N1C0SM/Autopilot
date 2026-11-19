@@ -26,18 +26,21 @@ const PlanShieldDialog = () => {
     <ResponsiveSheet
       open={open}
       onOpenChange={(o) => { if (!o) choose("keep"); }}
-      title="Tu rutina está protegida"
-      description="La has creado tú. El piloto automático no la cambia sin tu permiso."
+      title="Tu plan tiene rutinas tuyas"
+      description="El piloto automático no cambia un plan con rutinas tuyas sin tu permiso."
       desktopClassName="sm:max-w-md"
     >
       <div className="flex flex-1 flex-col justify-end gap-3 pb-4 md:justify-start md:pb-0">
-        <div className="mb-2 flex items-center gap-3 rounded-media border border-primary/30 bg-primary/10 p-4">
-          <ShieldCheck className="h-6 w-6 shrink-0 text-primary" aria-hidden />
-          <p className="type-subhead text-muted-foreground">Elige qué hacer. Si guardas una copia, la recuperas cuando quieras desde «Editar mi rutina».</p>
+        {/* Lo que pasa de verdad (generate-plan): no adapta solo una parte; o se conserva todo o se cambia entero. */}
+        <div className="mb-2 flex items-start gap-3 rounded-card bg-primary/10 p-4">
+          <ShieldCheck className="mt-0.5 h-6 w-6 shrink-0 text-primary" aria-hidden />
+          <p className="type-subhead text-foreground/85">
+            Puedes conservar tu plan tal cual o cambiarlo entero por uno nuevo del piloto automático. Si lo cambias, tus rutinas salen del plan; con una copia, las recuperas desde «Editar mi rutina» en este dispositivo.
+          </p>
         </div>
-        <Button size="lg" variant="hero" className="min-h-12 w-full" onClick={() => choose("keep")}>Conservar mi rutina</Button>
-        <Button size="lg" variant="outline" className="min-h-12 w-full" onClick={() => choose("backup")}>Guardar copia y usar la automática</Button>
-        <Button size="lg" variant="ghost" className="min-h-12 w-full text-muted-foreground" onClick={() => choose("replace")}>Sustituir sin copia</Button>
+        <Button size="lg" variant="hero" className="min-h-12 w-full" onClick={() => choose("keep")}>Conservar mi plan</Button>
+        <Button size="lg" variant="secondary" className="min-h-12 w-full" onClick={() => choose("backup")}>Guardar copia y usar el nuevo</Button>
+        <Button size="lg" variant="ghost" className="min-h-12 w-full text-muted-foreground" onClick={() => choose("replace")}>Cambiarlo sin copia</Button>
       </div>
     </ResponsiveSheet>
   );

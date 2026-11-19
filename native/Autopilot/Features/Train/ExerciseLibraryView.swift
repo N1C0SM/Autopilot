@@ -25,6 +25,16 @@ enum ExerciseLibraryCatalog {
     ]
     static let levels = [1: "Básico", 2: "Intermedio", 3: "Avanzado"]
 
+    /// «1 ejercicio», «12 ejercicios», «1.234 ejercicios»: punto de miles siempre y el plural
+    /// correcto. Igual que `exerciseCount` en la web (`exerciseLibrary.ts`).
+    static func count(_ n: Int) -> String { "\(NumberText.grouped(Double(max(0, n)))) \(n == 1 ? "ejercicio" : "ejercicios")" }
+
+    /// La huella de un grupo muscular (la deducida de su nombre): el visual de la tarjeta sin
+    /// foto, como `groupGlyph` en la web.
+    static func groupGlyph(_ group: String) -> ExerciseMotion.Spec {
+        ExerciseMotion.specFor(name: group, pattern: nil, stimulus: nil, load: nil, muscleGroup: group)
+    }
+
     /// Igual que `public.exercise_name_key`: minúsculas, sin acentos ni signos.
     static func nameKey(_ value: String) -> String {
         let folded = value.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: Locale(identifier: "es")).lowercased()
@@ -324,6 +334,20 @@ struct ExerciseLibraryView: View {
     /// Ficha abierta en modo pestaña (la pila es la de la app, no la propia).
     @State private var pushed: LibraryExercise?
     @Environment(\.dismiss) private var dismiss
+    #if !os(macOS)
+    @Environment(\.horizontalSizeClass) private var sizeClass
+    #endif
+
+    /// Columnas de las tarjetas de grupo: 2 en el iPhone y 3 en iPad y Mac, como
+    /// `grid-cols-2 sm:grid-cols-3` en la web (antes el Mac ponía 4 en la columna de 680).
+    private var groupColumns: [GridItem] {
+        #if os(macOS)
+        let count = 3
+        #else
+        let count = sizeClass == .regular ? 3 : 2
+        #endif
+        return Array(repeating: GridItem(.flexible(), spacing: 12), count: count)
+    }
 
     init(userId: UUID?, embedded: Bool = false) {
         self.userId = userId
@@ -399,18 +423,7 @@ struct ExerciseLibraryView: View {
     }
 
     private var searchField: some View {
-        HStack(spacing: 8) {
-            Image("lu-search").resizable().frame(width: 16, height: 16).foregroundStyle(Palette.muted)
-            TextField("Buscar ejercicio", text: $filters.query)
-                .font(.apBody).textFieldStyle(.plain).autocorrectionDisabled()
-                .accessibilityLabel("Buscar ejercicio")
-            if !filters.query.isEmpty {
-                Button { filters.query = "" } label: { Image("lu-x").resizable().frame(width: 16, height: 16).foregroundStyle(Palette.muted) }
-                    .buttonStyle(.plain).accessibilityLabel("Borrar búsqueda")
-            }
-        }
-        .padding(.horizontal, 16).frame(height: 44)
-        .background(Palette.card, in: Capsule())
+        SearchPill(prompt: "Buscar ejercicio", text: $filters.query)
     }
 
     private func selected(_ key: String) -> [String] {
@@ -432,16 +445,20 @@ struct ExerciseLibraryView: View {
                         withAnimation(.easeOut(duration: 0.2)) { facet = facet == f.key ? nil : f.key }
                     } label: {
                         Text(count > 0 ? "\(f.label) · \(count)" : f.label)
-                            .font(.apFootnote.weight(.semibold))
+                            .font(.apFootnote.weight(.semibold).monospacedDigit())
                             .foregroundStyle(count > 0 ? Palette.gold : Palette.foreground)
-                            .padding(.horizontal, 16).frame(height: 36)
+                            .padding(.horizontal, 16).frame(height: 40)
                             .background(count > 0 ? Palette.gold.opacity(0.15) : Palette.secondary, in: Capsule())
                     }
                     .buttonStyle(.plain)
+                    // «Grupo · 2» se lee «Grupo: 2 filtros», como `facetLabel` en la web.
+                    .accessibilityLabel(count > 0 ? "\(f.label): \(count) \(count == 1 ? "filtro" : "filtros")" : f.label)
+                    .accessibilityAddTraits(facet == f.key ? .isSelected : [])
                 }
                 if filters.activeCount > 0 {
-                    Button("Quitar filtros") { filters = LibraryFilters(query: filters.query) }
+                    Button("Quitar filtros") { clearFilters() }
                         .font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.muted).buttonStyle(.plain)
+                        .padding(.horizontal, 12).frame(height: 40)
                 }
             }
         }
@@ -459,27 +476,37 @@ struct ExerciseLibraryView: View {
         .accessibilityAddTraits(on ? .isSelected : [])
     }
 
+    private func clearFilters() { filters = LibraryFilters(query: filters.query) }
+
     @ViewBuilder private var content: some View {
         if model.failed {
-            VStack(spacing: 12) {
-                Text("No se pudo cargar la biblioteca.").font(.apSubhead).foregroundStyle(Palette.muted)
-                Button("Reintentar") { Task { await model.retry(userId: userId) } }.buttonStyle(.pillSecondary)
+            VStack(spacing: 0) {
+                EmptyStateView(symbol: "wifi.exclamationmark", title: "No hemos podido cargar los ejercicios",
+                               message: "Revisa tu conexión y vuelve a intentarlo.")
+                Button("Reintentar") { Task { await model.retry(userId: userId) } }
+                    .buttonStyle(.pillSecondary).fixedSize()
             }
-            .frame(maxWidth: .infinity).padding(.vertical, 40)
+            .frame(maxWidth: .infinity).padding(.bottom, 24)
         } else if model.items == nil {
-            VStack(spacing: 12) {
-                ForEach(0..<6, id: \.self) { _ in RoundedRectangle(cornerRadius: 16).fill(Palette.card).frame(height: 56) }
-            }
+            // Carga con la firma de marca (el AP latiendo), nunca bloques grises.
+            BrandLoader(size: 28).accessibilityLabel("Cargando ejercicios")
+                .frame(maxWidth: .infinity).padding(.vertical, 64)
         } else if browsing {
             browse
         } else {
             let results = ExerciseLibraryCatalog.filter(items, filters)
             if results.isEmpty {
-                Text("Ningún ejercicio coincide. Prueba con otro nombre o quita algún filtro.")
-                    .font(.apSubhead).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity).padding(.vertical, 40)
+                VStack(spacing: 0) {
+                    EmptyStateView(symbol: "magnifyingglass", title: "Prueba con otro nombre",
+                                   message: "Busca por ejercicio o músculo, o quita algún filtro.")
+                    if filters.activeCount > 0 {
+                        Button("Quitar filtros") { clearFilters() }.buttonStyle(.pillSecondary).fixedSize()
+                    }
+                }
+                .frame(maxWidth: .infinity).padding(.bottom, 24)
             } else {
-                Text("\(results.count) \(results.count == 1 ? "ejercicio" : "ejercicios")").font(.apFootnote).foregroundStyle(Palette.muted)
+                Text(ExerciseLibraryCatalog.count(results.count)).font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted)
+                    .padding(.horizontal, 4)
                 ExerciseRows(items: results, favorites: model.favorites) { open($0) }
             }
         }
@@ -509,12 +536,15 @@ struct ExerciseLibraryView: View {
                             ForEach(recent) { e in
                                 Button { open(e) } label: {
                                     VStack(alignment: .leading, spacing: 6) {
-                                        ExerciseThumbView(url: e.image, name: e.name, pattern: e.pattern, stimulus: e.stimulus, load: e.load, width: 112, height: 63)
+                                        ExerciseThumbView(url: e.image, name: e.name, pattern: e.pattern, stimulus: e.stimulus, load: e.load,
+                                                          muscleGroup: e.groups.first, width: 112, height: 63)
                                         Text(e.name).font(.apFootnote.weight(.medium)).lineLimit(2).multilineTextAlignment(.leading)
+                                            .fixedSize(horizontal: false, vertical: true)
                                     }
                                     .frame(width: 112, alignment: .leading)
                                 }
                                 .buttonStyle(.plain)
+                                .accessibilityLabel(e.name)
                             }
                         }
                     }
@@ -528,7 +558,7 @@ struct ExerciseLibraryView: View {
             }
             VStack(alignment: .leading, spacing: 10) {
                 LibrarySectionTitle("Grupos musculares")
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
+                LazyVGrid(columns: groupColumns, spacing: 12) {
                     ForEach(tiles, id: \.0) { tile in
                         Button { Haptics.selection(); filters.groups = [tile.0] } label: { groupTile(tile.0, count: tile.1, image: tile.2) }
                             .buttonStyle(PressableCardStyle())
@@ -538,27 +568,36 @@ struct ExerciseLibraryView: View {
         }
     }
 
+    /// Tarjeta de grupo muscular: la foto real de uno de sus ejercicios con su degradado o, si el
+    /// grupo aún no tiene ninguna, su huella dorada en el centro (como `GroupTile` en la web).
     private func groupTile(_ name: String, count: Int, image: String?) -> some View {
-        ZStack(alignment: .bottomLeading) {
-            Palette.card
-            if let image, let url = URL(string: image) {
-                CachedAsyncImage(url: url, maxSide: 500) { $0.resizable().scaledToFill() } placeholder: { Palette.card }
+        let photo = image.flatMap(URL.init(string:))
+        let glyph = ExerciseMotionGlyph(spec: ExerciseLibraryCatalog.groupGlyph(name))
+            .frame(width: 96, height: 54)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(.bottom, 48)
+        return ZStack(alignment: .bottomLeading) {
+            Color.clear
+            if let photo {
+                CachedAsyncImage(url: photo, maxSide: 500) { $0.resizable().scaledToFill() } placeholder: { glyph }
                     .opacity(0.7)
                 LinearGradient(colors: [.black.opacity(0.8), .black.opacity(0.2), .clear], startPoint: .bottom, endPoint: .top)
             } else {
-                // Sin foto, el propio cuerpo con el grupo en dorado: nunca una tarjeta vacía (como la web).
-                MuscleGroupFigure(group: name)
-                    .padding(12)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+                glyph
             }
             VStack(alignment: .leading, spacing: 2) {
-                Text(name).font(.apHeadline).foregroundStyle(.white)
-                Text("\(count) \(count == 1 ? "ejercicio" : "ejercicios")").font(.apFootnote).foregroundStyle(.white.opacity(0.7))
+                Text(name).font(.apHeadline).foregroundStyle(photo != nil ? Color.white : Palette.foreground).lineLimit(1)
+                Text(ExerciseLibraryCatalog.count(count)).font(.apFootnote.monospacedDigit())
+                    .foregroundStyle(photo != nil ? Color.white.opacity(0.75) : Palette.muted).lineLimit(1)
             }
             .padding(12)
         }
         .aspectRatio(4 / 3, contentMode: .fit)
         .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .surface()
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(name), \(ExerciseLibraryCatalog.count(count))")
+        .accessibilityAddTraits(.isButton)
     }
 }
 
@@ -592,12 +631,14 @@ private struct ExerciseThumbView: View {
     var pattern: String? = nil
     var stimulus: String? = nil
     var load: String? = nil
+    /// Grupo muscular: sin patrón en la ficha, deduce la huella (nunca un hueco vacío).
+    var muscleGroup: String? = nil
     var width: CGFloat = 48
     var height: CGFloat = 48
     var body: some View {
         Group {
             // Igual que `ExerciseThumb` en la web: la foto del ejercicio manda y la huella queda
-            // mientras carga, si falla o si no tiene foto.
+            // mientras carga, si falla o si no tiene foto (la de la ficha o la deducida).
             if let url, let u = URL(string: url) {
                 CachedAsyncImage(url: u, maxSide: 200) { $0.resizable().scaledToFill() } placeholder: { fallback }
             } else {
@@ -609,11 +650,11 @@ private struct ExerciseThumbView: View {
         .accessibilityHidden(true)
     }
 
-    @ViewBuilder private var fallback: some View {
-        if let spec = ExerciseMotion.spec(name: name, pattern: pattern, stimulus: stimulus, load: load) {
-            ZStack { Palette.secondary; ExerciseMotionGlyph(spec: spec).padding(6) }
-        } else {
-            ZStack { Palette.secondary; Image("lu-dumbbell").resizable().frame(width: 18, height: 18).foregroundStyle(Palette.muted) }
+    private var fallback: some View {
+        ZStack {
+            Palette.secondary
+            ExerciseMotionGlyph(spec: ExerciseMotion.specFor(name: name, pattern: pattern, stimulus: stimulus, load: load, muscleGroup: muscleGroup))
+                .padding(6)
         }
     }
 }
@@ -628,7 +669,7 @@ private struct ExerciseRows: View {
             ForEach(Array(items.enumerated()), id: \.element.id) { index, e in
                 Button { onOpen(e) } label: {
                     HStack(spacing: 12) {
-                        ExerciseThumbView(url: e.image, name: e.name, pattern: e.pattern, stimulus: e.stimulus, load: e.load)
+                        ExerciseThumbView(url: e.image, name: e.name, pattern: e.pattern, stimulus: e.stimulus, load: e.load, muscleGroup: e.groups.first)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(e.name).font(.apHeadline).lineLimit(1)
                             Text(e.subtitle).font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(1)
@@ -653,7 +694,7 @@ private struct ExerciseRows: View {
     }
 }
 
-/// Ficha: clip en bucle (o foto, o placeholder), datos clave y secciones con contenido.
+/// Ficha: clip en bucle, foto o la huella del ejercicio; datos clave y secciones con contenido.
 struct ExerciseDetailView: View {
     let exercise: LibraryExercise
     @ObservedObject var model: ExerciseLibraryModel
@@ -679,10 +720,12 @@ struct ExerciseDetailView: View {
                 hero
                 HStack(alignment: .top, spacing: 12) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(exercise.name).font(.inter(size: 28, weight: .bold)).tracking(-0.4)
+                        Text(exercise.name).font(.apTitle1).tracking(-0.4)
                             .fixedSize(horizontal: false, vertical: true)
+                            .accessibilityAddTraits(.isHeader)
                         if !exercise.altNames.isEmpty {
                             Text(exercise.altNames.joined(separator: " · ")).font(.apSubhead).foregroundStyle(Palette.muted)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -694,7 +737,7 @@ struct ExerciseDetailView: View {
                         } label: {
                             Image(systemName: on ? "heart.fill" : "heart").font(.title3)
                                 .foregroundStyle(on ? Palette.gold : Palette.foreground)
-                                .frame(width: 40, height: 40).background(Palette.secondary, in: Circle())
+                                .frame(width: 44, height: 44).background(Palette.secondary, in: Circle())
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel(on ? "Quitar de favoritos" : "Añadir a favoritos")
@@ -710,7 +753,7 @@ struct ExerciseDetailView: View {
                 }
                 sections.padding(.top, 16)
             }
-            .padding(.horizontal, 20).padding(.bottom, 32)
+            .padding(.horizontal, 20).padding(.top, 4).padding(.bottom, 32)
             .frame(maxWidth: 680)
             .frame(maxWidth: .infinity)
         }
@@ -722,25 +765,27 @@ struct ExerciseDetailView: View {
         .task(id: exercise.id) { variantIds = await model.variants(of: exercise.id) }
     }
 
+    /// Héroe 16:9 de la ficha: el clip, la foto o la huella (la de la ficha o la deducida), nunca un
+    /// cuadro de «próximamente». Igual que `ExerciseMedia` en la web.
     @ViewBuilder private var hero: some View {
         let shape = RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
         let videoURL = exercise.video
             .flatMap { URL(string: $0) }
             .flatMap { ["mp4", "mov", "m4v"].contains($0.pathExtension.lowercased()) ? $0 : nil }
+        // Con patrón en la ficha hay «Ritmo»; sin él, la huella deducida solo hace de visual.
         let motion = ExerciseMotion.spec(name: exercise.name, pattern: exercise.pattern, stimulus: exercise.stimulus, load: exercise.load)
+        let glyph = motion ?? ExerciseMotion.specFor(name: exercise.name, pattern: nil, stimulus: exercise.stimulus,
+                                                     load: exercise.load, muscleGroup: exercise.groups.first)
         ZStack(alignment: .bottomLeading) {
-            Palette.card
+            Color.clear
             if let videoURL {
                 LoopingVideo(url: videoURL)
-            } else if let motion, exercise.image == nil || showRhythm {
-                ExerciseMotionHero(spec: motion).padding(12)
+            } else if exercise.image == nil || showRhythm {
+                ExerciseMotionHero(spec: glyph).padding(12)
             } else if let image = exercise.image, let url = URL(string: image) {
-                CachedAsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { Palette.card }
+                CachedAsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { ExerciseMotionHero(spec: glyph).padding(12) }
             } else {
-                VStack(spacing: 8) {
-                    Image("lu-dumbbell").resizable().frame(width: 28, height: 28).foregroundStyle(Palette.muted)
-                    Text("Demostración en preparación").font(.apFootnote).foregroundStyle(Palette.muted)
-                }
+                ExerciseMotionHero(spec: glyph).padding(12)
             }
             // Con foto y huella, se cambia entre las dos con una píldora discreta.
             if motion != nil, exercise.image != nil, videoURL == nil {
@@ -755,6 +800,7 @@ struct ExerciseDetailView: View {
         }
         .aspectRatio(16 / 9, contentMode: .fit)
         .clipShape(shape)
+        .surface(Radius.hero)
         .accessibilityLabel(exercise.name)
     }
 
@@ -823,12 +869,16 @@ struct ExerciseDetailView: View {
             if !e.safety.isEmpty { section("Seguridad") { list(e.safety) } }
             if !variants.isEmpty { section("Variantes") { ExerciseRows(items: variants, favorites: model.favorites, onOpen: open) } }
             if !alternatives.isEmpty { section("Alternativas") { ExerciseRows(items: alternatives, favorites: model.favorites, onOpen: open) } }
+            // Autor y licencia solo cuando la licencia lo exige (CC BY / BY-SA).
             if let credit = e.attribution {
-                if let s = e.sourceUrl, let url = URL(string: s) {
-                    Link(credit, destination: url).font(.apCaption).foregroundStyle(Palette.muted)
-                } else {
-                    Text(credit).font(.apCaption).foregroundStyle(Palette.muted)
+                Group {
+                    if let s = e.sourceUrl, let url = URL(string: s) {
+                        Link(credit, destination: url)
+                    } else {
+                        Text(credit)
+                    }
                 }
+                .font(.apFootnote).foregroundStyle(Palette.muted).padding(.horizontal, 4)
             }
         }
     }

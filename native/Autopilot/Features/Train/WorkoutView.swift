@@ -23,9 +23,14 @@ struct WorkoutField: Hashable {
     var rowID: String { "\(exercise)_\(set)" }
 }
 
-/// Sesión en curso, calcada de `WorkoutTracker.tsx` (vista de lista): barra «Salir · título ·
-/// tiempo · X de Y series · ···», tarjetas de ejercicio con la tabla Serie/Previa/Kg/Reps/✓,
-/// «Añadir serie», y el pie con el descanso (−30 / +30 / Saltar) y Pausar · tiempo · Finalizar.
+/// «1 serie» / «3 series»: el plural va con la cifra (como `plural` en `WorkoutTracker.tsx`).
+func plural(_ n: Int, _ one: String, _ many: String) -> String {
+    "\(NumberText.integer(n)) \(n == 1 ? one : many)"
+}
+
+/// Sesión en curso, calcada de `WorkoutTracker.tsx`: barra «Salir · título · X de Y series · ···»,
+/// carrusel y foto grande (ejercicio a ejercicio) o tarjetas numeradas y plegables (toda la sesión)
+/// con la tabla Serie/Previa/Kg/Reps/✓, y el pie fijo con el descanso y Pausar · tiempo · Finalizar.
 struct WorkoutView: View {
     @ObservedObject var workout: ActiveWorkout
     let userId: UUID
@@ -38,6 +43,8 @@ struct WorkoutView: View {
     @State private var pendingSummary = false
     @State private var discardOpen = false
     @State private var rpe = 7
+    /// Esfuerzo guardado al cerrar (nil = «Completar sin valorar esfuerzo»): lo enseña el resumen.
+    @State private var savedRpe: Int?
     @State private var summaryOpen = false
     /// Campo numérico enfocado: mueve la barra del teclado (anterior/siguiente, ± y «Listo»)
     /// y permite centrar la serie sin que el teclado la tape.
@@ -88,13 +95,15 @@ struct WorkoutView: View {
 
     private var sessionScrollView: some View {
         ScrollView {
+            // Columna centrada de 680 en iPad y Mac, como Hoy y Nutrición (y la web ancha).
             LazyVStack(alignment: .leading, spacing: 12) {
                 sessionContent
             }
             .padding(.horizontal, 16)
             .padding(.top, 12)
             .padding(.bottom, 24)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: 680, alignment: .leading)
+            .frame(maxWidth: .infinity)
         }
         .scrollDismissesKeyboard(.interactively)
     }
@@ -139,7 +148,8 @@ struct WorkoutView: View {
     }
 
     private var finishIncompleteMessage: String {
-        "Te quedan " + String(workout.totalSets - workout.doneSets) + " series. Puedes terminarlo igualmente o seguir entrenando."
+        let left = workout.totalSets - workout.doneSets
+        return "\(left == 1 ? "Te queda" : "Te quedan") \(left) de \(plural(workout.totalSets, "serie", "series")). Puedes terminarlo igualmente o seguir entrenando."
     }
 
     private func handleFinishIncompleteDismiss() {
@@ -205,9 +215,12 @@ struct WorkoutView: View {
         .onReceive(NotificationCenter.default.publisher(for: .restMinus), perform: handleRestMinus)
     }
 
+    /// «05:12» o «1:05:12», como `formatElapsed` en la web; en pausa se queda quieto.
     private func elapsed(_ now: Date) -> String {
         let reference = workout.draft.pausedAt ?? now
-        return Duration.seconds(max(0, reference.timeIntervalSince(workout.draft.startedAt))).formatted(.time(pattern: .minuteSecond))
+        let total = max(0, Int(reference.timeIntervalSince(workout.draft.startedAt)))
+        let h = total / 3600, m = (total % 3600) / 60, sec = total % 60
+        return h > 0 ? String(format: "%d:%02d:%02d", h, m, sec) : String(format: "%02d:%02d", m, sec)
     }
 
     private func finish() {
@@ -218,9 +231,32 @@ struct WorkoutView: View {
         if workout.doneSets < workout.totalSets { finishIncompleteOpen = true } else { rpeOpen = true }
     }
 
-    /// «Finalizar» arriba a la derecha, como en Hevy: píldora dorada, siempre visible.
+    /// Píldora de la barra inferior con icono; la dorada es «Finalizar» (la única dorada de la pantalla).
+    private func barLabel(_ title: String, symbol: String, primary: Bool = false) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: symbol).font(.inter(size: 15, weight: .bold))
+            Text(title).font(.apHeadline).lineLimit(1)
+        }
+        .foregroundStyle(primary ? Palette.background : Palette.foreground)
+        .padding(.horizontal, 20)
+        .frame(height: 50)
+        .background {
+            if primary { GoldFill(shape: Capsule()) } else { RaisedFill(shape: Capsule()) }
+        }
+        .contentShape(Capsule())
+    }
+
+    /// «Finalizar» en la barra de abajo, a la derecha del tiempo (como la web).
     private var finishButton: some View {
-        Button { finish() } label: { finishLabel }
+        Button { finish() } label: {
+            if workout.saving {
+                BrandLoader().tint(Palette.background)
+                    .frame(width: 128, height: 50)
+                    .background(GoldFill(shape: Capsule()))
+            } else {
+                barLabel("Finalizar", symbol: "checkmark", primary: true)
+            }
+        }
         .buttonStyle(.plain)
         .disabled(workout.saving || workout.doneSets == 0)
         .opacity(workout.saving || workout.doneSets == 0 ? 0.45 : 1)
@@ -228,18 +264,41 @@ struct WorkoutView: View {
         .keyboardShortcut(.return, modifiers: .command)
     }
 
-    @ViewBuilder private var finishLabel: some View {
-        if workout.saving {
-            BrandLoader().tint(Palette.background)
-                .frame(width: 96, height: 34)
-                .background(Palette.gold, in: Capsule())
-        } else {
-            Text("Finalizar")
-                .font(.apSubhead.weight(.bold))
-                .foregroundStyle(Palette.background)
-                .padding(.horizontal, 16)
-                .frame(height: 34)
-                .background(Palette.gold, in: Capsule())
+    /// Pausa real: congela el tiempo y el descanso y se guarda en el borrador.
+    private var pauseButton: some View {
+        Button { Haptics.tap(); workout.togglePause() } label: {
+            Image(systemName: workout.isPaused ? "play.fill" : "pause.fill")
+                .font(.inter(size: 18, weight: .bold))
+                .foregroundStyle(Palette.foreground)
+                .frame(width: 50, height: 50)
+                .background(RaisedFill(shape: Circle()))
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(workout.isPaused ? "Reanudar" : "Pausar")
+        .accessibilityHint(workout.isPaused ? "Vuelven a correr el tiempo y el descanso" : "Se congelan el tiempo y el descanso")
+    }
+
+    /// Pausar · tiempo · Finalizar (diseño ChatGPT), igual en las dos vistas.
+    private var controlBar: some View {
+        HStack(spacing: 12) {
+            pauseButton
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                VStack(spacing: 2) {
+                    Text(elapsed(context.date))
+                        .font(.figure(size: 28))
+                        .foregroundStyle(Palette.foreground)
+                        .lineLimit(1).minimumScaleFactor(0.7)
+                    Text(workout.isPaused ? "En pausa" : "Tiempo transcurrido")
+                        .font(workout.isPaused ? .apFootnote.weight(.semibold) : .apFootnote)
+                        .foregroundStyle(workout.isPaused ? Palette.gold : Palette.muted)
+                        .lineLimit(1).minimumScaleFactor(0.8)
+                }
+                .frame(maxWidth: .infinity)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Tiempo de sesión \(elapsed(context.date))\(workout.isPaused ? ", en pausa" : "")")
+            }
+            finishButton
         }
     }
 
@@ -257,7 +316,7 @@ struct WorkoutView: View {
             }
         } label: {
             Image(systemName: "ellipsis").font(.inter(size: 15, weight: .bold)).foregroundStyle(Palette.foreground)
-                .frame(width: 30, height: 30).background(Palette.secondary, in: Circle())
+                .frame(width: 30, height: 30).background(RaisedFill(shape: Circle()))
                 .frame(width: 44, height: 44).contentShape(Rectangle())
         }
         .accessibilityLabel("Más acciones")
@@ -315,15 +374,16 @@ struct WorkoutView: View {
         VStack(alignment: .leading, spacing: 6) {
             Label(workout.isPaused ? "Entrenamiento en pausa" : "Entrenamiento en curso",
                   systemImage: workout.isPaused ? "pause.fill" : "dumbbell.fill")
-                .font(.apFootnote.weight(.medium))
+                .font(.apFootnote.weight(.semibold))
                 .foregroundStyle(workout.isPaused ? Palette.muted : Palette.gold)
             Text(sessionTitle)
-                .font(.inter(size: 30, weight: .bold))
+                .font(.apTitle1)
                 .lineLimit(2)
                 .accessibilityAddTraits(.isHeader)
-            Text("\(workout.exercises.count) ejercicios · \(workout.doneSets) de \(workout.totalSets) series")
+            Text("\(plural(workout.exercises.count, "ejercicio", "ejercicios")) · \(workout.doneSets) de \(plural(workout.totalSets, "serie", "series"))")
                 .font(.apSubhead.monospacedDigit())
                 .foregroundStyle(Palette.muted)
+            // Avance por ejercicios; el tiempo y «Pausar» viven en la barra de abajo.
             HStack(spacing: 12) {
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
@@ -334,9 +394,11 @@ struct WorkoutView: View {
                 .frame(height: 6)
                 .accessibilityLabel("Avance de la sesión")
                 .accessibilityValue("\(Int(progress * 100)) por ciento")
-                Text("\(doneExercises)/\(workout.exercises.count) ejercicios")
+                Text("\(doneExercises) de \(plural(workout.exercises.count, "ejercicio", "ejercicios"))")
                     .font(.apFootnote.monospacedDigit())
                     .foregroundStyle(Palette.muted)
+                    .lineLimit(1)
+                    .fixedSize()
             }
             .padding(.top, 6)
         }
@@ -346,38 +408,22 @@ struct WorkoutView: View {
     // MARK: Contenido de la sesión
 
     @ViewBuilder private var sessionContent: some View {
-        if focusMode { sessionStats } else { listHeader }
+        if !focusMode { listHeader }
         let currentIdx = min(workout.draft.currentExercise, max(workout.exercises.count - 1, 0))
         if focusMode, let ex = workout.exercises[safe: currentIdx] {
-            FocusViewer(workout: workout, index: currentIdx, onAdd: { Haptics.selection(); addingExercise = true })
+            FocusViewer(workout: workout, index: currentIdx, motion: motionMeta, onAdd: { Haptics.selection(); addingExercise = true })
             SessionExerciseCard(workout: workout, exercise: ex, index: currentIdx, userId: userId, focused: true)
                 .onAppear { workout.openExercises.insert(currentIdx) }
                 .id(ex.id)
         } else {
             exerciseCards
-            if !focusMode {
-                Button { Haptics.selection(); addingExercise = true } label: {
-                    HStack(spacing: 14) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Palette.secondary)
-                            Image(systemName: "plus").font(.system(size: 22, weight: .semibold)).foregroundStyle(Palette.gold)
-                        }
-                        .frame(width: 64, height: 64)
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                        Text("Añadir ejercicio a esta sesión")
-                            .font(.apBody.weight(.medium))
-                            .foregroundStyle(Palette.foreground)
-                        Spacer()
-                    }
-                    .padding(.leading, 12).padding(.trailing, 16).padding(.vertical, 12)
-                    .frame(maxWidth: .infinity, minHeight: 88, alignment: .leading)
-                    .surface()
-                    .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).strokeBorder(Palette.foreground.opacity(0.08), lineWidth: 1))
-                }
-                .buttonStyle(.plain)
-                .disabled(workout.isPaused)
-                .padding(.top, 4)
+            // En la lista, «Añadir ejercicio» va al final (en foco, es el «+» del carrusel).
+            Button { Haptics.selection(); addingExercise = true } label: {
+                Label("Añadir ejercicio a esta sesión", systemImage: "plus")
             }
+            .buttonStyle(.pillSecondary)
+            .disabled(workout.isPaused)
+            .padding(.top, 4)
         }
         if let error = workout.saveError {
             Text(error).font(.apFootnote).foregroundStyle(Palette.destructive)
@@ -398,89 +444,39 @@ struct WorkoutView: View {
             if focusMode {
                 VStack(spacing: 0) {
                     Text(sessionTitle).font(.apHeadline).lineLimit(1)
-                    Text("\(workout.doneSets) de \(workout.totalSets) series")
+                    Text("\(workout.doneSets) de \(plural(workout.totalSets, "serie", "series"))")
                         .font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted)
                         .contentTransition(.numericText())
                 }
                 .accessibilityElement(children: .combine)
             }
         }
+        // «Finalizar» vive en la barra de abajo: arriba solo quedan «Salir» y «···».
         #if os(iOS)
-        ToolbarItem(placement: .topBarTrailing) {
-            HStack(spacing: 16) { moreMenu; finishButton }
-        }
+        ToolbarItem(placement: .topBarTrailing) { moreMenu }
         #else
         ToolbarItem(placement: .primaryAction) { moreMenu }
-        ToolbarItem(placement: .primaryAction) { finishButton }
         #endif
     }
 
     // MARK: Pie fijo: descanso + Pausar · tiempo · Finalizar
 
-    /// Stats en vivo de la sesión — tres columnas compactas bajo el título.
-    private var sessionStats: some View {
-        TimelineView(.periodic(from: .now, by: 1)) { ctx in
-            HStack(spacing: 0) {
-                sessionStat("Duración", elapsed(ctx.date))
-                // Separador visual
-                Rectangle().fill(Palette.separator).frame(width: 0.5, height: 28)
-                sessionStat("Volumen", "\(NumberText.integer(Int(workout.volumeKg))) kg")
-                Rectangle().fill(Palette.separator).frame(width: 0.5, height: 28)
-                sessionStat("Series", "\(workout.doneSets)/\(workout.totalSets)")
-            }
-            .padding(.horizontal, 4)
-            .padding(.vertical, 6)
-            .surface(14)
-        }
-        .accessibilityElement(children: .combine)
-    }
-
-    private func sessionStat(_ label: String, _ value: String) -> some View {
-        VStack(alignment: .center, spacing: 1) {
-            Text(label)
-                .font(.inter(size: 11, weight: .semibold))
-                .tracking(0.05)
-                .foregroundStyle(Palette.muted)
-            Text(value)
-                .font(.inter(size: 17, weight: .bold).monospacedDigit())
-                .lineLimit(1).minimumScaleFactor(0.7)
-                .contentTransition(.numericText())
-                .animation(reduceMotion ? nil : .snappy, value: value)
-        }
-        .frame(maxWidth: .infinity)
-        .accessibilityLabel("\(label): \(value)")
-    }
-
     @ViewBuilder private var footer: some View {
-        VStack(spacing: 10) {
-            TimelineView(.periodic(from: .now, by: 1)) { context in
-                HStack(spacing: 12) {
-                    Button { Haptics.tap(); workout.togglePause() } label: {
-                        Text(workout.isPaused ? "Reanudar" : "Pausar")
-                            .font(.apSubhead.weight(.semibold))
-                            .foregroundStyle(workout.isPaused ? Palette.background : Palette.foreground)
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                            .background(workout.isPaused ? Palette.gold : Palette.secondary, in: Capsule())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(workout.isPaused ? "Reanudar entrenamiento" : "Pausar entrenamiento")
-                    Text(elapsed(context.date))
-                        .font(.apFootnote.monospacedDigit())
-                        .foregroundStyle(Palette.muted)
-                        .accessibilityLabel("Tiempo de sesión \(elapsed(context.date))")
-                    Text("\(doneExercises)/\(workout.exercises.count)")
-                        .font(.apFootnote.monospacedDigit())
-                        .foregroundStyle(Palette.muted)
-                        .accessibilityLabel("\(doneExercises) de \(workout.exercises.count) ejercicios completados")
-                }
+        VStack(spacing: 12) {
+            if let end = workout.draft.restEndsAt {
+                RestTimerRow(end: end, workout: workout)
+                    .disabled(workout.isPaused)
+                    .opacity(workout.isPaused ? 0.4 : 1)
+                    .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
             }
+            controlBar
             if focus != nil {
                 HStack(spacing: 8) {
                     Button { moveFocus(-1) } label: {
                         Label("Anterior", systemImage: "chevron.left")
                             .font(.apSubhead.weight(.medium))
                             .padding(.horizontal, 14).frame(height: 40)
-                            .background(Palette.secondary, in: Capsule())
+                            .background(RaisedFill(shape: Capsule()))
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Campo anterior")
@@ -488,7 +484,7 @@ struct WorkoutView: View {
                         Label("Siguiente", systemImage: "chevron.right")
                             .font(.apSubhead.weight(.medium))
                             .padding(.horizontal, 14).frame(height: 40)
-                            .background(Palette.secondary, in: Capsule())
+                            .background(RaisedFill(shape: Capsule()))
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Campo siguiente")
@@ -498,7 +494,7 @@ struct WorkoutView: View {
                             .font(.apSubhead.weight(.semibold))
                             .foregroundStyle(Palette.gold)
                             .padding(.horizontal, 16).frame(height: 40)
-                            .background(Palette.secondary, in: Capsule())
+                            .background(RaisedFill(shape: Capsule()))
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Cerrar el teclado")
@@ -506,59 +502,111 @@ struct WorkoutView: View {
                 .foregroundStyle(Palette.foreground)
                 .transition(.opacity)
             }
-            if let end = workout.draft.restEndsAt {
-                RestTimerRow(end: end, workout: workout)
-                    .disabled(workout.isPaused)
-                    .opacity(workout.isPaused ? 0.4 : 1)
-                    .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
-            }
         }
+        .frame(maxWidth: 680)
         .padding(.horizontal, 16).padding(.top, 12).padding(.bottom, 12)
-        .background(focus != nil || workout.draft.restEndsAt != nil ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(.clear))
-        .overlay(alignment: .top) {
-            if focus != nil || workout.draft.restEndsAt != nil {
-                Rectangle().fill(Palette.separator).frame(height: 0.5)
-            }
-        }
+        .frame(maxWidth: .infinity)
+        .background(.ultraThinMaterial)
+        .overlay(alignment: .top) { Rectangle().fill(Palette.separator).frame(height: 0.5) }
         .animation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.9), value: workout.draft.restEndsAt)
     }
 
     // MARK: Resumen final (WorkoutSummary)
 
     private var summarySheet: some View {
-        WorkoutSummaryView(workout: workout, rpe: rpe) { summaryOpen = false }
+        WorkoutSummaryView(workout: workout, rpe: savedRpe,
+                           onSaveRoutine: workout.draft.day.routine_name == CustomRoutines.freeWorkoutName ? { name, exercises in
+                               await TrainingRepo.commitRoutine(userId: userId) { CustomRoutines.add($0, name: name, exercises: exercises) }
+                           } : nil,
+                           routineLimitReached: !CustomRoutines.canAdd(TrainingRepo.cachedPlan(userId: userId) ?? [])) { summaryOpen = false }
             .frame(minWidth: 380)
+            #if os(macOS)
+            // Solo en el Mac la hoja toma el tamaño del contenido; en el iPhone, un mínimo fijo
+            // dejaría «Compartir» fuera de la hoja en pantallas bajas.
+            .frame(minHeight: 640)
+            #endif
             .presentationDetents([.large])
             .presentationBackground(Palette.card)
     }
 
-    // MARK: Esfuerzo (RPEDialog)
+    // MARK: Esfuerzo (RPEDialog): mismos textos, escala 1–10 y las dos salidas de la web
+
+    private static let rpeLabels: [Int: String] = [
+        1: "Muy fácil", 2: "Muy fácil", 3: "Fácil", 4: "Algo fácil", 5: "Moderado",
+        6: "Algo duro", 7: "Duro", 8: "Muy duro", 9: "Casi al fallo", 10: "Al fallo total",
+    ]
+
+    private func complete(rpe value: Int?) {
+        Haptics.tap()
+        Task {
+            savedRpe = value
+            if await workout.finish(userId: userId, rpe: value) {
+                pendingSummary = true
+                rpeOpen = false
+            }
+        }
+    }
 
     private var rpeSheet: some View {
-        VStack(spacing: 20) {
-            Text("¿Cómo de duro ha sido?").font(.apTitle2).accessibilityAddTraits(.isHeader)
-            Text("\(rpe)").font(.figure(size: 64)).foregroundStyle(Palette.gold).accessibilityHidden(true)
-            Slider(value: Binding(get: { Double(rpe) }, set: { rpe = Int($0.rounded()) }), in: 1...10, step: 1)
-                .accessibilityLabel("Esfuerzo percibido").accessibilityValue("\(rpe) de 10")
-            Button {
-                Task {
-                    if await workout.finish(userId: userId, rpe: rpe) {
-                        pendingSummary = true
-                        rpeOpen = false
+        ScrollView {
+            VStack(spacing: 22) {
+                VStack(spacing: 6) {
+                    Text("¿Cómo de duro fue?").font(.apTitle2).multilineTextAlignment(.center).accessibilityAddTraits(.isHeader)
+                    Text("Marca tu esfuerzo percibido del 1 al 10. Así ajustamos tu próximo plan.")
+                        .font(.apSubhead).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
+                }
+                VStack(spacing: 6) {
+                    Text("\(rpe)").font(.figure(size: 64)).foregroundStyle(Palette.gold).accessibilityHidden(true)
+                    Text(Self.rpeLabels[rpe] ?? "").font(.apHeadline).foregroundStyle(Palette.gold)
+                }
+                .accessibilityElement(children: .combine)
+                LazyVGrid(columns: Array(repeating: GridItem(.fixed(52), spacing: 12), count: 5), spacing: 12) {
+                    ForEach(1...10, id: \.self) { value in
+                        let selected = value == rpe
+                        Button { if !selected { Haptics.selection(); rpe = value } } label: {
+                            Text("\(value)")
+                                .font(.apHeadline.monospacedDigit())
+                                .foregroundStyle(selected ? Palette.gold : Palette.foreground)
+                                .frame(width: 52, height: 52)
+                                .background(selected ? Palette.gold.opacity(0.15) : Palette.secondary, in: Circle())
+                                .overlay(Circle().strokeBorder(selected ? Palette.gold : .clear, lineWidth: 2))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("\(value), \((Self.rpeLabels[value] ?? "").lowercased())")
+                        .accessibilityAddTraits(selected ? .isSelected : [])
                     }
                 }
-            } label: {
-                if workout.saving { BrandLoader().tint(.black) } else { Text("Guardar") }
+                HStack(alignment: .top, spacing: 16) {
+                    IconTile(symbol: "target")
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Apunta a un 7 u 8").font(.apHeadline)
+                        Text("Es lo ideal en la mayoría de sesiones. Si llevas tres días seguidos en 9 o 10, tu próximo plan bajará un poco la intensidad.")
+                            .font(.apSubhead).foregroundStyle(Palette.muted)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: 0)
+                }
+                VStack(spacing: 8) {
+                    Button { complete(rpe: rpe) } label: {
+                        if workout.saving { BrandLoader().tint(Palette.background) } else { Text("Guardar esfuerzo y completar") }
+                    }
+                    .buttonStyle(.pill)
+                    .disabled(workout.saving)
+                    Button { complete(rpe: nil) } label: {
+                        Text("Completar sin valorar esfuerzo").font(.apHeadline).foregroundStyle(Palette.gold)
+                            .frame(maxWidth: .infinity, minHeight: 50)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(workout.saving)
+                }
+                if let error = workout.saveError { Text(error).font(.apFootnote).foregroundStyle(Palette.destructive).multilineTextAlignment(.center) }
             }
-            .buttonStyle(.pill)
-            .disabled(workout.saving)
-            if let error = workout.saveError { Text(error).font(.apFootnote).foregroundStyle(Palette.destructive) }
+            .padding(.horizontal, 24).padding(.top, 28).padding(.bottom, 16)
         }
-        .padding(28)
-        .frame(minWidth: 340)
-        .presentationDetents([.medium])
+        .frame(minWidth: 360)
+        .presentationDetents([.large])
         .presentationBackground(Palette.card)
-        .interactiveDismissDisabled(workout.saving)
+        .interactiveDismissDisabled(true)
     }
 }
 
@@ -594,45 +642,21 @@ struct SessionExerciseCard: View {
     @State private var swapOptions: [String] = []
     @State private var motionMeta: (pattern: String?, stimulus: String?, load: String?)? = nil
 
-    private func metaChip(icon: String, text: String) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: icon).font(.inter(size: 10, weight: .semibold))
-            Text(text).font(.apCaption).lineLimit(1)
-        }
-        .foregroundStyle(Palette.muted)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 3)
-        .background(Palette.secondary, in: Capsule())
-        .accessibilityElement(children: .combine)
-    }
-
-    /// Glifo animado del ejercicio dentro de la tarjeta (como Symmetry). La foto ya está en el
-    /// carrusel de «ejercicio a ejercicio», así que aquí no se repite ninguna imagen.
-    @ViewBuilder private func exerciseVisual(spec: ExerciseMotion.Spec) -> some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: Radius.card, style: .continuous).fill(Palette.secondary)
-            ExerciseMotionHero(spec: spec).padding(16)
-        }
-        .frame(maxWidth: .infinity)
-        .frame(height: 160)
-        .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-        .accessibilityHidden(true)
+    /// Huella del ejercicio (patrón de la ficha o el deducido): la miniatura sin foto nunca es un hueco.
+    private var motionSpec: ExerciseMotion.Spec {
+        ExerciseMotion.specFor(name: exercise.name, pattern: motionMeta?.pattern, stimulus: motionMeta?.stimulus,
+                               load: motionMeta?.load, muscleGroup: exercise.muscle_group)
     }
 
     private var indexBadge: some View {
-        let isHighlighted = allDone || isCurrentExercise
-        return Text("\(index + 1)")
-            .font(.inter(size: 13, weight: .bold).monospacedDigit())
-            .foregroundStyle(isHighlighted ? Palette.background : Palette.foreground)
+        Text("\(index + 1)")
+            .font(.apFootnote.weight(.bold).monospacedDigit())
+            .foregroundStyle(allDone || isCurrentExercise ? Palette.background : Palette.foreground)
             .frame(width: 24, height: 24)
-            .background(isHighlighted ? Palette.gold : Palette.secondary, in: Circle())
+            .background(allDone || isCurrentExercise ? Palette.gold : Palette.secondary, in: Circle())
             .overlay(Circle().strokeBorder(Palette.card, lineWidth: 2))
             .offset(x: -6, y: -6)
             .accessibilityHidden(true)
-    }
-
-    private var restChip: some View {
-        metaChip(icon: "clock", text: "Descanso \(exercise.rest)")
     }
 
     /// Cabecera de la tarjeta: miniatura, nombre, chips y acciones.
@@ -640,7 +664,7 @@ struct SessionExerciseCard: View {
     private var cardHeader: some View {
         HStack(spacing: 12) {
             if !focused {
-                WorkoutThumb(url: exercise.image_url, completed: allDone)
+                WorkoutThumb(url: exercise.image_url, completed: allDone, motion: motionSpec)
                     .overlay(alignment: .topLeading) { indexBadge }
             }
             exerciseInfo
@@ -673,23 +697,30 @@ struct SessionExerciseCard: View {
         }
     }
 
+    /// Nombre, «En lugar de…», «4 series · 10 reps · 90 s» y la superserie, como la web.
     private var exerciseInfo: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text(workout.swaps[exercise.name] ?? exercise.name)
-                .font(.apHeadline)
-                .lineLimit(2)
-                .foregroundStyle(allDone ? Palette.muted : Palette.foreground)
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                Text(workout.swaps[exercise.name] ?? exercise.name)
+                    .font(focused ? .apTitle2 : .apHeadline)
+                    .lineLimit(2)
+                    .foregroundStyle(allDone ? Palette.muted : Palette.foreground)
+                if let pos = workout.supersetPosition(of: exercise.name) {
+                    Text("Superserie \((pos.members.firstIndex(of: exercise.name) ?? 0) + 1)/\(pos.members.count)")
+                        .font(.apFootnote.weight(.medium).monospacedDigit())
+                        .foregroundStyle(Palette.muted)
+                        .padding(.horizontal, 10).padding(.vertical, 2)
+                        .background(Palette.secondary, in: Capsule())
+                        .fixedSize()
+                }
+            }
             if workout.swaps[exercise.name] != nil {
                 Text("En lugar de \(exercise.name)").font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(1)
             }
-            FlowRow(spacing: 6) {
-                metaChip(icon: "clock", text: "Descanso \(exercise.rest)")
-                metaChip(icon: "dumbbell", text: "\(exercise.series) × \(exercise.reps)")
-                if let pos = workout.supersetPosition(of: exercise.name) {
-                    metaChip(icon: "link", text: "Superset \(pos.letter)")
-                        .foregroundStyle(Palette.gold)
-                }
-            }
+            Text("\(plural(exercise.series, "serie", "series")) · \(exercise.reps) reps · \(exercise.rest)")
+                .font((focused ? Font.apSubhead : Font.apFootnote).monospacedDigit())
+                .foregroundStyle(Palette.muted)
+                .lineLimit(1).minimumScaleFactor(0.85)
         }
     }
 
@@ -700,19 +731,7 @@ struct SessionExerciseCard: View {
 
             // Siempre desplegado: cero fricción para anotar (nada de tocar dos veces).
             if isOpen {
-                let meta = motionMeta
-                let motionSpec = ExerciseMotion.spec(
-                    name: exercise.name,
-                    pattern: meta?.pattern,
-                    stimulus: meta?.stimulus,
-                    load: meta?.load
-                )
                 VStack(spacing: 6) {
-                    // En «ejercicio a ejercicio» la foto ya está en el carrusel de arriba: aquí solo
-                    // el glifo de movimiento (Autopilot), nunca otra copia de la foto.
-                    // Sin caja de trayectoria: la foto ya está arriba y las series suben (estilo Hevy).
-                    let _ = motionSpec
-
                     HStack(spacing: 8) {
                         Text("Serie").frame(width: 24)
                         Text("Previa").frame(width: 52)
@@ -738,20 +757,20 @@ struct SessionExerciseCard: View {
 
                     Button { workout.addSet(exercise.name) } label: {
                         Label("Añadir serie", systemImage: "plus")
-                            .font(.apBody.weight(.medium))
-                            .foregroundStyle(Palette.foreground)
+                            .font(.apHeadline)
+                            .foregroundStyle(Palette.gold)
                             .frame(maxWidth: .infinity, minHeight: 44)
-                            .background(Palette.secondary, in: Capsule())
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                 }
                 .padding(.horizontal, 8).padding(.bottom, 12).padding(.top, 4)
             }
         }
-        .surface(14)
+        .surface()
         .overlay {
             // Aviso visual breve (1,2 s) al completar el ejercicio; sin animación con Reduce Motion.
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
                 .strokeBorder(Palette.gold.opacity(justCompleted ? 0.85 : 0), lineWidth: 1.5)
                 .animation(reduceMotion ? nil : .easeOut(duration: 0.25), value: justCompleted)
                 .allowsHitTesting(false)
@@ -781,10 +800,10 @@ struct SessionExerciseCard: View {
             Button { technique = true } label: { Label("Ficha de técnica", systemImage: "info.circle") }
             Button { Task { await openSwapSheet() } } label: { Label("Cambiar ejercicio", systemImage: "arrow.left.arrow.right") }
             if workout.supersetPosition(of: exercise.name) != nil {
-                Button { Haptics.selection(); workout.toggleSuperset(exercise.name) } label: { Label("Quitar del superset", systemImage: "link") }
+                Button { Haptics.selection(); workout.toggleSuperset(exercise.name) } label: { Label("Quitar de la superserie", systemImage: "link") }
             } else if let i = workout.exercises.firstIndex(where: { $0.name == exercise.name }), i + 1 < workout.exercises.count {
                 Button { Haptics.selection(); workout.toggleSuperset(exercise.name) } label: {
-                    Label("Superset con \(workout.exercises[i + 1].name)", systemImage: "link")
+                    Label("Superserie con \(workout.exercises[i + 1].name)", systemImage: "link")
                 }
             }
             Divider()
@@ -799,8 +818,8 @@ struct SessionExerciseCard: View {
                 }
             }
         }
-        .accessibilityHint("Mantén pulsado para cambiar el ejercicio o hacer un superset")
-        .sheet(isPresented: $technique) { TechniqueSheet(exercise: exercise) }
+        .accessibilityHint("Mantén pulsado para cambiar el ejercicio o hacer una superserie")
+        .sheet(isPresented: $technique) { TechniqueSheet(exercise: exercise, motion: motionSpec) }
         .sheet(isPresented: $swapSheet) { swapSheetContent }
         .task { await loadMotionMeta() }
     }
@@ -848,7 +867,9 @@ struct SessionExerciseCard: View {
                         swapRow(name, selected: workout.swaps[exercise.name] == name) { applySwap(name) }
                     }
                     if swapOptions.isEmpty {
-                        Text("Buscando alternativas…").font(.apSubhead).foregroundStyle(Palette.muted).padding(20)
+                        // Las alternativas ya se cargaron al abrir: sin ninguna, el mismo aviso que la web.
+                        EmptyStateView(symbol: "dumbbell", title: "Sigue con este ejercicio",
+                                       message: "Aún no hay alternativas para este movimiento en la biblioteca.")
                     }
                 }
                 .surface()
@@ -885,6 +906,8 @@ struct ChoiceSheet: View {
     let message: String
     let primary: String
     let destructive: Bool
+    /// Salida sin hacer nada («Seguir entrenando» en el entreno, «Cancelar» al borrar una rutina).
+    var cancel: String = "Seguir entrenando"
     var onPrimary: () -> Void
     var onCancel: () -> Void
 
@@ -895,7 +918,7 @@ struct ChoiceSheet: View {
             Button(primary) { Haptics.tap(); onPrimary() }
                 .buttonStyle(destructive ? .pillDestructive : .pill)
                 .padding(.top, 8)
-            Button("Seguir entrenando") { Haptics.selection(); onCancel() }
+            Button(cancel) { Haptics.selection(); onCancel() }
                 .font(.apHeadline).foregroundStyle(Palette.foreground).frame(maxWidth: .infinity, minHeight: 50)
                 .buttonStyle(.plain)
         }
@@ -906,10 +929,13 @@ struct ChoiceSheet: View {
     }
 }
 
-/// Modo foco: visor grande del ejercicio activo (desliza para cambiar) y carrusel de toda la sesión.
+/// Modo foco: carrusel de toda la sesión arriba y el ejercicio activo en grande debajo (desliza
+/// para cambiar), como el visor de `WorkoutTracker.tsx`. Sin foto, la huella del ejercicio.
 struct FocusViewer: View {
     @ObservedObject var workout: ActiveWorkout
     let index: Int
+    /// Patrón, estímulo y carga de cada ejercicio (por nombre) para su huella.
+    var motion: [String: (pattern: String?, stimulus: String?, load: String?)] = [:]
     var onAdd: () -> Void = {}
     @ObservedObject private var loops = ExerciseLoops.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -924,43 +950,57 @@ struct FocusViewer: View {
         Haptics.selection()
     }
 
+    /// La huella de cada ejercicio: su patrón o el deducido del nombre y el músculo.
+    private func spec(_ item: GymExercise) -> ExerciseMotion.Spec {
+        let m = motion[item.name]
+        return ExerciseMotion.specFor(name: item.name, pattern: m?.pattern ?? nil, stimulus: m?.stimulus ?? nil,
+                                      load: m?.load ?? nil, muscleGroup: item.muscle_group)
+    }
+
     var body: some View {
         let ex = workout.exercises[index]
-        VStack(spacing: 8) {
-            // Selector de ejercicios y «Añadir» en línea con el carrusel: miniaturas cuadradas de
-            // cada ejercicio (la foto grande de abajo es la del ejercicio activo).
+        VStack(spacing: 12) {
+            // Carrusel arriba: cada ejercicio con su foto o su huella y su número; «+» al final.
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
+                HStack(spacing: 10) {
                     ForEach(workout.exercises.indices, id: \.self) { i in
                         let item = workout.exercises[i]
                         let sets = workout.draft.logs[item.name] ?? []
                         let done = !sets.isEmpty && sets.allSatisfy(\.done)
                         Button { go(i) } label: {
-                            WorkoutThumb(url: loops.images[item.name] ?? item.image_url, completed: done, size: 52)
+                            WorkoutThumb(url: loops.images[item.name] ?? item.image_url, completed: done, size: 48, motion: spec(item))
                                 .padding(2)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 14, style: .continuous)
                                         .strokeBorder(i == index ? Palette.gold : .clear, lineWidth: 2)
                                 )
-                                .opacity(i == index ? 1 : 0.65)
+                                .overlay(alignment: .topLeading) {
+                                    // Número de orden: dorado el que estás haciendo y los hechos.
+                                    Text("\(i + 1)")
+                                        .font(.apCaption.weight(.bold).monospacedDigit())
+                                        .foregroundStyle(i == index || done ? Palette.background : Palette.foreground)
+                                        .frame(minWidth: 20, minHeight: 20)
+                                        .background(i == index || done ? Palette.gold : Palette.secondary, in: Capsule())
+                                        .overlay(Capsule().strokeBorder(Palette.background, lineWidth: 2))
+                                        .offset(x: -4, y: -4)
+                                }
+                                .opacity(i == index ? 1 : 0.6)
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("\(i + 1). \(workout.swaps[item.name] ?? item.name)\(done ? " · hecho" : "")")
                         .accessibilityAddTraits(i == index ? .isSelected : [])
                     }
                     Button { onAdd() } label: {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Palette.secondary)
-                            Image(systemName: "plus").font(.system(size: 20, weight: .semibold)).foregroundStyle(Palette.gold)
-                        }
-                        .frame(width: 52, height: 52)
-                        .padding(2)
+                        Image(systemName: "plus").font(.system(size: 20, weight: .semibold)).foregroundStyle(Palette.gold)
+                            .frame(width: 48, height: 48)
+                            .background(Palette.secondary, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .padding(2)
                     }
                     .buttonStyle(.plain)
                     .disabled(workout.isPaused)
                     .accessibilityLabel("Añadir ejercicio a esta sesión")
                 }
-                .padding(.vertical, 2)
+                .padding(.top, 6).padding(.bottom, 2).padding(.leading, 4)
             }
 
             // Carrusel paginado nativo: al deslizar, la página sigue al dedo y encaja sola
@@ -978,21 +1018,23 @@ struct FocusViewer: View {
             .scrollIndicators(.hidden)
             .scrollTargetBehavior(.paging)
             .scrollPosition(id: $page)
-            .frame(height: 140)
+            .frame(height: 220)
             .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             .overlay {
                 // El movimiento en bucle corto encima de la foto (que hace de portada mientras
                 // carga), como en la web; con «Reducir movimiento», solo la foto.
-                if !reduceMotion, let v = loops.urls[ex.name] {
-                    LoopingVideo(url: v).allowsHitTesting(false)
+                Group {
+                    if !reduceMotion, let v = loops.urls[ex.name] { LoopingVideo(url: v) }
                 }
+                .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                .allowsHitTesting(false)
             }
             .overlay(alignment: .bottomTrailing) {
                 Text("\(index + 1) / \(workout.exercises.count)")
-                    .font(.apCaption.weight(.semibold).monospacedDigit())
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 10).padding(.vertical, 5)
-                    .background(.black.opacity(0.45), in: Capsule())
+                    .font(.apFootnote.weight(.semibold).monospacedDigit())
+                    .foregroundStyle(Palette.foreground)
+                    .padding(.horizontal, 10).padding(.vertical, 4)
+                    .background(.ultraThinMaterial, in: Capsule())
                     .padding(10)
                     .allowsHitTesting(false)
                     .accessibilityHidden(true)
@@ -1009,7 +1051,7 @@ struct FocusViewer: View {
                 withAnimation(reduceMotion ? nil : .snappy) { page = new }
             }
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel("\(ex.name). Desliza para cambiar de ejercicio")
+            .accessibilityLabel("\(workout.swaps[ex.name] ?? ex.name). Desliza para cambiar de ejercicio")
             .accessibilityAdjustableAction { direction in
                 switch direction {
                 case .increment: go(index + 1)
@@ -1029,17 +1071,21 @@ struct FocusViewer: View {
         .task { await loops.load(workout.exercises.map(\.name)) }
     }
 
-    /// Una página del carrusel: la foto del ejercicio, o su icono mientras no hay foto.
+    /// Una página del carrusel: la foto del ejercicio a todo el visor o, sin foto, su huella en grande.
+    /// La foto va en un `overlay` del fondo: así «rellenar» se recorta al tamaño de la página y no
+    /// invade la foto vecina del carrusel.
     @ViewBuilder private func photoPage(_ item: GymExercise) -> some View {
-        ZStack {
-            Palette.card
-            if let url = (loops.images[item.name] ?? item.image_url).flatMap(URL.init(string:)) {
-                CachedAsyncImage(url: url, maxSide: 540) { $0.resizable().scaledToFit() } placeholder: { Palette.secondary }
-                    .clipped()
-            } else {
-                Image(systemName: "dumbbell").font(.inter(.title)).foregroundStyle(Palette.muted)
+        Palette.card
+            .overlay {
+                if let url = (loops.images[item.name] ?? item.image_url).flatMap(URL.init(string:)) {
+                    CachedAsyncImage(url: url, maxSide: 900) { $0.resizable().scaledToFill() } placeholder: {
+                        ExerciseMotionHero(spec: spec(item)).padding(.horizontal, 24).padding(.vertical, 16)
+                    }
+                } else {
+                    ExerciseMotionHero(spec: spec(item)).padding(.horizontal, 24).padding(.vertical, 16)
+                }
             }
-        }
+            .clipped()
     }
 }
 
@@ -1098,9 +1144,9 @@ struct ExerciseSwapMenu: View {
             if options.isEmpty { Text("Buscando alternativas…") }
             Divider()
             if workout.supersetPosition(of: exercise.name) != nil {
-                Button("Quitar del superset") { Haptics.selection(); workout.toggleSuperset(exercise.name) }
+                Button("Quitar de la superserie") { Haptics.selection(); workout.toggleSuperset(exercise.name) }
             } else if let i = workout.exercises.firstIndex(where: { $0.name == exercise.name }), i + 1 < workout.exercises.count {
-                Button("Superset con \(workout.exercises[i + 1].name)") {
+                Button("Superserie con \(workout.exercises[i + 1].name)") {
                     Haptics.selection()
                     workout.toggleSuperset(exercise.name)
                 }
@@ -1145,16 +1191,32 @@ struct ExerciseSwapMenu: View {
 /// Ficha de técnica del ejercicio (ExerciseFocus): imagen o vídeo, series, reps, descanso y músculo.
 struct TechniqueSheet: View {
     let exercise: GymExercise
+    /// Huella del ejercicio: el héroe cuando no hay foto (como `ExerciseMedia` en la web).
+    var motion: ExerciseMotion.Spec? = nil
     @Environment(\.dismiss) private var dismiss
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 if let i = exercise.image_url, let u = URL(string: i) {
-                    CachedAsyncImage(url: u) { $0.resizable().scaledToFit() } placeholder: { Palette.card.frame(height: 260) }
+                    CachedAsyncImage(url: u) { $0.resizable().scaledToFit() } placeholder: {
+                        // Mientras carga la foto, la huella en su sitio (nunca un bloque vacío).
+                        Group {
+                            if let motion { ExerciseMotionHero(spec: motion).padding(16) } else { Palette.card }
+                        }
+                        .aspectRatio(16 / 9, contentMode: .fit).frame(maxWidth: .infinity)
+                    }
                         .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
                         .accessibilityLabel(exercise.name)
+                } else if let motion {
+                    ExerciseMotionHero(spec: motion)
+                        .padding(16)
+                        .aspectRatio(16 / 9, contentMode: .fit)
+                        .frame(maxWidth: .infinity)
+                        .background(Palette.background, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
                 }
-                Text(exercise.name).font(.apTitle1)
+                Text(exercise.name).font(.apTitle1).tracking(-0.4)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityAddTraits(.isHeader)
                 if let g = exercise.muscle_group { Text(g).font(.apSubhead).foregroundStyle(Palette.muted) }
 
                 // Mapa muscular: mismo comportamiento que en la web (MuscleMap.tsx)
@@ -1209,11 +1271,11 @@ struct SetLine: View {
         HStack(spacing: 8) {
             Group {
                 if isWarmup {
-                    Text("W")
-                        .font(.inter(size: 13, weight: .heavy))
-                        .foregroundStyle(Color.black)
+                    // Calentamiento: la llama en gris, como la web (no cuenta en tus métricas).
+                    Image(systemName: "flame")
+                        .font(.inter(size: 15, weight: .semibold))
+                        .foregroundStyle(Palette.muted)
                         .frame(width: 24, height: 24)
-                        .background(Palette.gold, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
                 } else {
                     Text("\(index + 1)")
                         .font(.inter(.headline).monospacedDigit())
@@ -1230,9 +1292,9 @@ struct SetLine: View {
             Text(previous.map { $0.done ? "\($0.weight.isEmpty ? "—" : $0.weight.replacingOccurrences(of: ".", with: ","))×\($0.reps)" : "—" } ?? "—")
                 .font(.inter(.caption).monospacedDigit()).foregroundStyle(Palette.muted).lineLimit(1).minimumScaleFactor(0.7)
                 .frame(width: 52)
-                .accessibilityLabel("Previa: " + (previous.map { "\($0.weight) kilos por \($0.reps)" } ?? "sin datos"))
+                .accessibilityLabel("Previa: " + (previous.map { $0.done ? "\($0.weight.replacingOccurrences(of: ".", with: ",")) kilos por \($0.reps)" : "sin datos" } ?? "sin datos"))
             NumberField(value: set.weight,
-                        placeholder: previous?.weight.nilIfEmpty ?? exercise.weight.nilIfEmpty ?? "kg",
+                        placeholder: (previous?.weight.nilIfEmpty ?? exercise.weight.nilIfEmpty ?? "kg").replacingOccurrences(of: ".", with: ","),
                         big: isCurrent, decimal: true) { v in
                 workout.update(exercise.name, set: index) { $0.weight = v }
             }
@@ -1342,9 +1404,9 @@ struct SetLine: View {
         }
         .padding(.leading, 12).padding(.trailing, 8).padding(.vertical, 8)
         .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(isCurrent ? Palette.gold.opacity(0.05) : (set.done && !isWarmup ? Palette.gold.opacity(0.14) : .clear))
-                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(isCurrent ? Palette.gold.opacity(0.5) : .clear, lineWidth: 1))
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(isCurrent ? .clear : (set.done && !isWarmup ? Palette.gold.opacity(0.15) : .clear))
+                .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(isCurrent ? Palette.gold.opacity(0.4) : .clear, lineWidth: 1))
         )
         .overlay(alignment: .top) { if separator && !isCurrent { Rectangle().fill(Palette.separator).frame(height: 0.5).padding(.leading, 12) } }
         .accessibilityAction(named: "Quitar serie") { workout.removeSet(exercise.name, at: index) }
@@ -1441,14 +1503,16 @@ private struct WorkoutThumb: View {
     let url: String?
     var completed = false
     var size: CGFloat = 52
+    /// Huella del ejercicio: sin foto (o mientras carga) se dibuja ella, nunca un icono repetido.
+    var motion: ExerciseMotion.Spec? = nil
 
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Palette.secondary)
             if let u = url.flatMap(URL.init(string:)) {
-                RemoteThumb(url: u, maxSide: max(140, size * 2)) { Color.clear }
+                RemoteThumb(url: u, maxSide: max(140, size * 2)) { fallback }
             } else {
-                Image(systemName: "dumbbell").foregroundStyle(Palette.muted)
+                fallback
             }
             if completed {
                 Color.black.opacity(0.5)
@@ -1459,12 +1523,30 @@ private struct WorkoutThumb: View {
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .accessibilityHidden(true)
     }
+
+    @ViewBuilder private var fallback: some View {
+        if let motion {
+            ExerciseMotionGlyph(spec: motion).padding(6).opacity(completed ? 0.6 : 1)
+        } else {
+            Image(systemName: "dumbbell").foregroundStyle(Palette.muted)
+        }
+    }
 }
 
-/// Descanso: cifra de 34 pt, −30 / +30 en blanco, «Saltar» y la barra fina en dorado.
+/// Descanso: anillo dorado con la cuenta atrás («0:45», en Big Shoulders) y «Descanso», y −15 s / +15 s
+/// a los lados, como la web. Al llegar a cero, aviso y fuera.
 struct RestTimerRow: View {
     let end: Date
     @ObservedObject var workout: ActiveWorkout
+
+    private func stepButton(_ title: String, by seconds: Int, label: String) -> some View {
+        Button(title) { Haptics.selection(); workout.adjustRest(by: seconds) }
+            .font(.apHeadline.monospacedDigit())
+            .foregroundStyle(Palette.foreground)
+            .frame(minWidth: 76, minHeight: 44)
+            .background(RaisedFill(shape: Capsule()))
+            .accessibilityLabel(label)
+    }
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { ctx in
@@ -1474,12 +1556,7 @@ struct RestTimerRow: View {
             let progress = min(1.0, Double(left) / Double(target))
 
             HStack(spacing: 20) {
-                Button("−15 s") { Haptics.selection(); workout.adjustRest(by: -15) }
-                    .font(.apSubhead.weight(.semibold).monospacedDigit())
-                    .foregroundStyle(Palette.foreground)
-                    .frame(minWidth: 72, minHeight: 44)
-                    .background(Palette.secondary, in: Capsule())
-                    .accessibilityLabel("Restar 15 segundos")
+                stepButton("−15 s", by: -15, label: "Restar 15 segundos")
 
                 ZStack {
                     Circle().stroke(Palette.secondary, lineWidth: 4)
@@ -1488,25 +1565,23 @@ struct RestTimerRow: View {
                         .stroke(Palette.gold, style: StrokeStyle(lineWidth: 4, lineCap: .round))
                         .rotationEffect(.degrees(-90))
                         .animation(.linear(duration: 1), value: progress)
-                    Text(String(format: "%02d:%02d", left / 60, left % 60))
-                        .font(.inter(size: 26, weight: .bold).monospacedDigit())
-                        .foregroundStyle(Palette.foreground)
-                        .contentTransition(.numericText(countsDown: true))
-                        .transaction { $0.animation = nil }
+                    VStack(spacing: 2) {
+                        Text("\(left / 60):\(String(format: "%02d", left % 60))")
+                            .font(.figure(size: 30))
+                            .foregroundStyle(Palette.foreground)
+                            .contentTransition(.numericText(countsDown: true))
+                            .transaction { $0.animation = nil }
+                        Text("Descanso").font(.apFootnote).foregroundStyle(Palette.muted)
+                    }
                 }
-                .frame(width: 88, height: 88)
+                .frame(width: 92, height: 92)
+                .accessibilityElement(children: .ignore)
                 .accessibilityLabel("Descanso, quedan \(left) segundos")
 
-                Button("+15 s") { Haptics.selection(); workout.adjustRest(by: 15) }
-                    .font(.apSubhead.weight(.semibold).monospacedDigit())
-                    .foregroundStyle(Palette.foreground)
-                    .frame(minWidth: 72, minHeight: 44)
-                    .background(Palette.secondary, in: Capsule())
-                    .accessibilityLabel("Sumar 15 segundos")
+                stepButton("+15 s", by: 15, label: "Sumar 15 segundos")
             }
             .buttonStyle(.plain)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
             .onChange(of: left == 0) { _, done in if done { Haptics.warning(); workout.skipRest() } }
         }
     }
@@ -1521,65 +1596,96 @@ extension String {
 }
 
 
-/// Resumen final calcado de `WorkoutSummary.tsx`: páginas que se deslizan (Resumen y Comparar),
-/// puntos de página, «Listo» arriba y Compartir abajo.
+/// Resumen final calcado de `WorkoutSummary.tsx`: «Listo» arriba, páginas que se deslizan
+/// (Resumen, Músculos y Comparar) con sus puntos y «Compartir» dorado abajo. Solo se celebran las
+/// mejoras: con menos volumen que la última vez, la cifra de hoy habla sola (nada de «−832 kg»).
 struct WorkoutSummaryView: View {
     @ObservedObject var workout: ActiveWorkout
     let rpe: Int?
     var onDone: () -> Void
+    /// Entreno vacío: «Guardar como rutina» guarda lo hecho en «Mis rutinas» (nil en una sesión del plan).
+    var onSaveRoutine: ((String, [GymExercise]) async -> TrainingRepo.RoutineCommit)? = nil
+    /// Ya hay siete sesiones en el plan: «Guardar como rutina» lo explica.
+    var routineLimitReached = false
     @State private var page = 0
-    /// PNG de la tarjeta visible, listo para compartir como imagen.
+    /// PNG de la historia (1080×1920) de la página visible, listo para compartir.
     @State private var shareURL: URL?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// El confeti solo se lanza una vez por resumen (y nunca con «Reducir movimiento»).
     @State private var confettiDone = false
 
-    init(workout: ActiveWorkout, rpe: Int?, onDone: @escaping () -> Void) {
+    init(workout: ActiveWorkout, rpe: Int?, onSaveRoutine: ((String, [GymExercise]) async -> TrainingRepo.RoutineCommit)? = nil,
+         routineLimitReached: Bool = false, onDone: @escaping () -> Void) {
         self.workout = workout
         self.rpe = rpe
         self.onDone = onDone
+        self.onSaveRoutine = onSaveRoutine
+        self.routineLimitReached = routineLimitReached
         #if DEBUG
-        // Solo para capturas de QA: `-summaryPage=2` abre esa tarjeta del resumen.
+        // Solo para capturas de QA: `-summaryPage=2` abre esa página del resumen.
         if let arg = ProcessInfo.processInfo.arguments.first(where: { $0.hasPrefix("-summaryPage=") }),
            let n = Int(arg.dropFirst("-summaryPage=".count)) {
-            _page = State(initialValue: min(max(n, 0), 4))
+            _page = State(initialValue: min(max(n, 0), 2))
         }
         #endif
     }
 
-    private struct Item { let name: String; let change: String; let trend: Int; let proposal: String }
-    private struct ExRow: Identifiable { let id: String; let name: String; let sets: Int }
+    enum Trend { case up, same, down, new }
+    struct Item { let name: String; let change: String; let today: String; let trend: Trend; let proposal: String }
+    private enum Page: Hashable { case summary, muscles, compare }
+
+    // MARK: Datos
 
     private var title: (String, String) {
         let parts = workout.draft.day.title.components(separatedBy: " · ")
         return (parts.first ?? "", parts.dropFirst().joined(separator: " · "))
     }
-    private var dateLabel: String { Date().formatted(.dateTime.weekday(.wide).day().month(.wide).locale(Locale(identifier: "es_ES"))) }
+    /// «18 de noviembre», como la web.
+    private var dateLabel: String { Date().formatted(.dateTime.day().month(.wide).locale(Locale(identifier: "es_ES"))) }
+    private var volume: Double { workout.volumeKg }
+    private var hasVolume: Bool { volume > 0 }
     private var previousVolume: Double {
         workout.previous.values.joined().filter { $0.done && $0.isWarmup != true }
             .reduce(0) { $0 + Double($1.reps) * (Double($1.weight.replacingOccurrences(of: ",", with: ".")) ?? 0) }
     }
-    private var completedExercises: Int { workout.draft.logs.values.filter { $0.contains { $0.done && $0.isWarmup != true } }.count }
+    /// Solo lo que sube: si hoy hay menos volumen, no se resta nada.
+    private var gain: Double { previousVolume > 0 && hasVolume ? volume - previousVolume : 0 }
+    /// Ejercicios con todas sus series hechas, como `completedExercises` en la web.
+    private var completedExercises: Int {
+        workout.exercises.filter { ex in
+            let sets = workout.draft.logs[ex.name] ?? []
+            return !sets.isEmpty && sets.allSatisfy(\.done)
+        }.count
+    }
+    /// Series por músculo (sinergistas a la mitad), como `addExerciseLoad` en la web.
+    private var muscleCounts: [String: Double] {
+        var counts: [String: Double] = [:]
+        for ex in workout.exercises {
+            let n = Double((workout.draft.logs[ex.name] ?? []).filter { $0.done && $0.isWarmup != true }.count)
+            guard n > 0 else { continue }
+            let m = musclesForExercise(name: workout.swaps[ex.name] ?? ex.name, muscleGroup: ex.muscle_group)
+            for p in m.primary { counts[p, default: 0] += n }
+            for s in m.synergists { counts[s, default: 0] += n * 0.5 }
+        }
+        return counts
+    }
+    private var muscles: [String] { muscleCounts.sorted { $0.value > $1.value }.map(\.key) }
+    /// «Pecho, hombros y tríceps»: los tres con más series (`muscleLine` en la web).
+    private var muscleLine: String {
+        let top = muscles.prefix(3).enumerated().map { $0.offset == 0 ? $0.element : $0.element.lowercased() }
+        guard let last = top.last else { return "" }
+        return top.count > 1 ? "\(top.dropLast().joined(separator: ", ")) y \(last)" : last
+    }
     private func fmt(_ n: Double) -> String { NumberText.decimal(n, digits: n.rounded() == n ? 0 : 1) }
 
-    private var durationText: String {
-        let secs = max(0, Int(Date().timeIntervalSince(workout.draft.startedAt)))
-        let h = secs / 3600, m = (secs % 3600) / 60
-        if h > 0 { return "\(h) h \(m) min" }
-        if m > 0 { return "\(m) min" }
-        return "\(secs) s"
+    /// «48 min» o «1:05 h», como `durationParts` en la web.
+    private var durationParts: (value: String, unit: String)? {
+        guard workout.finishedAt != nil else { return nil }
+        let minutes = max(1, Int((workout.duration / 60).rounded()))
+        return minutes < 60 ? ("\(minutes)", "min") : ("\(minutes / 60):\(String(format: "%02d", minutes % 60))", "h")
     }
 
-    /// Ejercicios con series hechas, en orden de la sesión (para la tarjeta de resumen).
-    private var exerciseRows: [ExRow] {
-        workout.exercises.compactMap { ex in
-            let done = (workout.draft.logs[ex.name] ?? []).filter { $0.done && $0.isWarmup != true }
-            guard !done.isEmpty else { return nil }
-            return ExRow(id: ex.id, name: workout.swaps[ex.name] ?? ex.name, sets: done.count)
-        }
-    }
-
-    /// `buildWorkoutReview` de la web.
+    /// `buildWorkoutReview` de la web, con la cifra de hoy para lo que no mejora.
     private var review: [Item] {
         workout.exercises.compactMap { ex in
             func valid(_ s: [SetLog]) -> [SetLog] { s.filter { $0.done && $0.isWarmup != true && $0.reps > 0 } }
@@ -1607,22 +1713,44 @@ struct WorkoutSummaryView: View {
                 change = "\(d > 0 ? "+" : "−")\(pct == 0 ? "\(fmt(abs(d))) kg" : "\(abs(pct)) %")"
             }
             let proposal = (rpe ?? 0) >= 9 ? "Revisar esfuerzo y recuperación antes de aumentar la carga."
-                : (delta ?? 0) < 0 ? "Revisar descanso, técnica y sensaciones antes de cambiar la carga."
+                : (delta ?? 0) < 0 ? "Mantén la carga y cuida descanso y técnica: la próxima sesión es para subir."
                 : (delta ?? 0) > 0 ? "Si la técnica fue sólida, sube un poco la carga en la próxima sesión."
                 : "Mantener el plan como referencia y reunir otra sesión comparable."
-            let trend = delta == nil ? 2 : delta! > 0 ? 1 : delta! < 0 ? -1 : 0
-            return Item(name: workout.swaps[ex.name] ?? ex.name, change: trend == 0 ? "=" : change, trend: trend, proposal: proposal)
+            let trend: Trend = delta == nil ? .new : delta! > 0 ? .up : delta! < 0 ? .down : .same
+            let today = weighted(now) && top(now) > 0 ? "\(fmt(top(now))) kg" : "\(reps(now)) reps"
+            return Item(name: workout.swaps[ex.name] ?? ex.name, change: trend == .same ? "=" : change, today: today, trend: trend, proposal: proposal)
         }
     }
 
+    /// Etiqueta de «Frente a la última vez»: las mejoras en dorado; lo demás, la cifra de hoy en gris
+    /// (`compareTag` en la web).
+    static func compareTag(_ item: Item) -> (text: String, highlight: Bool) {
+        switch item.trend {
+        case .up: return (item.change, true)
+        case .new: return ("Nuevo", false)
+        default: return (item.today, false)
+        }
+    }
+
+    private var pages: [Page] { muscles.isEmpty ? [.summary, .compare] : [.summary, .muscles, .compare] }
+    private var currentPage: Page { pages[min(page, pages.count - 1)] }
+
     var body: some View {
         VStack(spacing: 0) {
-            header
-            cards
-            dots
-            actions
+            HStack {
+                Spacer()
+                Button { Haptics.success(); onDone() } label: {
+                    Text("Listo").font(.apHeadline).foregroundStyle(Palette.gold).frame(minWidth: 44, minHeight: 44)
+                }
+                .buttonStyle(.plain)
+                .keyboardShortcut(.defaultAction)
+            }
+            .padding(.horizontal, 12)
+            pager
+            saveRoutine
+            shareButton
         }
-        .background(Palette.background)
+        .background(Palette.card)
         .overlay(alignment: .top) {
             if !workout.records.isEmpty && !confettiDone {
                 CelebrationConfetti()
@@ -1635,85 +1763,291 @@ struct WorkoutSummaryView: View {
                     }
             }
         }
-        .task(id: page) { shareURL = renderCard() }
+        .task(id: page) { shareURL = renderStory() }
     }
 
-    // MARK: - Cabecera
+    // MARK: Páginas
 
-    private var header: some View {
-        ZStack(alignment: .topTrailing) {
-            VStack(spacing: 6) {
-                Text("¡Buen trabajo!").font(.apLargeTitle).accessibilityAddTraits(.isHeader)
-                Text("\(title.0) · \(dateLabel)")
-                    .font(.apSubhead)
-                    .foregroundStyle(Palette.muted)
-                    .lineLimit(1)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.top, 22)
-            .padding(.horizontal, 56)
-
-            Button {
-                Haptics.selection()
-                withAnimation(reduceMotion ? nil : .snappy) { page = (page + 1) % 5 }
-            } label: {
-                Image(systemName: "party.popper.fill")
-                    .font(.inter(size: 18))
-                    .foregroundStyle(Palette.gold)
-                    .frame(width: 44, height: 44)
-                    .background(Palette.secondary, in: Circle())
-            }
-            .buttonStyle(.plain)
-            .padding(.trailing, 20)
-            .padding(.top, 14)
-            .accessibilityLabel("Siguiente tarjeta")
-        }
-    }
-
-    // MARK: - Tarjetas deslizantes
-
-    private var cards: some View {
+    @ViewBuilder private var pager: some View {
         #if os(iOS)
         TabView(selection: $page) {
-            summaryCard.tag(0)
-            statsCard.tag(1)
-            funCard.tag(2)
-            recordsCard.tag(3)
-            compareCard.tag(4)
+            ForEach(Array(pages.enumerated()), id: \.offset) { i, p in
+                ScrollView { pageBody(p).padding(.horizontal, 16).padding(.bottom, 8) }
+                    .scrollIndicators(.hidden)
+                    .tag(i)
+            }
         }
         .tabViewStyle(.page(indexDisplayMode: .never))
-        .frame(height: 430)
-        .padding(.top, 8)
+        dots
         #else
+        // En el Mac las tres páginas, una debajo de otra; «Compartir» usa la del resumen.
         ScrollView {
-            VStack(spacing: 12) { summaryCard; statsCard; funCard; recordsCard; compareCard }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
+            VStack(alignment: .leading, spacing: 28) { ForEach(pages, id: \.self) { pageBody($0) } }
+                .padding(.horizontal, 24).padding(.bottom, 16)
+                .frame(maxWidth: 560)
+                .frame(maxWidth: .infinity)
         }
         #endif
     }
 
-    @ViewBuilder
-    private func cardFor(_ i: Int) -> some View {
-        switch i {
-        case 0: summaryCard
-        case 1: statsCard
-        case 2: funCard
-        case 3: recordsCard
-        default: compareCard
+    @ViewBuilder private func pageBody(_ p: Page) -> some View {
+        switch p {
+        case .summary: summaryPage
+        case .muscles: musclesPage
+        case .compare: comparePage
         }
     }
 
-    /// Renderiza la tarjeta visible a PNG (1080×1350) para compartirla como imagen.
+    private func tile<C: View>(@ViewBuilder _ content: () -> C) -> some View {
+        content()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(16)
+            .background(Palette.secondary, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+    }
+
+    private var summaryPage: some View {
+        VStack(spacing: 0) {
+            VStack(spacing: 4) {
+                Text("Completado · \(dateLabel)").font(.apSubhead).foregroundStyle(Palette.muted)
+                Text(title.0).font(.apLargeTitle).multilineTextAlignment(.center).lineLimit(2).accessibilityAddTraits(.isHeader)
+                if !title.1.isEmpty {
+                    Text(title.1).font(.apHeadline).foregroundStyle(Palette.muted).lineLimit(1)
+                }
+            }
+            .frame(maxWidth: .infinity)
+
+            // Una cifra protagonista: el volumen de hoy (o las series, si es peso corporal).
+            VStack(spacing: 4) {
+                Text(hasVolume ? "Volumen total" : "Series completadas").font(.apFootnote).foregroundStyle(Palette.muted)
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text(hasVolume ? NumberText.grouped(volume) : NumberText.integer(workout.doneSets))
+                        .font(.figure(size: 64))
+                        .foregroundStyle(Palette.gold)
+                    Text(hasVolume ? "kg" : (workout.doneSets == 1 ? "serie" : "series"))
+                        .font(.apTitle3).foregroundStyle(Palette.muted)
+                }
+                .lineLimit(1).minimumScaleFactor(0.6)
+                if gain > 0 {
+                    Label("+\(NumberText.grouped(gain)) kg más que la última vez", systemImage: "chart.line.uptrend.xyaxis")
+                        .font(.apSubhead.weight(.semibold).monospacedDigit())
+                        .foregroundStyle(Palette.gold)
+                        .padding(.horizontal, 12).padding(.vertical, 4)
+                        .background(Palette.gold.opacity(0.15), in: Capsule())
+                        .padding(.top, 8)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.top, 24)
+            .background {
+                // Halo dorado muy tenue detrás de la cifra.
+                RadialGradient(colors: [Palette.gold.opacity(0.14), .clear], center: .center, startRadius: 0, endRadius: 140)
+                    .allowsHitTesting(false)
+            }
+            .accessibilityElement(children: .combine)
+
+            if !workout.records.isEmpty { recordsBlock.padding(.top, 24) }
+
+            statsGrid.padding(.top, 24)
+        }
+        .padding(.top, 4)
+    }
+
+    private var recordsBlock: some View {
+        tile {
+            VStack(alignment: .leading, spacing: 8) {
+                Label(workout.records.count == 1 ? "Nuevo récord personal" : "\(workout.records.count) récords personales",
+                      systemImage: "trophy.fill")
+                    .font(.apTitle3)
+                    .labelStyle(GoldIconLabelStyle())
+                VStack(spacing: 0) {
+                    ForEach(Array(workout.records.enumerated()), id: \.offset) { i, name in
+                        let now = bestWeight(workout.draft.logs[name])
+                        let before = bestWeight(workout.previous[name])
+                        HStack(spacing: 12) {
+                            Text(name).font(.apBody).lineLimit(1)
+                            Spacer(minLength: 8)
+                            VStack(alignment: .trailing, spacing: 0) {
+                                if now > 0 { Text("\(fmt(now)) kg").font(.apHeadline.monospacedDigit()).foregroundStyle(Palette.gold) }
+                                if now > 0, before > 0, now > before {
+                                    Text("+\(fmt(now - before)) kg").font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted)
+                                }
+                            }
+                            .fixedSize()
+                        }
+                        .frame(minHeight: 44)
+                        .overlay(alignment: .bottom) {
+                            if i < workout.records.count - 1 { Rectangle().fill(Palette.separator).frame(height: 0.5) }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func bestWeight(_ sets: [SetLog]?) -> Double {
+        (sets ?? []).filter { $0.done && $0.isWarmup != true }
+            .compactMap { Double($0.weight.replacingOccurrences(of: ",", with: ".")) }.max() ?? 0
+    }
+
+    private var stats: [(label: String, value: String, unit: String?)] {
+        var out: [(label: String, value: String, unit: String?)] = [
+            ("Series", NumberText.grouped(Double(workout.doneSets)), nil),
+            ("Ejercicios", "\(completedExercises)", "/\(workout.exercises.count)"),
+        ]
+        if let d = durationParts { out.append(("Duración", d.value, d.unit)) }
+        if let rpe { out.append(("Esfuerzo", "\(rpe)", "/10")) }
+        if out.count % 2 == 1 && !muscles.isEmpty { out.append(("Músculos", "\(muscles.count)", nil)) }
+        return out
+    }
+
+    private var statsGrid: some View {
+        let items = stats
+        return LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+            ForEach(Array(items.enumerated()), id: \.offset) { _, stat in
+                VStack(spacing: 6) {
+                    Text(stat.label).font(.apFootnote).foregroundStyle(Palette.muted)
+                    HStack(alignment: .firstTextBaseline, spacing: 2) {
+                        Text(stat.value).font(.figure(size: 36))
+                        if let unit = stat.unit { Text(unit).font(.apHeadline).foregroundStyle(Palette.muted) }
+                    }
+                    .lineLimit(1).minimumScaleFactor(0.6)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(16)
+                .background(Palette.secondary, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                .accessibilityElement(children: .combine)
+            }
+        }
+    }
+
+    private var musclesPage: some View {
+        let counts = muscleCounts
+        let strong = muscles.filter { (counts[$0] ?? 0) >= 3 }
+        let light = muscles.filter { (counts[$0] ?? 0) < 3 }
+        return VStack(alignment: .leading, spacing: 4) {
+            Text("Músculos trabajados").font(.apTitle3).accessibilityAddTraits(.isHeader)
+            if !muscleLine.isEmpty { Text(muscleLine).font(.apFootnote).foregroundStyle(Palette.muted) }
+            HStack(spacing: 4) {
+                MuscleBodyFigure(back: false, primary: strong, synergists: light)
+                MuscleBodyFigure(back: true, primary: strong, synergists: light)
+            }
+            .frame(maxWidth: .infinity, minHeight: 256, maxHeight: 340)
+            .padding(.horizontal, 12).padding(.vertical, 16)
+            .background(Palette.secondary, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            .padding(.top, 12)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Músculos trabajados: \(muscles.joined(separator: ", "))")
+        }
+    }
+
+    private var comparePage: some View {
+        let items = Array(review.prefix(6))
+        return VStack(alignment: .leading, spacing: 0) {
+            Text("Frente a la última vez").font(.apTitle3).accessibilityAddTraits(.isHeader)
+            if items.isEmpty {
+                Text("Esta sesión será tu referencia para la próxima.")
+                    .font(.apSubhead).foregroundStyle(Palette.muted).padding(.top, 14)
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(Array(items.enumerated()), id: \.offset) { i, it in
+                        let tag = Self.compareTag(it)
+                        HStack(spacing: 12) {
+                            Text(it.name).font(.apSubhead).lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
+                            Text(tag.text)
+                                .font(.apFootnote.weight(.semibold).monospacedDigit())
+                                .foregroundStyle(tag.highlight ? Palette.gold : Palette.muted)
+                                .padding(.horizontal, 10).padding(.vertical, 2)
+                                .background(tag.highlight ? Palette.gold.opacity(0.15) : Palette.foreground.opacity(0.1), in: Capsule())
+                                .fixedSize()
+                        }
+                        .padding(.horizontal, 16)
+                        .frame(minHeight: 44)
+                        .overlay(alignment: .bottom) {
+                            if i < items.count - 1 { Rectangle().fill(Palette.separator).frame(height: 0.5) }
+                        }
+                    }
+                }
+                .padding(.vertical, 4)
+                .background(Palette.secondary, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                .padding(.top, 16)
+            }
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "target").font(.inter(size: 18, weight: .semibold)).foregroundStyle(Palette.gold)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Próxima sesión").font(.apHeadline)
+                    Text(items.first?.proposal ?? "Mantén tu plan como referencia para la próxima sesión.")
+                        .font(.apSubhead).foregroundStyle(Palette.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(16)
+            .background(Palette.secondary, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            .padding(.top, 12)
+        }
+    }
+
+    // MARK: Guardar como rutina, puntos y compartir
+
+    /// Entreno vacío terminado: lo hecho (ejercicios con series hechas) se guarda como rutina.
+    @ViewBuilder private var saveRoutine: some View {
+        let performed = CustomRoutines.fromWorkout(workout.exercises, logs: workout.draft.logs)
+        if let onSaveRoutine, !performed.isEmpty {
+            SaveRoutineButton(exercises: performed,
+                              suggestedName: SessionIdentity.suggestedName(DayPlan(day: "", type: "gimnasio", exercises: performed)),
+                              limitReached: routineLimitReached, onSave: onSaveRoutine)
+                .padding(.horizontal, 20).padding(.top, 4).padding(.bottom, 8)
+        }
+    }
+
+    private var dots: some View {
+        HStack(spacing: 0) {
+            ForEach(pages.indices, id: \.self) { i in
+                Capsule()
+                    .fill(i == page ? Palette.gold : Palette.foreground.opacity(0.25))
+                    .frame(width: i == page ? 16 : 7, height: 7)
+                    .frame(width: 28, height: 44)
+                    .contentShape(Rectangle())
+                    .onTapGesture { Haptics.selection(); withAnimation(reduceMotion ? nil : .snappy) { page = i } }
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Página \(page + 1) de \(pages.count)")
+        .accessibilityAdjustableAction { direction in
+            switch direction {
+            case .increment: page = min(page + 1, pages.count - 1)
+            case .decrement: page = max(page - 1, 0)
+            default: break
+            }
+        }
+    }
+
+    /// La única acción dorada: compartir la historia de la página visible (resumen o músculos).
+    @ViewBuilder private var shareButton: some View {
+        Group {
+            if let shareURL {
+                ShareLink(item: shareURL) { Label("Compartir", systemImage: "square.and.arrow.up") }
+            } else {
+                Button {} label: { Label("Compartir", systemImage: "square.and.arrow.up") }.disabled(true)
+            }
+        }
+        .buttonStyle(.pill)
+        .padding(.horizontal, 20)
+        .padding(.top, 4)
+        .padding(.bottom, 20)
+    }
+
+    /// Historia de 1080 × 1920 con la misma composición que `WorkoutStoryShare` en la web.
     @MainActor
-    private func renderCard() -> URL? {
-        // Mismo fondo negro y mismos márgenes que en pantalla: la imagen es idéntica a la tarjeta.
-        let view = cardFor(page)
-            .frame(width: 360, height: 450)
-            .background(Palette.background)
-            // Sin esto, ImageRenderer usa el esquema claro y los textos salen negros sobre negro.
-            .environment(\.colorScheme, .dark)
-        let renderer = ImageRenderer(content: view)
+    private func renderStory() -> URL? {
+        let card = WorkoutShareCard(
+            variant: currentPage == .muscles ? .musculos : .resumen,
+            title: workout.draft.day.title, date: dateLabel, volumeKg: volume, sets: workout.doneSets,
+            exercises: completedExercises, records: workout.records, muscles: muscles, muscleCounts: muscleCounts,
+            previousVolumeKg: previousVolume
+        )
+        let renderer = ImageRenderer(content: card)
         renderer.scale = 3
         #if os(iOS)
         guard let image = renderer.uiImage, let data = image.pngData() else { return nil }
@@ -1727,296 +2061,153 @@ struct WorkoutSummaryView: View {
         // Solo QA: `-saveCard` deja una copia en Documents para poder inspeccionarla desde el Mac.
         if ProcessInfo.processInfo.arguments.contains("-saveCard"),
            let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
-            try? data.write(to: docs.appendingPathComponent("autopilot-card.png"))
+            try? data.write(to: docs.appendingPathComponent("autopilot-entreno.png"))
         }
         #endif
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent("autopilot-card.png")
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("autopilot-entreno.png")
         do { try data.write(to: url); return url } catch { return nil }
     }
+}
 
-    private func card<C: View>(@ViewBuilder _ content: () -> C) -> some View {
-        content()
-            .padding(24)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .background {
-                LinearGradient(colors: [Palette.card, Color.black.opacity(0.94)], startPoint: .topLeading, endPoint: .bottomTrailing)
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .strokeBorder(Palette.gold.opacity(0.35), lineWidth: 1)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 6)
-    }
-
-    private var brandFooter: some View {
-        HStack {
-            Text("AUTOPILOT").font(.apCaption.weight(.bold)).tracking(2).foregroundStyle(Palette.foreground)
-            Spacer()
-            Text("autopilotplan.com").font(.apCaption).foregroundStyle(Palette.muted)
+/// Icono dorado y texto en el color del título (para «Nuevo récord personal»).
+private struct GoldIconLabelStyle: LabelStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: 8) {
+            configuration.icon.foregroundStyle(Palette.gold)
+            configuration.title
         }
     }
+}
 
-    private func eyebrow(_ text: String) -> some View {
-        Text(text)
-            .font(.apCaption.weight(.bold))
-            .tracking(2)
-            .foregroundStyle(Palette.gold)
+/// Imagen para compartir el entreno (historia 9:16), espejo de `renderStory` en la web: fecha arriba,
+/// título y músculos, la cifra protagonista en Big Shoulders con su unidad, el logro (solo si sube),
+/// tres cifras y el AP pequeño al pie, sin el nombre de la marca.
+struct WorkoutShareCard: View {
+    enum Variant { case resumen, musculos }
+    let variant: Variant
+    let title: String
+    let date: String
+    let volumeKg: Double
+    let sets: Int
+    let exercises: Int
+    let records: [String]
+    let muscles: [String]
+    let muscleCounts: [String: Double]
+    let previousVolumeKg: Double
+
+    private let secondary = Color(red: 0.659, green: 0.659, blue: 0.682)
+
+    /// Volumen de hoy, o las series si es peso corporal: nunca «0 kg».
+    private var hero: (label: String, value: String, unit: String) {
+        volumeKg > 0
+            ? ("Volumen total", NumberText.grouped(volumeKg), "kg")
+            : ("Series completadas", NumberText.grouped(Double(sets)), sets == 1 ? "serie" : "series")
     }
 
-    private var summaryCard: some View {
-        card {
-            VStack(alignment: .leading, spacing: 0) {
-                eyebrow("AUTOPILOT")
-                Spacer(minLength: 10)
-                Text(title.0)
-                    .font(.figure(size: 42))
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.7)
-                if !title.1.isEmpty {
-                    Text(title.1)
-                        .font(.apSubhead)
-                        .foregroundStyle(Palette.muted)
-                        .lineLimit(2)
-                        .padding(.top, 4)
-                }
-                Text("\(dateLabel) · \(durationText)")
-                    .font(.apFootnote)
-                    .foregroundStyle(Palette.muted)
-                    .padding(.top, 8)
-                Spacer(minLength: 14)
-                VStack(alignment: .leading, spacing: 7) {
-                    ForEach(Array(exerciseRows.prefix(6).enumerated()), id: \.element.id) { _, row in
-                        HStack(alignment: .firstTextBaseline, spacing: 8) {
-                            Text("\(row.sets)×")
-                                .font(.apFootnote.weight(.bold).monospacedDigit())
-                                .foregroundStyle(Palette.gold)
-                            Text(row.name).font(.apSubhead).lineLimit(1)
-                        }
-                    }
-                    if exerciseRows.count > 6 {
-                        Text("+\(exerciseRows.count - 6) ejercicios").font(.apFootnote).foregroundStyle(Palette.muted)
-                    }
-                }
+    /// Un récord o lo que sube el volumen; nunca una bajada (`sessionHighlight` en la web).
+    private var highlight: String? {
+        if let first = records.first { return "Nuevo récord · \(first)" }
+        let gain = volumeKg - previousVolumeKg
+        return previousVolumeKg > 0 && gain > 0 ? "+\(NumberText.grouped(gain)) kg más que la última vez" : nil
+    }
+
+    private var subtitle: String {
+        let top = muscles.prefix(3).enumerated().map { $0.offset == 0 ? $0.element : $0.element.lowercased() }
+        guard let last = top.last else { return "Sesión completada" }
+        return top.count > 1 ? "\(top.dropLast().joined(separator: ", ")) y \(last)" : last
+    }
+
+    var body: some View {
+        ZStack(alignment: .top) {
+            Color.black
+            RadialGradient(colors: [Palette.gold.opacity(0.14), .clear], center: UnitPoint(x: 0.5, y: 0.05), startRadius: 0, endRadius: 217)
+            VStack(spacing: 0) {
+                Text("Completado · \(date)")
+                    .font(.inter(size: 13, weight: .medium)).foregroundStyle(secondary)
+                    .padding(.top, 36)
+                if variant == .resumen { resumen } else { musculos }
                 Spacer(minLength: 0)
-                brandFooter.padding(.top, 12)
+                BrandMark(size: 24)
+                Text("autopilotplan.com")
+                    .font(.inter(size: 13, weight: .medium)).foregroundStyle(secondary)
+                    .padding(.top, 10).padding(.bottom, 34)
             }
+            .padding(.horizontal, 25)
+        }
+        .frame(width: 360, height: 640)
+        .environment(\.colorScheme, .dark)
+    }
+
+    private var titleBlock: some View {
+        VStack(spacing: 6) {
+            Text(title.isEmpty ? "Sesión de hoy" : title)
+                .font(.inter(size: 28, weight: .heavy)).foregroundStyle(.white)
+                .lineLimit(1).minimumScaleFactor(0.5)
+            Text(subtitle).font(.inter(size: 15, weight: .medium)).foregroundStyle(secondary).lineLimit(1)
         }
     }
 
-    private var statsCard: some View {
-        card {
-            VStack(alignment: .leading, spacing: 0) {
-                eyebrow("CIFRAS")
-                LazyVGrid(columns: [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)], spacing: 22) {
-                    figure("Volumen", "\(NumberText.integer(Int(workout.volumeKg))) kg", accent: true)
-                    figure("Series", "\(workout.doneSets)")
-                    figure("Duración", durationText)
-                    figure("Ejercicios", "\(completedExercises)/\(workout.exercises.count)")
-                    if let rpe { figure("Esfuerzo", "\(rpe)/10") }
-                }
-                .padding(.top, 28)
-                Spacer(minLength: 12)
-                if previousVolume > 0, workout.volumeKg > 0 {
-                    let diff = workout.volumeKg - previousVolume
-                    Text("\(diff >= 0 ? "+" : "−")\(NumberText.integer(Int(abs(diff)))) kg respecto a la última vez")
-                        .font(.apFootnote)
-                        .foregroundStyle(diff >= 0 ? Palette.gold : Palette.muted)
-                        .padding(.bottom, 10)
-                }
-                brandFooter
+    private func bigFigure(size: CGFloat) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Text(hero.value).font(.figure(size: size)).foregroundStyle(.white)
+            Text(hero.unit).font(.inter(size: size * 0.27, weight: .semibold)).foregroundStyle(secondary)
+        }
+        .lineLimit(1).minimumScaleFactor(0.4)
+    }
+
+    @ViewBuilder private var highlightCapsule: some View {
+        if let highlight {
+            Text(highlight)
+                .font(.inter(size: 11.5, weight: .semibold)).foregroundStyle(Palette.gold)
+                .lineLimit(1).minimumScaleFactor(0.6)
+                .padding(.horizontal, 12).frame(height: 23)
+                .background(Palette.gold.opacity(0.14), in: Capsule())
+        }
+    }
+
+    private var resumen: some View {
+        VStack(spacing: 0) {
+            titleBlock.padding(.top, 136)
+            Text(hero.label).font(.inter(size: 11.5, weight: .semibold)).foregroundStyle(secondary).padding(.top, 44)
+            bigFigure(size: 80)
+            highlightCapsule.padding(.top, 8)
+            HStack(spacing: 0) {
+                stat(NumberText.grouped(Double(sets)), "Series")
+                Rectangle().fill(.white.opacity(0.12)).frame(width: 0.7, height: 43)
+                stat("\(exercises)", "Ejercicios")
+                Rectangle().fill(.white.opacity(0.12)).frame(width: 0.7, height: 43)
+                stat("\(muscles.count)", "Músculos")
             }
+            .padding(.top, 70)
         }
     }
 
-    private func figure(_ label: String, _ value: String, accent: Bool = false) -> some View {
-        VStack(alignment: .leading, spacing: 1) {
-            Text(label).font(.apFootnote).foregroundStyle(Palette.muted)
-            Text(value)
-                .font(.inter(size: 26, weight: .bold).monospacedDigit())
-                .foregroundStyle(accent ? Palette.gold : Palette.foreground)
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .combine)
-    }
-
-    // MARK: - Tarjeta de dato sorprendente (estilo Hevy «has levantado un camión»)
-
-    private var funData: (symbol: String, headline: String, detail: String) {
-        let kg = Int(workout.volumeKg.rounded())
-        guard kg > 0 else {
-            return ("figure.strengthtraining.traditional", "Primer paso dado", "Cada sesión suma.")
-        }
-        if kg >= 12000 {
-            let trucks = max(1, Int((Double(kg) / 12000).rounded()))
-            return ("truck.box.fill", "Has movido \(NumberText.integer(kg)) kg",
-                    trucks == 1 ? "El equivalente a un camión." : "El equivalente a \(trucks) camiones.")
-        }
-        if kg >= 5000 {
-            let elephants = max(1, Int((Double(kg) / 5000).rounded()))
-            return ("figure.walk", "Has movido \(NumberText.integer(kg)) kg",
-                    elephants == 1 ? "El equivalente a un elefante." : "El equivalente a \(elephants) elefantes.")
-        }
-        if kg >= 1500 {
-            let cars = max(1, Int((Double(kg) / 1500).rounded()))
-            return ("car.fill", "Has movido \(NumberText.integer(kg)) kg",
-                    cars == 1 ? "El equivalente a un coche." : "El equivalente a \(cars) coches.")
-        }
-        return ("scalemass.fill", "Has movido \(NumberText.integer(kg)) kg",
-                "Más de lo que parece desde dentro.")
-    }
-
-    private var funCard: some View {
-        let f = funData
-        return card {
-            VStack(alignment: .leading, spacing: 0) {
-                eyebrow("DATO CURIOSO")
-                Spacer()
-                Image(systemName: f.symbol)
-                    .font(.inter(size: 64, weight: .semibold))
-                    .foregroundStyle(Palette.gold)
-                    .accessibilityHidden(true)
-                Text(f.headline)
-                    .font(.inter(size: 32, weight: .bold))
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.7)
-                    .padding(.top, 16)
-                Text(f.detail)
-                    .font(.apTitle3)
-                    .foregroundStyle(Palette.muted)
-                    .padding(.top, 4)
-                Spacer()
-                brandFooter
+    private var musculos: some View {
+        let strong = muscles.filter { (muscleCounts[$0] ?? 0) >= 3 }
+        let light = muscles.filter { (muscleCounts[$0] ?? 0) < 3 }
+        return VStack(spacing: 0) {
+            titleBlock.padding(.top, 46)
+            highlightCapsule.padding(.top, 12)
+            HStack(spacing: 20) {
+                MuscleBodyFigure(back: false, primary: strong, synergists: light)
+                MuscleBodyFigure(back: true, primary: strong, synergists: light)
             }
+            .frame(height: 220)
+            .padding(.top, 20)
+            Text(hero.label).font(.inter(size: 11.5, weight: .semibold)).foregroundStyle(secondary).padding(.top, 24)
+            bigFigure(size: 63)
+            Text("\(sets) \(sets == 1 ? "serie" : "series") · \(exercises) \(exercises == 1 ? "ejercicio" : "ejercicios")")
+                .font(.inter(size: 11.5, weight: .medium)).foregroundStyle(secondary).padding(.top, 4)
         }
     }
 
-    private var recordsCard: some View {
-        card {
-            VStack(alignment: .leading, spacing: 0) {
-                eyebrow("RÉCORDS")
-                Spacer(minLength: 16)
-                if workout.records.isEmpty {
-                    VStack(alignment: .leading, spacing: 0) {
-                        Image("lu-trophy")
-                            .renderingMode(.template)
-                            .resizable()
-                            .frame(width: 44, height: 44)
-                            .foregroundStyle(Palette.gold.opacity(0.55))
-                        Text("Hoy no ha caído ningún récord").font(.apTitle3).padding(.top, 14)
-                        Text("La próxima sesión es otra oportunidad.")
-                            .font(.apSubhead).foregroundStyle(Palette.muted).padding(.top, 2)
-                    }
-                } else {
-                    VStack(alignment: .leading, spacing: 14) {
-                        ForEach(workout.records.prefix(6), id: \.self) { r in
-                            HStack(spacing: 10) {
-                                Image("lu-trophy")
-                                    .renderingMode(.template)
-                                    .resizable()
-                                    .frame(width: 22, height: 22)
-                                    .foregroundStyle(Palette.gold)
-                                Text(r).font(.apTitle3).lineLimit(1).minimumScaleFactor(0.7)
-                            }
-                        }
-                    }
-                }
-                Spacer(minLength: 16)
-                brandFooter
-            }
+    private func stat(_ value: String, _ label: String) -> some View {
+        VStack(spacing: 4) {
+            Text(value).font(.figure(size: 32)).foregroundStyle(.white).lineLimit(1).minimumScaleFactor(0.6)
+            Text(label).font(.inter(size: 13, weight: .medium)).foregroundStyle(secondary)
         }
+        .frame(maxWidth: .infinity)
     }
-
-    private var compareCard: some View {
-        card {
-            VStack(alignment: .leading, spacing: 0) {
-                eyebrow("FRENTE A LA ÚLTIMA VEZ")
-                let items = Array(review.prefix(5))
-                if items.isEmpty {
-                    Text("Esta sesión será tu referencia para la próxima.")
-                        .font(.apSubhead)
-                        .foregroundStyle(Palette.muted)
-                        .padding(.top, 14)
-                } else {
-                    VStack(spacing: 0) {
-                        ForEach(Array(items.enumerated()), id: \.offset) { i, it in
-                            HStack(spacing: 10) {
-                                Text(it.name).font(.apSubhead).lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
-                                let color: Color = it.trend == 1 ? Palette.gold : Palette.muted
-                                Text(it.change)
-                                    .font(.apFootnote.weight(.semibold).monospacedDigit())
-                                    .foregroundStyle(color)
-                                    .padding(.horizontal, 8).padding(.vertical, 2)
-                                    .background((it.trend == 1 || it.trend == -1 ? color.opacity(0.15) : Palette.foreground.opacity(0.1)), in: Capsule())
-                            }
-                            .padding(.vertical, 7)
-                            .overlay(alignment: .bottom) {
-                                if i < items.count - 1 { Rectangle().fill(Palette.separator).frame(height: 0.5) }
-                            }
-                        }
-                    }
-                    .padding(.top, 10)
-                }
-                Spacer(minLength: 8)
-                HStack(alignment: .top, spacing: 10) {
-                    Image("lu-target").renderingMode(.template).resizable().frame(width: 18, height: 18).foregroundStyle(Palette.gold).padding(.top, 2)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("PRÓXIMA SESIÓN").font(.apCaption.weight(.bold)).tracking(1.6).foregroundStyle(Palette.gold)
-                        Text(items.first?.proposal ?? "Mantén tu plan como referencia para la próxima sesión.")
-                            .font(.apSubhead)
-                            .foregroundStyle(Palette.foreground.opacity(0.85))
-                    }
-                }
-                brandFooter.padding(.top, 14)
-            }
-        }
-    }
-
-    // MARK: - Puntos y acciones
-
-    private var dots: some View {
-        HStack(spacing: 2) {
-            ForEach(0..<5, id: \.self) { i in
-                Circle()
-                    .fill(i == page ? Palette.gold : Palette.foreground.opacity(0.22))
-                    .frame(width: i == page ? 8 : 6, height: i == page ? 8 : 6)
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
-                    .onTapGesture { Haptics.selection(); withAnimation(reduceMotion ? nil : .snappy) { page = i } }
-            }
-        }
-        .accessibilityHidden(true)
-    }
-
-    private var actions: some View {
-        VStack(spacing: 10) {
-            if let shareURL {
-                ShareLink(item: shareURL) {
-                    Label("Compartir tarjeta", systemImage: "square.and.arrow.up")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.pillSecondary)
-            } else {
-                Button {} label: {
-                    Label("Compartir tarjeta", systemImage: "square.and.arrow.up")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.pillSecondary)
-                .disabled(true)
-            }
-            Button { Haptics.success(); onDone() } label: {
-                Text("Listo").frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.pill)
-        }
-        .padding(.horizontal, 20)
-        .padding(.top, 2)
-        .padding(.bottom, 24)
-    }
-
 }
 
 // MARK: - Celebración
