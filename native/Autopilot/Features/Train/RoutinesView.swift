@@ -166,12 +166,27 @@ struct RoutineLimitNote: View {
 
 /// «Mis rutinas» en Entrenar (`MyRoutines.tsx`): cada rutina con su nombre, cuántos ejercicios y
 /// qué músculos, sus miniaturas (foto o la huella del ejercicio) y «Empezar»; en «···», «Editar»,
-/// «Duplicar» y «Borrar» (con hoja de confirmación).
+/// «Duplicar» y «Borrar» (con hoja de confirmación). Debajo, si tus rutinas no llegan a tus días de
+/// entreno, «Completar con el autopiloto».
 struct MyRoutinesSection: View {
+    /// «Completar con el autopiloto» (`AutopilotOffer` en la web): lo ofrece Entrenar cuando
+    /// `CustomRoutines.canCompleteWithAutopilot` (plan todo tuyo y menos sesiones que tus días).
+    struct Autopilot {
+        /// Sesiones tuyas y tus días de entreno: «Tus rutinas cubren 2 de tus 4 días de entreno».
+        let own: Int
+        let frequency: Int
+        /// generate-plan alrededor de tus rutinas y el plan se vuelve a leer: cuántas respetó, o nil si falló.
+        let onComplete: () async -> Int?
+    }
+
+    private enum Fill: Equatable { case idle, running(own: Int, frequency: Int), done(kept: Int), failed }
+
     let routines: [DayPlan]
     let limitReached: Bool
     var resumableDay: String? = nil
     var doneToday: Set<String> = []
+    /// Fila secundaria bajo tus rutinas; nil si no se ofrece.
+    var autopilot: Autopilot? = nil
     var onNew: () -> Void
     var onStart: (String) -> Void
     var onEdit: (String) -> Void
@@ -180,6 +195,8 @@ struct MyRoutinesSection: View {
 
     @State private var deleting: DayPlan?
     @State private var busy = false
+    /// El plan nuevo ya no pide la fila: el aviso de cómo fue (y la carga) se queda en su sitio.
+    @State private var fill: Fill = .idle
     /// Miniaturas que se enseñan por rutina; el resto, «+N».
     private let thumbs = 4
 
@@ -223,6 +240,7 @@ struct MyRoutinesSection: View {
                     ForEach(routines, id: \.day) { card($0) }
                 }
             }
+            if showFill { autopilotCard }
         }
         .sheet(item: $deleting) { routine in
             // Borrar: hoja de confirmación, como «¿Descartar entrenamiento?».
@@ -238,6 +256,99 @@ struct MyRoutinesSection: View {
                 }
             } onCancel: { deleting = nil }
         }
+    }
+
+    private var showFill: Bool {
+        switch fill {
+        case .running, .done: return true
+        case .idle, .failed: return autopilot != nil
+        }
+    }
+
+    /// Fila secundaria (la acción dorada de la sección es «Nueva rutina»): cuánto cubren tus rutinas y
+    /// «Completar con el autopiloto»; mientras trabaja, el AP latiendo; al terminar, «Hemos respetado
+    /// tus N rutinas»; si falla, el aviso de error con «Reintentar». Igual que `AutopilotFillCard` en la web.
+    private var autopilotCard: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            switch fill {
+            case .done(let kept):
+                HStack(alignment: .top, spacing: 12) {
+                    IconTile(symbol: "checkmark", size: 40)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(PlanShield.keptTitle(kept)).font(.apHeadline)
+                        Text(PlanShield.description).font(.apSubhead).foregroundStyle(Palette.muted)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .accessibilityElement(children: .combine)
+            case .failed:
+                HStack(alignment: .top, spacing: 12) {
+                    IconTile(symbol: "exclamationmark.triangle", size: 40, tint: Palette.destructive)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(CustomRoutines.fillErrorTitle).font(.apHeadline)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Text(CustomRoutines.fillErrorDetail).font(.apSubhead).foregroundStyle(Palette.muted)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .accessibilityElement(children: .combine)
+                Button(CustomRoutines.fillRetry) { Task { await completeWithAutopilot() } }
+                    .buttonStyle(.pillSecondary)
+                    .padding(.top, 16)
+            case .idle, .running:
+                let running = fill != .idle
+                let own: Int = { if case .running(let own, _) = fill { return own }; return autopilot?.own ?? 0 }()
+                let frequency: Int = { if case .running(_, let frequency) = fill { return frequency }; return autopilot?.frequency ?? 0 }()
+                Text(CustomRoutines.fillSummary(own: own, frequency: frequency))
+                    .font(.apHeadline.monospacedDigit()).fixedSize(horizontal: false, vertical: true)
+                Text(CustomRoutines.fillDetail).font(.apSubhead).foregroundStyle(Palette.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 2)
+                // Sin `.disabled` mientras trabaja: el AP se ve entero, no apagado; un segundo toque no hace nada.
+                Button { Task { await completeWithAutopilot() } } label: {
+                    // Con letra grande, el texto baja de línea centrado y con aire (`py-3` en la web).
+                    Group {
+                        if running {
+                            HStack(spacing: 10) {
+                                BrandLoader(size: 18).accessibilityHidden(true)
+                                Text(CustomRoutines.fillRunning)
+                            }
+                        } else {
+                            Text(CustomRoutines.fillAction)
+                        }
+                    }
+                    .multilineTextAlignment(.center)
+                    .padding(.vertical, 12)
+                }
+                .buttonStyle(.pillSecondary)
+                .allowsHitTesting(!running)
+                .padding(.top, 16)
+                .accessibilityLabel(running ? CustomRoutines.fillRunning : CustomRoutines.fillAction)
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .surface()
+    }
+
+    private func completeWithAutopilot() async {
+        guard let autopilot else { return }
+        if case .running = fill { return }
+        Haptics.tap()
+        fill = .running(own: autopilot.own, frequency: autopilot.frequency)
+        A11y.announce(CustomRoutines.fillRunning)
+        guard let kept = await autopilot.onComplete() else {
+            fill = .failed
+            Haptics.error()
+            A11y.announce(CustomRoutines.fillErrorTitle)
+            return
+        }
+        let shown = kept > 0 ? kept : autopilot.own
+        fill = .done(kept: shown)
+        Haptics.success()
+        A11y.announce("\(PlanShield.keptTitle(shown)). \(PlanShield.description)")
     }
 
     private func card(_ routine: DayPlan) -> some View {

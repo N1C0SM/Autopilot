@@ -154,6 +154,35 @@ export const planModeCopy = (plans: readonly DayPlan[]): { title: string; detail
 };
 
 /**
+ * «Completar con el autopiloto» en «Mis rutinas» (`CustomRoutines.canCompleteWithAutopilot` en la app):
+ * solo con rutinas tuyas, un plan que es todo tuyo (sin sesiones del piloto automático) y menos
+ * sesiones que tus días de entreno (`frequency`, la misma cuenta que generate-plan:
+ * `planTrainingDays`). Sin saber tus días (null), no se ofrece.
+ */
+export function canCompleteWithAutopilot(plans: readonly DayPlan[], frequency: number | null | undefined): boolean {
+  if (frequency == null || !Number.isFinite(frequency) || myRoutines(plans).length === 0) return false;
+  const sessions = routineSessions(plans);
+  if (!sessions.every((plan) => plan.custom === true)) return false;
+  return sessions.length < Math.min(Math.max(Math.floor(frequency), 0), MAX_ROUTINE_SESSIONS);
+}
+
+/** Textos de «Completar con el autopiloto»: los mismos en la app (`CustomRoutines.fill*`). */
+export const AUTOPILOT_FILL = {
+  action: "Completar con el autopiloto",
+  detail: "El piloto automático prepara las sesiones que faltan y respeta las tuyas.",
+  running: "Preparando tus sesiones…",
+  errorTitle: "No se han podido preparar tus sesiones",
+  errorDetail: "Revisa tu conexión y vuelve a intentarlo. Tus rutinas siguen guardadas.",
+  retry: "Reintentar",
+} as const;
+
+/** «Tus rutinas cubren 2 de tus 4 días de entreno» / «Tu rutina cubre 1 de tus 3 días de entreno». */
+export const autopilotFillSummary = (own: number, frequency: number): string =>
+  own === 1
+    ? `Tu rutina cubre 1 de tus ${frequency} días de entreno`
+    : `Tus rutinas cubren ${own} de tus ${frequency} días de entreno`;
+
+/**
  * «Guardar como rutina» tras un entreno vacío: cada ejercicio con series hechas pasa con esas
  * series, sus repeticiones (un número o el rango hecho, «8-12») y el peso más alto. Los ejercicios
  * sin ninguna serie hecha no entran. Los isométricos conservan sus segundos («30s»).

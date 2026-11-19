@@ -1691,6 +1691,81 @@ describe("paridad web ↔ apps nativas", () => {
     expect(read("native/Autopilot/Design/Components.swift")).toContain('if kept > 0 { A11y.announce("\\(PlanShield.keptTitle(kept)). \\(PlanShield.description)") }');
   });
 
+  it("«Completar con el autopiloto» en Mis rutinas: mismo texto, misma regla para enseñarlo, la misma llamada a generate-plan y «Hemos respetado tus N rutinas», en la web y en la app", () => {
+    const lib = read("src/shared/lib/customRoutines.ts");
+    const core = read("native/Autopilot/Core/Training.swift");
+    const web = read("src/app/components/dashboard/MyRoutines.tsx");
+    const app = read("native/Autopilot/Features/Train/RoutinesView.swift");
+    const dashboard = read("src/app/pages/Dashboard.tsx");
+    const train = read("native/Autopilot/Features/Train/TrainView.swift");
+    // Mismos textos: la acción, lo que hace, la carga y el aviso de error con «Reintentar».
+    const copy = lib.slice(lib.indexOf("export const AUTOPILOT_FILL = {"), lib.indexOf("} as const;", lib.indexOf("export const AUTOPILOT_FILL = {")));
+    const texts = Object.fromEntries([...copy.matchAll(/(\w+): "([^"]+)"/g)].map((m) => [m[1], m[2]]));
+    expect(texts.action).toBe("Completar con el autopiloto");
+    expect(texts.retry).toBe("Reintentar");
+    const swiftNames: Record<string, string> = {
+      action: "fillAction", detail: "fillDetail", running: "fillRunning", errorTitle: "fillErrorTitle", errorDetail: "fillErrorDetail", retry: "fillRetry",
+    };
+    for (const [key, name] of Object.entries(swiftNames)) {
+      expect(texts[key], key).toBeTruthy();
+      expect(core, key).toContain(`static let ${name} = "${texts[key]}"`);
+      expect(web, key).toContain(`AUTOPILOT_FILL.${key}`);
+      expect(app, key).toContain(`CustomRoutines.${name}`);
+    }
+    // Lo que cubren tus rutinas, con su singular.
+    expect(lib).toContain("? `Tu rutina cubre 1 de tus ${frequency} días de entreno`");
+    expect(lib).toContain(": `Tus rutinas cubren ${own} de tus ${frequency} días de entreno`;");
+    expect(core).toContain('? "Tu rutina cubre 1 de tus \\(frequency) días de entreno"');
+    expect(core).toContain(': "Tus rutinas cubren \\(own) de tus \\(frequency) días de entreno"');
+    // Misma regla: hay rutinas tuyas, el plan es todo tuyo (sin sesiones del piloto) y no llega a tus días (máximo 7).
+    expect(lib).toContain("myRoutines(plans).length === 0");
+    expect(core).toContain("guard let frequency, !mine(plans).isEmpty else { return false }");
+    expect(lib).toContain("if (!sessions.every((plan) => plan.custom === true)) return false;");
+    expect(core).toContain("guard sessions.allSatisfy({ $0.custom == true }) else { return false }");
+    expect(lib).toContain("return sessions.length < Math.min(Math.max(Math.floor(frequency), 0), MAX_ROUTINE_SESSIONS);");
+    expect(core).toContain("return sessions.count < min(max(frequency, 0), DayNames.all.count)");
+    // Free y Plus en las dos (generate-plan solo lo rechaza con Coach): la web no lo esconde a Plus.
+    expect(dashboard).toContain('autopilot={consumerPlan !== "coach" && canCompleteWithAutopilot(dayPlans, trainingDays)');
+    expect(dashboard).not.toContain("autopilot={!coaching");
+    expect(train).toContain("guard CustomRoutines.canCompleteWithAutopilot(model.days, frequency: trainingDays), let trainingDays else { return nil }");
+    // Los días se leen también con el plan vacío (como la web, que siempre los lee): al crear tu primera
+    // rutina la fila ya puede salir, y tras guardar el editor de rutina se vuelven a leer.
+    expect(train).toContain("guard let userId = session.userId, model.sessions.allSatisfy({ $0.custom == true }) else { return }");
+    expect(train).toContain("PlanEditorView(original: model.days) { saved in model.days = saved; Task { await loadTrainingDays() } }");
+    // Tus días de entreno, contados como generate-plan: «Mi horario» manda sobre el cuestionario y, sin nada, 4.
+    const availability = read("src/shared/lib/availability.ts");
+    expect(availability).toContain("export function planTrainingDays(availability: unknown, gymSlots?: unknown): number");
+    expect(availability).toContain('Number.parseInt(String(record.days || "4"), 10)');
+    expect(core).toContain('leadingInt(record["days"]) ?? 4');
+    expect(dashboard).toContain('supabase.from("user_schedule").select("gym_slots").eq("user_id", user.id).maybeSingle()');
+    expect(dashboard).toContain("planTrainingDays(onb.availability, scheduleResult.data?.gym_slots)");
+    expect(core).toContain('Backend.client.from("user_schedule").select("gym_slots")');
+    expect(core).toContain("CustomRoutines.trainingFrequency(availability: row.availability, gymSlots: slots.first?.gym_slots)");
+    // La misma llamada que respeta tus rutinas (sin `force`) y el plan se vuelve a leer.
+    expect(dashboard).toMatch(/const completeWithAutopilot = async \(\): Promise<number \| null> => \{[\s\S]{0,200}generatePlanGuarded\(supabase, \{ user_id: user\.id \}\)[\s\S]{0,120}await fetchData\(\);\s*return keptCustom;/);
+    expect(train).toMatch(/private func completeWithAutopilot\(\) async -> Int\? \{[\s\S]{0,160}TrainingRepo\.generateStarterPlan\(userId: userId\)[\s\S]{0,60}await load\(\)\s*return kept/);
+    // Carga con el AP, éxito con el texto del escudo y error con «Reintentar», en una fila secundaria (no dorada).
+    // El AP en su gris de carga en las dos (`Spinner` sin color propio, `BrandLoader`).
+    expect(web).toContain('<Spinner size="sm" aria-hidden="true" />');
+    expect(app).toContain("BrandLoader(size: 18).accessibilityHidden(true)");
+    expect(app).not.toContain("ProgressView");
+    expect(web).toContain("{keptRoutinesTitle(kept)}");
+    expect(web).toContain("{SHIELD_COPY.description}");
+    expect(app).toContain("Text(PlanShield.keptTitle(kept))");
+    expect(app).toContain("Text(PlanShield.description)");
+    expect(web).toContain('<IconTile icon={TriangleAlert} size="md" tone="destructive" />');
+    expect(app).toContain('IconTile(symbol: "exclamationmark.triangle", size: 40, tint: Palette.destructive)');
+    const webCard = web.slice(web.indexOf("const AutopilotFillCard"), web.indexOf("export const RoutinesPreview"));
+    const appCard = app.slice(app.indexOf("private var autopilotCard: some View"), app.indexOf("private func completeWithAutopilot"));
+    expect(webCard.match(/variant="secondary"/g)).toHaveLength(2);
+    expect(webCard).not.toMatch(/variant="(default|hero)"|btn-gold|bg-primary /);
+    expect(appCard.match(/\.buttonStyle\(\.pillSecondary\)/g)).toHaveLength(2);
+    expect(appCard).not.toContain(".buttonStyle(.pill)");
+    // La fila va bajo tus rutinas, en la misma tarjeta que el resto de la sección.
+    expect(web).toMatch(/\{showFill && \(\s*<AutopilotFillCard/);
+    expect(app).toContain("if showFill { autopilotCard }");
+  });
+
   it("Admin → Biblioteca: el catálogo base se importa, redacta y publica igual en la web y en la app", () => {
     const web = read("src/app/components/admin-library/CatalogImport.tsx");
     const app = read("native/Autopilot/Features/Admin/AdminCatalogImport.swift");

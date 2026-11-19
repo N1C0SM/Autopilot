@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, ChevronRight, Copy, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
+import { Check, ChevronRight, Copy, MoreHorizontal, Pencil, Plus, Trash2, TriangleAlert } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
+import { IconTile } from "@/shared/components/ui/icon-tile";
 import { SectionHeader } from "@/shared/components/ui/section-header";
+import { Spinner } from "@/shared/components/ui/spinner";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu";
@@ -9,11 +11,30 @@ import { Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, D
 import { ExerciseThumb } from "@/app/components/ExerciseMedia";
 import { useExerciseMetadata } from "@/shared/hooks/useExerciseMetadata";
 import { hapticNotify, hapticSelection, hapticTap } from "@/shared/lib/native";
-import { routineMeta, routineName, SESSION_LIMIT_MESSAGE } from "@/shared/lib/customRoutines";
+import { AUTOPILOT_FILL, autopilotFillSummary, routineMeta, routineName, SESSION_LIMIT_MESSAGE } from "@/shared/lib/customRoutines";
+import { keptRoutinesTitle, SHIELD_COPY } from "@/shared/lib/planShield";
 import type { DayPlan } from "@/shared/types/training";
 
 /** Miniaturas que se enseñan por rutina; el resto, «+N». */
 const THUMBS = 4;
+
+/**
+ * «Completar con el autopiloto»: lo ofrece Entrenar cuando `canCompleteWithAutopilot` (plan todo tuyo
+ * y menos sesiones que tus días de entreno). Es `MyRoutinesSection.Autopilot` en la app.
+ */
+export interface AutopilotOffer {
+  /** Sesiones tuyas y tus días de entreno: «Tus rutinas cubren 2 de tus 4 días de entreno». */
+  own: number;
+  frequency: number;
+  /** generate-plan alrededor de tus rutinas y el plan se vuelve a leer: cuántas respetó, o null si falló. */
+  onComplete: () => Promise<number | null>;
+}
+
+type FillState =
+  | { status: "idle" }
+  | { status: "running"; own: number; frequency: number }
+  | { status: "done"; kept: number }
+  | { status: "error" };
 
 interface Props {
   /** Rutinas del usuario (`myRoutines(dayPlans)`), en el orden de la rutina. */
@@ -31,6 +52,8 @@ interface Props {
   onDelete: (day: string) => Promise<boolean>;
   /** «Ver todas» desde Hoy: al llegar, la sección se pone arriba (como `scrollTo` en la app). */
   focus?: boolean;
+  /** «Completar con el autopiloto» (fila secundaria bajo tus rutinas); null si no se ofrece. */
+  autopilot?: AutopilotOffer | null;
 }
 
 /**
@@ -38,7 +61,7 @@ interface Props {
  * ejercicios y qué músculos, sus miniaturas (foto o la huella del ejercicio) y «Empezar»; en «···»,
  * «Editar», «Duplicar» y «Borrar» (con hoja de confirmación).
  */
-const MyRoutines = ({ routines, limitReached, resumableDay = null, doneToday = [], onNew, onStart, onEdit, onDuplicate, onDelete, focus = false }: Props) => {
+const MyRoutines = ({ routines, limitReached, resumableDay = null, doneToday = [], onNew, onStart, onEdit, onDuplicate, onDelete, focus = false, autopilot = null }: Props) => {
   const metadata = useExerciseMetadata(routines);
   const sectionRef = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -57,6 +80,25 @@ const MyRoutines = ({ routines, limitReached, resumableDay = null, doneToday = [
     setBusy(false);
     if (ok) setDeleting(null);
   };
+
+  // «Completar con el autopiloto»: el plan nuevo ya no lo pide, así que el aviso de cómo fue se queda
+  // en su sitio (y la carga también, aunque el plan se refresque antes de terminar).
+  const [fill, setFill] = useState<FillState>({ status: "idle" });
+  const completeWithAutopilot = async () => {
+    if (!autopilot || fill.status === "running") return;
+    void hapticTap();
+    setFill({ status: "running", own: autopilot.own, frequency: autopilot.frequency });
+    let kept: number | null = null;
+    try { kept = await autopilot.onComplete(); } catch { kept = null; }
+    if (kept === null) {
+      void hapticNotify("error");
+      setFill({ status: "error" });
+      return;
+    }
+    void hapticNotify("success");
+    setFill({ status: "done", kept: kept > 0 ? kept : autopilot.own });
+  };
+  const showFill = autopilot !== null || fill.status === "running" || fill.status === "done";
 
   return (
     <section ref={sectionRef} aria-labelledby="mis-rutinas" className="scroll-mt-20 space-y-3">
@@ -173,6 +215,16 @@ const MyRoutines = ({ routines, limitReached, resumableDay = null, doneToday = [
         </ul>
       )}
 
+      {showFill && (
+        <AutopilotFillCard
+          status={fill.status}
+          own={fill.status === "running" ? fill.own : autopilot?.own ?? 0}
+          frequency={fill.status === "running" ? fill.frequency : autopilot?.frequency ?? 0}
+          kept={fill.status === "done" ? fill.kept : 0}
+          onRun={() => void completeWithAutopilot()}
+        />
+      )}
+
       {/* Borrar: hoja de confirmación, como «¿Descartar entrenamiento?». */}
       <Drawer open={deleting !== null} onOpenChange={(open) => { if (!open) setDeleting(null); }}>
         <DrawerContent className="mx-auto max-w-md">
@@ -191,6 +243,70 @@ const MyRoutines = ({ routines, limitReached, resumableDay = null, doneToday = [
         </DrawerContent>
       </Drawer>
     </section>
+  );
+};
+
+/**
+ * Fila secundaria de «Mis rutinas» (la acción dorada de la sección es «Nueva rutina»): cuánto cubren
+ * tus rutinas y «Completar con el autopiloto»; mientras trabaja, el AP latiendo; al terminar, «Hemos
+ * respetado tus N rutinas»; si falla, el aviso de error con «Reintentar». Igual que en la app.
+ */
+const AutopilotFillCard = ({ status, own, frequency, kept, onRun }: {
+  status: FillState["status"];
+  own: number;
+  frequency: number;
+  kept: number;
+  onRun: () => void;
+}) => {
+  const running = status === "running";
+  return (
+    <div className="rounded-card bg-card p-4">
+      {status === "done" ? (
+        <div role="status" className="flex items-start gap-3">
+          <IconTile icon={Check} size="md" />
+          <div className="min-w-0 flex-1">
+            <p className="type-headline">{keptRoutinesTitle(kept)}</p>
+            <p className="mt-0.5 type-subhead text-muted-foreground">{SHIELD_COPY.description}</p>
+          </div>
+        </div>
+      ) : status === "error" ? (
+        <div role="alert">
+          <div className="flex items-start gap-3">
+            <IconTile icon={TriangleAlert} size="md" tone="destructive" />
+            <div className="min-w-0 flex-1">
+              <p className="type-headline">{AUTOPILOT_FILL.errorTitle}</p>
+              <p className="mt-0.5 type-subhead text-muted-foreground">{AUTOPILOT_FILL.errorDetail}</p>
+            </div>
+          </div>
+          <Button type="button" variant="secondary" size="lg" className="mt-4 w-full" onClick={onRun}>
+            {AUTOPILOT_FILL.retry}
+          </Button>
+        </div>
+      ) : (
+        <>
+          <p className="type-headline tabular-nums">{autopilotFillSummary(own, frequency)}</p>
+          <p className="mt-0.5 type-subhead text-muted-foreground">{AUTOPILOT_FILL.detail}</p>
+          {/* Sin `disabled` mientras trabaja: el AP se ve entero, no apagado; un segundo toque no hace nada.
+              Con letra grande, el texto baja de línea dentro de la píldora en vez de salirse. */}
+          <Button
+            type="button"
+            variant="secondary"
+            size="lg"
+            className="mt-4 h-auto min-h-12 w-full whitespace-normal px-5 py-3 text-center"
+            aria-disabled={running || undefined}
+            aria-busy={running || undefined}
+            onClick={running ? undefined : onRun}
+          >
+            {running ? (
+              <>
+                <Spinner size="sm" aria-hidden="true" />
+                {AUTOPILOT_FILL.running}
+              </>
+            ) : AUTOPILOT_FILL.action}
+          </Button>
+        </>
+      )}
+    </div>
   );
 };
 

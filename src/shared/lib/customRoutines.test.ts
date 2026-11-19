@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  addRoutine, canAddRoutine, commitRoutineChange, copyName, deleteRoutine, duplicateRoutine, markEditedDays, myRoutines,
-  nextFreeKey, planMode, planModeCopy, routineFromWorkout, routineMeta, routineMuscles, SESSION_LIMIT_MESSAGE, updateRoutine,
+  addRoutine, autopilotFillSummary, canAddRoutine, canCompleteWithAutopilot, commitRoutineChange, copyName, deleteRoutine,
+  duplicateRoutine, markEditedDays, myRoutines, nextFreeKey, planMode, planModeCopy, routineFromWorkout, routineMeta,
+  routineMuscles, SESSION_LIMIT_MESSAGE, updateRoutine,
 } from "@/shared/lib/customRoutines";
 import { planToSave } from "@/shared/lib/planEditorValues";
 import type { DayPlan, GymExerciseEntry } from "@/shared/types/training";
@@ -132,5 +133,39 @@ describe("rutinas propias en workouts_json", () => {
       }),
     };
     expect(await commitRoutineChange(failing, "u1", (plans) => addRoutine(plans, { name: "x", exercises: [] }))).toEqual({ ok: false, reason: "error" });
+  });
+});
+
+describe("«Completar con el autopiloto»", () => {
+  const mine = (day: string): DayPlan => ({ ...auto(day, `Mía ${day}`), custom: true });
+
+  it("se ofrece con un plan todo tuyo que no llega a tus días de entreno", () => {
+    expect(canCompleteWithAutopilot([mine("Lunes"), mine("Miércoles")], 4)).toBe(true);
+    expect(canCompleteWithAutopilot([mine("Lunes")], 2)).toBe(true);
+  });
+
+  it("no se ofrece si tus rutinas ya cubren tus días (o pasan de 7)", () => {
+    expect(canCompleteWithAutopilot([mine("Lunes"), mine("Martes")], 2)).toBe(false);
+    expect(canCompleteWithAutopilot([mine("Lunes"), mine("Martes"), mine("Jueves")], 2)).toBe(false);
+    expect(canCompleteWithAutopilot(KEYS.map(mine), 9)).toBe(false);
+  });
+
+  it("no se ofrece si el plan ya tiene sesiones del piloto automático", () => {
+    expect(canCompleteWithAutopilot([mine("Lunes"), auto("Miércoles")], 5)).toBe(false);
+    expect(canCompleteWithAutopilot([auto("Lunes"), auto("Miércoles")], 5)).toBe(false);
+  });
+
+  it("no se ofrece sin rutinas tuyas ni sin saber tus días", () => {
+    expect(canCompleteWithAutopilot([], 4)).toBe(false);
+    const activity: DayPlan = { day: "Lunes", type: "actividad", sport: "Pádel", custom: true };
+    expect(canCompleteWithAutopilot([activity], 4)).toBe(false);
+    expect(canCompleteWithAutopilot([mine("Lunes")], null)).toBe(false);
+    expect(canCompleteWithAutopilot([mine("Lunes")], undefined)).toBe(false);
+    expect(canCompleteWithAutopilot([mine("Lunes")], Number.NaN)).toBe(false);
+  });
+
+  it("dice cuánto cubren tus rutinas, en singular y en plural", () => {
+    expect(autopilotFillSummary(1, 3)).toBe("Tu rutina cubre 1 de tus 3 días de entreno");
+    expect(autopilotFillSummary(2, 4)).toBe("Tus rutinas cubren 2 de tus 4 días de entreno");
   });
 });
