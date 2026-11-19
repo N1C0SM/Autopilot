@@ -42,7 +42,7 @@ function ExitIntent({ onCta }: { onCta: () => void }) {
           Ya tienes el análisis inicial, ahora elige un plan con entrenador
         </DialogTitle>
         <DialogDescription className="type-subhead text-muted-foreground text-center">
-          Elige el plan que encaja contigo para que un entrenador real prepare y lleve tu entrenamiento. Pruébalo 7 días antes del primer cobro.
+          Elige el plan que encaja contigo para que Autopilot prepare y ajuste tu entrenamiento. Pruébalo 7 días antes del primer cobro.
         </DialogDescription>
         <Button size="lg" className="w-full" onClick={cta}>
           Elegir mi plan

@@ -25,8 +25,8 @@ const Email = ({ name, ctaUrl = 'https://autopilotplan.com/dashboard?section=set
             Y a los 3 días vuelve al punto de partida.
           </Text>
           <Text style={s.text}>
-            Autopilot no es un curso más. Es un plan que se adapta a ti cada semana,
-            con un entrenador real al otro lado del chat. Si algo no encaja, lo ajustamos al día siguiente.
+            Autopilot no es un curso más. Es un plan que se adapta a ti cada semana
+            con lo que registras en cada serie. Si algo no encaja, lo ajusta solo.
           </Text>
           <Text style={s.text}>
             <strong>Tienes 1ª semana gratis</strong> para probar sin pagar nada. Cancelas en 1 clic.

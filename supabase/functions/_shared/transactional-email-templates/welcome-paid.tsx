@@ -29,25 +29,25 @@ const WelcomePaidEmail = ({ name, dashboardUrl = 'https://autopilotplan.com/dash
           <Text style={s.text}>
             Tu plan de <strong>entrenamiento + nutrición</strong> personalizado se está
             generando ahora mismo según tu cuestionario. En cuanto esté listo recibirás
-            un aviso en el dashboard.
+            un aviso en la app.
           </Text>
           <Section style={s.buttonContainer}>
             <Button href={dashboardUrl} style={s.button}>
-              Ir a mi dashboard
+              Abrir mi plan
             </Button>
           </Section>
           <Hr style={s.hr} />
           <Heading as="h2" style={s.h2}>Qué pasa ahora</Heading>
           <Text style={s.text}>
-            1. Revisa tu plan en el dashboard (entrenamiento + nutrición).<br />
-            2. Conecta Google Calendar para recibir tus sesiones automáticamente.<br />
-            3. Cualquier duda, escríbenos por el chat — te responde un entrenador real.
+            1. Abre la app y mira tu sesión de hoy y tus comidas.<br />
+            2. Registra cada serie: Autopilot ajusta tu progresión solo.<br />
+            3. ¿Dudas? Responde a este correo y te ayudamos.
           </Text>
         </Section>
         <Section style={s.footer}>
           <Text style={s.footerText}>
             Tu suscripción es mensual sin permanencia. Cancela en cualquier momento
-            desde Configuración → Suscripción.
+            desde Ajustes → Mi plan.
           </Text>
         </Section>
       </Container>

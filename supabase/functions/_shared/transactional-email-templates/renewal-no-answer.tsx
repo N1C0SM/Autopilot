@@ -54,8 +54,7 @@ const RenewalNoAnswerEmail = ({
           </Section>
           <Hr style={s.hr} />
           <Text style={s.small}>
-            ¿Dudas? Responde a este correo o escríbenos por el chat de la app — te responde un
-            entrenador real.
+            ¿Dudas? Responde a este correo y te ayudamos.
           </Text>
         </Section>
         <Section style={s.footer}>

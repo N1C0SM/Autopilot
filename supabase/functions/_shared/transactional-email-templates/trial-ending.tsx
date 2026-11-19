@@ -53,8 +53,7 @@ const TrialEndingEmail = ({
             </Section>
             <Hr style={s.hr} />
             <Text style={s.small}>
-              ¿Dudas sobre tu plan o resultados? Responde a este correo o escríbenos
-              por el chat — te responde un entrenador real.
+              ¿Dudas sobre tu plan o tus resultados? Responde a este correo y te ayudamos.
             </Text>
           </Section>
           <Section style={s.footer}>

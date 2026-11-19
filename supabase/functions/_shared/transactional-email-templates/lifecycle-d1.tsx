@@ -32,7 +32,7 @@ const Email = ({ name, ctaUrl = 'https://autopilotplan.com/onboarding' }: Props)
           </Section>
           <Hr style={s.hr} />
           <Text style={s.small}>
-            Si tienes cualquier duda, responde a este correo. Te lee un entrenador real.
+            Si tienes cualquier duda, responde a este correo y te ayudamos.
           </Text>
         </Section>
         <Section style={s.footer}>
