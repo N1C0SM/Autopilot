@@ -99,11 +99,11 @@ struct AppCommands: Commands {
         }
 
         CommandGroup(replacing: .help) {
-            Link("Ayuda de Autopilot", destination: URL(string: "https://autopilotplan.app/preguntas-frecuentes")!)
-            Link("Abrir la web", destination: URL(string: "https://autopilotplan.app")!)
+            Link("Ayuda de Autopilot", destination: URL(string: "https://autopilotplan.com/preguntas-frecuentes")!)
+            Link("Abrir la web", destination: URL(string: "https://autopilotplan.com")!)
             Divider()
-            Link("Privacidad", destination: URL(string: "https://autopilotplan.app/legal/privacidad")!)
-            Link("Términos", destination: URL(string: "https://autopilotplan.app/legal/terminos")!)
+            Link("Privacidad", destination: URL(string: "https://autopilotplan.com/legal/privacidad")!)
+            Link("Términos", destination: URL(string: "https://autopilotplan.com/legal/terminos")!)
         }
     }
 

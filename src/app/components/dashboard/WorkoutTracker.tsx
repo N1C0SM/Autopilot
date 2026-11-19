@@ -1554,7 +1554,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                   {loop ? (
                     <video key={loop} ref={startLoop} src={loop} poster={img || undefined} autoPlay muted loop playsInline preload="auto" disablePictureInPicture aria-label={active.name} draggable={false} className="pointer-events-none h-full w-full object-contain" />
                   ) : img ? (
-                    <img src={img} alt={active.name} draggable={false} decoding="async" fetchPriority="high" loading="eager" className="h-full w-full object-contain" />
+                    <img src={img} alt={active.name} draggable={false} decoding="async" {...{ fetchpriority: "high" }} loading="eager" className="h-full w-full object-contain" />
                   ) : (
                     <Dumbbell className="h-6 w-6 text-muted-foreground/60" strokeWidth={1.75} aria-hidden="true" />
                   )}

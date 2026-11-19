@@ -52,6 +52,7 @@ import AcquisitionCapture from "@/shared/components/AcquisitionCapture";
 import { Helmet } from "react-helmet-async";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/shared/contexts/AuthContext";
+import DashboardRedirect from "@/app/components/auth/DashboardRedirect";
 import { Spinner } from "@/shared/components/ui/spinner";
 import { isNativeApp } from "@/shared/lib/platform";
 import { hideSplashScreen } from "@/shared/lib/native";
@@ -75,19 +76,6 @@ if (typeof window !== "undefined" && !isNativeApp() && isMainHost(window.locatio
 }
 const isAppHost = () => typeof window !== "undefined" && window.location.hostname.startsWith("app.");
 const RootRoute = () => (isNativeApp() ? <Welcome /> : isAppHost() ? <DashboardRedirect /> : <Index />);
-
-const DashboardRedirect = () => {
-  const { user, loading } = useAuth();
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <Spinner size="lg" />
-      </div>
-    );
-  }
-  if (!user) return <Navigate to="/login" replace />;
-  return <Navigate to={`/dashboard/user/${user.id}`} replace />;
-};
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -146,6 +134,12 @@ const DomainRoutes = () => {
           <Route path="/signup" element={<Signup />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/para-entrenadores" element={<ForTrainers />} />
+          <Route path="/entrenadores" element={<Navigate to="/para-entrenadores" replace />} />
+          <Route path="/academia" element={<Navigate to="/recursos" replace />} />
+          <Route path="/terminos" element={<Navigate to="/legal/terminos" replace />} />
+          <Route path="/privacidad" element={<Navigate to="/legal/privacidad" replace />} />
+          <Route path="/comenzar" element={<Navigate to="/onboarding" replace />} />
+          <Route path="/ajustes" element={<Navigate to="/settings" replace />} />
           <Route path="/invitacion/:token" element={<AcceptInvitation />} />
           <Route path="/login" element={<Login />} />
           <Route path="/scan" element={<Scan />} />

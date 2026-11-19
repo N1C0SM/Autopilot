@@ -211,7 +211,7 @@ const MySchedule = () => {
           </Button>
         }
       >
-        <div className="space-y-8 pb-4">
+        <div className="space-y-8 pb-32">
           <div className="flex items-start gap-4 px-1">
             <div className="flex w-10 shrink-0 items-center justify-center pt-0.5">
               <CalendarClock className="h-7 w-7 text-primary" strokeWidth={1.75} aria-hidden="true" />

@@ -146,7 +146,7 @@ struct AdminBlogView: View {
                                 AdminStatusPill(text: p.published ? "Publicado" : "Borrador",
                                                 tint: p.published ? Palette.gold : Palette.muted)
                                 Menu {
-                                    if p.published, let u = URL(string: "https://autopilotplan.app/blog/\(p.slug)") {
+                                    if p.published, let u = URL(string: "https://autopilotplan.com/blog/\(p.slug)") {
                                         Link("Ver en el blog", destination: u)
                                     }
                                     Button("Eliminar", role: .destructive) { Task { await remove(p) } }

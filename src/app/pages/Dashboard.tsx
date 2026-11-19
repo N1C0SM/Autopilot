@@ -268,7 +268,8 @@ const Dashboard = () => {
         .lte("completed_at", todayDate),
     ]);
 
-    if (roleResult?.data) {
+    // Solo se envía al panel de admin desde la entrada genérica; ver su propio panel de usuario sigue permitido.
+    if (roleResult?.data && !window.location.pathname.startsWith("/dashboard/user/")) {
       navigate("/admin");
       return;
     }

@@ -273,6 +273,13 @@ private enum Quiz {
         default: nil
         }
     }
+    static func photoAsset(_ focus: String) -> String {
+        switch focus {
+        case "calistenia": "brand-pullup"
+        case "mixto": "brand-dumbbells"
+        default: "brand-gym"
+        }
+    }
     /// Lado de las fotos del cuestionario en pt: un tercio de pantalla, sin bajar la foto grande.
     static let photoSide: CGFloat = 160
     static func label(_ options: [Option], _ v: String) -> String { options.first { $0.v == v }?.l ?? "—" }
@@ -562,7 +569,9 @@ struct OnboardingQuizView: View {
             // El hueco 4:5 manda (tres iguales, como `grid-cols-3` en la web); la foto solo lo rellena.
             Color.clear.aspectRatio(4 / 5, contentMode: .fit).frame(maxWidth: .infinity)
                 .background {
-                    CachedAsyncImage(url: Quiz.photo(o.v), maxSide: Quiz.photoSide) { $0.resizable().scaledToFill() } placeholder: { Palette.card }
+                    CachedAsyncImage(url: Quiz.photo(o.v), maxSide: Quiz.photoSide) { $0.resizable().scaledToFill() } placeholder: {
+                        Image(Quiz.photoAsset(o.v)).resizable().scaledToFill()
+                    }
                 }
                 .clipped()
                 .overlay { LinearGradient(colors: [.clear, .black.opacity(0.9)], startPoint: .center, endPoint: .bottom) }

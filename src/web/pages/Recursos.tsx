@@ -215,7 +215,7 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
 
         {hasEbooks && (
           <section>
-            <h2 className={embedded ? "type-title2" : "type-display-sm"}><ScrollWords text="Guías en PDF" /></h2>
+            <h2 className={embedded ? "type-title2" : "type-display-sm"}>Guías en PDF</h2>
             <p className="mt-1 mb-5 max-w-xl type-subhead text-muted-foreground">
               Descarga inmediata en PDF tras el pago. Guías para leer por tu cuenta, sin plan personalizado ni seguimiento{plans.coach ? ` (eso es el plan ${plans.coachName})` : ""}.
             </p>

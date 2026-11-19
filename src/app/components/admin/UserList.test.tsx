@@ -17,6 +17,7 @@ const profile = (id: string, email: string, extra: Partial<Profile> = {}): Profi
   email,
   plan_status: "plan_ready",
   payment_status: "paid",
+  subscription_tier: "training",
   created_at: "2026-03-10T10:00:00Z",
   ...extra,
 });
@@ -77,5 +78,15 @@ describe("UserList", () => {
     setup();
     fireEvent.change(screen.getByLabelText("Buscar usuario"), { target: { value: "zzzz" } });
     expect(screen.getByText("Sin usuarios")).toBeInTheDocument();
+  });
+
+  it("excludes free accounts from the unpaid filter", () => {
+    render(<UserList users={[
+      profile("free", "gratis@example.com", { name: "Gratis", subscription_tier: "free", payment_status: "unpaid" }),
+      profile("plus", "plus@example.com", { name: "Plus", payment_status: "unpaid" }),
+    ]} adminIds={new Set()} onSelectUser={vi.fn()} onTestAccountCreated={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Sin pagar" }));
+    expect(screen.queryByText("Gratis")).not.toBeInTheDocument();
+    expect(screen.getByText("Plus")).toBeInTheDocument();
   });
 });

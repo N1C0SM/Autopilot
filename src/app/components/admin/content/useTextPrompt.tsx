@@ -55,7 +55,6 @@ export function useTextPrompt() {
   const dialog = (
     <AlertDialog open={open} onOpenChange={(next) => { if (!next) settle(null); }}>
       <AlertDialogContent
-        {...(options?.description ? {} : { "aria-describedby": undefined })}
         onOpenAutoFocus={(event) => {
           event.preventDefault();
           inputRef.current?.focus({ preventScroll: true });
@@ -64,7 +63,9 @@ export function useTextPrompt() {
       >
         <AlertDialogHeader>
           <AlertDialogTitle>{options?.title}</AlertDialogTitle>
-          {options?.description ? <AlertDialogDescription>{options.description}</AlertDialogDescription> : null}
+          <AlertDialogDescription>
+            {options?.description || (readOnly ? "Puedes seleccionar y copiar este valor." : "Edita el valor y confirma para guardarlo, o cancela para conservar el anterior.")}
+          </AlertDialogDescription>
           <Input
             ref={inputRef}
             aria-label={options?.title}

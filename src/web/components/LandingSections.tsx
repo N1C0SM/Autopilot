@@ -32,7 +32,7 @@ export function LandingHero({ ctaRef }: { ctaRef: React.Ref<HTMLDivElement> }) {
     { icon: Layers, t: "Academia", s: "para aprender más" },
   ];
   return <section className="relative overflow-hidden">
-    <img src={heroAthlete} alt="" aria-hidden="true" width={1600} height={1008} fetchPriority="high" className="absolute inset-y-0 right-0 h-full w-full object-cover object-[75%_20%] opacity-55 sm:w-[78%] sm:opacity-100" />
+    <img src={heroAthlete} alt="" aria-hidden="true" width={1600} height={1008} {...{ fetchpriority: "high" }} className="absolute inset-y-0 right-0 h-full w-full object-cover object-[75%_20%] opacity-55 sm:w-[78%] sm:opacity-100" />
     <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-r from-background via-background/85 to-transparent sm:via-background/40" />
     <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-background to-transparent" />
     <div className="relative mx-auto max-w-6xl px-5 pb-12 pt-10 sm:px-8 sm:pt-14">

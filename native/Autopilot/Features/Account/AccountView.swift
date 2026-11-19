@@ -394,7 +394,7 @@ struct AccountView: View {
                         .frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
                     }
                     .buttonStyle(.plain).disabled(busy)
-                    Link(destination: URL(string: "https://autopilotplan.app/legal/privacidad")!) {
+                    Link(destination: URL(string: "https://autopilotplan.com/legal/privacidad")!) {
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Ver Política de Privacidad").font(.apBody).foregroundStyle(Palette.foreground)
@@ -414,10 +414,10 @@ struct AccountView: View {
     @ViewBuilder private var legalSection: some View {
 
                 group("Legal") {
-                    linkRow("Términos", "https://autopilotplan.app/legal/terminos")
-                    linkRow("Cookies", "https://autopilotplan.app/legal/cookies")
-                    linkRow("Disclaimer médico", "https://autopilotplan.app/legal/disclaimer-medico")
-                    linkRow("Aviso legal", "https://autopilotplan.app/legal/aviso-legal")
+                    linkRow("Términos", "https://autopilotplan.com/legal/terminos")
+                    linkRow("Cookies", "https://autopilotplan.com/legal/cookies")
+                    linkRow("Disclaimer médico", "https://autopilotplan.com/legal/disclaimer-medico")
+                    linkRow("Aviso legal", "https://autopilotplan.com/legal/aviso-legal")
                 }
 
     }

@@ -21,6 +21,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { hapticSelection } from "@/shared/lib/native";
 import { markStaffDevice } from "@/shared/lib/acquisition";
 import { toast } from "sonner";
+import { showsPaymentIndicator } from "@/shared/lib/paymentIndicator";
 
 const AdminMetrics = lazy(() => import("@/app/components/admin/AdminMetrics"));
 const UserList = lazy(() => import("@/app/components/admin/UserList"));
@@ -209,8 +210,8 @@ const Admin = () => {
 
   if (!isAdmin) return null;
 
-  // Hide the currently-logged-in admin from every list
-  const users = allUsers.filter((u) => u.user_id !== user?.id);
+  // La cuenta con la sesión abierta también aparece (en su grupo de admin).
+  const users = allUsers;
 
   // Una ficha abierta es una pantalla empujada: su barra lleva el nombre y "‹ Usuarios".
   const detailUser = section === "users" ? selectedUser : null;
@@ -322,7 +323,7 @@ const Admin = () => {
                                 planStatus={u.plan_status}
                                 traveling={!!u.travel_mode_until && new Date(u.travel_mode_until) >= new Date()}
                               />
-                              <PaymentDot status={u.payment_status} />
+                              {showsPaymentIndicator(u) && <PaymentDot status={u.payment_status} />}
                             </span>
                           }
                         />

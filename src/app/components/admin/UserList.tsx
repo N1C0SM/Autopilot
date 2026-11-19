@@ -15,6 +15,7 @@ import { ListGroup, ListRow } from "@/shared/components/ui/list";
 import { PaymentDot, PlanStatusBadge } from "@/shared/components/ui/status-badge";
 import { EmptyState } from "@/shared/components/ui/empty-state";
 import { ChipBar } from "@/app/components/admin/AdminOpsParts";
+import { showsPaymentIndicator } from "@/shared/lib/paymentIndicator";
 
 interface Props {
   users: Profile[];
@@ -66,7 +67,7 @@ const UserRow = ({ user: u, kind, onClick }: { user: Profile; kind: UserKind; on
         kind === "user" ? (
           <span className="flex items-center gap-2">
             <PlanStatusBadge planStatus={u.plan_status} traveling={isTraveling(u)} className="type-caption1" />
-            <PaymentDot status={u.payment_status} title={undefined} />
+            {showsPaymentIndicator(u) && <PaymentDot status={u.payment_status} />}
           </span>
         ) : undefined
       }
@@ -126,8 +127,8 @@ const UserList = ({ users, adminIds, trainerIds, onSelectUser, onTestAccountCrea
     }
 
     if (filter === "all") return matchesSearch && inRange;
-    if (filter === "paid") return matchesSearch && inRange && u.payment_status === "paid";
-    if (filter === "unpaid") return matchesSearch && inRange && u.payment_status === "unpaid";
+    if (filter === "paid") return matchesSearch && inRange && showsPaymentIndicator(u) && u.payment_status === "paid";
+    if (filter === "unpaid") return matchesSearch && inRange && showsPaymentIndicator(u) && u.payment_status === "unpaid";
     if (filter === "traveling") return matchesSearch && inRange && isTraveling(u);
     return matchesSearch && inRange && u.plan_status === filter;
   };

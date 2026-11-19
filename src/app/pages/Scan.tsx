@@ -1,6 +1,7 @@
 import { errorMessage, errorStatus } from "@/shared/lib/runtimeValues";
 import { scanErrorMessage } from "@/shared/lib/scanErrors";
 import { scanProgressAt } from "@/shared/lib/scanLoading";
+import { dashboardDestination } from "@/shared/lib/dashboardDestination";
 import ScanAnalyzing from "@/app/components/scan/ScanAnalyzing";
 import { formatDecimal } from "@/shared/lib/numberFormat";
 import { compressImage, toBrowserFriendlyImage } from "@/shared/lib/imageCompression";
@@ -286,6 +287,10 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { user } = useAuth();
+  const openDashboard = (section: import("@/app/components/mobile/MobileTabBar").MobileTab) => {
+    if (!user) return;
+    navigate(dashboardDestination(user.id, section));
+  };
   const { userId: paramUserId } = useParams<{ userId?: string }>();
   const routeUserId = inline ? user?.id : paramUserId;
   const location = useLocation();
@@ -2393,8 +2398,8 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
         titleInContent
         active="progress"
         userId={user.id}
-        onChange={(t) => { try { sessionStorage.setItem("autopilot_section", t); } catch { /* sin storage */ } navigate("/dashboard"); }}
-        onSettings={() => { try { sessionStorage.setItem("autopilot_section", "settings"); } catch { /* sin storage */ } navigate("/dashboard"); }}
+        onChange={openDashboard}
+        onSettings={() => openDashboard("settings")}
       >
         <div className="relative w-full"><>{scanBody}{resetDialog}</></div>
       </MobileAppShell>
@@ -2404,7 +2409,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
   return (
     <SidebarProvider>
     <div className="min-h-screen bg-background relative overflow-hidden flex w-full">
-      {user && <UserSidebar section="progress" onNavigate={(s) => navigate(s === "progress" ? `/scan/user/${user.id}` : "/dashboard")} onSignOut={() => { void supabase.auth.signOut(); navigate("/"); }} />}
+      {user && <UserSidebar section="progress" onNavigate={openDashboard} onSignOut={() => { void supabase.auth.signOut(); navigate("/"); }} />}
       <div className="flex-1 min-w-0 relative">
       <>{scanBody}{resetDialog}</>
       </div>
