@@ -17,6 +17,9 @@ import BookCover from "@/web/components/BookCover";
 import BookPreviewModal from "@/web/components/BookPreviewModal";
 import ItemPreviewModal, { RECOMMENDATION_VARIANT, previewIntro, type PreviewItem } from "@/web/components/ItemPreviewModal";
 import { useAuth } from "@/shared/contexts/AuthContext";
+import heroAthlete from "@/shared/assets/landing/hero-athlete.jpg";
+import problemSunset from "@/shared/assets/landing/problem-sunset.jpg";
+import finalHorizon from "@/shared/assets/landing/final-horizon.jpg";
 import UserSidebar from "@/app/components/UserSidebar";
 import { usePlanAvailability } from "@/shared/lib/planCatalog";
 import { SidebarProvider, SidebarTrigger } from "@/shared/components/ui/sidebar";
@@ -48,10 +51,22 @@ const RowThumb = ({ src, alt, fallback: Fallback }: { src?: string | null; alt: 
   );
 };
 
-const CardImage = ({ src, alt, fallback: Fallback }: { src?: string | null; alt: string; fallback: typeof Newspaper }) => {
+/** Artículos sin portada: una foto real de la marca, elegida siempre igual para cada título, nunca un hueco gris. */
+const ARTICLE_PHOTOS = [heroAthlete, problemSunset, finalHorizon];
+const photoFor = (seed: string) => ARTICLE_PHOTOS[[...seed].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % ARTICLE_PHOTOS.length];
+
+const CardImage = ({ src, alt, fallback: Fallback, photoSeed }: { src?: string | null; alt: string; fallback: typeof Newspaper; photoSeed?: string }) => {
   const [failed, setFailed] = useState(false);
   if (src && !failed) {
     return <img src={src} alt={alt} loading="lazy" onError={() => setFailed(true)} className="aspect-[16/10] w-full bg-secondary object-cover transition-transform duration-500 group-hover:scale-[1.02]" />;
+  }
+  if (photoSeed) {
+    return (
+      <span aria-hidden className="relative block aspect-[16/10] w-full overflow-hidden bg-secondary">
+        <img src={photoFor(photoSeed)} alt="" loading="lazy" className="h-full w-full object-cover opacity-70 transition-transform duration-500 group-hover:scale-[1.02]" />
+        <span className="absolute inset-0 bg-gradient-to-t from-card via-card/20 to-transparent" />
+      </span>
+    );
   }
   return (
     <span aria-hidden className="flex aspect-[16/10] w-full items-center justify-center bg-secondary">
@@ -306,7 +321,7 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {posts.map((p) => (
                   <Link key={p.slug} to={`/blog/${p.slug}`} onClick={() => void hapticTap()} className="group overflow-hidden rounded-[22px] bg-card transition-transform duration-150 active:scale-[0.98]">
-                    <CardImage src={p.cover_url} alt={p.title} fallback={Newspaper} />
+                    <CardImage src={p.cover_url} alt={p.title} fallback={Newspaper} photoSeed={p.slug} />
                     <div className="p-5">
                       <h3 className="line-clamp-2 type-headline">{p.title}</h3>
                       {p.excerpt && <p className="mt-2 line-clamp-3 type-subhead text-muted-foreground">{p.excerpt}</p>}
