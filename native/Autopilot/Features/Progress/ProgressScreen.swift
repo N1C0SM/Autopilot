@@ -1879,7 +1879,7 @@ struct ExerciseProgressSection: View {
     /// Foto del ejercicio o, sin ella, su huella de movimiento (nunca un cuadro vacío), como `ExerciseThumb` en la web.
     private func photo(_ name: String, size: CGFloat) -> some View {
         // Con su URL como identidad: nunca se queda la foto del ejercicio anterior.
-        ExerciseThumb(url: images[name], size: size, name: name)
+        ExerciseThumb(url: images[name], size: size, name: name, moves: false)
             .id(images[name] ?? name)
             .accessibilityHidden(true)
     }

@@ -276,3 +276,18 @@ struct ExerciseMotionHero: View {
         .accessibilityAddTraits(.isImage)
     }
 }
+
+/// La huella animada en pequeño sobre la foto (visor del entreno y ficha cuando el ejercicio aún no
+/// tiene vídeo): la foto sigue mandando y el punto dorado enseña el ritmo. `ExerciseMotionBadge` en la web.
+struct ExerciseMotionBadge: View {
+    let spec: ExerciseMotion.Spec
+
+    var body: some View {
+        ExerciseMotionHero(spec: spec)
+            .padding(.horizontal, 8).padding(.vertical, 4)
+            .frame(width: 64, height: 36)
+            .background(.ultraThinMaterial, in: Capsule())
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+}

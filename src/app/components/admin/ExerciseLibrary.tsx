@@ -37,6 +37,7 @@ import { cn } from "@/shared/lib/utils";
 import { skipAutoFocusOnTouch } from "@/app/components/admin-library/touchAutoFocus";
 import { WithImageFallback } from "@/app/components/admin-library/WithImageFallback";
 import CatalogImport from "@/app/components/admin-library/CatalogImport";
+import PlanVideos from "@/app/components/admin-library/PlanVideos";
 
 /**
  * Versión del estilo visual actual. Debe coincidir con MEDIA_STYLE_VERSION de la
@@ -148,47 +149,6 @@ const CRITERIA = [
 ];
 
 /* ── Fila de la biblioteca ── */
-
-/** Miniatura de fila con vídeo-como-GIF en hover. Si hay video_url (mp4 de site-assets),
- *  se reproduce en loop silencioso al pasar el ratón o al montar en móvil. */
-const ExerciseThumbWithGif = ({ image, video, name }: { image: string | null | undefined; video: string | null | undefined; name: string }) => {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const isHostedVideo = video && (video.includes("site-assets") || video.endsWith(".mp4") || video.endsWith(".webm"));
-
-  return (
-    <div
-      className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-secondary"
-      onMouseEnter={() => { if (videoRef.current) void videoRef.current.play(); }}
-      onMouseLeave={() => { if (videoRef.current) { videoRef.current.pause(); videoRef.current.currentTime = 0; } }}
-      aria-hidden="true"
-    >
-      {isHostedVideo ? (
-        <>
-          {image && (
-            <img src={image} alt={name} className="absolute inset-0 h-full w-full object-cover" />
-          )}
-          <video
-            ref={videoRef}
-            src={video}
-            muted
-            loop
-            playsInline
-            preload="none"
-            className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-200 [&[data-playing]]:opacity-100"
-            onPlay={(e) => e.currentTarget.setAttribute("data-playing", "")}
-            onPause={(e) => e.currentTarget.removeAttribute("data-playing")}
-          />
-        </>
-      ) : image ? (
-        <img src={image} alt={name} className="h-full w-full object-cover" />
-      ) : (
-        <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-          <Dumbbell className="h-5 w-5" strokeWidth={1.5} />
-        </div>
-      )}
-    </div>
-  );
-};
 
 /** Clasificación de un ejercicio, para el subtítulo de su fila: solo grupo muscular y tipo. */
 const ExerciseMeta = ({ exercise: ex }: { exercise: ExerciseRow }) => {
@@ -1253,6 +1213,9 @@ const ExerciseLibrary = () => {
 
       <CatalogImport onChanged={() => void fetchExercises()} />
 
+      {/* Vídeos de los ejercicios que usan los planes: cuenta, coste, confirmación y uno a uno. */}
+      {fetched && <PlanVideos onChanged={() => void fetchExercises()} />}
+
       {!mediaColumnsReady && (
         <p role="status" className="type-footnote text-muted-foreground">
           Faltan las columnas de medios en la base de datos: aplica supabase db push para activar la generación y el marcado de estilos y errores.
@@ -1376,7 +1339,7 @@ const ExerciseLibrary = () => {
                     </button>
                   )}
                   <WithImageFallback image={ex.image_url}>
-                    {(image) => <ExerciseThumbWithGif image={image} video={ex.video_url} name={ex.name} />}
+                    {(image) => <ExerciseThumb image={image} video={ex.video_url} name={ex.name} pattern={ex.movement_pattern} stimulus={ex.stimulus_type} load={ex.load_level} muscleGroup={ex.muscle_group} />}
                   </WithImageFallback>
                 </div>
               }

@@ -16,9 +16,9 @@ export type ExercisePreviewData = {
 };
 
 /**
- * Ficha rápida de técnica: el héroe es el vídeo (con su portada) y se reproduce
- * solo si el usuario pulsa play. Se usa desde la biblioteca del admin y desde el
- * editor de rutinas para ver el vídeo sin entrar a editar.
+ * Ficha rápida de técnica (Admin → Biblioteca y el editor de planes del admin): el héroe es el
+ * ejercicio en movimiento sobre su foto, como en la app (`ExerciseHeroMedia`), para ver el clip
+ * sin entrar a editar. Es la hoja de vista previa de `AdminExercises.swift`.
  */
 export const ExercisePreviewSheet = ({
   exercise,
@@ -32,7 +32,7 @@ export const ExercisePreviewSheet = ({
       className="gap-0 sm:max-w-lg"
       {...(exercise?.detail ? {} : { "aria-describedby": undefined })}
     >
-      {/* Bajo el botón de cerrar, no debajo de él: los controles del vídeo quedan libres. */}
+      {/* Bajo el botón de cerrar, no debajo de él: «Ver vídeo» y «Ritmo / Foto» quedan libres. */}
       <ExerciseMedia video={exercise?.video} image={exercise?.image} name={exercise?.name} pattern={exercise?.pattern} stimulus={exercise?.stimulus} load={exercise?.load} className="mt-7 rounded-[14px] sm:mt-6" />
 
       <div className="mt-5 pr-8">
@@ -40,13 +40,13 @@ export const ExercisePreviewSheet = ({
         {exercise?.detail && <DialogDescription className="mt-1">{exercise.detail}</DialogDescription>}
       </div>
 
-      {/* Sin imagen, el propio hueco del vídeo ya lo dice: no se repite. */}
+      {/* Con foto y sin clip: qué falta y cómo crearlo (sin foto, el propio héroe ya lo dice). */}
       {!exercise?.video && exercise?.image && (
         <FeatureRow
           className="mt-6"
           icon={Video}
-          title="Todavía sin vídeo"
-          description="Este ejercicio solo tiene imagen de técnica por ahora."
+          title="Vídeo de técnica por crear"
+          description="Créalo desde su ficha o con «Generar vídeos de los ejercicios de los planes»."
         />
       )}
 

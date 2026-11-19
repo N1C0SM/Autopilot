@@ -213,7 +213,7 @@ const TrainingPlanView = ({ dayPlans, initialDay, doneThisWeek = [], doneToday =
             <ListGroup aria-label="Ejercicios">
               {selectedPlan.exercises?.map((ex, i) => {
                 const metadata = exerciseMetadata.byId[ex.exercise_id] || exerciseMetadata.byName[ex.name];
-                const video = ex.video_url || metadata?.video_url;
+                const video = metadata?.video_url || ex.video_url;
                 const image = metadata?.image_url || ex.image_url;
                 const category = ex.muscle_group || metadata?.muscle_group;
                 const exerciseType = ex.exercise_type || metadata?.exercise_type;
@@ -226,7 +226,7 @@ const TrainingPlanView = ({ dayPlans, initialDay, doneThisWeek = [], doneToday =
                 return (
                   <ListRow
                     key={`${selectedPlan.day}-${ex.exercise_id || ex.name}-${i}`}
-                    // La miniatura es la portada del vídeo: al tocar la fila se abre la ficha, cuyo héroe es el vídeo.
+                    // La miniatura se mueve con su clip de técnica (sobre la foto): al tocar la fila se abre la ficha.
                     leading={<ExerciseThumb image={usableImage(image)} video={video} name={ex.name} pattern={pattern} stimulus={stimulus} load={load} muscleGroup={category} size="sm" />}
                     title={<span className="line-clamp-2 whitespace-normal">{ex.name}</span>}
                     subtitle={info ? <span className="block truncate">{info}</span> : undefined}

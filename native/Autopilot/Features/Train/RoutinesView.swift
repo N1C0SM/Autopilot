@@ -274,7 +274,7 @@ struct MyRoutinesSection: View {
             if !exercises.isEmpty {
                 HStack(spacing: 8) {
                     ForEach(Array(exercises.prefix(thumbs).enumerated()), id: \.offset) { _, exercise in
-                        ExerciseThumb(url: exercise.image_url, size: 48, name: exercise.name, muscleGroup: exercise.muscle_group)
+                        ExerciseThumb(url: exercise.image_url, size: 48, name: exercise.name, muscleGroup: exercise.muscle_group, video: exercise.video_url)
                     }
                     if extra > 0 {
                         Text("+\(extra)").font(.apFootnote.weight(.semibold).monospacedDigit()).foregroundStyle(Palette.muted)
@@ -328,7 +328,7 @@ struct RoutinesPreview: View {
                         Button { Haptics.tap(); onOpen() } label: {
                             HStack(spacing: 14) {
                                 ExerciseThumb(url: first?.image_url, size: 48, name: first?.name ?? CustomRoutines.name(routine),
-                                              muscleGroup: first?.muscle_group)
+                                              muscleGroup: first?.muscle_group, video: first?.video_url)
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text(CustomRoutines.name(routine)).font(.apHeadline).foregroundStyle(Palette.foreground).lineLimit(1)
                                     Text(CustomRoutines.meta(routine)).font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted).lineLimit(1)

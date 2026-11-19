@@ -175,7 +175,7 @@ const ExercisePicker = ({ open, onOpenChange, onPick, existing = [] }: Props) =>
                     )}
                   >
                     <span className="py-2.5">
-                      <ExerciseThumb image={r.image_url ?? undefined} name={r.name} pattern={r.movement_pattern} stimulus={r.stimulus_type} load={r.load_level} muscleGroup={r.muscle_group} size="md" />
+                      <ExerciseThumb image={r.image_url ?? undefined} video={r.video_url} name={r.name} pattern={r.movement_pattern} stimulus={r.stimulus_type} load={r.load_level} muscleGroup={r.muscle_group} size="md" />
                     </span>
                     {/* El separador nace donde empieza el texto, como en la biblioteca. */}
                     <span className="flex min-w-0 flex-1 items-center gap-3 self-stretch py-2.5 pr-3 group-[:not(:last-child)]/row:sep-b">

@@ -321,6 +321,13 @@ const HomeOverview = ({
     const metadata = exerciseMetadata.byId[first.exercise_id] || exerciseMetadata.byName[first.name];
     return plan.cover_url || metadata?.image_url || first.image_url || null;
   };
+  /** Sin portada propia, la sesión se mueve con el clip de su primer ejercicio (como `routineThumb` en la app). */
+  const routineVideo = (plan: DayPlan) => {
+    const first = plan.exercises?.[0];
+    if (!first || plan.cover_url) return null;
+    const metadata = exerciseMetadata.byId[first.exercise_id] || exerciseMetadata.byName[first.name];
+    return metadata?.video_url || first.video_url || null;
+  };
 
   const readMealsDone = useCallback(() => {
     setCompletedMeals(new Set(readMealsDoneFor(userId)));
@@ -584,7 +591,7 @@ const HomeOverview = ({
                   aria-label={`Ver sesión ${planTitle(plan)}${done ? ", hecha esta semana" : ""}`}
                 >
                   <span aria-hidden="true" className="absolute left-3.5 right-3.5 top-0 h-px bg-border/60" />
-                  <ExerciseThumb image={routinePhoto(plan)} name={planTitle(plan)} size="md" />
+                  <ExerciseThumb image={routinePhoto(plan)} video={routineVideo(plan)} name={planTitle(plan)} size="md" />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate type-headline">{planTitle(plan).split(" · ")[0]}</span>
                     <span className="mt-0.5 block truncate type-footnote text-muted-foreground">{routineSubtitle(plan)}</span>
@@ -655,11 +662,12 @@ const HomeOverview = ({
               {previewExercises.map((exercise, index) => {
                 const metadata = exerciseMetadata.byId[exercise.exercise_id] || exerciseMetadata.byName[exercise.name];
                 const image = metadata?.image_url || exercise.image_url;
+                const video = metadata?.video_url || exercise.video_url;
                 const info = [exercise.rest, exercise.muscle_group || metadata?.muscle_group].filter(Boolean).join(" · ");
                 return (
                   <ListRow
                     key={`${previewPlan.day}-${exercise.exercise_id || exercise.name}-${index}`}
-                    leading={<ExerciseThumb image={image} name={exercise.name} muscleGroup={exercise.muscle_group || metadata?.muscle_group} size="md" />}
+                    leading={<ExerciseThumb image={image} video={video} name={exercise.name} pattern={metadata?.movement_pattern} muscleGroup={exercise.muscle_group || metadata?.muscle_group} size="md" />}
                     title={exercise.name}
                     subtitle={info || undefined}
                     value={`${exercise.series} × ${exercise.reps}`}

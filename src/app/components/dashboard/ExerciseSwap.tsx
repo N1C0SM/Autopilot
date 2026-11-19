@@ -23,7 +23,7 @@ interface Props {
   onSelect: (name: string | null) => void;
 }
 
-type Option = { name: string; image: string | null; pattern: string | null; stimulus: string | null; load: string | null };
+type Option = { name: string; image: string | null; video: string | null; pattern: string | null; stimulus: string | null; load: string | null };
 
 const GYM_GEAR_RE = /polea|cable|mancuerna|dumbbell|kettlebell|pesa rusa|goblet|barra|m[aá]quina|prensa|smith|multipower|landmine|lastr|disco|trap bar|glute-ham|farmer/i;
 const BAR_OK_RE = /en barra|barra fija|dominad|pull-?up|chin-?up|muscle/i;
@@ -59,7 +59,7 @@ export function ExerciseSwap({ original, current, movementPattern, muscleGroup, 
         if (obError) throw obError;
         if (ob?.equipment_type) style = ob.equipment_type;
       }
-      let query = supabase.from("exercises").select("name, image_url, muscle_group, exercise_type, movement_pattern, stimulus_type, load_level").neq("name", original).limit(60);
+      let query = supabase.from("exercises").select("name, image_url, video_url, muscle_group, exercise_type, movement_pattern, stimulus_type, load_level").neq("name", original).limit(60);
       if (movementPattern) query = query.eq("movement_pattern", movementPattern);
       else if (muscleGroup) query = query.eq("muscle_group", muscleGroup);
       const { data, error } = await query;
@@ -71,6 +71,7 @@ export function ExerciseSwap({ original, current, movementPattern, muscleGroup, 
       setOptions(rows.slice(0, 6).map((row) => ({
         name: row.name,
         image: row.image_url,
+        video: row.video_url ?? null,
         pattern: row.movement_pattern,
         stimulus: row.stimulus_type,
         load: row.load_level,
@@ -137,7 +138,7 @@ export function ExerciseSwap({ original, current, movementPattern, muscleGroup, 
               {options.map((option) => (
                 <ListRow
                   key={option.name}
-                  leading={<ExerciseThumb image={option.image} name={option.name} pattern={option.pattern} stimulus={option.stimulus} load={option.load} size="sm" />}
+                  leading={<ExerciseThumb image={option.image} video={option.video} name={option.name} pattern={option.pattern} stimulus={option.stimulus} load={option.load} size="sm" />}
                   title={<span className="line-clamp-2 whitespace-normal">{option.name}</span>}
                   value={current === option.name ? (
                     <Check className="h-5 w-5 text-primary" strokeWidth={2.5} aria-label="Seleccionado" />

@@ -636,6 +636,7 @@ struct SessionExerciseCard: View {
     }
     private var firstPending: Int? { sets.firstIndex { !$0.done } }
     @State private var technique = false
+    @ObservedObject private var loops = ExerciseLoops.shared
     /// Celebración breve al completar todas las series del ejercicio.
     @State private var justCompleted = false
     @State private var swapSheet = false
@@ -664,7 +665,8 @@ struct SessionExerciseCard: View {
     private var cardHeader: some View {
         HStack(spacing: 12) {
             if !focused {
-                WorkoutThumb(url: exercise.image_url, completed: allDone, motion: motionSpec)
+                WorkoutThumb(url: exercise.image_url, completed: allDone, motion: motionSpec,
+                             video: loops.video(exercise.name, plan: exercise.video_url))
                     .overlay(alignment: .topLeading) { indexBadge }
             }
             exerciseInfo
@@ -822,6 +824,7 @@ struct SessionExerciseCard: View {
         .sheet(isPresented: $technique) { TechniqueSheet(exercise: exercise, motion: motionSpec) }
         .sheet(isPresented: $swapSheet) { swapSheetContent }
         .task { await loadMotionMeta() }
+        .task(id: exercise.name) { loops.want(exercise.name) }
     }
 
     private func loadMotionMeta() async {
@@ -938,6 +941,7 @@ struct FocusViewer: View {
     var motion: [String: (pattern: String?, stimulus: String?, load: String?)] = [:]
     var onAdd: () -> Void = {}
     @ObservedObject private var loops = ExerciseLoops.shared
+    @ObservedObject private var policy = LoopPolicy.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Página visible del carrusel. Se sincroniza en los dos sentidos con el ejercicio actual.
     @State private var page: Int?
@@ -1008,7 +1012,7 @@ struct FocusViewer: View {
             ScrollView(.horizontal) {
                 LazyHStack(spacing: 0) {
                     ForEach(Array(workout.exercises.enumerated()), id: \.element.id) { i, item in
-                        photoPage(item)
+                        photoPage(item, current: i == index)
                             .containerRelativeFrame(.horizontal)
                             .id(i)
                     }
@@ -1020,15 +1024,6 @@ struct FocusViewer: View {
             .scrollPosition(id: $page)
             .frame(height: 220)
             .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-            .overlay {
-                // El movimiento en bucle corto encima de la foto (que hace de portada mientras
-                // carga), como en la web; con «Reducir movimiento», solo la foto.
-                Group {
-                    if !reduceMotion, let v = loops.urls[ex.name] { LoopingVideo(url: v) }
-                }
-                .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-                .allowsHitTesting(false)
-            }
             .overlay(alignment: .bottomTrailing) {
                 Text("\(index + 1) / \(workout.exercises.count)")
                     .font(.apFootnote.weight(.semibold).monospacedDigit())
@@ -1066,24 +1061,46 @@ struct FocusViewer: View {
                     return workout.exercises[index + offset].image_url.flatMap(URL.init(string:))
                 }
                 ImageCache.shared.prefetch(urls, maxSide: 900)
+                preloadNext()
             }
         }
-        .task { await loops.load(workout.exercises.map(\.name)) }
+        .task {
+            await loops.load(workout.exercises.map(\.name))
+            preloadNext()
+        }
+    }
+
+    /// El siguiente ejercicio ya tiene el principio de su vídeo cargado: pasar a él es instantáneo
+    /// (como `preloadExerciseLoop` en la web). Con la foto fija (reducir movimiento…), nada.
+    private func preloadNext() {
+        guard policy.allows(reduceMotion: reduceMotion),
+              let next = LoopRules.next(after: index, total: workout.exercises.count) else { return }
+        let item = workout.exercises[next]
+        if let url = loops.video(item.name, plan: item.video_url) { ExerciseLoopPool.shared.preload(url) }
     }
 
     /// Una página del carrusel: la foto del ejercicio a todo el visor o, sin foto, su huella en grande.
+    /// El ejercicio actual se mueve encima en bucle (mudo, sin controles) en cuanto su primer fotograma
+    /// está listo; sin vídeo todavía, la huella dorada en una esquina de la foto. Como la web.
     /// La foto va en un `overlay` del fondo: así «rellenar» se recorta al tamaño de la página y no
     /// invade la foto vecina del carrusel.
-    @ViewBuilder private func photoPage(_ item: GymExercise) -> some View {
+    @ViewBuilder private func photoPage(_ item: GymExercise, current: Bool) -> some View {
+        let photo = (loops.images[item.name] ?? item.image_url).flatMap(URL.init(string:))
+        let clip = loops.video(item.name, plan: item.video_url)
         Palette.card
             .overlay {
-                if let url = (loops.images[item.name] ?? item.image_url).flatMap(URL.init(string:)) {
-                    CachedAsyncImage(url: url, maxSide: 900) { $0.resizable().scaledToFill() } placeholder: {
+                ExerciseLoopView(url: current ? clip : nil, hero: true) {
+                    if let url = photo {
+                        CachedAsyncImage(url: url, maxSide: 900) { $0.resizable().scaledToFill() } placeholder: {
+                            ExerciseMotionHero(spec: spec(item)).padding(.horizontal, 24).padding(.vertical, 16)
+                        }
+                    } else {
                         ExerciseMotionHero(spec: spec(item)).padding(.horizontal, 24).padding(.vertical, 16)
                     }
-                } else {
-                    ExerciseMotionHero(spec: spec(item)).padding(.horizontal, 24).padding(.vertical, 16)
                 }
+            }
+            .overlay(alignment: .bottomLeading) {
+                if photo != nil, clip == nil { ExerciseMotionBadge(spec: spec(item)).padding(10) }
             }
             .clipped()
     }
@@ -1191,29 +1208,22 @@ struct ExerciseSwapMenu: View {
 /// Ficha de técnica del ejercicio (ExerciseFocus): imagen o vídeo, series, reps, descanso y músculo.
 struct TechniqueSheet: View {
     let exercise: GymExercise
-    /// Huella del ejercicio: el héroe cuando no hay foto (como `ExerciseMedia` en la web).
+    /// Huella del ejercicio: «Ritmo» y el héroe cuando no hay foto (como `ExerciseMedia` en la web).
     var motion: ExerciseMotion.Spec? = nil
     @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var loops = ExerciseLoops.shared
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                if let i = exercise.image_url, let u = URL(string: i) {
-                    CachedAsyncImage(url: u) { $0.resizable().scaledToFit() } placeholder: {
-                        // Mientras carga la foto, la huella en su sitio (nunca un bloque vacío).
-                        Group {
-                            if let motion { ExerciseMotionHero(spec: motion).padding(16) } else { Palette.card }
-                        }
-                        .aspectRatio(16 / 9, contentMode: .fit).frame(maxWidth: .infinity)
-                    }
-                        .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
-                        .accessibilityLabel(exercise.name)
-                } else if let motion {
-                    ExerciseMotionHero(spec: motion)
-                        .padding(16)
-                        .aspectRatio(16 / 9, contentMode: .fit)
-                        .frame(maxWidth: .infinity)
-                        .background(Palette.background, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
-                }
+                // El mismo héroe que la ficha de la biblioteca: el clip en bucle sobre su foto, la foto
+                // con «Ritmo / Foto» o la huella; nunca un bloque vacío.
+                ExerciseHeroMedia(
+                    name: exercise.name,
+                    image: loops.images[exercise.name] ?? exercise.image_url,
+                    video: loops.video(exercise.name, plan: exercise.video_url)?.absoluteString,
+                    motion: motion,
+                    glyph: motion ?? ExerciseMotion.specFor(name: exercise.name, pattern: nil, stimulus: nil, load: nil, muscleGroup: exercise.muscle_group)
+                )
                 Text(exercise.name).font(.apTitle1).tracking(-0.4)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityAddTraits(.isHeader)
@@ -1250,6 +1260,7 @@ struct TechniqueSheet: View {
         .frame(minWidth: 420, minHeight: 520)
         .presentationDetents([.large])
         .presentationBackground(Palette.card)
+        .task { await loops.load([exercise.name]) }
     }
 }
 
@@ -1505,14 +1516,18 @@ private struct WorkoutThumb: View {
     var size: CGFloat = 52
     /// Huella del ejercicio: sin foto (o mientras carga) se dibuja ella, nunca un icono repetido.
     var motion: ExerciseMotion.Spec? = nil
+    /// Clip de técnica: en la lista de la sesión el ejercicio se mueve sobre su foto (hecho, quieto).
+    var video: URL? = nil
 
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Palette.secondary)
-            if let u = url.flatMap(URL.init(string:)) {
-                RemoteThumb(url: u, maxSide: max(140, size * 2)) { fallback }
-            } else {
-                fallback
+            ExerciseLoopView(url: video, paused: completed) {
+                if let u = url.flatMap(URL.init(string:)) {
+                    RemoteThumb(url: u, maxSide: max(140, size * 2)) { fallback }
+                } else {
+                    fallback
+                }
             }
             if completed {
                 Color.black.opacity(0.5)

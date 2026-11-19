@@ -354,7 +354,7 @@ struct ExerciseListRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            ExerciseThumb(url: exercise.image_url, completed: done, name: exercise.name, muscleGroup: exercise.muscle_group)
+            ExerciseThumb(url: exercise.image_url, completed: done, name: exercise.name, muscleGroup: exercise.muscle_group, video: exercise.video_url)
             VStack(alignment: .leading, spacing: 2) {
                 Text(exercise.name).font(.apHeadline).lineLimit(2).foregroundStyle(done ? Palette.muted : Palette.foreground)
                 Text("\(exercise.series) series · \(exercise.reps) reps · \(exercise.rest)").font(.apFootnote.monospacedDigit())
@@ -371,27 +371,43 @@ struct ExerciseListRow: View {
 
 /// Miniatura única de ejercicio (como `ExerciseThumb` en la web): la foto y, sin foto (o mientras
 /// carga), la huella del ejercicio, la de su patrón o la deducida del nombre y el grupo. Nunca un
-/// cuadro gris vacío.
+/// cuadro gris vacío. Con clip de técnica, el ejercicio se mueve encima en bucle (`ExerciseLoopView`):
+/// la foto y el clip salen de la biblioteca por su nombre (en tandas) y, mientras llegan, del plan.
 struct ExerciseThumb: View {
     let url: String?
     var completed = false
     var size: CGFloat = 52
-    /// Nombre y datos de la ficha para dibujar la huella. Sin nombre (administración) queda el hueco.
+    /// Nombre y datos de la ficha para dibujar la huella. Sin nombre queda el hueco con la mancuerna.
     var name: String = ""
     var muscleGroup: String? = nil
     var pattern: String? = nil
     var stimulus: String? = nil
     var load: String? = nil
+    /// Clip que guarda el plan (el de la biblioteca manda en cuanto llega).
+    var video: String? = nil
+    /// `false` deja la miniatura quieta (Progreso, donde la cifra es la protagonista).
+    var moves = true
+    /// La foto y el clip que se pasan ya están al día (Admin): no se buscan por nombre en la biblioteca.
+    var fresh = false
+    @ObservedObject private var loops = ExerciseLoops.shared
+
+    private var photo: String? { fresh || name.isEmpty ? url : loops.images[name] ?? url }
+    private var clip: URL? {
+        guard moves, !name.isEmpty else { return nil }
+        return fresh ? LoopRules.url(video) : loops.video(name, plan: video)
+    }
 
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Palette.secondary)
-            if let url, let u = URL(string: url) {
-                CachedAsyncImage(url: u, maxSide: max(140, size * 2)) { $0.resizable().scaledToFill() } placeholder: { glyph }
-            } else if name.isEmpty {
-                Image(systemName: "dumbbell").foregroundStyle(Palette.muted)
-            } else {
-                glyph
+            ExerciseLoopView(url: clip, paused: completed) {
+                if let photo, let u = URL(string: photo) {
+                    CachedAsyncImage(url: u, maxSide: max(140, size * 2)) { $0.resizable().scaledToFill() } placeholder: { glyph }
+                } else if name.isEmpty {
+                    Image(systemName: "dumbbell").foregroundStyle(Palette.muted)
+                } else {
+                    glyph
+                }
             }
             if completed {
                 Color.black.opacity(0.5)
@@ -401,6 +417,7 @@ struct ExerciseThumb: View {
         .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .accessibilityHidden(true)
+        .task(id: name) { if moves, !fresh { loops.want(name) } }
     }
 
     @ViewBuilder private var glyph: some View {
@@ -680,7 +697,7 @@ struct RoutineListView: View {
                             Button { detail = ex } label: {
                                 HStack(spacing: 12) {
                                     // Miniaturas uniformes (44) y mismo padding en todas las filas.
-                                    ExerciseThumb(url: ex.image_url, size: 44, name: ex.name, muscleGroup: ex.muscle_group)
+                                    ExerciseThumb(url: ex.image_url, size: 44, name: ex.name, muscleGroup: ex.muscle_group, video: ex.video_url)
                                     VStack(alignment: .leading, spacing: 3) {
                                         Text(ex.name).font(.apHeadline).lineLimit(2)
                                             .fixedSize(horizontal: false, vertical: true)

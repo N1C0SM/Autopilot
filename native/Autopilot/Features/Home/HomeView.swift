@@ -341,16 +341,20 @@ struct HomeView: View {
     }
 
     /// Miniatura de una sesión del programa: portada (foto propia o IA) y, sin ella, la foto de su
-    /// primer ejercicio; como último recurso, su icono sobre el fondo de marca.
+    /// primer ejercicio en movimiento; como último recurso, su icono sobre el fondo de marca.
     @ViewBuilder private func routineThumb(_ plan: DayPlan) -> some View {
         let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
-        let firstPhoto = (plan.exercises ?? []).compactMap { $0.image_url }.first.flatMap(URL.init(string:))
+        let first = (plan.exercises ?? []).first { $0.image_url != nil }
+        let firstPhoto = first?.image_url.flatMap(URL.init(string:))
         ZStack {
             Palette.secondary
             if let cover = plan.cover_url, let url = URL(string: cover) {
                 CachedAsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
             } else if let firstPhoto {
-                CachedAsyncImage(url: firstPhoto) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
+                // Sin portada propia, la sesión se mueve con el clip de su primer ejercicio (como la web).
+                NamedExerciseLoop(name: first?.name ?? "", plan: first?.video_url) {
+                    CachedAsyncImage(url: firstPhoto) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
+                }
             } else if let icon = SessionIdentity.clean(plan.session_icon) {
                 Image(systemName: icon).font(.inter(size: 22, weight: .semibold)).foregroundStyle(Palette.gold)
             } else {
@@ -1227,7 +1231,7 @@ private struct TodaySessionSheet: View {
         VStack(spacing: 0) {
             ForEach(Array(exercises.enumerated()), id: \.offset) { i, ex in
                 HStack(spacing: 12) {
-                    ExerciseThumb(url: ex.image_url, size: 48, name: ex.name, muscleGroup: ex.muscle_group)
+                    ExerciseThumb(url: ex.image_url, size: 48, name: ex.name, muscleGroup: ex.muscle_group, video: ex.video_url)
                     VStack(alignment: .leading, spacing: 3) {
                         Text(ex.name).font(.apHeadline).lineLimit(2)
                             .fixedSize(horizontal: false, vertical: true)

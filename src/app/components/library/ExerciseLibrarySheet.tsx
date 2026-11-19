@@ -181,7 +181,7 @@ const ExerciseList = ({ items, favorites, onOpen }: {
     {items.map((e) => (
       <li key={e.id} className="group/row">
         <button type="button" onClick={() => onOpen(e)} className="flex w-full items-center gap-3 pl-3 text-left transition-colors duration-150 active:bg-accent">
-          <span className="py-2.5"><ExerciseThumb image={e.image} name={e.name} pattern={e.pattern} stimulus={e.stimulus} load={e.load} muscleGroup={e.groups[0]} size="md" /></span>
+          <span className="py-2.5"><ExerciseThumb image={e.image} video={e.video} name={e.name} pattern={e.pattern} stimulus={e.stimulus} load={e.load} muscleGroup={e.groups[0]} size="md" /></span>
           {/* El separador nace donde empieza el texto, como en ListRow. */}
           <span className="flex min-w-0 flex-1 items-center gap-2 self-stretch py-2.5 pr-3 group-[:not(:last-child)]/row:sep-b">
             <span className="min-w-0 flex-1">
@@ -256,7 +256,7 @@ const Browse = ({ items, recent, favorites, onOpen, onGroup }: {
           <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
             {recent.map((e) => (
               <button key={e.id} type="button" onClick={() => onOpen(e)} className="w-28 shrink-0 text-left transition-opacity active:opacity-60">
-                <ExerciseThumb image={e.image} name={e.name} pattern={e.pattern} stimulus={e.stimulus} load={e.load} muscleGroup={e.groups[0]} aspect="video" className="w-28" />
+                <ExerciseThumb image={e.image} video={e.video} name={e.name} pattern={e.pattern} stimulus={e.stimulus} load={e.load} muscleGroup={e.groups[0]} aspect="video" className="w-28" />
                 <span className="mt-1.5 line-clamp-2 type-footnote font-medium">{e.name}</span>
               </button>
             ))}

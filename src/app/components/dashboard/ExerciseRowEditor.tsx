@@ -131,7 +131,7 @@ const ExerciseRowEditor = ({ ex, index, total, onChange, onMove, onRemove }: Pro
       <button type="button" aria-expanded={open} aria-label={exerciseSpoken(ex)}
         onClick={() => { void hapticSelection(); setOpen((v) => !v); setCustomRest(false); }}
         className="flex w-full items-center gap-3 p-3 pr-4 text-left">
-        <ExerciseThumb image={ex.image_url ?? undefined} name={ex.name} muscleGroup={ex.muscle_group} size="md" />
+        <ExerciseThumb image={ex.image_url ?? undefined} video={ex.video_url} name={ex.name} muscleGroup={ex.muscle_group} size="md" />
         <span className="min-w-0 flex-1">
           <span className="line-clamp-2 type-headline">{ex.name}</span>
           <span className="mt-0.5 block truncate type-footnote tabular-nums text-muted-foreground">{summary}</span>

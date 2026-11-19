@@ -691,13 +691,196 @@ describe("paridad web ↔ apps nativas", () => {
   it("Ejercicio en movimiento: bucle corto, mudo y sin controles sobre la foto, y foto fija con «reducir movimiento», en la web y en la app", () => {
     const web = read("src/app/components/dashboard/WorkoutTracker.tsx");
     const app = read("native/Autopilot/Features/Train/WorkoutView.swift");
-    const loop = read("native/Autopilot/Design/LoopingVideo.swift");
-    expect(web).toContain("const loop = vid && isDirectFile(vid) && !prefersReducedMotion ? vid : null;");
-    expect(web).toContain("autoPlay muted loop playsInline");
-    expect(app).toContain("if !reduceMotion, let v = loops.urls[ex.name] { LoopingVideo(url: v) }");
-    expect(loop).toContain("player.isMuted = true");
-    expect(loop).toContain("AVPlayerLooper(");
-    expect(loop).toContain('["mp4", "mov", "m4v"]');
+    const loopWeb = read("src/app/components/ExerciseLoop.tsx");
+    const loopApp = read("native/Autopilot/Design/ExerciseLoopView.swift");
+    expect(existsSync(resolve(root, "native/Autopilot/Design/LoopingVideo.swift"))).toBe(false);
+    // Una sola pieza por plataforma: `ExerciseLoop` (web) y `ExerciseLoopView` (app).
+    expect(loopWeb).toMatch(/<video[\s\S]*?autoPlay\s+muted\s+loop\s+playsInline[\s\S]*?controls=\{false\}/);
+    expect(loopWeb).toContain("poster={poster ?? undefined}");
+    expect(loopApp).toContain("player.isMuted = true");
+    expect(loopApp).toContain("AVPlayerLooper(player: player, templateItem: item)");
+    expect(loopApp).toContain(".allowsHitTesting(false)");
+    // El visor del entreno usa la pieza común sobre la foto, nunca un <video> propio.
+    expect(web).toContain("<ExerciseLoop key={vid ?? active.name} src={vid} poster={img} priority />");
+    expect(web).not.toContain("<video");
+    expect(app).toContain("ExerciseLoopView(url: current ? clip : nil, hero: true) {");
+    expect(app).not.toContain("LoopingVideo(");
+  });
+
+  it("Ejercicio en movimiento: mismas reglas del bucle en la web y en la app (clip propio, foto debajo, solo en pantalla, seis vivos, foto fija con reducir movimiento, ahorro de datos o bajo consumo)", () => {
+    const rules = read("src/shared/lib/exerciseLoop.ts");
+    const loopWeb = read("src/app/components/ExerciseLoop.tsx");
+    const loopApp = read("native/Autopilot/Design/ExerciseLoopView.swift");
+    const num = (src: string, re: RegExp) => Number(src.match(re)?.[1]);
+    // Solo clips directos propios: nunca GIF, YouTube ni imágenes de terceros.
+    expect(rules).toContain('export const LOOP_EXTENSIONS = ["mp4", "mov", "m4v"] as const;');
+    expect(loopApp).toContain('static let extensions = ["mp4", "mov", "m4v"]');
+    for (const src of [rules, loopWeb, loopApp]) expect(src).not.toMatch(/\.gif|gifUrl|exercisedb|gymvisual/i);
+    // Seis bucles vivos como mucho, dos en reserva y 150 ms de espera al entrar en pantalla.
+    expect(num(rules, /MAX_LIVE_LOOPS = (\d+)/)).toBe(num(loopApp, /static let maxLive = (\d+)/));
+    expect(num(rules, /MAX_WARM_LOOPS = (\d+)/)).toBe(num(loopApp, /static let maxWarm = (\d+)/));
+    expect(num(rules, /LOOP_START_DELAY_MS = (\d+)/)).toBe(num(loopApp, /static let startDelayMs = (\d+)/));
+    // Foto fija con reducir movimiento, ahorro de datos o bajo consumo (la misma regla en las dos).
+    expect(rules).toContain("!reducedMotion && !saveData && !lowPower");
+    expect(loopApp).toContain("!reduceMotion && !saveData && !lowPower");
+    expect(loopWeb).toContain('"(prefers-reduced-motion: reduce)"');
+    expect(loopWeb).toContain("saveData === true");
+    expect(loopApp).toContain("ProcessInfo.processInfo.isLowPowerModeEnabled");
+    expect(loopApp).toContain(".NSProcessInfoPowerStateDidChange");
+    expect(loopApp).toContain("path.isConstrained");
+    expect(loopApp).toContain("@Environment(\\.accessibilityReduceMotion)");
+    // Solo se mueve lo que se ve: IntersectionObserver en la web, onAppear/onDisappear con reserva compartida en la app.
+    expect(loopWeb).toContain("new IntersectionObserver(");
+    expect(loopWeb).toContain('document.addEventListener("visibilitychange", sync)');
+    expect(loopApp).toMatch(/\.onDisappear \{[\s\S]*?give\(\)/);
+    expect(loopApp).toContain("final class ExerciseLoopPool");
+    expect(loopApp).toContain("if !hero && live >= LoopRules.maxLive { return nil }");
+    // La foto siempre debajo y el vídeo con fundido cuando su primer fotograma está listo (nunca negro).
+    expect(loopWeb).toContain('ready ? "opacity-100" : "opacity-0"');
+    expect(loopWeb).toContain("onPlaying={() => setReady(true)}");
+    expect(loopApp).toContain("observe(\\.isReadyForDisplay");
+    expect(loopApp).toContain(".opacity(ready ? 1 : 0)");
+    expect(loopApp).toMatch(/ZStack \{\s*still\s*if let url, !paused/);
+    expect(loopApp).toContain("videoGravity = .resizeAspectFill");
+    // Siguiente ejercicio precargado en el entreno: cambiar es instantáneo.
+    expect(rules).toContain("export const nextLoopIndex");
+    expect(loopApp).toContain("static func next(after current: Int, total: Int) -> Int?");
+    const web = read("src/app/components/dashboard/WorkoutTracker.tsx");
+    const app = read("native/Autopilot/Features/Train/WorkoutView.swift");
+    expect(web).toContain("nextLoopIndex(expandedExercise, currentPlan?.exercises?.length ?? 0)");
+    expect(web).toContain("preloadExerciseLoop(upcomingVideo);");
+    expect(app).toContain("let next = LoopRules.next(after: index, total: workout.exercises.count)");
+    expect(app).toContain("ExerciseLoopPool.shared.preload(url)");
+    // Sin vídeo: la foto con la huella dorada animada en una esquina (visor), o la huella sin foto.
+    expect(web).toContain('{img && !loopUrl(vid) && <ExerciseMotionBadge spec={activeSpec} className="absolute bottom-2.5 left-2.5" />}');
+    expect(app).toContain("if photo != nil, clip == nil { ExerciseMotionBadge(spec: spec(item)).padding(10) }");
+    expect(read("src/app/components/ExerciseMotion.tsx")).toContain("export const ExerciseMotionBadge");
+    expect(read("native/Autopilot/Design/ExerciseMotion.swift")).toContain("struct ExerciseMotionBadge: View");
+    // En el carrusel del entreno, quietas: solo se mueve el ejercicio grande.
+    expect(web).toMatch(/<ExerciseThumb image=\{m\?\.image_url \|\| item\.image_url\} name=\{item\.name\}/);
+    expect(app).toContain("WorkoutThumb(url: loops.images[item.name] ?? item.image_url, completed: done, size: 48, motion: spec(item))");
+  });
+
+  it("Ejercicio en movimiento en todas partes: entreno (lista y visor), ficha, biblioteca, añadir ejercicios, Hoy, rutina y Mis rutinas, igual en la web y en la app", () => {
+    const thumbWeb = read("src/app/components/ExerciseMedia.tsx");
+    const thumbApp = read("native/Autopilot/Features/Train/TrainView.swift");
+    // Las miniaturas comunes llevan el bucle (quietas si el ejercicio ya está hecho).
+    expect(thumbWeb).toContain("<ExerciseLoop src={video} poster={photo} paused={completed} />");
+    expect(thumbApp).toContain("ExerciseLoopView(url: clip, paused: completed) {");
+    expect(read("native/Autopilot/Features/Train/ExerciseLibraryView.swift")).toContain("ExerciseLoopView(url: LoopRules.url(video)) {");
+    expect(read("native/Autopilot/Features/Train/WorkoutView.swift")).toContain("ExerciseLoopView(url: video, paused: completed) {");
+    // Cada sitio pasa el clip del ejercicio, en la web y en la app.
+    const web: [string, string][] = [
+      ["src/app/components/dashboard/WorkoutTracker.tsx", "video={exerciseVideo}"],
+      ["src/app/components/library/ExerciseLibrarySheet.tsx", "video={e.video}"],
+      ["src/app/components/dashboard/ExercisePicker.tsx", "video={r.video_url}"],
+      ["src/app/components/dashboard/HomeOverview.tsx", "video={video}"],
+      ["src/app/components/dashboard/HomeOverview.tsx", "video={routineVideo(plan)}"],
+      ["src/app/components/dashboard/TrainingPlanView.tsx", "video={video}"],
+      ["src/app/components/dashboard/MyRoutines.tsx", "video={meta?.video_url || first?.video_url}"],
+      ["src/app/components/dashboard/MyRoutines.tsx", "video={meta?.video_url || exercise.video_url}"],
+      ["src/app/components/dashboard/ExerciseRowEditor.tsx", "video={ex.video_url}"],
+    ];
+    for (const [file, text] of web) expect(read(file), `${file}: ${text}`).toContain(text);
+    const app: [string, string][] = [
+      ["native/Autopilot/Features/Train/WorkoutView.swift", "video: loops.video(exercise.name, plan: exercise.video_url))"],
+      ["native/Autopilot/Features/Train/ExerciseLibraryView.swift", "video: e.video"],
+      ["native/Autopilot/Features/Train/PlanEditorView.swift", "video: row.video_url)"],
+      ["native/Autopilot/Features/Home/HomeView.swift", "video: ex.video_url)"],
+      ["native/Autopilot/Features/Home/HomeView.swift", "NamedExerciseLoop(name: first?.name ?? \"\", plan: first?.video_url)"],
+      ["native/Autopilot/Features/Train/TrainView.swift", "video: ex.video_url)"],
+      ["native/Autopilot/Features/Train/RoutinesView.swift", "video: first?.video_url)"],
+      ["native/Autopilot/Features/Train/RoutinesView.swift", "video: exercise.video_url)"],
+      ["native/Autopilot/Features/Train/PlanEditorView.swift", "video: exercise.video_url)"],
+    ];
+    for (const [file, text] of app) expect(read(file), `${file}: ${text}`).toContain(text);
+    // La biblioteca manda sobre lo guardado en el plan (las URL cambian al regenerar el clip).
+    expect(read("src/app/components/dashboard/WorkoutTracker.tsx")).toContain("const exerciseVideo = metadata?.video_url || ex.video_url;");
+    expect(read("native/Autopilot/Design/ExerciseLoopView.swift")).toContain("func video(_ name: String, plan: String? = nil) -> URL? { urls[name] ?? LoopRules.url(plan) }");
+    // Ficha (biblioteca y técnica desde Entrenar): el clip en bucle sobre su foto, sin controles; con la foto
+    // fija, «Ver vídeo» / «Parar vídeo», en la web y en la app.
+    const hero = read("native/Autopilot/Features/Train/ExerciseLibraryView.swift");
+    expect(thumbWeb).toContain("{clip && <ExerciseLoop src={clip} poster={still} priority force={manual} />}");
+    expect(hero).toContain("ExerciseLoopView(url: videoURL, hero: true, force: playVideo) { still(clip: videoURL != nil) }");
+    expect(read("native/Autopilot/Features/Train/WorkoutView.swift")).toMatch(/struct TechniqueSheet[\s\S]*?ExerciseHeroMedia\(/);
+    expect(read("src/app/components/ExerciseFocus.tsx")).toContain("<ExerciseMedia key={name} video={exercise?.video}");
+    for (const text of ["Ver vídeo", "Parar vídeo"]) {
+      expect(thumbWeb).toContain(text);
+      expect(hero).toContain(text);
+    }
+    expect(thumbWeb).not.toMatch(/<video[^>]*\bcontrols\b(?!=\{false\})/);
+    // Ficha con foto y sin clip ni patrón: la huella dorada animada en una esquina, en las dos.
+    expect(thumbWeb).toContain('<ExerciseMotionBadge spec={glyph} className="absolute bottom-3 left-3" />');
+    expect(hero).toContain("ExerciseMotionBadge(spec: glyph).padding(12)");
+    // Vista previa de Admin: el mismo héroe y una línea en positivo cuando falta el clip.
+    expect(read("native/Autopilot/Features/Admin/AdminExercises.swift")).toContain("ExerciseHeroMedia(name: ex.name, image: ex.image_url, video: ex.video_url");
+    for (const text of ["Vídeo de técnica por crear", "Créalo desde su ficha o con «Generar vídeos de los ejercicios de los planes»."]) {
+      expect(read("src/app/components/ExercisePreviewSheet.tsx")).toContain(text);
+      expect(read("native/Autopilot/Features/Admin/AdminExercises.swift")).toContain(text);
+    }
+    expect(read("src/app/components/ExercisePreviewSheet.tsx")).not.toContain("Todavía sin vídeo");
+    // Progreso sigue con la foto quieta en los dos lados (la cifra es la protagonista).
+    expect(read("src/app/components/dashboard/WorkoutProgress.tsx")).not.toContain("video=");
+    expect(read("native/Autopilot/Features/Progress/ProgressScreen.swift")).toContain("moves: false");
+  });
+
+  it("Admin → Biblioteca: «Generar vídeos de los ejercicios de los planes» con la misma cuenta, el mismo coste, confirmación, uno a uno y «Parar», en la web y en la app", () => {
+    const lib = read("src/shared/lib/planVideos.ts");
+    const web = read("src/app/components/admin-library/PlanVideos.tsx");
+    const app = read("native/Autopilot/Features/Admin/AdminPlanVideos.swift");
+    // Mismos textos: los de la web salen de `PLAN_VIDEOS_COPY` y la app los repite literalmente.
+    const copy = lib.slice(lib.indexOf("export const PLAN_VIDEOS_COPY"), lib.indexOf("} as const;"));
+    const texts = [...copy.matchAll(/^\s+\w+: "([^"]+)",$/gm)].map((m) => m[1]);
+    expect(texts).toEqual(expect.arrayContaining([
+      "Vídeos de los planes", "Generar vídeos de los ejercicios de los planes", "Vídeos en pausa", "Parar",
+      "Parando al terminar este vídeo…", "Para reintentar", "Ahora no",
+    ]));
+    for (const text of texts) expect(app, text).toContain(`"${text}"`);
+    for (const text of [
+      "en los planes · ", " con vídeo · ", " sin vídeo", " de 4 s · ≈", " créditos de Lovable (", " por vídeo)", "¿Generar ", "Generando ", " de ",
+      "necesitan antes su foto (el vídeo parte de ella): créala desde su ficha y entrarán en la siguiente tanda.",
+      "Se creará un clip de 4 s para cada ejercicio de los planes que aún no tiene vídeo, uno detrás de otro. Coste estimado: ≈",
+      "Los que ya tienen vídeo se saltan y puedes parar cuando quieras.", "Parado: ", "Listo: ", "vídeos nuevos", "vídeos creados",
+      "Mantén esta pantalla abierta: cada vídeo tarda de 1 a 3 minutos.", "Admin → Landing → Claves de IA → Vídeos de ejercicios",
+    ]) {
+      expect(lib + web, text).toContain(text);
+      expect(app, text).toContain(text);
+    }
+    // 1,6 créditos por clip de 4 s, el mismo tope de espera y el mismo sondeo.
+    expect(lib).toContain("export const CREDITS_PER_CLIP = 1.6;");
+    expect(app).toContain("static let creditsPerClip = 1.6");
+    expect(lib).toContain("PLAN_VIDEO_DEADLINE_MS = 10 * 60 * 1000");
+    expect(app).toContain("static let deadline: TimeInterval = 10 * 60");
+    expect(lib).toContain("PLAN_VIDEO_POLL_MS = 8000");
+    expect(app).toContain("static let pollSeconds = 8");
+    // Lee los planes y la biblioteca con los permisos del admin, por páginas, y salta los que ya tienen vídeo.
+    for (const src of [web, app]) {
+      expect(src).toContain('from("training_plan").select("workouts_json")');
+      expect(src).toContain('from("exercises").select("id, name, image_url, video_url")');
+    }
+    expect(web).toContain(".range(from, from + PAGE - 1)");
+    expect(app).toContain(".range(from: from, to: from + 999)");
+    expect(lib).toContain("const missing = used.filter((exercise) => !hasValue(exercise.video_url));");
+    expect(app).toContain("let missing = used.filter { !has($0.video_url) }");
+    // Confirmación antes de gastar créditos.
+    expect(web).toContain("<AlertDialogTitle>{planVideoConfirmTitle(ready)}</AlertDialogTitle>");
+    expect(app).toContain(".confirmationDialog(PlanVideos.confirmTitle(ready), isPresented: $confirming");
+    // Uno a uno con `exercise-video` (create → check) y «Parar» al terminar el actual.
+    expect(web).toContain('callVideo(exercise.id, "create")');
+    expect(web).toContain('callVideo(exercise.id, "check")');
+    expect(app).toContain('call(exercise.id, "create")');
+    expect(app).toContain('call(exercise.id, "check")');
+    expect(web).toContain("if (stopRef.current || !alive.current) { stopped = true; break; }");
+    expect(app).toContain("if stopRequested || Task.isCancelled { stopped = true; break }");
+    // En pausa (Claves de IA) lo dice y no lanza nada; nunca cambia la configuración.
+    expect(web).toContain('.eq("key", "AI_VIDEO_ENABLED").maybeSingle()');
+    expect(app).toContain('.eq("key", value: "AI_VIDEO_ENABLED")');
+    for (const src of [web, app]) expect(src).not.toMatch(/\.upsert\(|app_secrets"\)\s*\.(update|insert|delete)\(/);
+    expect(web).toContain("if (started.paused) { setPaused(true); stopped = true; break; }");
+    expect(app).toContain("if started.paused == true { paused = true; stopped = true; break }");
+    // Dentro de Admin → Biblioteca, junto al catálogo base.
+    expect(read("src/app/components/admin/ExerciseLibrary.tsx")).toContain("<PlanVideos onChanged=");
+    expect(read("native/Autopilot/Features/Admin/AdminExercises.swift")).toContain("AdminPlanVideosCard {");
   });
 
   it("Entreno sin foto: la huella del ejercicio a todo el visor y en cada miniatura (patrón de la ficha o deducido con las mismas pistas), en la web y en la app", () => {
@@ -767,8 +950,8 @@ describe("paridad web ↔ apps nativas", () => {
     expect(thumb).toContain('<Check className="!size-5 text-primary"');
     expect(app).toContain('Image(systemName: "checkmark").font(.inter(.headline).weight(.bold)).foregroundStyle(Palette.gold)');
     // La foto del visor se recorta a su página: «rellenar» no invade la foto vecina del carrusel.
-    const photoPage = app.slice(app.indexOf("private func photoPage"), app.indexOf("private func photoPage") + 900);
-    expect(photoPage).toMatch(/^private func photoPage\(_ item: GymExercise\) -> some View \{\s*Palette\.card\s*\.overlay \{[\s\S]*?scaledToFill\(\)[\s\S]*?\n {12}\}\s*\.clipped\(\)/);
+    const photoPage = app.slice(app.indexOf("private func photoPage"), app.indexOf("private func photoPage") + 1600);
+    expect(photoPage).toMatch(/^private func photoPage\(_ item: GymExercise, current: Bool\) -> some View \{[\s\S]*?Palette\.card\s*\.overlay \{[\s\S]*?scaledToFill\(\)[\s\S]*?\n {12}\}[\s\S]*?\.clipped\(\)/);
   });
 
   it("Resumen y tarjeta para compartir: mismos textos, solo se destacan las mejoras (nunca «−832 kg») y el AP al pie sin el nombre de la marca, en la web y en la app", () => {
@@ -1135,7 +1318,7 @@ describe("paridad web ↔ apps nativas", () => {
     const app = read("native/Autopilot/Features/Train/ExerciseLibraryView.swift");
     const appThumb = app.slice(app.indexOf("private struct ExerciseThumbView"));
     expect(appThumb).toMatch(/if let url, let u = URL\(string: url\) \{\s*CachedAsyncImage[^\n]*placeholder: \{ fallback \}/);
-    expect(app).toContain("exercise.image == nil || showRhythm");
+    expect(app).toContain("image == nil || showRhythm");
     expect(app).not.toContain("if Self.cache == nil");
     const lib = read("src/shared/hooks/useExerciseLibrary.ts");
     expect(lib).toMatch(/if \(cache\) setItems\(cache\);/);
@@ -1162,11 +1345,11 @@ describe("paridad web ↔ apps nativas", () => {
     expect(app.slice(app.indexOf("private struct ExerciseThumbView"))).toContain("ExerciseMotion.specFor(name: name, pattern: pattern, stimulus: stimulus, load: load, muscleGroup: muscleGroup)");
     expect(train).toContain("ExerciseMotionGlyph(spec: ExerciseMotion.specFor(name: name, pattern: pattern, stimulus: stimulus, load: load, muscleGroup: muscleGroup))");
     // Ficha sin foto: la huella a todo el héroe (y mientras carga la foto), en una tarjeta de 28.
-    expect(app).toContain("} else if exercise.image == nil || showRhythm {\n                ExerciseMotionHero(spec: glyph).padding(12)");
+    expect(app).toMatch(/\} else if image == nil \|\| showRhythm \{\s*ExerciseMotionHero\(spec: glyph\)\.padding\(12\)/);
     expect(app).toContain(".surface(Radius.hero)");
     expect(web).toContain('className="rounded-sheet bg-card"');
     // «Ritmo / Foto» también sobre la foto (antes desaparecía al cambiar a la foto en la web).
-    expect(media).toContain("{rhythm && usable && (");
+    expect(media).toContain("{!clip && rhythm && usable && (");
     // Tarjetas de grupo: la foto real con su degradado o la huella dorada del grupo, nunca un bloque oscuro vacío.
     expect(web).toContain("const groupGlyph = (group: string) => exerciseMotionFor({ name: group, muscleGroup: group });");
     expect(app).toContain("ExerciseMotion.specFor(name: group, pattern: nil, stimulus: nil, load: nil, muscleGroup: group)");
@@ -1187,7 +1370,7 @@ describe("paridad web ↔ apps nativas", () => {
     expect(web + read("src/app/components/ExerciseFocus.tsx")).not.toContain("text-[28px]");
     // Recientes con la huella deducida si no hay foto (el grupo viaja con el ejercicio).
     expect(web).toContain('muscleGroup={e.groups[0]} aspect="video"');
-    expect(app).toContain("muscleGroup: e.groups.first, width: 112, height: 63)");
+    expect(app).toContain("muscleGroup: e.groups.first, video: e.video, width: 112, height: 63)");
   });
 
   it("Ejercicios (rediseño): mismos textos, cifras con su plural, estados vacíos, de error y de carga, y zonas de 44, en la web y en la app", () => {
@@ -1270,7 +1453,7 @@ describe("paridad web ↔ apps nativas", () => {
     expect(picker).toContain('"Añadir \\(ExerciseLibraryCatalog.count(selected.count))"');
     // Filas: miniatura con huella, «grupo · modalidad», círculo dorado con el orden; lo que ya está, atenuado y sin repetir.
     expect(web).toContain("muscleGroup={r.muscle_group} size=\"md\"");
-    expect(picker).toContain("pattern: row.movement_pattern, stimulus: row.stimulus_type, load: row.load_level)");
+    expect(picker).toContain("pattern: row.movement_pattern, stimulus: row.stimulus_type, load: row.load_level, video: row.video_url)");
     expect(web).toContain("disabled={inSession}");
     expect(picker).toContain(".disabled(inSession)");
     expect(web).toContain('sel >= 0 ? "bg-primary text-primary-foreground" : "border-[1.5px] border-muted-foreground/40"');
@@ -1282,7 +1465,8 @@ describe("paridad web ↔ apps nativas", () => {
     expect(web).not.toContain("animate-pulse");
     // Lo elegido sobrevive a cambiar de filtro: se añade aunque ya no se vea en la lista.
     expect(picker).toContain("selected.compactMap { picked[$0] }");
-    expect(app).toContain('static let columns = "id,name,muscle_group,image_url,exercise_type,movement_pattern,stimulus_type,load_level"');
+    expect(app).toContain('static let columns = "id,name,muscle_group,image_url,exercise_type,movement_pattern,stimulus_type,load_level,video_url"');
+    expect(web).toContain('.select("id,name,muscle_group,exercise_type,movement_pattern,stimulus_type,load_level,image_url,video_url,tracking_mode,fatigue_level")');
   });
 
   it("Editar rutina y sesión: la misma fila plegable (series y reps con − / +, peso, descanso, subir, bajar y quitar), en la web y en la app", () => {
@@ -1772,7 +1956,7 @@ describe("paridad web ↔ apps nativas", () => {
     expect(app).toContain(".symbolSize(260)");
     // Sin foto del ejercicio, su huella; nunca un cuadro gris.
     expect(strengthWeb).toContain("<ExerciseThumb image={exerciseImages[selectedExercise]} name={selectedExercise} size=\"lg\" />");
-    expect(app).toContain("ExerciseThumb(url: images[name], size: size, name: name)");
+    expect(app).toContain("ExerciseThumb(url: images[name], size: size, name: name, moves: false)");
     // Récords vacío: misma portada, textos y acción en las dos.
     for (const text of ["Tu primer récord está a un entreno", "Cada vez que registras una serie con peso, guardamos tu mejor marca de ese ejercicio.", "Ir a entrenar",
       "Tu mejor marca de cada ejercicio", "Los récords nuevos de cada mes", "El día en que rompiste cada uno"]) {

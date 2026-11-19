@@ -25,13 +25,35 @@ interface ExerciseMetadataIndex {
 
 const EMPTY_INDEX: ExerciseMetadataIndex = { byId: {}, byName: {} };
 
+/**
+ * Lo ya leído en esta sesión: al volver a Hoy, Entrenar o al entreno, las fotos y los clips
+ * salen al instante de memoria y la red solo los pone al día (nunca un parpadeo sin foto).
+ */
+const memory: ExerciseMetadataIndex = { byId: {}, byName: {} };
+
+const fromMemory = (ids: string[], names: string[]): ExerciseMetadataIndex => {
+  const index: ExerciseMetadataIndex = { byId: {}, byName: {} };
+  for (const id of ids) {
+    const item = memory.byId[id];
+    if (item) { index.byId[id] = item; index.byName[item.name] = item; }
+  }
+  for (const name of names) {
+    const item = memory.byName[name];
+    if (item) { index.byName[name] = item; index.byId[item.id] = item; }
+  }
+  return index;
+};
+
 export function useExerciseMetadata(dayPlans: DayPlan[]): ExerciseMetadataIndex {
   const entries = dayPlans.flatMap((day) => day.exercises ?? []);
   const lookupKey = JSON.stringify({
     ids: [...new Set(entries.map((exercise) => exercise.exercise_id).filter(Boolean))].sort(),
     names: [...new Set(entries.filter((exercise) => !exercise.exercise_id).map((exercise) => exercise.name))].sort(),
   });
-  const [metadata, setMetadata] = useState(EMPTY_INDEX);
+  const [metadata, setMetadata] = useState(() => {
+    const { ids, names } = JSON.parse(lookupKey) as { ids: string[]; names: string[] };
+    return fromMemory(ids, names);
+  });
 
   useEffect(() => {
     const { ids, names } = JSON.parse(lookupKey) as { ids: string[]; names: string[] };
@@ -42,7 +64,7 @@ export function useExerciseMetadata(dayPlans: DayPlan[]): ExerciseMetadataIndex 
 
     let cancelled = false;
     const load = async () => {
-      setMetadata(EMPTY_INDEX);
+      setMetadata(fromMemory(ids, names));
       try {
         const requests = [];
         if (ids.length > 0) {
@@ -75,12 +97,16 @@ export function useExerciseMetadata(dayPlans: DayPlan[]): ExerciseMetadataIndex 
               muscle_group: row.muscle_group,
               exercise_type: row.exercise_type,
               movement_pattern: row.movement_pattern,
+              stimulus_type: row.stimulus_type,
+              load_level: row.load_level,
               skill_tag: row.skill_tag,
               video_url: row.video_url,
               image_url: fastImage(row.image_url, 800),
             };
             index.byId[item.id] = item;
             index.byName[item.name] = item;
+            memory.byId[item.id] = item;
+            memory.byName[item.name] = item;
           }
         }
         if (!cancelled) {

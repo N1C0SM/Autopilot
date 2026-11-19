@@ -29,6 +29,7 @@ Documentos:
 | Un estado vacío o de descanso | `EmptyState` (con `photo` para foto de marca, `rest` para la noche con luna) |
 | Una foto de entrenamiento genérica | `BRAND_PHOTOS` de `src/shared/lib/brandPhotos.ts` |
 | La foto de un ejercicio concreto | `useExerciseImages(nombres)` |
+| Un ejercicio en movimiento (clip de técnica en bucle sobre su foto) | `ExerciseThumb` / `ExerciseMedia` con `video` (web, `ExerciseLoop`) y `ExerciseThumb` / `ExerciseHeroMedia` (app, `ExerciseLoopView`); reglas en `src/shared/lib/exerciseLoop.ts` |
 | Portada de sesión o foto de comida | `useSessionCover` / `useMealPhoto` (IA, con respaldo) |
 | Cabecera de página pública | `PageHero` dentro de `PublicLayout` |
 | Lista de ajustes | `ListGroup` + `ListRow` |

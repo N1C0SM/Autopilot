@@ -17,9 +17,11 @@ import { toast } from "sonner";
 import type { DayPlan, ExerciseTrackingMode, GymExerciseEntry } from "@/shared/types/training";
 import ExercisePicker from "@/app/components/dashboard/ExercisePicker";
 import RPEDialog from "@/app/components/dashboard/RPEDialog";
-import { ExerciseThumb, isDirectFile } from "@/app/components/ExerciseMedia";
+import { ExerciseThumb } from "@/app/components/ExerciseMedia";
+import ExerciseLoop, { preloadExerciseLoop, useLoopsAllowed } from "@/app/components/ExerciseLoop";
+import { loopUrl, nextLoopIndex } from "@/shared/lib/exerciseLoop";
 import ExerciseFocus from "@/app/components/ExerciseFocus";
-import { ExerciseMotion } from "@/app/components/ExerciseMotion";
+import { ExerciseMotion, ExerciseMotionBadge } from "@/app/components/ExerciseMotion";
 import { exerciseMotionFor, inferMotionPattern } from "@/shared/lib/exerciseMotion";
 import { useExerciseMetadata } from "@/shared/hooks/useExerciseMetadata";
 import { getWorkoutAdvanced, getWorkoutLayout, getWorkoutRestPreference, getWorkoutView, setWorkoutAdvanced, setWorkoutView, WORKOUT_VIEW_EVENT, type WorkoutLayout } from "@/shared/lib/workoutPreferences";
@@ -109,12 +111,6 @@ const SET_GRID = "grid grid-cols-[24px_52px_minmax(0,1fr)_minmax(0,1fr)_44px] it
 const NUMBER_FIELD = "scroll-mb-40 h-11 w-full min-w-0 rounded-[10px] border-0 bg-secondary px-1 text-center font-rounded type-headline tabular-nums outline-none transition-colors duration-150 placeholder:font-normal placeholder:text-muted-foreground/60 focus:bg-accent focus:ring-1 focus:ring-inset focus:ring-primary/40 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-inset aria-[invalid=true]:ring-destructive";
 // La serie en curso: cifras más grandes que el resto.
 const CURRENT_FIGURE = "!text-[22px] !font-bold !leading-7";
-// iOS solo arranca un vídeo en silencio si `muted` está puesto antes de `play()`.
-const startLoop = (el: HTMLVideoElement | null) => {
-  if (!el) return;
-  el.muted = true;
-  void el.play().catch(() => undefined);
-};
 // Cápsula de 34 pt con el objetivo táctil ampliado a 44 pt.
 const CAPSULE_HIT = "relative before:absolute before:inset-x-0 before:-inset-y-[5px] before:content-['']";
 
@@ -267,6 +263,20 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
   const currentPlan = basePlan && sessionExtras.length > 0
     ? { ...basePlan, exercises: [...(basePlan.exercises ?? []), ...sessionExtras] }
     : basePlan;
+  // Ejercicio a ejercicio: el siguiente ya tiene su foto y el principio de su vídeo descargados,
+  // así que pasar al siguiente es instantáneo (como `ExerciseLoopPool.preload` en la app).
+  const loopsAllowed = useLoopsAllowed();
+  const upcomingIndex = workoutView === "focus" && expandedExercise !== null
+    ? nextLoopIndex(expandedExercise, currentPlan?.exercises?.length ?? 0)
+    : null;
+  const upcoming = upcomingIndex === null ? null : currentPlan?.exercises?.[upcomingIndex] ?? null;
+  const upcomingMeta = upcoming ? exerciseMetadata.byId[upcoming.exercise_id] || exerciseMetadata.byName[upcoming.name] : undefined;
+  const upcomingPhoto = upcomingMeta?.image_url || upcoming?.image_url || null;
+  const upcomingVideo = upcomingMeta?.video_url || upcoming?.video_url || null;
+  useEffect(() => {
+    if (upcomingPhoto) { const image = new Image(); image.decoding = "async"; image.src = upcomingPhoto; }
+    preloadExerciseLoop(upcomingVideo);
+  }, [upcomingPhoto, upcomingVideo]);
   // Portada de la sesión: generada con IA según sus músculos; mientras tanto, la foto del primer ejercicio.
   const coverExercises = currentPlan?.exercises || [];
   const firstExercise = coverExercises[0];
@@ -1535,12 +1545,14 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
             if (!active) return null;
             const meta = exerciseMetadata.byId[active.exercise_id] || exerciseMetadata.byName[active.name];
             const img = meta?.image_url || active.image_url;
-            const vid = active.video_url || meta?.video_url;
+            const vid = meta?.video_url || active.video_url;
             const total = currentPlan.exercises?.length ?? 0;
             const activeName = swaps[active.name] || active.name;
-            // El movimiento en bucle corto (como un GIF) con la foto de portada; con «reducir
-            // movimiento», solo la foto. Igual que `LoopingVideo` en la app.
-            const loop = vid && isDirectFile(vid) && !prefersReducedMotion ? vid : null;
+            // El movimiento en bucle corto (como un GIF) sobre la foto, que hace de portada hasta el
+            // primer fotograma; con «reducir movimiento» o ahorro de datos, la foto fija. Sin vídeo,
+            // la foto con la huella dorada en una esquina. Igual que `FocusViewer` en la app.
+            const moving = Boolean(loopUrl(vid)) && loopsAllowed;
+            const activeSpec = exerciseMotionFor({ name: active.name, pattern: meta?.movement_pattern, stimulus: meta?.stimulus_type, load: meta?.load_level, muscleGroup: active.muscle_group || meta?.muscle_group });
             return (
               <div className="mx-auto w-full max-w-[680px] space-y-3">
                 {/* Carrusel arriba y el movimiento en grande debajo: se ve en qué ejercicio estás. */}
@@ -1561,8 +1573,9 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                           onClick={() => { setExpandedExercise(idx); void hapticTap(); }}
                           className={`relative shrink-0 rounded-[14px] p-0.5 transition-opacity duration-150 active:opacity-60 ${isActive ? "ring-2 ring-inset ring-primary" : "opacity-60"}`}
                         >
-                          {/* Sin foto, la huella del ejercicio (su patrón o el deducido): cada uno el suyo, nunca el mismo icono. */}
-                          <ExerciseThumb image={m?.image_url || item.image_url} video={item.video_url || m?.video_url} name={item.name} pattern={m?.movement_pattern || inferMotionPattern(item.name, item.muscle_group || m?.muscle_group)} stimulus={m?.stimulus_type} load={m?.load_level} completed={done} />
+                          {/* Sin foto, la huella del ejercicio (su patrón o el deducido): cada uno el suyo, nunca el mismo icono.
+                              Quietas: en el carrusel solo se mueve el ejercicio grande de abajo. */}
+                          <ExerciseThumb image={m?.image_url || item.image_url} name={item.name} pattern={m?.movement_pattern || inferMotionPattern(item.name, item.muscle_group || m?.muscle_group)} stimulus={m?.stimulus_type} load={m?.load_level} completed={done} />
                           {/* Número de orden en la esquina: dorado el que estás haciendo y los hechos. */}
                           <span aria-hidden="true" className={`absolute -left-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full px-1 type-caption1 font-bold tabular-nums ring-2 ring-background ${isActive || done ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"}`}>
                             {idx + 1}
@@ -1600,15 +1613,16 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                   aria-label="Desliza para cambiar de ejercicio"
                   // Foto grande siempre, con o sin foto: sin foto, la huella del ejercicio a todo el visor.
                   className="relative aspect-[4/3] max-h-[26dvh] w-full overflow-hidden rounded-card bg-card [@media(max-height:700px)]:max-h-[22dvh] md:max-h-[40dvh] md:cursor-grab md:active:cursor-grabbing">
-                  {loop ? (
-                    <video key={loop} ref={startLoop} src={loop} poster={img || undefined} autoPlay muted loop playsInline preload="auto" disablePictureInPicture aria-label={activeName} draggable={false} className="pointer-events-none h-full w-full object-cover" />
-                  ) : img ? (
+                  {img ? (
                     <img src={img} alt={activeName} draggable={false} decoding="async" {...{ fetchpriority: "high" }} loading="eager" className="h-full w-full object-cover" />
                   ) : (
                     <div className="pointer-events-none flex h-full w-full items-center justify-center px-6 py-4">
                       <ExerciseMotion spec={exerciseMotionFor({ name: active.name, pattern: meta?.movement_pattern, stimulus: meta?.stimulus_type, load: meta?.load_level, muscleGroup: active.muscle_group || meta?.muscle_group })} />
                     </div>
                   )}
+                  <ExerciseLoop key={vid ?? active.name} src={vid} poster={img} priority />
+                  {/* Sin vídeo todavía: la foto manda y la huella dorada enseña el ritmo en una esquina. */}
+                  {img && !loopUrl(vid) && <ExerciseMotionBadge spec={activeSpec} className="absolute bottom-2.5 left-2.5" />}
                   {/* Posición en la sesión, como el contador de la app. */}
                   <span aria-hidden="true" className="pointer-events-none absolute bottom-2.5 right-2.5 rounded-full bg-background/70 px-2.5 py-1 type-footnote font-semibold tabular-nums text-foreground backdrop-blur-sm">
                     {expandedExercise + 1} / {total}
@@ -1618,7 +1632,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                       type="button"
                       aria-label={`Ver vídeo de técnica de ${activeName}`}
                       onClick={() => { void hapticTap(); setTechnique({ name: active.name, image: img, video: vid, series: active.series != null ? String(active.series) : undefined, reps: active.reps != null ? String(active.reps) : undefined, rest: active.rest, category: active.muscle_group || meta?.muscle_group, type: active.exercise_type || meta?.exercise_type, pattern: meta?.movement_pattern || inferMotionPattern(active.name, active.muscle_group || meta?.muscle_group), stimulus: meta?.stimulus_type, load: meta?.load_level }); }}
-                      className={`material absolute flex items-center justify-center rounded-full text-foreground transition-opacity active:opacity-60 ${loop ? "bottom-2 left-2 h-11 w-11" : "inset-0 m-auto h-14 w-14"}`}
+                      className={`material absolute flex items-center justify-center rounded-full text-foreground transition-opacity active:opacity-60 ${moving ? "bottom-2 left-2 h-11 w-11" : "inset-0 m-auto h-14 w-14"}`}
                     >
                       <Play className="h-5 w-5 fill-current" aria-hidden="true" />
                     </button>
@@ -1668,7 +1682,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
             const prevSets = previousLogs[ex.name];
             const restSec = parseRestSeconds(ex.rest);
             const metadata = exerciseMetadata.byId[ex.exercise_id] || exerciseMetadata.byName[ex.name];
-            const exerciseVideo = ex.video_url || metadata?.video_url;
+            const exerciseVideo = metadata?.video_url || ex.video_url;
             const exerciseCategory = ex.muscle_group || metadata?.muscle_group;
             const exerciseType = ex.exercise_type || metadata?.exercise_type;
             // Patrón, estímulo y carga: con los tres se dibuja la huella del ejercicio.

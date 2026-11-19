@@ -537,7 +537,7 @@ struct ExerciseLibraryView: View {
                                 Button { open(e) } label: {
                                     VStack(alignment: .leading, spacing: 6) {
                                         ExerciseThumbView(url: e.image, name: e.name, pattern: e.pattern, stimulus: e.stimulus, load: e.load,
-                                                          muscleGroup: e.groups.first, width: 112, height: 63)
+                                                          muscleGroup: e.groups.first, video: e.video, width: 112, height: 63)
                                         Text(e.name).font(.apFootnote.weight(.medium)).lineLimit(2).multilineTextAlignment(.leading)
                                             .fixedSize(horizontal: false, vertical: true)
                                     }
@@ -633,10 +633,12 @@ private struct ExerciseThumbView: View {
     var load: String? = nil
     /// Grupo muscular: sin patrón en la ficha, deduce la huella (nunca un hueco vacío).
     var muscleGroup: String? = nil
+    /// Clip de técnica: la miniatura se mueve en bucle sobre la foto (como `ExerciseThumb` en la web).
+    var video: String? = nil
     var width: CGFloat = 48
     var height: CGFloat = 48
     var body: some View {
-        Group {
+        ExerciseLoopView(url: LoopRules.url(video)) {
             // Igual que `ExerciseThumb` en la web: la foto del ejercicio manda y la huella queda
             // mientras carga, si falla o si no tiene foto (la de la ficha o la deducida).
             if let url, let u = URL(string: url) {
@@ -669,7 +671,7 @@ private struct ExerciseRows: View {
             ForEach(Array(items.enumerated()), id: \.element.id) { index, e in
                 Button { onOpen(e) } label: {
                     HStack(spacing: 12) {
-                        ExerciseThumbView(url: e.image, name: e.name, pattern: e.pattern, stimulus: e.stimulus, load: e.load, muscleGroup: e.groups.first)
+                        ExerciseThumbView(url: e.image, name: e.name, pattern: e.pattern, stimulus: e.stimulus, load: e.load, muscleGroup: e.groups.first, video: e.video)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(e.name).font(.apHeadline).lineLimit(1)
                             Text(e.subtitle).font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(1)
@@ -701,8 +703,6 @@ struct ExerciseDetailView: View {
     let userId: UUID?
     let onOpen: (LibraryExercise) -> Void
     @State private var variantIds: [String] = []
-    /// Con foto se abre en la foto, como `ExerciseMedia` en la web; «Ritmo» muestra la huella.
-    @State private var showRhythm = false
 
     private var all: [LibraryExercise] { model.items ?? [] }
     private var variants: [LibraryExercise] { variantIds.compactMap { id in all.first { $0.id == id } } }
@@ -765,55 +765,14 @@ struct ExerciseDetailView: View {
         .task(id: exercise.id) { variantIds = await model.variants(of: exercise.id) }
     }
 
-    /// Héroe 16:9 de la ficha: el clip, la foto o la huella (la de la ficha o la deducida), nunca un
-    /// cuadro de «próximamente». Igual que `ExerciseMedia` en la web.
-    @ViewBuilder private var hero: some View {
-        let shape = RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
-        let videoURL = exercise.video
-            .flatMap { URL(string: $0) }
-            .flatMap { ["mp4", "mov", "m4v"].contains($0.pathExtension.lowercased()) ? $0 : nil }
+    /// Héroe 16:9: el mismo que la técnica desde Entrenar (`ExerciseHeroMedia`).
+    private var hero: some View {
         // Con patrón en la ficha hay «Ritmo»; sin él, la huella deducida solo hace de visual.
         let motion = ExerciseMotion.spec(name: exercise.name, pattern: exercise.pattern, stimulus: exercise.stimulus, load: exercise.load)
-        let glyph = motion ?? ExerciseMotion.specFor(name: exercise.name, pattern: nil, stimulus: exercise.stimulus,
-                                                     load: exercise.load, muscleGroup: exercise.groups.first)
-        ZStack(alignment: .bottomLeading) {
-            Color.clear
-            if let videoURL {
-                LoopingVideo(url: videoURL)
-            } else if exercise.image == nil || showRhythm {
-                ExerciseMotionHero(spec: glyph).padding(12)
-            } else if let image = exercise.image, let url = URL(string: image) {
-                CachedAsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { ExerciseMotionHero(spec: glyph).padding(12) }
-            } else {
-                ExerciseMotionHero(spec: glyph).padding(12)
-            }
-            // Con foto y huella, se cambia entre las dos con una píldora discreta.
-            if motion != nil, exercise.image != nil, videoURL == nil {
-                HStack(spacing: 2) {
-                    heroTab("Ritmo", on: showRhythm) { showRhythm = true }
-                    heroTab("Foto", on: !showRhythm) { showRhythm = false }
-                }
-                .padding(2)
-                .background(Palette.secondary, in: Capsule())
-                .padding(12)
-            }
-        }
-        .aspectRatio(16 / 9, contentMode: .fit)
-        .clipShape(shape)
-        .surface(Radius.hero)
-        .accessibilityLabel(exercise.name)
-    }
-
-    private func heroTab(_ title: String, on: Bool, show: @escaping () -> Void) -> some View {
-        Button(action: show) {
-            Text(title)
-                .font(.apFootnote.weight(.semibold))
-                .foregroundStyle(on ? Palette.gold : Palette.muted)
-                .padding(.horizontal, 12)
-                .frame(height: 28)
-                .background(on ? Palette.gold.opacity(0.15) : Color.clear, in: Capsule())
-        }
-        .buttonStyle(.plain)
+        return ExerciseHeroMedia(name: exercise.name, image: exercise.image, video: exercise.video, motion: motion,
+                                 glyph: motion ?? ExerciseMotion.specFor(name: exercise.name, pattern: nil, stimulus: exercise.stimulus,
+                                                                         load: exercise.load, muscleGroup: exercise.groups.first))
+            .id(exercise.id)
     }
 
     /// Pasos con su número en un círculo dorado tenue; el resto, con un punto dorado (como la web).
@@ -904,5 +863,104 @@ struct ExerciseDetailView: View {
             LibrarySectionTitle(title)
             content()
         }
+    }
+}
+
+/// Héroe 16:9 de un ejercicio (ficha de la biblioteca y técnica desde Entrenar), igual que `ExerciseMedia`
+/// en la web: el clip en bucle (mudo y sin controles) sobre su foto, la foto o la huella (la de la ficha o
+/// la deducida), nunca un cuadro de «próximamente». Con foto y patrón pero aún sin clip, «Ritmo / Foto»;
+/// con la foto fija (reducir movimiento, bajo consumo o datos reducidos), «Ver vídeo» / «Parar vídeo».
+struct ExerciseHeroMedia: View {
+    let name: String
+    let image: String?
+    let video: String?
+    /// Huella con el patrón de la ficha: hay «Ritmo» que enseñar. `nil` si no lo tiene.
+    let motion: ExerciseMotion.Spec?
+    /// La huella siempre (la de la ficha o la deducida).
+    let glyph: ExerciseMotion.Spec
+    /// Con foto se abre en la foto; «Ritmo» muestra la huella.
+    @State private var showRhythm = false
+    /// «Ver vídeo» con la foto fija: el clip, porque se ha pedido.
+    @State private var playVideo = false
+    @ObservedObject private var policy = LoopPolicy.shared
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
+        let videoURL = LoopRules.url(video)
+        let moving = videoURL != nil && policy.allows(reduceMotion: reduceMotion)
+        ZStack(alignment: .bottomLeading) {
+            Color.clear
+            ExerciseLoopView(url: videoURL, hero: true, force: playVideo) { still(clip: videoURL != nil) }
+            if videoURL != nil {
+                BrandMark(size: 18).opacity(0.6)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                    .padding(12)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+            if videoURL != nil, !moving {
+                // Con la foto fija, el clip solo si se pide (y se para igual).
+                Button {
+                    Haptics.selection()
+                    playVideo.toggle()
+                } label: {
+                    Label(playVideo ? "Parar vídeo" : "Ver vídeo", systemImage: playVideo ? "pause.fill" : "play.fill")
+                        .font(.apFootnote.weight(.semibold))
+                        .foregroundStyle(Palette.foreground)
+                        .padding(.horizontal, 14)
+                        .frame(minHeight: 44)
+                        .background(.ultraThinMaterial, in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .padding(12)
+                .accessibilityLabel(playVideo ? "Parar vídeo de técnica de \(name)" : "Ver vídeo de técnica de \(name)")
+            }
+            // Sin clip ni patrón propio: la foto con la huella dorada en una esquina (como el visor del entreno).
+            if motion == nil, image != nil, videoURL == nil {
+                ExerciseMotionBadge(spec: glyph).padding(12)
+            }
+            // Con foto y huella (y aún sin clip), se cambia entre las dos con una píldora discreta.
+            if motion != nil, image != nil, videoURL == nil {
+                HStack(spacing: 2) {
+                    tab("Ritmo", on: showRhythm) { showRhythm = true }
+                    tab("Foto", on: !showRhythm) { showRhythm = false }
+                }
+                .padding(2)
+                .background(Palette.secondary, in: Capsule())
+                .padding(12)
+            }
+        }
+        .aspectRatio(16 / 9, contentMode: .fit)
+        .clipShape(shape)
+        .surface(Radius.hero)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(name)
+    }
+
+    /// Lo que hay debajo del clip (o sin él): la foto como portada, la huella con «Ritmo» o sin foto.
+    @ViewBuilder private func still(clip: Bool) -> some View {
+        if clip, let image, let url = URL(string: image) {
+            CachedAsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { ExerciseMotionHero(spec: glyph).padding(12) }
+        } else if image == nil || showRhythm {
+            ExerciseMotionHero(spec: glyph).padding(12)
+        } else if let image, let url = URL(string: image) {
+            CachedAsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { ExerciseMotionHero(spec: glyph).padding(12) }
+        } else {
+            ExerciseMotionHero(spec: glyph).padding(12)
+        }
+    }
+
+    private func tab(_ title: String, on: Bool, show: @escaping () -> Void) -> some View {
+        Button(action: show) {
+            Text(title)
+                .font(.apFootnote.weight(.semibold))
+                .foregroundStyle(on ? Palette.gold : Palette.muted)
+                .padding(.horizontal, 12)
+                .frame(height: 28)
+                .background(on ? Palette.gold.opacity(0.15) : Color.clear, in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(on ? .isSelected : [])
     }
 }

@@ -212,7 +212,7 @@ struct PlanExerciseRow: View {
                 withAnimation(reduceMotion ? nil : .snappy) { open.toggle() }
             } label: {
                 HStack(spacing: 12) {
-                    ExerciseThumb(url: exercise.image_url, size: 48, name: exercise.name, muscleGroup: exercise.muscle_group)
+                    ExerciseThumb(url: exercise.image_url, size: 48, name: exercise.name, muscleGroup: exercise.muscle_group, video: exercise.video_url)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(exercise.name).font(.apHeadline).lineLimit(2).fixedSize(horizontal: false, vertical: true)
                         Text(PlanEditorValues.summary(exercise)).font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted).lineLimit(1)
@@ -740,9 +740,11 @@ struct ExercisePickerRow: Codable, Identifiable, Hashable {
     var movement_pattern: String? = nil
     var stimulus_type: String? = nil
     var load_level: String? = nil
+    /// Clip de técnica: la fila se mueve en bucle sobre su foto (como `ExercisePicker.tsx`).
+    var video_url: String? = nil
 
     /// Columnas que pide el buscador (como `ExercisePicker.tsx`).
-    static let columns = "id,name,muscle_group,image_url,exercise_type,movement_pattern,stimulus_type,load_level"
+    static let columns = "id,name,muscle_group,image_url,exercise_type,movement_pattern,stimulus_type,load_level,video_url"
 }
 
 /// Catálogo del buscador: memoria → disco → red, compartido por toda la app. Se calienta al
@@ -924,7 +926,7 @@ struct ExercisePickerView: View {
         return Button { toggle(row) } label: {
             HStack(spacing: 12) {
                 ExerciseThumb(url: row.image_url, size: 48, name: row.name, muscleGroup: row.muscle_group,
-                              pattern: row.movement_pattern, stimulus: row.stimulus_type, load: row.load_level)
+                              pattern: row.movement_pattern, stimulus: row.stimulus_type, load: row.load_level, video: row.video_url)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(row.name).font(.apHeadline).lineLimit(1)
                     if !info.isEmpty { Text(info).font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(1) }

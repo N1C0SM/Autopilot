@@ -64,3 +64,14 @@ export const ExerciseMotionGlyph = ({ spec, className }: { spec: MotionSpec; cla
     )}
   </svg>
 );
+
+/**
+ * La huella animada en pequeño sobre la foto (visor del entreno y ficha cuando el ejercicio aún
+ * no tiene vídeo): la foto sigue mandando y el punto dorado enseña el ritmo de la repetición.
+ * Es `ExerciseMotionBadge` en la app.
+ */
+export const ExerciseMotionBadge = ({ spec, className }: { spec: MotionSpec; className?: string }) => (
+  <span aria-hidden="true" className={cn("material pointer-events-none flex h-9 w-16 items-center justify-center rounded-full px-2", className)}>
+    <ExerciseMotion spec={spec} />
+  </span>
+);

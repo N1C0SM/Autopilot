@@ -1,6 +1,5 @@
 import SwiftUI
 import PhotosUI
-import AVKit
 import Supabase
 
 /// Ejercicios, calcado de `ExerciseLibrary.tsx`: «Nuevo ejercicio», buscador, filtros por músculo y tipo,
@@ -97,6 +96,9 @@ struct AdminExercisesView: View {
 
                     AdminCatalogImportCard { Task { await load() } }
 
+                    // Vídeos de los ejercicios que usan los planes: cuenta, coste, confirmación y uno a uno.
+                    AdminPlanVideosCard { Task { await load() } }
+
                     HStack {
                         Image(systemName: "magnifyingglass").foregroundStyle(Palette.muted)
                             .accessibilityHidden(true)
@@ -133,7 +135,8 @@ struct AdminExercisesView: View {
                             ForEach(Array(filtered.prefix(visible).enumerated()), id: \.element.id) { i, ex in
                                 Button { editing = ex } label: {
                                     AdminListRow(ex.name, detail: [ex.muscle_group, ex.exercise_type, ex.movement_pattern].compactMap { $0 }.joined(separator: " · ")) {
-                                        ExerciseThumb(url: ex.image_url, size: 52)
+                                        ExerciseThumb(url: ex.image_url, size: 52, name: ex.name, muscleGroup: ex.muscle_group, pattern: ex.movement_pattern,
+                                                      stimulus: ex.stimulus_type, load: ex.load_level, video: ex.video_url, fresh: true)
                                     } trailing: {
                                         HStack(spacing: 2) {
                                             if !(ex.video_url ?? "").isEmpty || !(ex.image_url ?? "").isEmpty {
@@ -171,19 +174,34 @@ struct AdminExercisesView: View {
             ExerciseEditor(exercise: ex, all: exercises) { changed in editing = nil; if changed { Task { await load() } } }
         }
         .sheet(item: $preview) { ex in
-            VStack(spacing: 12) {
-                if let v = ex.video_url, let u = URL(string: v) {
-                    VideoPlayer(player: AVPlayer(url: u)).frame(minHeight: 360)
-                        .accessibilityLabel("Vídeo de técnica de \(ex.name)")
-                } else if let i = ex.image_url, let u = URL(string: i) {
-                    CachedAsyncImage(url: u) { $0.resizable().scaledToFit() } placeholder: { BrandLoader() }
-                        .accessibilityLabel("Imagen de \(ex.name)")
+            // Ficha rápida (`ExercisePreviewSheet` en la web): el ejercicio en movimiento sobre su foto.
+            let motion = ExerciseMotion.spec(name: ex.name, pattern: ex.movement_pattern, stimulus: ex.stimulus_type, load: ex.load_level)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    ExerciseHeroMedia(name: ex.name, image: ex.image_url, video: ex.video_url, motion: motion,
+                                      glyph: motion ?? ExerciseMotion.specFor(name: ex.name, pattern: nil, stimulus: ex.stimulus_type,
+                                                                              load: ex.load_level, muscleGroup: ex.muscle_group))
+                    Text(ex.name).font(.apTitle2).fixedSize(horizontal: false, vertical: true).accessibilityAddTraits(.isHeader)
+                    let detail = [ex.muscle_group, ex.exercise_type].compactMap { $0 }.joined(separator: " · ")
+                    if !detail.isEmpty { Text(detail).font(.apSubhead).foregroundStyle(Palette.muted) }
+                    if (ex.video_url ?? "").isEmpty, !(ex.image_url ?? "").isEmpty {
+                        // Con foto y sin clip: qué falta y cómo crearlo.
+                        HStack(alignment: .top, spacing: 16) {
+                            IconTile(symbol: "video", size: 40)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Vídeo de técnica por crear").font(.apHeadline)
+                                Text("Créalo desde su ficha o con «Generar vídeos de los ejercicios de los planes».")
+                                    .font(.apSubhead).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                        .padding(.top, 12)
+                        .accessibilityElement(children: .combine)
+                    }
+                    Button("Cerrar") { preview = nil }.buttonStyle(.pillSecondary).frame(maxWidth: 280).padding(.top, 8)
                 }
-                Text(ex.name).font(.apTitle3)
-                Text([ex.muscle_group, ex.exercise_type].compactMap { $0 }.joined(separator: " · ")).font(.apSubhead).foregroundStyle(Palette.muted)
-                Button("Cerrar") { preview = nil }.buttonStyle(.pillSecondary).frame(maxWidth: 280)
+                .padding(20)
             }
-            .padding(20).frame(minWidth: 480).screenBackground()
+            .frame(minWidth: 480, minHeight: 420).screenBackground()
         }
     }
 
@@ -254,6 +272,15 @@ struct ExerciseEditor: View {
     var body: some View {
         NavigationStack {
             Form {
+                // El ejercicio arriba del todo, como el formulario de la web: en movimiento si ya tiene clip,
+                // su foto o su huella si no.
+                Section {
+                    ExerciseHeroMedia(name: exercise.name, image: exercise.image_url, video: exercise.video_url, motion: nil,
+                                      glyph: ExerciseMotion.specFor(name: exercise.name, pattern: exercise.movement_pattern, stimulus: exercise.stimulus_type,
+                                                                    load: exercise.load_level, muscleGroup: exercise.muscle_group))
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                }
                 Section("Información básica") {
                     HStack {
                         TextField("Press banca", text: $exercise.name)
@@ -277,8 +304,8 @@ struct ExerciseEditor: View {
                     Toggle("Alta tensión", isOn: Binding(get: { exercise.high_tension ?? false }, set: { exercise.high_tension = $0 }))
                 }
                 Section("Imagen del ejercicio") {
-                    if let i = exercise.image_url, let u = URL(string: i), !i.isEmpty {
-                        CachedAsyncImage(url: u) { $0.resizable().scaledToFit() } placeholder: { BrandLoader() }.frame(maxHeight: 220)
+                    if !(exercise.image_url ?? "").isEmpty {
+                        ExerciseThumb(url: exercise.image_url, size: 64, name: exercise.name, muscleGroup: exercise.muscle_group, moves: false, fresh: true)
                     }
                     PhotosPicker(selection: $photo, matching: .images) { Text("Subir imagen").foregroundStyle(Palette.gold) }
                     if !exercise.id.isEmpty {

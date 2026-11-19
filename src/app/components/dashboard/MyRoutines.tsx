@@ -135,6 +135,7 @@ const MyRoutines = ({ routines, limitReached, resumableDay = null, doneToday = [
                         <ExerciseThumb
                           key={`${exercise.exercise_id}-${index}`}
                           image={meta?.image_url || exercise.image_url}
+                          video={meta?.video_url || exercise.video_url}
                           name={exercise.name}
                           muscleGroup={exercise.muscle_group || meta?.muscle_group}
                           pattern={meta?.movement_pattern}
@@ -223,6 +224,7 @@ export const RoutinesPreview = ({ routines, onOpen }: { routines: DayPlan[]; onO
               {index > 0 && <span aria-hidden="true" className="absolute left-3.5 right-3.5 top-0 h-px bg-border/60" />}
               <ExerciseThumb
                 image={meta?.image_url || first?.image_url}
+                video={meta?.video_url || first?.video_url}
                 name={first?.name ?? routineName(routine)}
                 muscleGroup={first?.muscle_group || meta?.muscle_group}
                 pattern={meta?.movement_pattern}
