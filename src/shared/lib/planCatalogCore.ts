@@ -14,6 +14,7 @@ export type CatalogPlan = {
 };
 
 const ORDER: PlanKey[] = ["free", "training", "full"];
+const COACH_ONLY = /atenci[oó]n (personal|humana)|entrenador|coach|fundador|videollamada|\bchat\b/i;
 const strings = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []);
 
 export const fallbackCatalog = (): CatalogPlan[] => ORDER.map((k) => {
@@ -41,7 +42,10 @@ export function parseCatalog(rows: unknown): CatalogPlan[] {
       accepting: r.accepting_new_subscriptions !== false && r.accepting !== false,
     });
   }
-  return out.length ? out : fallbackCatalog();
+  if (!out.length) return fallbackCatalog();
+  // Sin Coach publicado, una fila «no incluye» sobre atención humana anuncia algo que nadie puede comprar.
+  if (!out.some((p) => p.key === "full")) for (const p of out) p.notIncluded = p.notIncluded.filter((f) => !COACH_ONLY.test(f));
+  return out;
 }
 
 export type PlanAvailability = {

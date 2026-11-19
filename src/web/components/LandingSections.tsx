@@ -283,12 +283,12 @@ export function LandingPlans({ onSelect, innerRef }: { onSelect: (plan: PlanKey)
         <p className="mt-4 text-[16px] leading-[22px] text-foreground/90">Sin compromiso. Mejora tu rutina, tu alimentación y tu progreso.</p>
         <p className="mt-4"><Link to="/planes" className="text-[14px] font-medium text-primary active:opacity-60">Ver la comparativa completa</Link></p>
       </div>
-      {free && <div className="flex h-full flex-col rounded-[14px] border border-border bg-card p-5">
+      {free && <div className="flex h-full flex-col rounded-[22px] bg-card p-6">
         <p className="text-[20px] font-bold">{free.name} — {price(free.price)} €</p>
         <ul className="mt-3 flex-1 space-y-1.5">{free.features.slice(0, 5).map((f) => <li key={f} className="flex gap-3 text-[14px]"><Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />{f}</li>)}</ul>
         <button type="button" onClick={() => onSelect("free")} className={`${pillLine} mt-5 h-11 w-full text-[15px]`}>Crear cuenta gratis</button>
       </div>}
-      {plus && <div className="flex h-full flex-col rounded-[14px] border-2 border-primary bg-card p-5">
+      {plus && <div className="flex h-full flex-col rounded-[22px] bg-card p-6">
         <div className="flex items-start justify-between gap-2"><p className="text-[20px] font-bold">{plus.name} — {price(plus.price)} € <span className="text-[13px] font-medium">/mes</span></p><span className="rounded-full bg-primary px-2.5 py-1 text-[10px] font-bold text-primary-foreground">Más completo</span></div>
         <ul className="mt-3 flex-1 space-y-1.5">{plus.features.slice(0, 5).map((f) => <li key={f} className="flex gap-3 text-[14px]"><Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />{f}</li>)}</ul>
         <button type="button" onClick={() => onSelect("training")} className={`${pillGold} mt-5 h-11 w-full text-[15px]`}>Elegir {plus.name} <ArrowRight className="h-4 w-4" /></button>

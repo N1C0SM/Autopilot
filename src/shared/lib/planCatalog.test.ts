@@ -15,4 +15,9 @@ describe("plan catalog", () => {
     const [coach] = parseCatalog([{ key: "full", accepting_new_subscriptions: false }]);
     expect(coach.accepting).toBe(false);
   });
+  it("drops 'not included' rows about human attention while Coach is hidden", () => {
+    const rows = [{ key: "training", features: [], not_included: ["Atención personal", "Progresión automática"] }];
+    expect(parseCatalog(rows)[0].notIncluded).toEqual(["Progresión automática"]);
+    expect(parseCatalog([...rows, { key: "full", features: [] }])[0].notIncluded).toEqual(["Atención personal", "Progresión automática"]);
+  });
 });
