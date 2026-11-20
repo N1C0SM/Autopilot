@@ -18,7 +18,7 @@ Deno.serve(async (req) => {
   try {
     const token = (req.headers.get("Authorization") || "").replace("Bearer ", "");
     if (!token) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!);
+    const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: `Bearer ${token}` } } });
     const { data: { user } } = await sb.auth.getUser(token);
     if (!user) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     const { data: isAdmin } = await sb.rpc("has_role", { _user_id: user.id, _role: "admin" });
