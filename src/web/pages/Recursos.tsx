@@ -39,11 +39,12 @@ const sentenceCase = (t: string) => {
   return v.charAt(0).toUpperCase() + v.slice(1);
 };
 
-const RowThumb = ({ src, alt, fallback: Fallback }: { src?: string | null; alt: string; fallback: typeof Newspaper }) => {
+const RowThumb = ({ src, alt, fallback: Fallback, photoSeed }: { src?: string | null; alt: string; fallback: typeof Newspaper; photoSeed?: string }) => {
   const [failed, setFailed] = useState(false);
   if (src && !failed) {
     return <img src={src} alt={alt} loading="lazy" onError={() => setFailed(true)} className="h-14 w-14 shrink-0 rounded-media bg-secondary object-cover" />;
   }
+  if (photoSeed) return <img src={photoFor(photoSeed)} alt="" aria-hidden loading="lazy" className="h-14 w-14 shrink-0 rounded-media bg-secondary object-cover" />;
   return (
     <span aria-hidden className="flex h-14 w-14 shrink-0 items-center justify-center rounded-media bg-secondary">
       <Fallback className="h-6 w-6 text-muted-foreground" strokeWidth={1.75} />
@@ -197,7 +198,7 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
   const hasPosts = flags.blog && posts.length > 0;
 
   const body = (
-      <main className={embedded ? "w-full space-y-10 py-2" : "mx-auto w-full max-w-5xl space-y-20 px-4 pb-safe pt-6 md:space-y-28 md:py-10"}>
+      <main className={embedded ? "mx-auto w-full max-w-[680px] space-y-10 py-2" : "mx-auto w-full max-w-5xl space-y-20 px-4 pb-safe pt-6 md:space-y-28 md:py-10"}>
         {/* Embebida, el título grande lo pinta la pantalla anfitriona: aquí solo va la descripción. */}
         <header className={embedded ? undefined : "mx-auto max-w-3xl pb-4 pt-10 text-center animate-in fade-in duration-1000 motion-reduce:animate-none md:pt-14"}>
           {embedded ? null : (
@@ -235,7 +236,7 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
               Descarga inmediata en PDF tras el pago. Guías para leer por tu cuenta, sin plan personalizado ni seguimiento{plans.coach ? ` (eso es el plan ${plans.coachName})` : ""}.
             </p>
 
-            <div className="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 lg:grid-cols-4">
+            <div className={embedded ? "grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3" : "grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 lg:grid-cols-4"}>
               {ebooks.map((e, i) => (
                 <button
                   type="button"
@@ -310,7 +311,7 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
                   <ListRow
                     key={p.slug}
                     to={`/blog/${p.slug}`}
-                    leading={<RowThumb src={p.cover_url} alt={p.title} fallback={Newspaper} />}
+                    leading={<RowThumb src={p.cover_url} alt={p.title} fallback={Newspaper} photoSeed={p.slug} />}
                     title={<span className="line-clamp-2">{p.title}</span>}
                     subtitle={p.excerpt ? <span className="line-clamp-2">{p.excerpt}</span> : undefined}
                     chevron

@@ -1167,7 +1167,7 @@ const Dashboard = () => {
       )}
 
       {section === "settings" && (
-        <div className="w-full"><SettingsPanel onUpgrade={(plan) => handleCompletePayment(plan)} page={settingsPage} onPageChange={openSettingsPage} /></div>
+        <div className="mx-auto w-full max-w-[680px]"><SettingsPanel onUpgrade={(plan) => handleCompletePayment(plan)} page={settingsPage} onPageChange={openSettingsPage} /></div>
       )}
 
       {section === "resources" && (
