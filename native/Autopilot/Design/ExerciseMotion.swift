@@ -233,61 +233,20 @@ extension ExerciseMotion {
 }
 
 // MARK: - Vistas
+// La huella dibujada se retiró: los ejercicios solo muestran su foto o su animación real.
+// Las vistas se conservan (mismas llamadas que la web) pero no dibujan nada.
 
-/// La huella en miniatura: quieta, para las filas de las listas.
 struct ExerciseMotionGlyph: View {
     let spec: ExerciseMotion.Spec
-
-    var body: some View {
-        Canvas { context, size in
-            ExerciseMotion.draw(spec, in: context, size: size, mode: .thumb)
-        }
-        .accessibilityHidden(true)
-    }
+    var body: some View { Color.clear.accessibilityHidden(true) }
 }
 
-/// La huella grande, con el punto que entrena. Con «reducir movimiento» se ve
-/// el mismo dibujo quieto, con el punto en la posición de mayor tensión.
 struct ExerciseMotionHero: View {
     let spec: ExerciseMotion.Spec
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    var body: some View {
-        Group {
-            if reduceMotion {
-                Canvas { context, size in
-                    ExerciseMotion.draw(spec, in: context, size: size, mode: .hero(u: 1))
-                }
-            } else {
-                TimelineView(.animation) { timeline in
-                    Canvas { context, size in
-                        let time = timeline.date.timeIntervalSinceReferenceDate
-                        ExerciseMotion.draw(
-                            spec,
-                            in: context,
-                            size: size,
-                            mode: .hero(u: ExerciseMotion.position(spec: spec, time: time))
-                        )
-                    }
-                }
-            }
-        }
-        .accessibilityLabel("Ritmo de \(spec.label)")
-        .accessibilityAddTraits(.isImage)
-    }
+    var body: some View { Color.clear.accessibilityHidden(true) }
 }
 
-/// La huella animada en pequeño sobre la foto (visor del entreno y ficha cuando el ejercicio aún no
-/// tiene vídeo): la foto sigue mandando y el punto dorado enseña el ritmo. `ExerciseMotionBadge` en la web.
 struct ExerciseMotionBadge: View {
     let spec: ExerciseMotion.Spec
-
-    var body: some View {
-        ExerciseMotionHero(spec: spec)
-            .padding(.horizontal, 8).padding(.vertical, 4)
-            .frame(width: 64, height: 36)
-            .background(.ultraThinMaterial, in: Capsule())
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
-    }
+    var body: some View { EmptyView() }
 }

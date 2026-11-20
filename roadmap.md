@@ -43,3 +43,8 @@
 - [x] Drive: nombre del archivo = nombre del ejercicio asignado
 - [x] iPhone/Mac: .apng animados en las fichas de ejercicio
 - [x] Quitar el borde blanco del recorte de GIFs de ejercicios
+
+## Ejercicios en movimiento
+- [x] Landing con narrativa interactiva (teléfono fijo que muestra el entreno al hacer scroll)
+- [x] Quitar el dibujo de patrón de movimiento y el campo «Patrón» del formulario; ejercicios animados
+- [ ] Generar animación para los ejercicios que aún no la tienen (bloqueado: consume créditos de imagen, pendiente de tu visto bueno)

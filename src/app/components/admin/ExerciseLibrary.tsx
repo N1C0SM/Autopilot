@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import type { Exercise } from "@/shared/types/training";
 import {
-  MUSCLE_GROUPS, EXERCISE_TYPES, MOVEMENT_PATTERNS, LEVELS,
+  MUSCLE_GROUPS, EXERCISE_TYPES, LEVELS,
   PRIORITIES, STIMULUS_TYPES, LOAD_LEVELS, FATIGUE_LEVELS, RECOMMENDED_ORDERS, SKILL_TAGS,
 } from "@/shared/types/training";
 import ExerciseMedia, { ExerciseThumb } from "@/app/components/ExerciseMedia";
@@ -424,9 +424,6 @@ const ExerciseFormDialog = ({
 
           <FormSection title="Clasificación">
             <div className="grid grid-cols-2 gap-3">
-              <FormField label="Patrón">
-                <SmallSelect value={form.movement_pattern || ""} onChange={(v) => set("movement_pattern", v)} options={MOVEMENT_PATTERNS} placeholder="Patrón…" />
-              </FormField>
               <FormField label="Estímulo">
                 <SmallSelect value={form.stimulus_type || ""} onChange={(v) => set("stimulus_type", v)} options={STIMULUS_TYPES} placeholder="Estímulo…" />
               </FormField>

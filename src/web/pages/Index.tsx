@@ -9,7 +9,8 @@ import { type PlanKey } from "@/shared/config/tiers";
 import { usePlanAvailability } from "@/shared/lib/planCatalog";
 import { LANDING_META, landingDescription, landingFaqs } from "@/shared/lib/publicCopy";
 import { LandingFaq } from "@/web/components/LandingSections";
-import { RefHero, RefMethod, RefApp, RefPlans, RefFounder, RefFinal } from "@/web/components/LandingReference";
+import { RefHero, RefPlans, RefFounder, RefFinal } from "@/web/components/LandingReference";
+import LandingStory from "@/web/components/LandingStory";
 import { hapticTap } from "@/shared/lib/native";
 
 
@@ -115,8 +116,8 @@ export default function Index() {
         })}</script>
     </Helmet>
     <RefHero ctaRef={heroCtaRef} />
-    <RefMethod />
-    <RefApp />
+    {/* Narrativa estilo Apple: el teléfono queda fijo y el entreno avanza con el scroll. */}
+    <div id="funciones" className="scroll-mt-20"><LandingStory /></div>
     <RefPlans onSelect={selectPlan} innerRef={pricingRef} />
     <RefFounder />
     <div id="faq" className="scroll-mt-20"><LandingFaq faqs={faqs.slice(0, 3)} /></div>

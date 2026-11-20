@@ -1,77 +1,18 @@
-import { useReducedMotion } from "framer-motion";
-import { MOTION_VIEWBOX, motionKeyTimes, type MotionSpec } from "@/shared/lib/exerciseMotion";
+import type { MotionSpec } from "@/shared/lib/exerciseMotion";
 import { cn } from "@/shared/lib/utils";
 
 /**
- * Huella de movimiento: la repetición del ejercicio dibujada con sus datos
- * (patrón, estímulo y carga). Un solo gesto ámbar sobre negro, sin foto y sin
- * IA. El punto sube rápido, baja despacio y descansa, como una serie de verdad.
- *
- * Con «reducir movimiento» se ve el mismo dibujo quieto, con el punto en la
- * posición de mayor tensión.
+ * La huella de movimiento dibujada se retiró a petición del producto: los ejercicios
+ * solo se enseñan con su foto o su animación real. Estos componentes se conservan para
+ * no romper las llamadas (y la paridad con `ExerciseMotion.swift`), pero solo dejan un
+ * hueco neutro sin dibujo.
  */
-export const ExerciseMotion = ({ spec, className }: { spec: MotionSpec; className?: string }) => {
-  const reduced = useReducedMotion();
-  const { keyPoints, keyTimes } = motionKeyTimes(spec);
-
-  return (
-    <svg
-      viewBox={MOTION_VIEWBOX}
-      preserveAspectRatio="xMidYMid meet"
-      // `!`: dentro de un `Button` (que fija los SVG a 16 px) la huella sigue llenando su cuadro.
-      className={cn("!h-full !w-full text-primary", className)}
-      role="img"
-      aria-label={`Ritmo de ${spec.label}`}
-    >
-      {/* La trayectoria que recorre cada repetición. */}
-      <path d={spec.d} fill="none" stroke="currentColor" strokeOpacity="0.22" strokeWidth={spec.stroke} strokeLinecap="round" />
-      {/* Reposo (inicio) y tensión máxima (final): los dos extremos del gesto. */}
-      <circle cx={spec.start.x} cy={spec.start.y} r="1.3" fill="currentColor" fillOpacity="0.35" />
-      <circle cx={spec.end.x} cy={spec.end.y} r="2.6" fill="none" stroke="currentColor" strokeOpacity="0.45" strokeWidth="0.9" />
-      {/* El punto que entrena: halo suave + núcleo. */}
-      <g transform={reduced ? `translate(${spec.end.x} ${spec.end.y})` : undefined}>
-        <circle r="9" fill="currentColor" fillOpacity="0.09" />
-        <circle r="3.2" fill="currentColor" />
-        {!reduced && (
-          <animateMotion
-            dur={`${spec.duration}s`}
-            repeatCount="indefinite"
-            path={spec.d}
-            calcMode="linear"
-            keyPoints={keyPoints}
-            keyTimes={keyTimes}
-          />
-        )}
-      </g>
-    </svg>
-  );
-};
-
-/**
- * La misma huella en miniatura: sin animación ni texto, para las filas de las
- * listas. Se lee en 40 px y no baja una sola foto. El trazo es grueso a propósito:
- * en un cuadro tan pequeño una línea fina se convierte en polvo.
- */
-export const ExerciseMotionGlyph = ({ spec, className }: { spec: MotionSpec; className?: string }) => (
-  <svg viewBox={MOTION_VIEWBOX} preserveAspectRatio="xMidYMid meet" aria-hidden className={cn("!h-full !w-full text-primary", className)}>
-    <path d={spec.d} fill="none" stroke="currentColor" strokeOpacity="0.42" strokeWidth={spec.stroke + 6} strokeLinecap="round" />
-    <circle cx={spec.start.x} cy={spec.start.y} r="3.4" fill="currentColor" fillOpacity="0.5" />
-    {spec.hold ? (
-      // Isométrico: el punto no viaja, aguanta. Se marca con un anillo.
-      <circle cx={spec.end.x} cy={spec.end.y} r="6.4" fill="none" stroke="currentColor" strokeWidth="2.8" />
-    ) : (
-      <circle cx={spec.end.x} cy={spec.end.y} r="6.6" fill="currentColor" />
-    )}
-  </svg>
+export const ExerciseMotion = ({ className }: { spec: MotionSpec; className?: string }) => (
+  <div aria-hidden="true" className={cn("h-full w-full", className)} />
 );
 
-/**
- * La huella animada en pequeño sobre la foto (visor del entreno y ficha cuando el ejercicio aún
- * no tiene vídeo): la foto sigue mandando y el punto dorado enseña el ritmo de la repetición.
- * Es `ExerciseMotionBadge` en la app.
- */
-export const ExerciseMotionBadge = ({ spec, className }: { spec: MotionSpec; className?: string }) => (
-  <span aria-hidden="true" className={cn("material pointer-events-none flex h-9 w-16 items-center justify-center rounded-full px-2", className)}>
-    <ExerciseMotion spec={spec} />
-  </span>
+export const ExerciseMotionGlyph = ({ className }: { spec: MotionSpec; className?: string }) => (
+  <div aria-hidden="true" className={cn("h-full w-full", className)} />
 );
+
+export const ExerciseMotionBadge = (_props: { spec: MotionSpec; className?: string }) => null;
