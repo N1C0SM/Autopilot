@@ -8,8 +8,8 @@ import { track } from "@/shared/lib/analytics";
 import { type PlanKey } from "@/shared/config/tiers";
 import { usePlanAvailability } from "@/shared/lib/planCatalog";
 import { LANDING_META, landingDescription, landingFaqs } from "@/shared/lib/publicCopy";
-import { LandingHero, LandingExperience, LandingProblem, LandingOrigin, LandingPlans, LandingFaq, LandingFinal } from "@/web/components/LandingSections";
-import LandingStory from "@/web/components/LandingStory";
+import { LandingFaq } from "@/web/components/LandingSections";
+import { RefHero, RefMethod, RefApp, RefPlans, RefFounder, RefFinal } from "@/web/components/LandingReference";
 import { hapticTap } from "@/shared/lib/native";
 
 
@@ -114,15 +114,13 @@ export default function Index() {
           inLanguage: "es-ES",
         })}</script>
     </Helmet>
-    <LandingHero ctaRef={heroCtaRef} />
-    {/* La historia: el problema y, con el scroll, la app resolviéndolo escena a escena (poco texto, como Apple). */}
-    <LandingProblem />
-    <LandingStory />
-    <LandingExperience />
-    <LandingOrigin />
-    <LandingPlans onSelect={selectPlan} innerRef={pricingRef} />
-    <LandingFaq faqs={faqs.slice(0, 4)} />
-    <LandingFinal innerRef={finalCtaRef} />
+    <RefHero ctaRef={heroCtaRef} />
+    <RefMethod />
+    <RefApp />
+    <RefPlans onSelect={selectPlan} innerRef={pricingRef} />
+    <RefFounder />
+    <div id="faq" className="scroll-mt-20"><LandingFaq faqs={faqs.slice(0, 3)} /></div>
+    <RefFinal innerRef={finalCtaRef} />
 
     {/* CTA fija en móvil cuando el quiz del hero ya no se ve */}
     {showSticky && !finalVisible && !ownCtaInView && <div className="fixed inset-x-0 bottom-0 z-40 bg-background/90 px-4 pb-[max(env(safe-area-inset-bottom),12px)] pt-3 backdrop-blur sm:hidden animate-in slide-in-from-bottom-full duration-300">

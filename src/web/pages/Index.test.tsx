@@ -33,16 +33,15 @@ describe("short public home", () => {
   it("takes the clear primary action to the routine configurator", async () => {
     open();
     const main = await screen.findByRole("main");
-    expect(within(main).getByRole("heading", { level: 1 })).toHaveTextContent("Convierte la disciplina");
+    expect(within(main).getByRole("heading", { level: 1 })).toHaveTextContent("Tu entrenamiento, nutrición y progreso");
     fireEvent.click(within(main).getAllByRole("link", { name: /Empezar gratis/ })[0]);
     expect(screen.getByTestId("destination")).toHaveTextContent("/onboarding");
   });
 
-  it("shows the demo link, the real Free price and the full comparison", async () => {
+  it("shows the real Free price and the full comparison", async () => {
     open();
     const main = await screen.findByRole("main");
-    expect(within(main).getByRole("link", { name: /Ver demo/ })).toHaveAttribute("href", "/como-funciona#demo");
-    expect(within(main).getByText(/Free — 0 €/)).toBeInTheDocument();
+    expect(within(main).getByText("0 €")).toBeInTheDocument();
     expect(within(main).getByRole("link", { name: "Ver la comparativa completa" })).toHaveAttribute("href", "/planes");
   });
 
