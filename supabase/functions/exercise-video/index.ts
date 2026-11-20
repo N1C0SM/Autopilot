@@ -31,7 +31,7 @@ const STYLE = [
  * todos los medios anteriores quedarán marcados como "estilo antiguo" en el
  * admin (coincide con MEDIA_STYLE_VERSION en ExerciseLibrary.tsx).
  */
-const MEDIA_STYLE_VERSION = 3;
+const MEDIA_STYLE_VERSION = 4;
 
 /** Ángulo de cámara estandarizado según el patrón biomecánico. */
 function cameraAngle(name: string, group: string): string {
@@ -298,7 +298,7 @@ Deno.serve(async (req) => {
       }
       const frame = typeof exercise.image_url === "string" ? exercise.image_url : "";
       if (!frame) return json({ error: "Genera primero la foto: el vídeo parte de ella" }, 400);
-      const prompt = `Professional exercise technique demonstration video of the exercise "${name}" (${group}). Start from the exact pose of the reference frame, perform exactly one smooth controlled repetition with perfect biomechanical form over the full range of motion, and return to that exact pose on the last frame so the clip loops seamlessly. Same athlete, outfit, equipment, lighting and framing as the reference frame. Silent clip, no audio. ${angle} ${STYLE}`;
+      const prompt = `Professional exercise technique demonstration video of the exercise "${name}" (${group}). Start from the exact pose of the reference frame, perform exactly one smooth controlled repetition with perfect biomechanical form over the full range of motion, and return to that exact pose on the last frame so the clip loops seamlessly. Keep the exact look of the reference frame: same grey anatomical figure, equipment, background and framing. Colors: only the working muscles (${group}) glow golden yellow (#FACC15); the rest of the body stays neutral grey. Never red, orange, pink or warm color grading anywhere. Locked tripod camera, no cuts, no text, no logos. Silent clip, no audio. ${angle}`;
       const still = await loopFrame(frame);
       if (!still) return json({ error: "La foto del ejercicio debe ser PNG o JPEG para crear el vídeo" }, 400);
       const r = await fetch(`${GATEWAY}/v1/videos`, {
