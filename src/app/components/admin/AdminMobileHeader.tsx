@@ -22,7 +22,7 @@ import { openAccountPicker } from "@/shared/lib/accounts";
 import { supportsMultipleAccounts } from "@/shared/lib/platform";
 import { ArrowLeftRight } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
-import autopilotLogo from "@/shared/assets/autopilot-logo.png";
+import { AppIconMark } from "@/shared/components/ui/app-icon-mark";
 import type { AdminSection } from "@/app/pages/Admin";
 import { ADMIN_NAV_GROUPS } from "@/app/components/admin/adminNav";
 
@@ -145,7 +145,7 @@ const AdminMobileHeader = ({ title, section, onNavigate, onSignOut, contentRef, 
               {...longPress.handlers}
               className="inline-flex h-11 w-11 shrink-0 items-center justify-center transition-opacity active:opacity-60"
             >
-              <img decoding="async" src={autopilotLogo} alt="" className="h-[30px] w-[30px] rounded-full object-cover" />
+              <AppIconMark size={30} className="rounded-full shadow-none" />
             </button>
           </SheetTrigger>
 

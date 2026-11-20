@@ -134,7 +134,6 @@ for (const [suffix, size] of [["", 240], ["@2x", 480], ["@3x", 720]]) {
 }
 await write(square(1024), "native/Autopilot/Assets.xcassets/Logo.imageset/logo.png", 1024, "flat");
 // Logo de las tarjetas para compartir (se pinta a 66 px como mucho): 256 px bastan.
-await write(square(256), "src/shared/assets/autopilot-logo.png", 256, "flat");
 
 // Web y PWA. En los tamaños pequeños el AP crece para seguir leyéndose.
 await write(square(180), "public/apple-touch-icon.png", 180, "flat");

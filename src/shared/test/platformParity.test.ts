@@ -546,11 +546,11 @@ describe("paridad web ↔ apps nativas", () => {
     // esquinas del iPhone; la bienvenida lo usa a 52 y el arranque, en el sitio del splash (110 de 240).
     const markWeb = read("src/shared/components/ui/app-icon-mark.tsx");
     const markApp = read("native/Autopilot/Design/Components.swift");
-    expect(markWeb).toContain('from "@/shared/assets/autopilot-logo.png"');
+    expect(markWeb).toContain("BRAND_A");
+    expect(markWeb).not.toContain(".png");
     expect(markApp).toMatch(/struct AppIconMark: View[\s\S]*?Image\("Logo"\)/);
     expect(markWeb).toContain("size * 0.2237");
     expect(markApp).toContain("size * 0.2237");
-    expect(icons).toContain('"src/shared/assets/autopilot-logo.png"');
     expect(icons).toContain('"native/Autopilot/Assets.xcassets/Logo.imageset/logo.png"');
     expect(read("src/app/pages/Welcome.tsx")).toContain("<AppIconMark size={52} />");
     expect(read("native/Autopilot/Features/Auth/OnboardingView.swift")).toContain("AppIconMark(size: 52)");
