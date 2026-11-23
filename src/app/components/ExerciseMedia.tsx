@@ -89,7 +89,7 @@ export const ExerciseThumb = ({
         <img
           src={fastImage(image, 192)}
           alt={name ?? ""}
-          loading="lazy"
+          loading="eager"
           decoding="async"
           onError={() => setBroken(image)}
           className={cn("h-full w-full object-cover", completed && "opacity-70")}

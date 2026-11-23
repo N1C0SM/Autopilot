@@ -15,6 +15,10 @@ import { EmptyState } from "@/shared/components/ui/empty-state";
 import { SectionHeader } from "@/shared/components/ui/section-header";
 import { ExerciseThumb } from "@/app/components/ExerciseMedia";
 import { ExercisePreviewSheet, type ExercisePreviewData } from "@/app/components/ExercisePreviewSheet";
+import { fastImage } from "@/shared/lib/fastImage";
+
+// Catálogo compartido entre fichas: abrir otro usuario no vuelve a esperar a la red.
+let catalogCache: Exercise[] | null = null;
 
 interface Props {
   dayPlans: DayPlan[];
@@ -250,7 +254,7 @@ const SKILL_TEMPLATES: Record<string, SkillTemplate> = {
 const TrainingPlanForm = forwardRef<HTMLDivElement, Props>(({ dayPlans, onChange, userSports, equipmentType = "Mixto", specificGoal, intensityLevel = 5, userGoal, userInjuries, userAge, userAvailability }, ref) => {
   const formId = useId();
   const [preview, setPreview] = useState<ExercisePreviewData | null>(null);
-  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [exercises, setExercises] = useState<Exercise[]>(() => catalogCache ?? []);
   const injuredMuscles = getInjuredMuscles(userInjuries);
   const recommendedStructure = getRecommendedStructure(userAvailability);
   const activeDays = getAvailabilityDayCount(userAvailability);
@@ -264,11 +268,25 @@ const TrainingPlanForm = forwardRef<HTMLDivElement, Props>(({ dayPlans, onChange
   const eqFilter = equipmentType === "Calistenia" ? "Calistenia" : equipmentType === "Gimnasio" ? "Gimnasio" : null;
 
   useEffect(() => {
+    if (catalogCache) return;
     supabase.from("exercises")
       .select("id, name, muscle_group, image_url, video_url, exercise_type, movement_pattern, level, priority, stimulus_type, load_level, fatigue_level, recommended_order, skill_tag, progression_order")
       .order("muscle_group").order("recommended_order").order("name")
-      .then(({ data }) => { if (data) setExercises(data as Exercise[]); });
+      .then(({ data }) => {
+        if (!data) return;
+        catalogCache = data as Exercise[];
+        setExercises(catalogCache);
+        // Precarga de miniaturas: al abrir un día, la foto ya está en caché.
+        for (const e of catalogCache) if (e.image_url) { const img = new Image(); img.decoding = "async"; img.src = fastImage(e.image_url, 192) as string; }
+      });
   }, []);
+
+  const byId = new Map(exercises.map((e) => [e.id, e]));
+  const byName = new Map(exercises.map((e) => [e.name.toLowerCase(), e]));
+  const mediaFor = (ex: GymExerciseEntry) => {
+    const m = byId.get(ex.exercise_id) ?? byName.get((ex.name || "").toLowerCase());
+    return { image: ex.image_url || m?.image_url || undefined, video: ex.video_url || m?.video_url || undefined };
+  };
 
   // Filtered exercises based on equipment preference
   const filteredExercises = eqFilter
@@ -721,8 +739,8 @@ const TrainingPlanForm = forwardRef<HTMLDivElement, Props>(({ dayPlans, onChange
                             return (
                               <div key={exIdx} className="min-w-0 space-y-3 py-4 sep-t">
                                 <div className="flex min-w-0 items-end gap-2">
-                                  <button type="button" onClick={() => { void hapticTap(); setPreview({ name: ex.name, image: ex.image_url, video: ex.video_url }); }} aria-label={`Ver técnica de ${ex.name || "este ejercicio"}`} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-media transition-opacity active:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-                                    <ExerciseThumb image={ex.image_url} video={ex.video_url} name={ex.name} size="xs" />
+                                  <button type="button" onClick={() => { void hapticTap(); const md = mediaFor(ex); setPreview({ name: ex.name, image: md.image, video: md.video }); }} aria-label={`Ver técnica de ${ex.name || "este ejercicio"}`} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-media transition-opacity active:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                                    <ExerciseThumb image={mediaFor(ex).image} video={mediaFor(ex).video} name={ex.name} size="xs" />
                                   </button>
                                   <div className="min-w-0 flex-1">
                                     <Label htmlFor={exerciseId} className={LABEL}>Ejercicio</Label>

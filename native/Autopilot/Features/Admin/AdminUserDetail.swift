@@ -334,7 +334,8 @@ struct AdminUserFullDetail: View {
                             if let exercises = d.exercises, !exercises.isEmpty {
                                 VStack(spacing: 0) {
                                     ForEach(Array(exercises.enumerated()), id: \.element.id) { i, e in
-                                        HStack(alignment: .firstTextBaseline, spacing: 12) {
+                                        HStack(alignment: .center, spacing: 12) {
+                                            ExerciseThumb(url: e.image_url, size: 44, name: e.name, muscleGroup: e.muscle_group, video: e.video_url)
                                             Text(e.name).font(.apBody).lineLimit(2)
                                             Spacer(minLength: 8)
                                             Text("\(e.series) × \(e.reps)")
@@ -414,7 +415,10 @@ struct AdminUserFullDetail: View {
         }
         let o: [[String: AnyJSON]] = (try? await Backend.client.from("onboarding").select().eq("user_id", value: userId).limit(1).execute().value) ?? []
         onboarding = o.first ?? [:]
-        if let uid = UUID(uuidString: userId) { plan = (try? await TrainingRepo.plan(userId: uid)) ?? [] }
+        if let uid = UUID(uuidString: userId) {
+            plan = (try? await TrainingRepo.plan(userId: uid)) ?? []
+            ImageCache.shared.prefetch(plan.flatMap { $0.exercises ?? [] }.compactMap(\.image_url).compactMap(URL.init(string:)), maxSide: 140)
+        }
         struct N: Decodable { let macros_json: [String: AnyJSON]? }
         let n: [N] = (try? await Backend.client.from("nutrition_plan").select("macros_json").eq("user_id", value: userId).limit(1).execute().value) ?? []
         macros = n.first?.macros_json ?? [:]
