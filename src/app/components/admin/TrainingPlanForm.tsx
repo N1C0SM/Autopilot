@@ -268,7 +268,8 @@ const TrainingPlanForm = forwardRef<HTMLDivElement, Props>(({ dayPlans, onChange
   const eqFilter = equipmentType === "Calistenia" ? "Calistenia" : equipmentType === "Gimnasio" ? "Gimnasio" : null;
 
   useEffect(() => {
-    if (catalogCache) return;
+    // La caché da una primera pintura inmediata, pero siempre se revalida
+    // en segundo plano para recoger ejercicios nuevos o fotos editadas.
     supabase.from("exercises")
       .select("id, name, muscle_group, image_url, video_url, exercise_type, movement_pattern, level, priority, stimulus_type, load_level, fatigue_level, recommended_order, skill_tag, progression_order")
       .order("muscle_group").order("recommended_order").order("name")
