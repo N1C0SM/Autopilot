@@ -98,17 +98,20 @@ serve(async (req) => {
 
         const { data: referral } = await supabaseAdmin
           .from("referrals")
-          .select("id, referrer_user_id, reward_applied")
+          .select("id, referrer_user_id, referral_code, reward_applied")
           .eq("referred_user_id", referredProfile.user_id)
           .eq("reward_applied", false)
           .maybeSingle();
         if (!referral) return;
+        if (referral.referrer_user_id === referredProfile.user_id) return;
 
         const { data: referrerProfile } = await supabaseAdmin
           .from("profiles")
-          .select("stripe_customer_id, email")
+          .select("stripe_customer_id, email, referral_code")
           .eq("user_id", referral.referrer_user_id)
           .maybeSingle();
+
+        if (!referrerProfile?.referral_code || referrerProfile.referral_code !== referral.referral_code) return;
 
         let referrerCustomerId = referrerProfile?.stripe_customer_id;
         if (!referrerCustomerId && referrerProfile?.email) {
