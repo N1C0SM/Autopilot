@@ -177,7 +177,7 @@ Deno.serve(async (req) => {
     // `exclude` evita que un ejercicio que falla siempre bloquee la cola.
     if (action === "batch") {
       const exclude = Array.isArray(rawExclude)
-        ? rawExclude.filter((id: unknown): id is string => typeof id === "string" && id.length > 0).slice(0, 200)
+        ? rawExclude.filter((id: unknown): id is string => typeof id === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)).slice(0, 200)
         : [];
       // Con los vídeos pausados, la cola solo recorre las fotos pendientes.
       const { videoEnabled } = await getAiConfig();

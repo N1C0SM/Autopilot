@@ -23,7 +23,7 @@ serve(async (req) => {
 
     // For now, we'll just log the notification. 
     // In production, integrate with an email service via Lovable Cloud email.
-    console.log(`Plan ready notification for ${email}: Your personalized plan is ready! View it at /dashboard`);
+    console.log("Plan ready notification queued");
 
     return new Response(JSON.stringify({ success: true, message: `Notification sent to ${email}` }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

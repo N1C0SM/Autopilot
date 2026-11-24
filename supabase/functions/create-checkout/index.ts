@@ -41,7 +41,7 @@ serve(async (req) => {
     if (userError) throw new Error(`Auth error: ${userError.message}`);
     const user = userData.user;
     if (!user?.email) throw new Error("User not authenticated");
-    log("User authenticated", { email: user.email });
+    log("User authenticated", { userId: user.id });
 
     // Plus (training) es el plan por defecto: es el que se vende primero. Coach solo
     // si el usuario lo pide explícitamente.

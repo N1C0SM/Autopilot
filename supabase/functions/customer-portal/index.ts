@@ -45,7 +45,9 @@ serve(async (req) => {
       });
     }
 
-    const origin = req.headers.get("origin") || "https://autopilotplan.com";
+    const ALLOWED_ORIGINS = ["https://autopilotplan.com", "https://www.autopilotplan.com", "https://app.autopilotplan.com", "https://autopilotplan.lovable.app"];
+    const reqOrigin = req.headers.get("origin") || "";
+    const origin = ALLOWED_ORIGINS.includes(reqOrigin) || /^https:\/\/[a-z0-9-]+\.lovable\.app$/.test(reqOrigin) ? reqOrigin : "https://app.autopilotplan.com";
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: customers.data[0].id,
       return_url: `${origin}/dashboard`,

@@ -126,7 +126,7 @@ serve(async (req) => {
             currency: "eur",
             description: `Recompensa por referido: ${referredEmail}`,
           });
-          console.log(`Applied referral credit to referrer ${referrerProfile?.email}`);
+          console.log("Applied referral credit to referrer");
         }
 
         await supabaseAdmin
@@ -242,7 +242,7 @@ serve(async (req) => {
       const invoice = event.data.object as Stripe.Invoice;
       const customerEmail = invoice.customer_email;
       if (customerEmail) {
-        console.log(`Payment failed for ${customerEmail}`);
+        console.log("Invoice payment failed");
       }
     }
 
