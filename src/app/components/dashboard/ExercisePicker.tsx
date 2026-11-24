@@ -70,7 +70,9 @@ const ExercisePicker = ({ open, onOpenChange, onPick, existing = [] }: Props) =>
   useEffect(() => { if (open) { setPicked([]); setQ(""); } }, [open]);
 
   useEffect(() => {
-    if (!open || cache) return;
+    // La caché pinta al instante, pero cada apertura revalida para recoger
+    // ejercicios nuevos o fotos editadas en la biblioteca sin recargar.
+    if (!open) return;
     let alive = true;
     setFailed(false);
     void supabase
