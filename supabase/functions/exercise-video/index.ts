@@ -45,6 +45,37 @@ function cameraAngle(name: string, group: string): string {
   return "Camera angle: centered 45 degree medium shot focused on the working muscle.";
 }
 
+
+/**
+ * Guía biomecánica por ejercicio (pose inicial, recorrido y ángulo), tomada como
+ * referencia de técnica de bibliotecas públicas. Solo texto: nunca se copian sus
+ * imágenes ni vídeos; el estilo sigue siendo el de Autopilot.
+ */
+const POSE_GUIDES: Array<[RegExp, string]> = [
+  [/hack/, "Machine hack squat: back flat on the inclined pad, shoulders under the pads, feet shoulder-width mid-platform. Descend until thighs are parallel or below, knees tracking over toes, then drive up to near lockout. Strict 90 degree side profile."],
+  [/b[uú]lgara|bulgarian/, "Bulgarian split squat: rear foot laces-down on a bench behind, front foot far forward, torso upright with dumbbells at the sides. Lower until the rear knee nearly touches the floor and the front thigh is parallel, front knee over the ankle, then push up through the front heel. Strict 90 degree side profile."],
+  [/rumano|romanian/, "Romanian deadlift: standing, barbell at the thighs, knees softly bent. Hinge at the hips pushing them back, neutral spine, bar sliding along the legs to mid-shin with a hamstring stretch, then extend the hips back to standing. Strict 90 degree side profile."],
+  [/curl femoral(?! sentado)|lying leg curl/, "Lying leg curl machine: prone on the bench, knees just off the pad edge, roller above the heels. Curl the heels toward the glutes without lifting the hips, then lower under control. 90 degree side profile."],
+  [/gemelo|calf/, "Standing calf raise: balls of the feet on the edge of the platform, knees straight. Lower the heels into a full stretch, then rise onto the toes to full plantar flexion. 90 degree side profile, framed on the lower legs and full body."],
+  [/jal[oó]n unilateral|single.?arm pulldown/, "Single-arm cable pulldown: half-kneeling facing the high pulley, one arm extended overhead. Pull the elbow down to the side of the ribs, then return to a full overhead stretch. 45 degree three-quarter front view."],
+  [/remo en polea|seated cable row/, "Seated cable row: seated, feet on the platform, knees slightly bent, torso upright, close-grip handle at arm's length. Pull the handle to the lower abdomen squeezing the shoulder blades, elbows close to the body, then extend the arms forward. 90 degree side profile."],
+  [/curl inclinado|incline curl/, "Incline dumbbell curl: seated back flat on a 45 degree incline bench, arms hanging straight down behind the torso, palms forward. Curl the dumbbells up keeping the upper arms still, then lower to full extension. 45 degree three-quarter front view."],
+  [/face pull/, "Cable face pull: standing facing a pulley at head height with a rope. Pull the rope toward the face, elbows high and wide, hands ending beside the ears with external rotation, then return. 45 degree three-quarter rear view showing the rear shoulders."],
+  [/p[aá]jaros|reverse fly|aperturas inversas/, "Reverse pec deck: seated facing the pad, chest against it, arms extended forward at shoulder height on the handles. Open the arms out to the sides in an arc until in line with the body, squeezing the rear shoulders, then return. 45 degree three-quarter rear view."],
+  [/elevaci[oó]n lateral en m[aá]quina/, "Lateral raise machine: seated, pads against the outside of the upper arms. Raise the arms out to the sides up to shoulder height, then lower under control. Front view slightly from above."],
+  [/press horizontal en m[aá]quina|chest press machine/, "Seated chest press machine: back against the pad, handles at mid-chest height. Press the handles forward to near full extension without locking, then return until a chest stretch. 45 degree three-quarter front view."],
+  [/push.?up plus/, "Push-up plus: high plank on the hands, body in a straight line. At the top of a push-up, push the floor away further to protract the shoulder blades and round the upper back slightly, then let them retract. 90 degree side profile."],
+  [/serratus punch/, "Serratus punch: lying supine, one arm holding a dumbbell straight up over the shoulder. Punch the weight toward the ceiling by lifting the shoulder blade off the floor without bending the elbow, then lower the shoulder back. 45 degree three-quarter side view."],
+  [/reverse crunch|crunch inverso/, "Reverse crunch: lying supine, hands by the sides, hips and knees bent 90 degrees. Curl the pelvis up lifting the hips off the floor bringing the knees toward the chest, then lower slowly. 90 degree side profile."],
+  [/ab wheel|rueda abdominal/, "Ab wheel rollout: kneeling, hands on the wheel under the shoulders. Roll forward extending the body with a braced core and no lower-back sag, then pull back to the start using the abs. 90 degree side profile."],
+];
+
+function poseGuide(name: string): string {
+  const n = name.toLowerCase();
+  const hit = POSE_GUIDES.find(([re]) => re.test(n));
+  return hit ? ` Biomechanics: ${hit[1]}` : "";
+}
+
 const WEBP_DECODER_WASM = "https://cdn.jsdelivr.net/npm/@jsquash/webp@1.4.0/codec/dec/webp_dec.wasm";
 const isWebp = (b: Uint8Array) =>
   b.length > 12 && String.fromCharCode(...b.subarray(0, 4)) === "RIFF" && String.fromCharCode(...b.subarray(8, 12)) === "WEBP";
@@ -227,7 +258,8 @@ Deno.serve(async (req) => {
 
     const name = exercise.name || "un ejercicio";
     const group = exercise.muscle_group || "full body";
-    const angle = cameraAngle(name, group);
+    const guide = poseGuide(name);
+    const angle = guide ? guide.trim() : cameraAngle(name, group);
 
     if (action === "image") {
       // La imagen sale en 3:2 (límite del modelo) pero se muestra en un marco 16:9
