@@ -39,3 +39,11 @@ audit/antes/
 audit/despues/
 audit/tmp/
 audit/.auth/
+
+# Compilados nativos: nunca al repositorio
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+native/build/
+native/build-mac/

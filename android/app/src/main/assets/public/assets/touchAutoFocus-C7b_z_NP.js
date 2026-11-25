@@ -1,1 +1,0 @@
-var e=e=>{typeof window.matchMedia==`function`&&window.matchMedia(`(pointer: coarse)`).matches&&e.preventDefault()};export{e as t};
