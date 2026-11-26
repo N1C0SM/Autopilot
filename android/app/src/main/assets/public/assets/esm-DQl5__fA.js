@@ -1,1 +1,0 @@
-import{p as e}from"./react-vendor-DrmNC-PY.js";import{i as t}from"./dist-62TeNfsI.js";var n=t(`SplashScreen`,{web:()=>e(()=>import(`./web-BtELLQGr.js`).then(e=>new e.SplashScreenWeb),[])});export{n as SplashScreen};

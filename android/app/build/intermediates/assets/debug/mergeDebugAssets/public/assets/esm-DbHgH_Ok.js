@@ -1,1 +1,0 @@
-import{p as e}from"./react-vendor-BGGnU2c6.js";import{i as t}from"./dist-B-fBiTU6.js";var n=t(`App`,{web:()=>e(()=>import(`./web-SN-aL2rb.js`).then(e=>new e.AppWeb),[])});export{n as App};

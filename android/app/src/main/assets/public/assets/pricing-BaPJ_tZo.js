@@ -1,1 +1,0 @@
-import{U as e}from"./index-C9GBeZHj.js";var t=e.training.price,n=e.training.trial_days;export{n,t};

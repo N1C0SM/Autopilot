@@ -1,1 +1,0 @@
-import{p as e}from"./react-vendor-DrmNC-PY.js";import{i as t}from"./dist-62TeNfsI.js";var n=t(`Share`,{web:()=>e(()=>import(`./web-BfhmW3-l.js`).then(e=>new e.ShareWeb),[])});export{n as Share};
