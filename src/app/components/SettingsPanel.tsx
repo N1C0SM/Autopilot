@@ -732,34 +732,29 @@ const SettingsPanel = ({ onUpgrade, adminMode = false, page: controlledPage, onP
         </button>
       )}
 
-      {/* Ajustes de ChatGPT: subtítulo arriba (sin banner de Plus, como el iPhone), el perfil y el índice agrupado; cada fila abre su sección. */}
-      {hubOpen && (
-        <div className="order-first flex flex-col gap-6">
-          <p className="-mt-2 type-subhead text-muted-foreground md:hidden">Gestiona tu cuenta, plan y preferencias.</p>
-        </div>
-      )}
+      {/* Ajustes minimalistas, como Ajustes de iOS: el perfil y el índice agrupado, solo títulos; cada fila abre su sección. */}
       {hubOpen && (
         <div className="order-2 flex flex-col gap-6">
           {[
             { title: "Mi cuenta", rows: [
-              { id: "ajustes-perfil", icon: User, title: "Perfil", subtitle: "Nombre, foto y privacidad", show: true },
-              { id: "ajustes-datos", icon: Target, title: "Tus datos y objetivo", subtitle: "Edad, peso, objetivo y disponibilidad", show: hasOnboarding },
-              // El plan va en una insignia a la derecha (igual que el iPhone), no en el subtítulo.
-              { id: "ajustes-plan", icon: Crown, title: "Mi plan", subtitle: hasPaidAccess || !plans.plus || iosNoPurchases ? "Tu suscripción y lo que incluye" : `Cambia a ${plans.plusName} para más funciones`, value: <SubscriptionBadge name={planName} paid={hasPaidAccess} />, show: !campaign || consumerPlan !== "free" },
-              { id: "ajustes-cuentas", icon: Users, title: "Cuentas en este dispositivo", subtitle: "Cambia de cuenta sin cerrar sesión", show: supportsMultipleAccounts() },
+              { id: "ajustes-perfil", icon: User, title: "Perfil", show: true },
+              { id: "ajustes-datos", icon: Target, title: "Tus datos y objetivo", show: hasOnboarding },
+              // El plan va en una insignia a la derecha (igual que el iPhone).
+              { id: "ajustes-plan", icon: Crown, title: "Mi plan", value: <SubscriptionBadge name={planName} paid={hasPaidAccess} />, show: !campaign || consumerPlan !== "free" },
+              { id: "ajustes-cuentas", icon: Users, title: "Cuentas en este dispositivo", show: supportsMultipleAccounts() },
             ] },
             { title: "Preferencias", rows: [
-              { id: "ajustes-entreno", icon: Dumbbell, title: "Tu forma de entrenar", subtitle: "Vista del entreno y descanso entre series", show: true },
-              { id: "ajustes-apariencia", icon: Moon, title: "Apariencia", subtitle: "Modo oscuro o del sistema", show: true },
-              { id: "ajustes-contrasena", icon: KeyRound, title: "Contraseña", subtitle: "Cambia tu contraseña", show: true },
+              { id: "ajustes-entreno", icon: Dumbbell, title: "Tu forma de entrenar", show: true },
+              { id: "ajustes-apariencia", icon: Moon, title: "Apariencia", show: true },
+              { id: "ajustes-contrasena", icon: KeyRound, title: "Contraseña", show: true },
             ] },
             { title: "Privacidad y legal", rows: [
-              { id: "ajustes-privacidad", icon: ShieldCheck, title: "Privacidad y mis datos", subtitle: "Exporta tus datos y política de privacidad", show: true },
-              { id: "ajustes-legal", icon: FileText, title: "Legal", subtitle: "Términos, cookies y avisos", show: true },
+              { id: "ajustes-privacidad", icon: ShieldCheck, title: "Privacidad y mis datos", show: true },
+              { id: "ajustes-legal", icon: FileText, title: "Legal", show: true },
             ] },
           ].map((group) => (
             <ListGroup key={group.title} header={group.title}>
-              {group.rows.filter((row) => row.show).map(({ id, icon: Icon, title, subtitle, ...row }) => (
+              {group.rows.filter((row) => row.show).map(({ id, icon: Icon, title, ...row }) => (
                 <ListRow
                   key={id}
                   // Icono en una losa redondeada, como las filas de Plus en Nutrición y el iPhone.
@@ -769,7 +764,6 @@ const SettingsPanel = ({ onUpgrade, adminMode = false, page: controlledPage, onP
                     </span>
                   )}
                   title={title}
-                  subtitle={subtitle}
                   value={"value" in row ? row.value : undefined}
                   chevron
                   onClick={() => {
@@ -1283,7 +1277,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false, page: controlledPage, onP
       </div>
 
       {/* Sign out */}
-      <ListGroup className={`order-9${onHub}`} header="Sesión" footer="Cierra tu sesión en este dispositivo.">
+      <ListGroup className={`order-9${onHub}`} header="Sesión">
         <ListRow
           icon={<LogOut className="text-destructive" />}
           title="Cerrar sesión"

@@ -354,7 +354,7 @@ describe("paridad web ↔ apps nativas", () => {
     // Progreso de ChatGPT: «Tu fuerza» con la mejor marca (no la última: es la serie de más 1RM), la subida en kg y «Tu constancia» debajo.
     const progressWeb = read("src/app/components/dashboard/WorkoutProgress.tsx") + read("src/app/pages/Dashboard.tsx");
     const progressApp = read("native/Autopilot/Features/Progress/ProgressScreen.swift");
-    for (const text of ["Tu fuerza", "Evolución de tus principales ejercicios.", "Mejor marca", "Ver todos mis ejercicios", "Ver menos ejercicios", "Tu constancia", "Evolución de tu fuerza, tu físico y tus récords."]) {
+    for (const text of ["Tu fuerza", "Mejor marca", "Ver todos mis ejercicios", "Ver menos ejercicios", "Tu constancia"]) {
       expect(progressWeb, text).toContain(text);
       expect(progressApp, text).toContain(text);
     }
@@ -363,10 +363,15 @@ describe("paridad web ↔ apps nativas", () => {
     // Ajustes de ChatGPT: índice agrupado con iconos que lleva a cada sección, en las dos.
     const settingsWeb = read("src/app/components/SettingsPanel.tsx");
     const settingsApp = read("native/Autopilot/Features/Account/AccountView.swift");
-    for (const text of ["Gestiona tu cuenta, plan y preferencias.", "Mi cuenta", "Nombre, foto y privacidad", "Tus datos y objetivo", "Edad, peso, objetivo y disponibilidad", "Mi plan",
-      "Preferencias", "Vista del entreno y descanso entre series", "Cambia tu contraseña", "Privacidad y legal", "Exporta tus datos y política de privacidad", "Términos, cookies y avisos"]) {
+    for (const text of ["Mi cuenta", "Perfil", "Tus datos y objetivo", "Mi plan", "Cuentas en este dispositivo",
+      "Preferencias", "Tu forma de entrenar", "Contraseña", "Privacidad y legal", "Privacidad y mis datos", "Legal"]) {
       expect(settingsWeb, text).toContain(text);
       expect(settingsApp, text).toContain(text);
+    }
+    // Minimalista, como Ajustes de iOS: sin subtítulo de página ni de fila, en las dos.
+    for (const text of ["Gestiona tu cuenta, plan y preferencias.", "Nombre, foto y privacidad", "Cierra tu sesión en este dispositivo."]) {
+      expect(settingsWeb, text).not.toContain(text);
+      expect(settingsApp, text).not.toContain(text);
     }
     // Cada fila del índice abre su página (sin la lista completa debajo): ids en la web, `SettingsPage` en la app.
     for (const id of ["ajustes-perfil", "ajustes-datos", "ajustes-plan", "ajustes-entreno", "ajustes-contrasena", "ajustes-privacidad", "ajustes-legal", "ajustes-cuentas"]) {
@@ -1633,11 +1638,10 @@ describe("paridad web ↔ apps nativas", () => {
     const app = read("native/Autopilot/Features/Account/AccountView.swift");
     const web = read("src/app/components/SettingsPanel.tsx");
     expect(app).not.toMatch(/if profileLoaded \{\s*hubRow\("crown"/);
-    expect(app).toContain('hubRow("crown", "Mi plan", "Tu suscripción y lo que incluye", to: .plan)');
+    expect(app).toContain('hubRow("crown", "Mi plan", to: .plan)');
     expect(app).toContain("SubscriptionBadge(name: planKnown ? planName : nil, paid: paid)");
     expect(app).toContain("CachedProfile.load(id)");
     expect(web).toContain("value: <SubscriptionBadge name={planName} paid={hasPaidAccess} />");
-    expect(web).toContain('"Tu suscripción y lo que incluye"');
     expect(read("native/Autopilot/Design/Components.swift")).toContain("struct SubscriptionBadge: View");
     expect(read("src/shared/components/ui/plus-badge.tsx")).toContain("export function SubscriptionBadge(");
   });

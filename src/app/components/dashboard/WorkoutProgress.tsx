@@ -125,7 +125,6 @@ const WorkoutProgress = ({ userId, compact = false, onGoTrain }: Props) => {
       {!loading && !loadError && exercises.length > 0 && (
         <div className="mb-2.5 shrink-0">
           <h3 className="type-title3">Tu fuerza</h3>
-          <p className="mt-0.5 type-subhead text-muted-foreground">Evolución de tus principales ejercicios.</p>
         </div>
       )}
 

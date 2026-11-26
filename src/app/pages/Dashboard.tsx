@@ -1095,8 +1095,6 @@ const Dashboard = () => {
           }}
           className="mx-auto w-full min-w-0 max-w-[680px] space-y-4"
         >
-          {/* Subtítulo de la maqueta bajo el título grande; en escritorio la barra ya lleva su pista. */}
-          <p className="-mt-1 type-subhead text-muted-foreground md:hidden">Evolución de tu fuerza, tu físico y tus récords.</p>
           {/* Control segmentado del rediseño: 44 px, fondo de tarjeta y la sección activa en dorado (igual que `SegmentedPill(gold:)` en nativo). */}
           <TabsList aria-label="Tu progreso" className="mx-auto mb-4 flex h-11 w-full max-w-md border-0 bg-card lg:max-w-lg">
             {([["evolution", "Fuerza"], ["photos", "Físico"], ["records", "Récords"], ["scan", "Scan"]] as const).map(([value, label]) => (
