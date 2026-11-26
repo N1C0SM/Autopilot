@@ -14,7 +14,8 @@ Objetivo: Autopilot se reconoce **sin logo**. Si tapas la marca en una pantalla,
 | **Háptica** | Fuerte, suave, fuerte (2-1-2, la cadencia de una repetición) **solo** al cerrar una serie. | `hapticSignature()`, `Haptics.signature()` |
 | **Foto y vídeo** | Gradación ámbar cálida, negros profundos, saturación ≈85 %, grano fino y fundido a negro en el tercio inferior. | Prompt de `supabase/functions/exercise-video` |
 | **Emails** | Fondo negro y el mismo dorado que la app (`#D6B45B`). | `supabase/functions/_shared/email-styles.ts` |
-| **Cards para compartir** | Foto con el tratamiento anterior, cifra en `.type-figure` y el AP pequeño al pie, sin el nombre de la marca. | (pendiente: `WorkoutStoryShare`, `ScanShareCard`) |
+| **Cards para compartir** | Historia de 1080 × 1920 con márgenes seguros: foto real con el tratamiento anterior fundida a negro (o el mapa muscular en dorado), una cifra en Big Shoulders, dos o tres de apoyo y el AP con autopilotplan.com al pie, sin el nombre de la marca. | `STORY` + `storyCanvas.ts` (`WorkoutStoryShare`, `ScanShareCard`), `ShareStory.swift` (`WorkoutShareCard`, `ScanShareCardView`) |
+| **Live Activity** | El AP dorado en la pantalla de bloqueo y en la isla dinámica, cifras en Big Shoulders y solo el dorado como acento. | `native/AutopilotWidgets` |
 
 Prohibido: el motivo como relleno o patrón, más de un AP por vista, o dibujarla con otra geometría, otras fuentes de cifras y otros dorados.
 

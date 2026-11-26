@@ -1,3 +1,5 @@
+import { groupedInt } from "@/shared/lib/workoutSummaryFormat";
+
 /**
  * Macros de cada comida del día, cuadrados con el objetivo: la proteína, los carbos, las
  * grasas y las kcal de todas las comidas suman exactamente lo que marca el resumen.
@@ -64,6 +66,19 @@ export function mealIngredients(meal: PlanMeal): { food: string; amount: string 
   return (Array.isArray(meal.ingredients) ? meal.ingredients : [])
     .filter((i) => typeof i?.food === "string" && i.food.trim() && typeof i.grams === "number" && i.grams > 0)
     .map((i) => ({ food: (i.food as string).trim(), amount: `${Math.round(i.grams as number)} ${i.unit === "ml" ? "ml" : "g"}` }));
+}
+
+/**
+ * Línea tranquila de cada comida en «Comidas de hoy», detrás de sus kcal: «P 40 g · H 62 g · G 14 g»
+ * (proteína, hidratos, grasas). La app la escribe igual (`NutritionView.macroDetail`).
+ */
+export function mealMacroDetail(m: MealMacros): string {
+  return `P ${m.protein} g · H ${m.carbs} g · G ${m.fats} g`;
+}
+
+/** Lo mismo, dicho para VoiceOver: «640 kcal: 40 g de proteína, 62 g de hidratos y 14 g de grasas». */
+export function mealMacroLabel(m: MealMacros): string {
+  return `${groupedInt(m.kcal)} kcal: ${m.protein} g de proteína, ${m.carbs} g de hidratos y ${m.fats} g de grasas`;
 }
 
 /** Suma de las comidas marcadas: marcarlas todas da exactamente el objetivo. */

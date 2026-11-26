@@ -2,10 +2,39 @@ import ActivityKit
 import WidgetKit
 import SwiftUI
 
-// MARK: - Paleta mínima para la extensión (no puede importar el módulo principal)
+// MARK: - Marca (la extensión no puede importar el módulo de la app)
 
-private let gold = Color(red: 0.93, green: 0.78, blue: 0.33)
-private let cardBg = Color(white: 0.10)
+/// Tokens de la app para la extensión: el dorado de la marca (`Palette.gold` oscuro, #D8B25E), el
+/// gris secundario (#A8A8AE), Inter y Big Shoulders para las cifras (fuentes en `UIAppFonts`).
+private enum LA {
+    static let gold = Color(red: 0.847, green: 0.698, blue: 0.369)
+    static let ink = Color.white
+    static let secondary = Color(red: 0.659, green: 0.659, blue: 0.682)
+    static let background = Color.black
+
+    static func inter(_ size: CGFloat, _ weight: Font.Weight = .regular, relativeTo style: Font.TextStyle = .body) -> Font {
+        .custom("Inter", size: size, relativeTo: style).weight(weight)
+    }
+
+    /// Cifras en Big Shoulders 800 con dígitos tabulares, como `Font.figure` en la app.
+    static func figure(_ size: CGFloat, relativeTo style: Font.TextStyle = .title) -> Font {
+        .custom("BigShoulders-Bold", size: size, relativeTo: style).weight(.heavy).monospacedDigit()
+    }
+}
+
+/// El AP dorado de la marca (misma geometría que `BrandMark`, de `Shared/BrandShape.swift`).
+private struct APMark: View {
+    var width: CGFloat
+
+    var body: some View {
+        ZStack {
+            BrandShape(part: .a).fill(LA.gold)
+            BrandShape(part: .p).fill(LA.gold)
+        }
+        .frame(width: width, height: width * 500 / 916)
+        .accessibilityHidden(true)
+    }
+}
 
 // MARK: - Widget bundle
 
@@ -18,196 +47,200 @@ struct AutopilotWidgetBundle: WidgetBundle {
 
 // MARK: - Live Activity
 
+/// Live Activity del entreno: el AP, el ejercicio, «Serie X de Y», la cuenta atrás del descanso y
+/// el tiempo de sesión, en la pantalla de bloqueo y en la isla dinámica (compacta, mínima y
+/// expandida). Solo el dorado de la marca como acento. Los tiempos los cuenta el sistema con
+/// `Text(timerInterval:)`: avanzan sin actualizaciones y se quedan quietos en pausa o al terminar.
 struct WorkoutLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: WorkoutActivityAttributes.self) { context in
-            // ── Lock Screen / StandBy ──────────────────────────────────────
-            LockScreenView(attributes: context.attributes, state: context.state)
+            LockScreenView(attributes: context.attributes, state: context.state, isStale: context.isStale)
+                .activityBackgroundTint(LA.background)
+                .activitySystemActionForegroundColor(LA.gold)
         } dynamicIsland: { context in
-            // ── Dynamic Island ─────────────────────────────────────────────
-            DynamicIsland {
-                // Expanded: aparece al pulsar la pastilla
+            let state = context.state
+            let display = Display(state: state, isStale: context.isStale)
+            return DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(context.attributes.sessionTitle)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(gold)
-                            .lineLimit(1)
-                        Text(context.state.exerciseName)
-                            .font(.subheadline.weight(.bold))
-                            .foregroundStyle(.white)
-                            .lineLimit(1)
-                    }
-                    .padding(.leading, 4)
+                    APMark(width: 30)
+                        .frame(maxHeight: .infinity, alignment: .center)
+                        .padding(.leading, 6)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    VStack(alignment: .trailing, spacing: 2) {
-                        // Cronómetro de duración
-                        if context.state.isPaused {
-                            Label("Pausa", systemImage: "pause.fill")
-                                .font(.caption2.weight(.medium))
-                                .foregroundStyle(.white.opacity(0.6))
-                        } else {
-                            Text(context.state.startedAt, style: .timer)
-                                .font(.caption.monospacedDigit())
-                                .foregroundStyle(.white.opacity(0.75))
-                                .multilineTextAlignment(.trailing)
-                        }
-                        // Series
-                        Text("\(context.state.doneSets)/\(context.state.totalSets) series")
-                            .font(.caption2.monospacedDigit())
-                            .foregroundStyle(.white.opacity(0.55))
+                    ElapsedTimer(state: state)
+                        .font(LA.figure(24))
+                        .foregroundStyle(state.elapsedFrozenAt == nil ? LA.ink : LA.secondary)
+                        .frame(maxWidth: 86, maxHeight: .infinity, alignment: .trailing)
+                        .padding(.trailing, 6)
+                }
+                DynamicIslandExpandedRegion(.center) {
+                    VStack(spacing: 1) {
+                        Text(display.title).font(LA.inter(15, .semibold)).foregroundStyle(LA.ink).lineLimit(1)
+                        Text(display.status).font(LA.inter(12)).foregroundStyle(display.statusColor).lineLimit(1)
                     }
-                    .padding(.trailing, 4)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    if let end = context.state.restEndsAt, end > Date() {
-                        // Barra de descanso
-                        RestBarExpanded(endsAt: end)
+                    BottomRow(state: state, display: display, figureSize: 28)
+                        .padding(.horizontal, 6)
+                        .padding(.top, 4)
+                }
+            } compactLeading: {
+                APMark(width: 22).padding(.leading, 2)
+            } compactTrailing: {
+                Group {
+                    if display.showsRest, let range = state.restRange {
+                        Text(timerInterval: range, pauseTime: state.pausedAt, countsDown: true, showsHours: false)
+                            .foregroundStyle(LA.gold)
                     } else {
-                        // Volumen acumulado
-                        HStack {
-                            Image(systemName: "chart.bar.fill")
-                                .foregroundStyle(gold)
-                            Text("\(context.state.volumeKg) kg levantados")
-                                .font(.caption.weight(.medium))
-                                .foregroundStyle(.white.opacity(0.75))
+                        ElapsedTimer(state: state)
+                            .foregroundStyle(state.elapsedFrozenAt == nil ? LA.ink : LA.secondary)
+                    }
+                }
+                .font(LA.figure(16))
+                .multilineTextAlignment(.trailing)
+                .frame(maxWidth: 52, alignment: .trailing)
+            } minimal: {
+                APMark(width: 20)
+            }
+            .keylineTint(LA.gold)
+        }
+    }
+}
+
+// MARK: - Lo que se enseña
+
+/// Título, línea de estado y si hay descanso a la vista, decidido igual en todas las presentaciones.
+private struct Display {
+    let state: WorkoutActivityAttributes.WorkoutState
+    let isStale: Bool
+
+    /// El sistema marca la actividad como pasada al acabar el descanso (`staleDate`): ya toca la serie.
+    var restOver: Bool { isStale && state.pausedAt == nil && state.restEndsAt != nil }
+    var showsRest: Bool { state.isResting && !restOver }
+    var finished: Bool { state.finishedAt != nil }
+
+    var title: String { finished ? WorkoutActivityText.finished : state.exerciseName }
+
+    /// «Serie 2 de 4 · Ejercicio 1 de 6», «En pausa · Serie 2 de 4» o, al terminar, «12 de 12 series».
+    /// Al acabar el descanso, «Siguiente serie» sale abajo en dorado, donde estaba la cuenta atrás
+    /// (sin repetirlo aquí).
+    var status: String {
+        if finished { return WorkoutActivityText.progress(state) }
+        if state.pausedAt != nil { return "\(WorkoutActivityText.paused) · \(WorkoutActivityText.setLine(state))" }
+        return "\(WorkoutActivityText.setLine(state)) · \(WorkoutActivityText.exerciseLine(state))"
+    }
+
+    var statusColor: Color { state.pausedAt != nil ? LA.ink : LA.secondary }
+}
+
+/// Tiempo de sesión: corre solo y se queda quieto en pausa o al terminar.
+private struct ElapsedTimer: View {
+    let state: WorkoutActivityAttributes.WorkoutState
+
+    var body: some View {
+        Text(timerInterval: state.elapsedRange, pauseTime: state.elapsedFrozenAt, countsDown: false, showsHours: true)
+            .multilineTextAlignment(.trailing)
+    }
+}
+
+/// Abajo: el descanso (etiqueta, cuenta atrás en dorado y su barra) o el avance de la sesión. Lo
+/// que ya dice la línea de estado («En pausa», el avance al terminar) no se repite aquí.
+private struct BottomRow: View {
+    let state: WorkoutActivityAttributes.WorkoutState
+    let display: Display
+    let figureSize: CGFloat
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if display.showsRest, let range = state.restRange {
+                HStack(alignment: .lastTextBaseline) {
+                    Text(WorkoutActivityText.rest)
+                        .font(LA.inter(13, .medium)).foregroundStyle(LA.secondary)
+                    Spacer(minLength: 8)
+                    Text(timerInterval: range, pauseTime: state.pausedAt, countsDown: true, showsHours: false)
+                        .font(LA.figure(figureSize)).foregroundStyle(LA.gold)
+                        .multilineTextAlignment(.trailing)
+                        .frame(maxWidth: 110, alignment: .trailing)
+                }
+                RestBar(state: state, range: range)
+            } else {
+                // Al terminar, el avance ya es la línea de estado: aquí solo queda la barra.
+                if !display.finished {
+                    HStack(alignment: .lastTextBaseline) {
+                        Text(WorkoutActivityText.progress(state))
+                            .font(LA.inter(13, .medium)).foregroundStyle(LA.secondary)
+                        Spacer(minLength: 8)
+                        if display.restOver {
+                            Text(WorkoutActivityText.nextSet).font(LA.inter(13, .semibold)).foregroundStyle(LA.gold)
                         }
                     }
                 }
-            } compactLeading: {
-                // Píldora izquierda: icono de mancuerna
-                Image(systemName: "dumbbell.fill")
-                    .foregroundStyle(gold)
-                    .font(.system(size: 13, weight: .semibold))
-            } compactTrailing: {
-                // Píldora derecha: descanso o cronómetro
-                if let end = context.state.restEndsAt, end > Date() {
-                    Text(end, style: .timer)
-                        .font(.caption2.monospacedDigit().weight(.semibold))
-                        .foregroundStyle(gold)
-                        .multilineTextAlignment(.trailing)
-                } else if context.state.isPaused {
-                    Image(systemName: "pause.fill")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(.white.opacity(0.6))
-                } else {
-                    Text(context.state.startedAt, style: .timer)
-                        .font(.caption2.monospacedDigit().weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.75))
-                        .multilineTextAlignment(.trailing)
-                }
-            } minimal: {
-                // Solo el icono cuando hay muchas activities
-                Image(systemName: "dumbbell.fill")
-                    .foregroundStyle(gold)
+                ProgressView(value: Double(state.doneSets), total: Double(max(state.totalSets, 1)))
+                    .progressViewStyle(.linear)
+                    .tint(LA.gold)
+                    .accessibilityHidden(true)
             }
         }
     }
 }
 
-// MARK: - Lock Screen / StandBy view
+/// Barra del descanso: se vacía sola mientras corre; en pausa, quieta en lo que queda.
+private struct RestBar: View {
+    let state: WorkoutActivityAttributes.WorkoutState
+    let range: ClosedRange<Date>
+
+    var body: some View {
+        Group {
+            if state.pausedAt == nil {
+                ProgressView(timerInterval: range, countsDown: true) { EmptyView() } currentValueLabel: { EmptyView() }
+            } else {
+                ProgressView(value: 1 - state.restFraction)
+            }
+        }
+        .progressViewStyle(.linear)
+        .tint(LA.gold)
+        .accessibilityHidden(true)
+    }
+}
+
+// MARK: - Pantalla de bloqueo / StandBy
 
 private struct LockScreenView: View {
     let attributes: WorkoutActivityAttributes
     let state: WorkoutActivityAttributes.WorkoutState
+    let isStale: Bool
 
     var body: some View {
-        HStack(spacing: 14) {
-            // Icono
-            ZStack {
-                Circle().fill(gold.opacity(0.15))
-                Image(systemName: "dumbbell.fill")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(gold)
-            }
-            .frame(width: 44, height: 44)
-
-            // Info central
-            VStack(alignment: .leading, spacing: 3) {
+        let display = Display(state: state, isStale: isStale)
+        VStack(alignment: .leading, spacing: 12) {
+            // El AP, la sesión y el tiempo de sesión.
+            HStack(alignment: .center, spacing: 8) {
+                APMark(width: 26)
                 Text(attributes.sessionTitle)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(gold)
+                    .font(LA.inter(13, .semibold)).foregroundStyle(LA.secondary)
                     .lineLimit(1)
-                Text(state.exerciseName)
-                    .font(.subheadline.weight(.bold))
-                    .foregroundStyle(.white)
+                Spacer(minLength: 8)
+                ElapsedTimer(state: state)
+                    .font(LA.figure(22))
+                    .foregroundStyle(state.elapsedFrozenAt == nil ? LA.ink : LA.secondary)
+                    .frame(maxWidth: 96, alignment: .trailing)
+            }
+            // El ejercicio y su serie.
+            VStack(alignment: .leading, spacing: 2) {
+                Text(display.title)
+                    .font(LA.inter(20, .bold, relativeTo: .title3)).foregroundStyle(LA.ink)
+                    .lineLimit(1).minimumScaleFactor(0.8)
+                Text(display.status)
+                    .font(LA.inter(13, display.statusColor == LA.ink ? .semibold : .regular))
+                    .foregroundStyle(display.statusColor)
                     .lineLimit(1)
-
-                // Descanso o progreso
-                if let end = state.restEndsAt, end > Date() {
-                    HStack(spacing: 6) {
-                        Image(systemName: "timer")
-                            .font(.caption2)
-                            .foregroundStyle(gold)
-                        Text(end, style: .timer)
-                            .font(.caption.monospacedDigit().weight(.medium))
-                            .foregroundStyle(gold)
-                        Text("descanso")
-                            .font(.caption2)
-                            .foregroundStyle(.white.opacity(0.5))
-                    }
-                } else {
-                    HStack(spacing: 6) {
-                        Text("\(state.doneSets)/\(state.totalSets)")
-                            .font(.caption.monospacedDigit().weight(.semibold))
-                            .foregroundStyle(.white)
-                        Text("series")
-                            .font(.caption2)
-                            .foregroundStyle(.white.opacity(0.5))
-                        Text("·")
-                            .foregroundStyle(.white.opacity(0.3))
-                        Text("\(state.volumeKg) kg")
-                            .font(.caption.monospacedDigit().weight(.semibold))
-                            .foregroundStyle(.white)
-                    }
-                }
             }
-
-            Spacer(minLength: 0)
-
-            // Cronómetro derecha
-            VStack(alignment: .trailing, spacing: 2) {
-                if state.isPaused {
-                    Image(systemName: "pause.circle.fill")
-                        .font(.title3)
-                        .foregroundStyle(.white.opacity(0.5))
-                } else {
-                    Text(state.startedAt, style: .timer)
-                        .font(.callout.monospacedDigit().weight(.semibold))
-                        .foregroundStyle(.white)
-                        .multilineTextAlignment(.trailing)
-                    Text("duración")
-                        .font(.caption2)
-                        .foregroundStyle(.white.opacity(0.4))
-                }
-            }
+            BottomRow(state: state, display: display, figureSize: 30)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(cardBg)
-    }
-}
-
-// MARK: - Barra de descanso expandida
-
-private struct RestBarExpanded: View {
-    let endsAt: Date
-
-    var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "timer")
-                .foregroundStyle(gold)
-                .font(.caption.weight(.semibold))
-            Text("Descansa")
-                .font(.caption.weight(.medium))
-                .foregroundStyle(.white.opacity(0.65))
-            Text(endsAt, style: .timer)
-                .font(.caption.monospacedDigit().weight(.bold))
-                .foregroundStyle(gold)
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 16)
-        .padding(.bottom, 8)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 16)
+        // Letra grande sí, pero sin romper la tarjeta del sistema (máximo 160 pt de alto).
+        .dynamicTypeSize(...DynamicTypeSize.xLarge)
+        .accessibilityElement(children: .combine)
     }
 }

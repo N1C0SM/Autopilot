@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mealIngredients, mealMacros, splitExact, sumMacros } from "./mealMacros";
+import { mealIngredients, mealMacroDetail, mealMacroLabel, mealMacros, splitExact, sumMacros } from "./mealMacros";
 
 const target = { kcal: 2366, protein: 154, carbs: 280, fats: 70 };
 const meals = ["Desayuno", "Almuerzo", "Merienda", "Cena"].map((name) => ({ name, description: name }));
@@ -36,6 +36,13 @@ describe("macros por comida", () => {
       { food: "Leche", amount: "200 ml" },
     ]);
     expect(mealIngredients(meals[0])).toEqual([]);
+  });
+
+  it("escribe la línea tranquila de cada comida y su lectura para VoiceOver", () => {
+    const m = { kcal: 640, protein: 40, carbs: 62, fats: 14 };
+    expect(mealMacroDetail(m)).toBe("P 40 g · H 62 g · G 14 g");
+    expect(mealMacroLabel(m)).toBe("640 kcal: 40 g de proteína, 62 g de hidratos y 14 g de grasas");
+    expect(mealMacroLabel({ ...m, kcal: 1234 })).toMatch(/^1\.234 kcal:/);
   });
 
   it("reparte enteros exactos", () => {

@@ -53,6 +53,17 @@ export const MUSCLE_HEAT = {
 } as const;
 
 /**
+ * Mapa muscular de las historias para compartir: solo el dorado de la marca, como `MuscleBodyFigure`
+ * en la app (3 series o más, dorado; menos, dorado al 45 %; sin trabajar, la silueta gris).
+ */
+export const SHARE_MUSCLE = {
+  none: "#1E1E22",
+  strong: BRAND_GOLD,
+  light: "rgba(216, 178, 94, 0.45)",
+  glow: "rgba(216, 178, 94, 0.7)",
+} as const;
+
+/**
  * Colores de las actividades del calendario. Son datos del usuario (cada tipo de
  * actividad conserva su color al exportar el calendario), no interfaz.
  */

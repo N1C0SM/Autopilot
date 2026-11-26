@@ -1,84 +1,63 @@
 import SwiftUI
 
 /// Imagen del scan para compartir (historia 9:16, 360 × 640 a ×3 = 1080 × 1920), espejo de
-/// `drawScanStory` en la web (ScanShareCard.tsx) y con la firma del entreno (`WorkoutShareCard`):
-/// la fecha arriba, «Mi análisis físico», la nota de físico en Big Shoulders, el foco en dorado,
-/// la frase del diagnóstico, tres cifras y el AP con autopilotplan.com al pie. Nunca lleva tus fotos.
+/// `drawScanStory` en la web (ScanShareCard.tsx) con la rejilla y la firma de `ShareStory` (las del
+/// entreno): arriba la nota de físico en Big Shoulders dentro de su anillo dorado; debajo la fecha,
+/// «Mi análisis físico», el foco en dorado, la frase del diagnóstico, tres cifras y el AP con
+/// autopilotplan.com al pie. Nunca lleva tus fotos.
 struct ScanShareCardView: View {
     let result: ScanResult
     var date = Date()
 
-    private let secondary = Color(red: 0.659, green: 0.659, blue: 0.682)
-    private let ink = Color(red: 0.961, green: 0.961, blue: 0.969)
+    /// Primera línea de la frase del diagnóstico (`HEADLINE_Y` en la web: 40 px, hasta tres líneas de 56).
+    private static let headlineY: CGFloat = 1090 / ShareStory.scale
 
     var body: some View {
-        ZStack(alignment: .top) {
-            Color.black
-            RadialGradient(colors: [Palette.gold.opacity(0.14), .clear], center: UnitPoint(x: 0.5, y: 0.052), startRadius: 0, endRadius: 217)
-            VStack(spacing: 0) {
-                Text(ScanFormat.shareDate(date))
-                    .font(.inter(size: 13, weight: .medium)).foregroundStyle(secondary)
-                    .padding(.top, 36)
-                VStack(spacing: 4) {
-                    Text(ScanFormat.shareTitle)
-                        .font(.inter(size: 28, weight: .heavy)).foregroundStyle(.white)
-                        .lineLimit(1).minimumScaleFactor(0.5)
-                    Text(ScanFormat.shareSubtitle)
-                        .font(.inter(size: 15, weight: .medium)).foregroundStyle(secondary)
-                        .lineLimit(1).minimumScaleFactor(0.7)
-                }
-                .padding(.top, 96)
-                Text(ScanFormat.shareHero)
-                    .font(.inter(size: 11.5, weight: .semibold)).foregroundStyle(secondary)
-                    .padding(.top, 52)
-                // La nota y su «/10» siempre en una línea.
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text(ScanFormat.score(result.physique)).font(.figure(size: 80)).foregroundStyle(.white)
-                    if result.physique != nil {
-                        Text("/10").font(.inter(size: 21.6, weight: .semibold)).foregroundStyle(secondary)
-                    }
-                }
-                .lineLimit(1).minimumScaleFactor(0.5)
-                if let focus = ScanFormat.shareFocus(result) {
-                    Text("\(ScanFormat.shareFocus) · \(focus)")
-                        .font(.inter(size: 11.5, weight: .semibold)).foregroundStyle(Palette.gold)
-                        .lineLimit(1).minimumScaleFactor(0.65).truncationMode(.tail)
-                        .padding(.horizontal, 12).frame(height: 23)
-                        .background(Palette.gold.opacity(0.14), in: Capsule())
-                        .padding(.top, 8)
-                }
-                if let headline = ScanFormat.shareHeadline(result) {
-                    Text(headline)
-                        .font(.inter(size: 14, weight: .medium)).foregroundStyle(ink)
-                        .multilineTextAlignment(.center).lineLimit(3).lineSpacing(2.5)
-                        .padding(.top, 24)
-                }
-                Spacer(minLength: 0)
-                let stats = ScanFormat.shareStats(result)
-                if !stats.isEmpty {
-                    HStack(spacing: 0) {
-                        ForEach(Array(stats.enumerated()), id: \.offset) { index, stat in
-                            if index > 0 { Rectangle().fill(.white.opacity(0.12)).frame(width: 0.7, height: 43) }
-                            VStack(spacing: 4) {
-                                Text(stat.1).font(.figure(size: 32))
-                                    .foregroundStyle(index == 0 ? Palette.gold : .white)
-                                    .lineLimit(1).minimumScaleFactor(0.5)
-                                Text(stat.0).font(.inter(size: 13, weight: .medium)).foregroundStyle(secondary)
-                                    .lineLimit(1).minimumScaleFactor(0.8)
-                            }
-                            .frame(maxWidth: .infinity)
-                        }
-                    }
-                }
-                BrandMark(size: 24)
-                    .padding(.top, 24)
-                Text("autopilotplan.com")
-                    .font(.inter(size: 13, weight: .medium)).foregroundStyle(secondary)
-                    .padding(.top, 10).padding(.bottom, 34)
+        ZStack(alignment: .topLeading) {
+            ShareStoryBackdrop()
+            scoreRing
+            ShareStoryLine(text: ScanFormat.shareDate(date), y: ShareStory.eyebrow, size: 36 / ShareStory.scale, weight: .medium, color: ShareStory.secondary)
+            ShareStoryLine(text: ScanFormat.shareTitle, y: ShareStory.title, size: 76 / ShareStory.scale, weight: .heavy)
+            ShareStoryLine(text: ScanFormat.shareSubtitle, y: ShareStory.subtitle, size: 38 / ShareStory.scale, weight: .medium, color: ShareStory.secondary)
+            if let focus = ScanFormat.shareFocus(result) {
+                ShareStoryCapsule(label: "\(ScanFormat.shareFocus) · \(focus)", y: ShareStory.heroLabel)
             }
-            .padding(.horizontal, 25)
+            if let headline = ScanFormat.shareHeadline(result) {
+                // Hasta tres líneas centradas; la primera, centrada en `headlineY`.
+                Text(headline)
+                    .font(ShareStory.font(40 / ShareStory.scale, .medium)).foregroundStyle(ShareStory.body)
+                    .multilineTextAlignment(.center).lineLimit(3).truncationMode(.tail)
+                    .lineSpacing((56 - 40 * 1.21) / ShareStory.scale)
+                    .frame(width: ShareStory.width - ShareStory.side * 2)
+                    .offset(x: ShareStory.side, y: Self.headlineY - 28 / ShareStory.scale)
+            }
+            ShareStoryStats(stats: ScanFormat.shareStats(result).map { (value: $0.1, label: $0.0) })
+            ShareStorySignature()
         }
-        .frame(width: 360, height: 640)
+        .frame(width: ShareStory.width, height: ShareStory.height)
         .environment(\.colorScheme, .dark)
+        .environment(\.dynamicTypeSize, .large)
+    }
+
+    /// La nota de físico sobre 10 en su anillo: dorado hasta la nota, pista blanca tenue el resto.
+    private var scoreRing: some View {
+        let diameter = ShareStory.ringSize - ShareStory.ringStroke
+        let fraction = result.physique.map { max(0, min(1, $0 / 10)) } ?? 0
+        return ZStack {
+            Circle().stroke(.white.opacity(0.1), lineWidth: ShareStory.ringStroke)
+                .frame(width: diameter, height: diameter)
+                .position(x: ShareStory.width / 2, y: ShareStory.ringCenter)
+            Circle().trim(from: 0, to: fraction)
+                .stroke(Palette.gold, style: StrokeStyle(lineWidth: ShareStory.ringStroke, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+                .frame(width: diameter, height: diameter)
+                .position(x: ShareStory.width / 2, y: ShareStory.ringCenter)
+            ShareStoryLine(text: ScanFormat.shareHero, y: ShareStory.ringCenter - 110 / ShareStory.scale,
+                           size: 32 / ShareStory.scale, weight: .semibold, color: ShareStory.secondary)
+            // La nota y su «/10» siempre en una línea.
+            ShareStoryFigure(value: ScanFormat.score(result.physique), unit: result.physique != nil ? "/10" : "",
+                             baseline: ShareStory.ringCenter + 62 / ShareStory.scale, size: 170 / ShareStory.scale)
+        }
+        .frame(width: ShareStory.width, height: ShareStory.height)
     }
 }

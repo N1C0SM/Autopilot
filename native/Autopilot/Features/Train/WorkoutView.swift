@@ -105,6 +105,8 @@ struct WorkoutView: View {
             discardOpen = false
             workout.skipRest()
             workout.discard()
+            // La Live Activity desaparece al momento (no queda nada que seguir).
+            WorkoutActivityController.shared.discard()
             onClose(false)
         } onCancel: { discardOpen = false }
     }
@@ -170,6 +172,9 @@ struct WorkoutView: View {
         }
         .screenBackground()
         .task {
+            // El entreno en la pantalla de bloqueo y en la isla dinámica (solo iPhone): empieza o se
+            // retoma con la sesión y sigue cada serie, ejercicio, descanso y pausa.
+            WorkoutActivityController.shared.track(workout, title: sessionTitle)
             // Entreno que empieza: todas sus fotos (miniatura y grande) y los dos primeros clips, por
             // detrás; primero con lo que guarda el plan y, en cuanto llega, con lo de la biblioteca.
             // Como `workoutMedia` en la web. Y, con Instruments, el tiempo hasta su primera foto.
@@ -194,6 +199,8 @@ struct WorkoutView: View {
         .sheet(isPresented: $summaryOpen, onDismiss: handleSummaryDismiss) { summarySheet }
         .sheet(isPresented: $addingExercise) { addingExerciseChoice }
         .onChange(of: scenePhase) { _, phase in handleScenePhase(phase) }
+        // Al salir sin terminar, la Live Activity sigue (la sesión queda guardada y el tiempo corre solo).
+        .onDisappear { WorkoutActivityController.shared.stopTracking() }
         .onReceive(NotificationCenter.default.publisher(for: .finishWorkout), perform: handleFinishWorkout)
         .onReceive(NotificationCenter.default.publisher(for: .skipRest), perform: handleSkipRest)
         .onReceive(NotificationCenter.default.publisher(for: .restPlus), perform: handleRestPlus)
@@ -540,6 +547,8 @@ struct WorkoutView: View {
         Task {
             savedRpe = value
             if await workout.finish(userId: userId, rpe: value) {
+                // «Entreno completado» con el tiempo quieto en la pantalla de bloqueo, unos minutos.
+                WorkoutActivityController.shared.finish(workout)
                 pendingSummary = true
                 rpeOpen = false
             }
@@ -1837,7 +1846,18 @@ struct WorkoutSummaryView: View {
                     }
             }
         }
-        .task(id: page) { shareURL = renderStory() }
+        // La historia de la página visible, al momento (con la foto real si ya está en caché, que es
+        // lo normal: el entreno la precarga) y, si la foto llega después, rehecha con ella. Así
+        // «Compartir» nunca espera a la red, como antes.
+        .task(id: page) {
+            let source = sharePhotoURL()
+            let cached = source.flatMap { ImageCache.shared.cached($0, maxSide: MediaSizing.hero) }
+            shareURL = renderStory(photo: cached)
+            guard cached == nil, currentPage != .muscles, let source,
+                  let photo = await ImageCache.shared.load(source, maxSide: MediaSizing.hero),
+                  !Task.isCancelled else { return }
+            shareURL = renderStory(photo: photo)
+        }
     }
 
     // MARK: Páginas
@@ -2112,14 +2132,27 @@ struct WorkoutSummaryView: View {
         .padding(.bottom, 20)
     }
 
+    /// Foto real para la historia: la del primer ejercicio hecho (sin cambiar) que tenga foto, a
+    /// 1000 px (`MediaSizing.hero`). Igual que `sharePhoto` en la web (WorkoutTracker.tsx).
+    private func sharePhotoURL() -> URL? {
+        let loops = ExerciseLoops.shared
+        for ex in workout.exercises where workout.swaps[ex.name] == nil {
+            guard (workout.draft.logs[ex.name] ?? []).contains(where: { $0.done && $0.isWarmup != true }),
+                  let url = (loops.images[ex.name] ?? ex.image_url).flatMap(URL.init(string:)) else { continue }
+            return url
+        }
+        return nil
+    }
+
     /// Historia de 1080 × 1920 con la misma composición que `WorkoutStoryShare` en la web.
     @MainActor
-    private func renderStory() -> URL? {
+    private func renderStory(photo: PlatformImage?) -> URL? {
         let card = WorkoutShareCard(
             variant: currentPage == .muscles ? .musculos : .resumen,
             title: workout.draft.day.title, date: dateLabel, volumeKg: volume, sets: workout.doneSets,
             exercises: completedExercises, records: workout.records, muscles: muscles, muscleCounts: muscleCounts,
-            previousVolumeKg: previousVolume
+            previousVolumeKg: previousVolume, photo: photo,
+            durationSeconds: workout.finishedAt != nil ? workout.duration : nil
         )
         let renderer = ImageRenderer(content: card)
         renderer.scale = 3
@@ -2153,9 +2186,11 @@ private struct GoldIconLabelStyle: LabelStyle {
     }
 }
 
-/// Imagen para compartir el entreno (historia 9:16), espejo de `renderStory` en la web: fecha arriba,
-/// título y músculos, la cifra protagonista en Big Shoulders con su unidad, el logro (solo si sube),
-/// tres cifras y el AP pequeño al pie, sin el nombre de la marca.
+/// Historia del entreno para compartir (360 × 640 pt a ×3 = 1080 × 1920), igual que `drawWorkoutStory`
+/// en la web (WorkoutStoryShare.tsx) y con la rejilla de `ShareStory`: arriba la foto real de un
+/// ejercicio hecho fundida a negro (o, sin foto o en «Músculos», el mapa muscular en dorado); debajo
+/// la fecha, el nombre de la sesión y sus músculos, una sola cifra protagonista en Big Shoulders, el
+/// logro en dorado (solo si sube), dos o tres cifras de apoyo y el AP con autopilotplan.com al pie.
 struct WorkoutShareCard: View {
     enum Variant { case resumen, musculos }
     let variant: Variant
@@ -2168,8 +2203,10 @@ struct WorkoutShareCard: View {
     let muscles: [String]
     let muscleCounts: [String: Double]
     let previousVolumeKg: Double
-
-    private let secondary = Color(red: 0.659, green: 0.659, blue: 0.682)
+    /// Foto real de un ejercicio hecho (ya descargada: el render no espera a la red).
+    var photo: PlatformImage? = nil
+    /// Duración real (sin pausas), para la cifra de apoyo «Minutos».
+    var durationSeconds: TimeInterval? = nil
 
     /// Volumen de hoy, o las series si es peso corporal: nunca «0 kg».
     private var hero: (label: String, value: String, unit: String) {
@@ -2185,102 +2222,48 @@ struct WorkoutShareCard: View {
         return previousVolumeKg > 0 && gain > 0 ? "+\(NumberText.grouped(gain)) kg más que la última vez" : nil
     }
 
+    /// «Pecho, hombros y tríceps»: los tres con más series (`muscleLine` en la web).
     private var subtitle: String {
-        let top = muscles.prefix(3).enumerated().map { $0.offset == 0 ? $0.element : $0.element.lowercased() }
+        let sorted = muscles.sorted { (muscleCounts[$0] ?? 0) > (muscleCounts[$1] ?? 0) }
+        let top = sorted.prefix(3).enumerated().map { $0.offset == 0 ? $0.element : $0.element.lowercased() }
         guard let last = top.last else { return "Sesión completada" }
         return top.count > 1 ? "\(top.dropLast().joined(separator: ", ")) y \(last)" : last
     }
 
     var body: some View {
-        ZStack(alignment: .top) {
-            Color.black
-            RadialGradient(colors: [Palette.gold.opacity(0.14), .clear], center: UnitPoint(x: 0.5, y: 0.05), startRadius: 0, endRadius: 217)
-            VStack(spacing: 0) {
-                Text("Completado · \(date)")
-                    .font(.inter(size: 13, weight: .medium)).foregroundStyle(secondary)
-                    .padding(.top, 36)
-                if variant == .resumen { resumen } else { musculos }
-                Spacer(minLength: 0)
-                BrandMark(size: 24)
-                Text("autopilotplan.com")
-                    .font(.inter(size: 13, weight: .medium)).foregroundStyle(secondary)
-                    .padding(.top, 10).padding(.bottom, 34)
+        ZStack(alignment: .topLeading) {
+            ShareStoryBackdrop()
+            if variant == .resumen, let photo {
+                ShareStoryPhoto(image: photo)
+            } else {
+                figures
             }
-            .padding(.horizontal, 25)
+            ShareStoryLine(text: "Completado · \(date)", y: ShareStory.eyebrow, size: 36 / ShareStory.scale, weight: .medium, color: ShareStory.secondary)
+            ShareStoryLine(text: title.isEmpty ? "Sesión de hoy" : title, y: ShareStory.title, size: 76 / ShareStory.scale, weight: .heavy)
+            ShareStoryLine(text: subtitle, y: ShareStory.subtitle, size: 38 / ShareStory.scale, weight: .medium, color: ShareStory.secondary)
+            ShareStoryLine(text: hero.label, y: ShareStory.heroLabel, size: 32 / ShareStory.scale, weight: .semibold, color: ShareStory.secondary)
+            ShareStoryFigure(value: hero.value, unit: hero.unit, baseline: ShareStory.hero, size: ShareStory.heroSize)
+            if let highlight { ShareStoryCapsule(label: highlight, y: ShareStory.highlight) }
+            ShareStoryStats(stats: ShareStory.workoutStats(volumeKg: volumeKg, sets: sets, exercises: exercises,
+                                                           muscles: muscles.count, durationSeconds: durationSeconds))
+            ShareStorySignature()
         }
-        .frame(width: 360, height: 640)
+        .frame(width: ShareStory.width, height: ShareStory.height)
         .environment(\.colorScheme, .dark)
+        .environment(\.dynamicTypeSize, .large)
     }
 
-    private var titleBlock: some View {
-        VStack(spacing: 6) {
-            Text(title.isEmpty ? "Sesión de hoy" : title)
-                .font(.inter(size: 28, weight: .heavy)).foregroundStyle(.white)
-                .lineLimit(1).minimumScaleFactor(0.5)
-            Text(subtitle).font(.inter(size: 15, weight: .medium)).foregroundStyle(secondary).lineLimit(1)
-        }
-    }
-
-    private func bigFigure(size: CGFloat) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 6) {
-            Text(hero.value).font(.figure(size: size)).foregroundStyle(.white)
-            Text(hero.unit).font(.inter(size: size * 0.27, weight: .semibold)).foregroundStyle(secondary)
-        }
-        .lineLimit(1).minimumScaleFactor(0.4)
-    }
-
-    @ViewBuilder private var highlightCapsule: some View {
-        if let highlight {
-            Text(highlight)
-                .font(.inter(size: 11.5, weight: .semibold)).foregroundStyle(Palette.gold)
-                .lineLimit(1).minimumScaleFactor(0.6)
-                .padding(.horizontal, 12).frame(height: 23)
-                .background(Palette.gold.opacity(0.14), in: Capsule())
-        }
-    }
-
-    private var resumen: some View {
-        VStack(spacing: 0) {
-            titleBlock.padding(.top, 136)
-            Text(hero.label).font(.inter(size: 11.5, weight: .semibold)).foregroundStyle(secondary).padding(.top, 44)
-            bigFigure(size: 80)
-            highlightCapsule.padding(.top, 8)
-            HStack(spacing: 0) {
-                stat(NumberText.grouped(Double(sets)), "Series")
-                Rectangle().fill(.white.opacity(0.12)).frame(width: 0.7, height: 43)
-                stat("\(exercises)", "Ejercicios")
-                Rectangle().fill(.white.opacity(0.12)).frame(width: 0.7, height: 43)
-                stat("\(muscles.count)", "Músculos")
-            }
-            .padding(.top, 70)
-        }
-    }
-
-    private var musculos: some View {
+    /// Frente y espalda en dorado (3 series o más) y dorado tenue (menos), arriba y centrados.
+    private var figures: some View {
         let strong = muscles.filter { (muscleCounts[$0] ?? 0) >= 3 }
         let light = muscles.filter { (muscleCounts[$0] ?? 0) < 3 }
-        return VStack(spacing: 0) {
-            titleBlock.padding(.top, 46)
-            highlightCapsule.padding(.top, 12)
-            HStack(spacing: 20) {
-                MuscleBodyFigure(back: false, primary: strong, synergists: light)
-                MuscleBodyFigure(back: true, primary: strong, synergists: light)
-            }
-            .frame(height: 220)
-            .padding(.top, 20)
-            Text(hero.label).font(.inter(size: 11.5, weight: .semibold)).foregroundStyle(secondary).padding(.top, 24)
-            bigFigure(size: 63)
-            Text("\(sets) \(sets == 1 ? "serie" : "series") · \(exercises) \(exercises == 1 ? "ejercicio" : "ejercicios")")
-                .font(.inter(size: 11.5, weight: .medium)).foregroundStyle(secondary).padding(.top, 4)
+        return HStack(spacing: ShareStory.figureGap) {
+            MuscleBodyFigure(back: false, primary: strong, synergists: light)
+            MuscleBodyFigure(back: true, primary: strong, synergists: light)
         }
-    }
-
-    private func stat(_ value: String, _ label: String) -> some View {
-        VStack(spacing: 4) {
-            Text(value).font(.figure(size: 32)).foregroundStyle(.white).lineLimit(1).minimumScaleFactor(0.6)
-            Text(label).font(.inter(size: 13, weight: .medium)).foregroundStyle(secondary)
-        }
-        .frame(maxWidth: .infinity)
+        .frame(height: ShareStory.figureHeight)
+        .frame(width: ShareStory.width)
+        .offset(y: ShareStory.figureTop)
     }
 }
 

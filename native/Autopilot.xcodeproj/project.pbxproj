@@ -16,10 +16,12 @@
 		224764578170A5967D49426F /* AdminDrive.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1162F3D5C142878DA85F3630 /* AdminDrive.swift */; };
 		30C1A16D10C334C0D2EFB9D1 /* PlanEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F040E4F2B840DC88A30CD7D /* PlanEditorView.swift */; };
 		3538D36D10996732BE4FF0C5 /* Snapshots.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87BC260CE2642615E55007E6 /* Snapshots.swift */; };
+		37116F382532E41D775D8EA2 /* BrandShape.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06C99A7FC5EAA4F4AC3487A0 /* BrandShape.swift */; };
 		37AB3736DA2D27767EF5091A /* AdminPhysiques.swift in Sources */ = {isa = PBXBuildFile; fileRef = C67655E7437E327953D3487E /* AdminPhysiques.swift */; };
 		38108789AEF99008A7016FDA /* NutritionSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94FDE3BFE671B103E0039E96 /* NutritionSetupView.swift */; };
 		39012991BB9D556B10C68E0C /* AdminViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 215885F8A59B676130290EEB /* AdminViews.swift */; };
 		3CD2ECE76B612C811CF540BA /* Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9E053FD3BBE7DBA136AACF9 /* Session.swift */; };
+		3F2C6CDDECBA648B750DF998 /* InterVariable.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 523B49FFF874D33F1F331FA9 /* InterVariable.ttf */; };
 		40E128686442FD8358557317 /* brand-fallback.jpg in Resources */ = {isa = PBXBuildFile; fileRef = F78CB5E03275A5F00797F420 /* brand-fallback.jpg */; };
 		42B37E40810ED706D583D9A5 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2087F6E61B3A0D2AD7B75E7A /* LoginView.swift */; };
 		445258069304B4AF9A7AB111 /* ScanShareCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A89DEAE73DCF19644F3BDEC6 /* ScanShareCardView.swift */; };
@@ -33,19 +35,26 @@
 		509D6E210D8DC96844E661C5 /* Accounts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04DF82EEABE70C2CD7FA8478 /* Accounts.swift */; };
 		57465A2CCC8862B96537FE2C /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1837043D6026822C99B027E /* Components.swift */; };
 		57B02A075F88DC56F40180DC /* AdminProducts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 853847766E839A5A319D2EB4 /* AdminProducts.swift */; };
+		58F913A53178F62FC13FBDF8 /* BrandShape.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06C99A7FC5EAA4F4AC3487A0 /* BrandShape.swift */; };
 		5FDD42D966E843635893C724 /* InterFont.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EF43ECE1DCA7DF46622829D /* InterFont.swift */; };
+		603E3F4629B5E484D7AD806F /* WorkoutLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210880CF05E187AB0074848F /* WorkoutLiveActivity.swift */; };
 		642DC69615ED6F9C9C49CE51 /* ProgressScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 853B2DAC8254F0DD0241B738 /* ProgressScreen.swift */; };
 		6735C26A62352008CEB87B2C /* RoutinesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88D5A20CFD78754B444CC005 /* RoutinesView.swift */; };
 		6AF473D054AE230F2A3D39E0 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE889BC545E5693DEA12E35E /* OnboardingView.swift */; };
+		72882DD278A60BF5A51C53E4 /* BigShoulders-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 833844952D3321A1BE6A4ADD /* BigShoulders-Bold.ttf */; };
 		7407111E1A4E7EA1161EEB24 /* WhoIsTrainingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2B6432A97E06E936915D024 /* WhoIsTrainingView.swift */; };
+		773E58C74C8A9BD5A082F6BE /* WorkoutActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 503F322D105E3FD8A7A0700F /* WorkoutActivityAttributes.swift */; };
 		84D2950407D627971026844C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9FD92FC3A4FA899A9AF2A41F /* Assets.xcassets */; };
 		87E60DB75F6066D44856E541 /* ScanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4E7B8525054278D389D0B59 /* ScanView.swift */; };
+		89B5649AF0B7ED30510113B6 /* AutopilotWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 2A04724BF2FDC822C429933F /* AutopilotWidgets.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		8FE19892EC0CC43B5079CBC7 /* WorkoutActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 503F322D105E3FD8A7A0700F /* WorkoutActivityAttributes.swift */; };
 		9649678245C4FAEEB4E1A90C /* WorkoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DC0DEEDEC81345BD48108A7 /* WorkoutView.swift */; };
 		98563A606D28BC5688F28819 /* TrainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92E329249B146C8FEF5E45AF /* TrainView.swift */; };
 		9A0975F2340BFE3928FD9F8A /* Progression.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4D7A51FF897F39CC070F086 /* Progression.swift */; };
 		A372CB454C9ECF3F0162D9DF /* AdminSidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5F1077ED3EAA7387521BC6A /* AdminSidebarView.swift */; };
 		A3F7B49D3F50D6E4FB409B18 /* AdminLanding.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABDC5FBCB982DC18600B15B1 /* AdminLanding.swift */; };
 		A6E13AE092205191FF9B2177 /* ExerciseLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 668CF450ED8BDDB4165C8A45 /* ExerciseLibraryView.swift */; };
+		AF98EC58CB4CE5DC1EDE7703 /* ShareStory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 613DEA2ACD9C8611629363A1 /* ShareStory.swift */; };
 		B0AED86AD0879DB4DC404BA5 /* AdminExercises.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F83F6BD939EF251A757930A /* AdminExercises.swift */; };
 		B303B7824C6D835D37EB539F /* RoadmapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54840FD78B7470F1A4A687B3 /* RoadmapView.swift */; };
 		B3C0E827FE1DBF6EAA3E3554 /* AdminRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9CE1814A5ED5A9830CBCCFE /* AdminRules.swift */; };
@@ -53,6 +62,7 @@
 		C17254753A884901E29E432F /* HealthKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A57E68C8EAB6DFD893FAFDF5 /* HealthKitManager.swift */; };
 		C33EEF6918E30230C1551E46 /* AdminTrainers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AB2F8559DD0B658B4DA48C0 /* AdminTrainers.swift */; };
 		C38BFD538EEEA7E82ADCB392 /* Training.swift in Sources */ = {isa = PBXBuildFile; fileRef = C60F84451BD2C06501A2E80E /* Training.swift */; };
+		C994FAF8BDA532C7F07CE784 /* WorkoutActivityController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35AFC3AAC3DF08B43C7FD074 /* WorkoutActivityController.swift */; };
 		CDC65C8AAD8F8F7358F3D540 /* RoutineDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2B3C99B8B09F4962E9E5ADC /* RoutineDetailSheet.swift */; };
 		D6DA59DC5917CE17B6D42958 /* InterVariable.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 523B49FFF874D33F1F331FA9 /* InterVariable.ttf */; };
 		DDEB07BF5162DA692EE1F4F6 /* MuscleMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 736261749DDF4F29B5E99A13 /* MuscleMapView.swift */; };
@@ -68,8 +78,33 @@
 		FE5FFFEBFADDA7C63208E610 /* AutopilotApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74B2604636425A7A76330A3C /* AutopilotApp.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		A89CFF5334AEEF8E2CC85E8D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 64C75C56B04DDD4B729CC4AD /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 63E1BD54C5AEDCB28EEFBCEF;
+			remoteInfo = AutopilotWidgets;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		66536A4DD5CE9F892A1E6A13 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				89B5649AF0B7ED30510113B6 /* AutopilotWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		04DF82EEABE70C2CD7FA8478 /* Accounts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Accounts.swift; sourceTree = "<group>"; };
+		06C99A7FC5EAA4F4AC3487A0 /* BrandShape.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrandShape.swift; sourceTree = "<group>"; };
 		1162F3D5C142878DA85F3630 /* AdminDrive.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminDrive.swift; sourceTree = "<group>"; };
 		13BFD641222C0CC2169DE1E7 /* AdminEmails.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminEmails.swift; sourceTree = "<group>"; };
 		172F9A007BDD4D9E6CB124BB /* AccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountView.swift; sourceTree = "<group>"; };
@@ -79,19 +114,24 @@
 		1E2CBD0297E5F8BCF017644D /* Autopilot.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Autopilot.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1FF57E97B337D0FEDEB3F183 /* AdminPlanVideos.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminPlanVideos.swift; sourceTree = "<group>"; };
 		2087F6E61B3A0D2AD7B75E7A /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		210880CF05E187AB0074848F /* WorkoutLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutLiveActivity.swift; sourceTree = "<group>"; };
 		215885F8A59B676130290EEB /* AdminViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminViews.swift; sourceTree = "<group>"; };
+		2A04724BF2FDC822C429933F /* AutopilotWidgets.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = AutopilotWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		2ABEA2EE0F4882F9B05D3C21 /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
 		2F83F6BD939EF251A757930A /* AdminExercises.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminExercises.swift; sourceTree = "<group>"; };
+		35AFC3AAC3DF08B43C7FD074 /* WorkoutActivityController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutActivityController.swift; sourceTree = "<group>"; };
 		38E2F87813CF2F5DC1B3F82A /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		39B292B7E4F06B3F6E1B0BBA /* AdminCatalogImport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminCatalogImport.swift; sourceTree = "<group>"; };
 		3DC0DEEDEC81345BD48108A7 /* WorkoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutView.swift; sourceTree = "<group>"; };
 		3EF43ECE1DCA7DF46622829D /* InterFont.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterFont.swift; sourceTree = "<group>"; };
 		4F040E4F2B840DC88A30CD7D /* PlanEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanEditorView.swift; sourceTree = "<group>"; };
 		5020C97FAD7768B09C004CD2 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		503F322D105E3FD8A7A0700F /* WorkoutActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutActivityAttributes.swift; sourceTree = "<group>"; };
 		523B49FFF874D33F1F331FA9 /* InterVariable.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = InterVariable.ttf; sourceTree = "<group>"; };
 		54840FD78B7470F1A4A687B3 /* RoadmapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoadmapView.swift; sourceTree = "<group>"; };
 		5D06C6CE81D75452F06C8802 /* Backend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Backend.swift; sourceTree = "<group>"; };
 		5E66848A41F7CB3939916BFD /* ExerciseLoopView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseLoopView.swift; sourceTree = "<group>"; };
+		613DEA2ACD9C8611629363A1 /* ShareStory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareStory.swift; sourceTree = "<group>"; };
 		668CF450ED8BDDB4165C8A45 /* ExerciseLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseLibraryView.swift; sourceTree = "<group>"; };
 		66ACDDCD9DCD34A77D715501 /* AdminDashboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminDashboard.swift; sourceTree = "<group>"; };
 		6AB2F8559DD0B658B4DA48C0 /* AdminTrainers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminTrainers.swift; sourceTree = "<group>"; };
@@ -124,6 +164,7 @@
 		D2B6432A97E06E936915D024 /* WhoIsTrainingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhoIsTrainingView.swift; sourceTree = "<group>"; };
 		D9CE1814A5ED5A9830CBCCFE /* AdminRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminRules.swift; sourceTree = "<group>"; };
 		D9E053FD3BBE7DBA136AACF9 /* Session.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Session.swift; sourceTree = "<group>"; };
+		DFE368812ED8ECEB4184FB48 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		EBDF230DE9FE12D555FC3505 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		EE889BC545E5693DEA12E35E /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		F4D7A51FF897F39CC070F086 /* Progression.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Progression.swift; sourceTree = "<group>"; };
@@ -172,6 +213,7 @@
 			isa = PBXGroup;
 			children = (
 				83E35664504DEECF72134186 /* Autopilot */,
+				45C1CF241869863DE0453D07 /* AutopilotWidgets */,
 				CD72E4CD24376B8573E995E9 /* Shared */,
 				4986BCFBE6B202E5AC6C5C51 /* Products */,
 			);
@@ -236,6 +278,16 @@
 			path = Account;
 			sourceTree = "<group>";
 		};
+		45C1CF241869863DE0453D07 /* AutopilotWidgets */ = {
+			isa = PBXGroup;
+			children = (
+				DFE368812ED8ECEB4184FB48 /* Info.plist */,
+				503F322D105E3FD8A7A0700F /* WorkoutActivityAttributes.swift */,
+				210880CF05E187AB0074848F /* WorkoutLiveActivity.swift */,
+			);
+			path = AutopilotWidgets;
+			sourceTree = "<group>";
+		};
 		4802D7F652902DAC8FA9C294 /* Train */ = {
 			isa = PBXGroup;
 			children = (
@@ -244,6 +296,7 @@
 				4F040E4F2B840DC88A30CD7D /* PlanEditorView.swift */,
 				88D5A20CFD78754B444CC005 /* RoutinesView.swift */,
 				92E329249B146C8FEF5E45AF /* TrainView.swift */,
+				35AFC3AAC3DF08B43C7FD074 /* WorkoutActivityController.swift */,
 				3DC0DEEDEC81345BD48108A7 /* WorkoutView.swift */,
 			);
 			path = Train;
@@ -253,6 +306,7 @@
 			isa = PBXGroup;
 			children = (
 				1E2CBD0297E5F8BCF017644D /* Autopilot.app */,
+				2A04724BF2FDC822C429933F /* AutopilotWidgets.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -325,6 +379,7 @@
 		CD72E4CD24376B8573E995E9 /* Shared */ = {
 			isa = PBXGroup;
 			children = (
+				06C99A7FC5EAA4F4AC3487A0 /* BrandShape.swift */,
 				3EF43ECE1DCA7DF46622829D /* InterFont.swift */,
 				1A8404261AB147D4E88C6CEA /* Fonts */,
 			);
@@ -348,6 +403,7 @@
 				5E66848A41F7CB3939916BFD /* ExerciseLoopView.swift */,
 				18372D90ACEF551F883409B3 /* ExerciseMotion.swift */,
 				736261749DDF4F29B5E99A13 /* MuscleMapView.swift */,
+				613DEA2ACD9C8611629363A1 /* ShareStory.swift */,
 				922D1242F803ABF9EC7B42D3 /* Theme.swift */,
 			);
 			path = Design;
@@ -363,10 +419,12 @@
 				EDD31AE9C2DA323093D8DE80 /* Sources */,
 				859A7186C695B7A234448BF4 /* Resources */,
 				E534E259182646DC1F88C193 /* Frameworks */,
+				66536A4DD5CE9F892A1E6A13 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				C4485430BD730D92CC59B75D /* PBXTargetDependency */,
 			);
 			name = Autopilot;
 			packageProductDependencies = (
@@ -375,6 +433,24 @@
 			productName = Autopilot;
 			productReference = 1E2CBD0297E5F8BCF017644D /* Autopilot.app */;
 			productType = "com.apple.product-type.application";
+		};
+		63E1BD54C5AEDCB28EEFBCEF /* AutopilotWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1C20722977077BB6A397185D /* Build configuration list for PBXNativeTarget "AutopilotWidgets" */;
+			buildPhases = (
+				962EB1CF22E1C1C55A82C233 /* Sources */,
+				C862FB51E9F1443F009CE5D3 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = AutopilotWidgets;
+			packageProductDependencies = (
+			);
+			productName = AutopilotWidgets;
+			productReference = 2A04724BF2FDC822C429933F /* AutopilotWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -386,6 +462,10 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					0C3CD606707F5E6F3B4507DC = {
+						DevelopmentTeam = 3245AGM98R;
+						ProvisioningStyle = Automatic;
+					};
+					63E1BD54C5AEDCB28EEFBCEF = {
 						DevelopmentTeam = 3245AGM98R;
 						ProvisioningStyle = Automatic;
 					};
@@ -409,6 +489,7 @@
 			projectRoot = "";
 			targets = (
 				0C3CD606707F5E6F3B4507DC /* Autopilot */,
+				63E1BD54C5AEDCB28EEFBCEF /* AutopilotWidgets */,
 			);
 		};
 /* End PBXProject section */
@@ -426,9 +507,28 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C862FB51E9F1443F009CE5D3 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				72882DD278A60BF5A51C53E4 /* BigShoulders-Bold.ttf in Resources */,
+				3F2C6CDDECBA648B750DF998 /* InterVariable.ttf in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		962EB1CF22E1C1C55A82C233 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				58F913A53178F62FC13FBDF8 /* BrandShape.swift in Sources */,
+				773E58C74C8A9BD5A082F6BE /* WorkoutActivityAttributes.swift in Sources */,
+				603E3F4629B5E484D7AD806F /* WorkoutLiveActivity.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		EDD31AE9C2DA323093D8DE80 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -456,6 +556,7 @@
 				FE5FFFEBFADDA7C63208E610 /* AutopilotApp.swift in Sources */,
 				E3C379D882AD856AB8A82CA5 /* Backend.swift in Sources */,
 				DF8BBEBB678636895C8BB363 /* BrandPhotos.swift in Sources */,
+				37116F382532E41D775D8EA2 /* BrandShape.swift in Sources */,
 				57465A2CCC8862B96537FE2C /* Components.swift in Sources */,
 				A6E13AE092205191FF9B2177 /* ExerciseLibraryView.swift in Sources */,
 				48D7E44B5AE2F9741C789C48 /* ExerciseLoopView.swift in Sources */,
@@ -480,18 +581,58 @@
 				445258069304B4AF9A7AB111 /* ScanShareCardView.swift in Sources */,
 				87E60DB75F6066D44856E541 /* ScanView.swift in Sources */,
 				3CD2ECE76B612C811CF540BA /* Session.swift in Sources */,
+				AF98EC58CB4CE5DC1EDE7703 /* ShareStory.swift in Sources */,
 				3538D36D10996732BE4FF0C5 /* Snapshots.swift in Sources */,
 				45C59E19DE5DBDD2398090D4 /* Theme.swift in Sources */,
 				98563A606D28BC5688F28819 /* TrainView.swift in Sources */,
 				C38BFD538EEEA7E82ADCB392 /* Training.swift in Sources */,
 				7407111E1A4E7EA1161EEB24 /* WhoIsTrainingView.swift in Sources */,
+				8FE19892EC0CC43B5079CBC7 /* WorkoutActivityAttributes.swift in Sources */,
+				C994FAF8BDA532C7F07CE784 /* WorkoutActivityController.swift in Sources */,
 				9649678245C4FAEEB4E1A90C /* WorkoutView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		C4485430BD730D92CC59B75D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			platformFilter = ios;
+			target = 63E1BD54C5AEDCB28EEFBCEF /* AutopilotWidgets */;
+			targetProxy = A89CFF5334AEEF8E2CC85E8D /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		2F17AA86337C7DED95D13E9E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = AutopilotWidgets/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = app.lovable.aa0029da00154c05a2b503e61df0f87c.widgets;
+				PRODUCT_NAME = AutopilotWidgets;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		69E4DAF9CBD9C5B7EC90C88C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = AutopilotWidgets/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = app.lovable.aa0029da00154c05a2b503e61df0f87c.widgets;
+				PRODUCT_NAME = AutopilotWidgets;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
 		786C7F07EA265D14F0F28EC1 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -503,6 +644,8 @@
 				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES;
 				"ENABLE_OUTGOING_NETWORK_CONNECTIONS[sdk=macosx*]" = YES;
 				"ENABLE_USER_SELECTED_FILES[sdk=macosx*]" = readwrite;
+				"INFOPLIST_KEY_NSSupportsLiveActivities[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_NSSupportsLiveActivities[sdk=iphonesimulator*]" = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -593,7 +736,6 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = auto;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -665,7 +807,6 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = auto;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
@@ -683,6 +824,8 @@
 				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES;
 				"ENABLE_OUTGOING_NETWORK_CONNECTIONS[sdk=macosx*]" = YES;
 				"ENABLE_USER_SELECTED_FILES[sdk=macosx*]" = readwrite;
+				"INFOPLIST_KEY_NSSupportsLiveActivities[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_NSSupportsLiveActivities[sdk=iphonesimulator*]" = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -704,6 +847,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		1C20722977077BB6A397185D /* Build configuration list for PBXNativeTarget "AutopilotWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				69E4DAF9CBD9C5B7EC90C88C /* Debug */,
+				2F17AA86337C7DED95D13E9E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		7723E56CC96E8CD965482C5C /* Build configuration list for PBXProject "Autopilot" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

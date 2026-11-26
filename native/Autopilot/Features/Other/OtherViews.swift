@@ -1,8 +1,10 @@
 import SwiftUI
 import Supabase
 
-/// Nutrición, calcada de `MealsList.tsx`: resumen con anillo de comidas hechas y objetivos, y
-/// «Comidas de hoy» marcables con la foto propia de cada plato (o «Sin comidas todavía»).
+/// Nutrición minimalista, calcada de `MealsList.tsx` y `BasicNutrition.tsx`: el anillo de calorías
+/// con las barras de macros como única protagonista y «Comidas de hoy» como una lista limpia (foto,
+/// nombre, plato y kcal con macros en una línea tranquila, y el check). «Regenerar comidas» y
+/// «Actualizar mis datos» van en «···»; en Gratis, lo de Plus en una sola fila tranquila.
 struct NutritionView: View {
     @EnvironmentObject private var session: SessionModel
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -42,19 +44,12 @@ struct NutritionView: View {
     /// Plus sin preferencias de comidas: se le preguntan antes de prepararlas (como la web).
     @State private var needsSetup = false
     struct Macros: Codable { let calories: Double?; let protein: Double?; let carbs: Double?; let fats: Double? }
-    /// Ingredientes con su peso (para pesarlos) y gramos de cada macro si la IA los dio; sin
-    /// macros, la comida cuenta como una parte igual del día.
+    /// Ingredientes con su peso y gramos de cada macro si la IA los dio; sin macros, la comida
+    /// cuenta como una parte igual del día.
     struct Meal: Codable, Hashable {
         let name: String?; let description: String?
         var ingredients: [Ingredient]? = nil
         var protein: Double? = nil; var carbs: Double? = nil; var fats: Double? = nil
-        /// Ingredientes válidos con su cantidad lista para pintar («80 g», «200 ml»), como `mealIngredients`.
-        var weighed: [(food: String, amount: String)] {
-            (ingredients ?? []).compactMap { i in
-                guard let food = i.food?.trimmingCharacters(in: .whitespaces), !food.isEmpty, let g = i.grams, g > 0 else { return nil }
-                return (food, "\(Int(g.rounded())) \(i.unit == "ml" ? "ml" : "g")")
-            }
-        }
     }
     /// Todo opcional: un ingrediente incompleto se descarta sin romper la carga del plan.
     struct Ingredient: Codable, Hashable { let food: String?; let grams: Double?; var unit: String? = nil }
@@ -81,15 +76,7 @@ struct NutritionView: View {
                 if failed {
                     retryCard
                 } else if loaded {
-                    // Subtítulo de la maqueta, bajo el título grande (en Mac la barra lleva su pista).
-                    #if os(iOS)
-                    if singleColumn {
-                        Text("Controla tu alimentación y alcanza tu objetivo.")
-                            .font(.apSubhead).foregroundStyle(Palette.muted)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.bottom, -16)
-                    }
-                    #endif
+                    // Sin subtítulo: el título grande y el anillo bastan (como Hoy y Entrenar).
                     content
                 } else {
                     // Skeleton en vez de una pantalla vacía mientras llega la red.
@@ -122,50 +109,52 @@ struct NutritionView: View {
         }
     }
 
-    /// Lo que Plus añade a Nutrición (`NUTRITION_PLUS_ROWS` de la web): solo funciones reales.
-    struct PlusRow: Hashable { let symbol: String; let title: String; let detail: String }
-    static let plusRows = [
-        PlusRow(symbol: "fork.knife", title: "Comidas de cada día", detail: "Ajustadas a tus macros y a lo que te gusta."),
-        PlusRow(symbol: "chart.bar", title: "Seguimiento de macros", detail: "Marca cada comida y se suman sus macros."),
-        PlusRow(symbol: "arrow.triangle.2.circlepath", title: "Menú a tu gusto", detail: "Regenera tus comidas cuando quieras."),
-    ]
+    /// Lo que Plus añade a Nutrición, en una sola fila (`NUTRITION_PLUS_ROW` de la web): solo funciones reales.
+    static let plusRowTitle = "Comidas de cada día"
+    static let plusRowDetail = "Ajustadas a tus macros y a lo que te gusta."
+    /// Aviso de los objetivos estimados, bajo el anillo (`NUTRITION_ESTIMATE_NOTE` de la web).
+    static let estimateNote = "Estimación según tus datos y objetivo. No sustituye una valoración nutricional individual."
+    /// Error de red (`NUTRITION_LOAD_ERROR` de la web).
+    static let loadErrorTitle = "No hemos podido cargar tu plan"
+    static let loadErrorMessage = "Revisa tu conexión y vuelve a intentarlo. Tus datos siguen guardados."
+    /// Textos de Plus sin comidas y de las filas (`MEALS_COPY` de la web).
+    static let preparingTitle = "Preparando tus comidas…"
+    static let preparingDetail = "Con tus macros, tus gustos y lo que no comes."
+    static let readyTitle = "Tus comidas de hoy"
+    static let readyDetail = "Te las preparamos con tus macros y lo que te gusta."
+    static let readyAction = "Preparar mis comidas"
+    static let regenerateFailed = "Tus comidas siguen aquí. Prueba a regenerarlas en unos minutos."
+    static let weightTitle = "Añade tu peso"
+    static let weightDetail = "Con tu peso calculamos tus macros. Hasta entonces, las comidas son orientativas."
 
-    /// «Más en Plus» (maqueta de ChatGPT): filas con candado; sin enlace a pagos externos en la app.
-    private var plusSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+    /// Ajustes, para revisar peso y objetivo (como `onOpenProfile` / `onEdit` en la web).
+    private func openSettings() {
+        Haptics.tap()
+        NotificationCenter.default.post(name: .goToSection, object: AppSection.settings)
+    }
+
+    /// Nutrición en Gratis: lo de Plus en una sola fila tranquila bajo el anillo (icono en su losa,
+    /// título, una línea y la insignia Plus), como `NutritionPlusSection` en la web. En la app no
+    /// enlaza a pagos externos (normas de la App Store).
+    private var plusRow: some View {
+        HStack(spacing: 14) {
+            Image(systemName: "fork.knife").font(.system(size: 15, weight: .medium)).foregroundStyle(Palette.muted)
+                .frame(width: 32, height: 32)
+                .background(Palette.secondary, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
-                Text("Registra tus comidas").font(.apTitle2)
-                Text("Disponible en Plus.").font(.apSubhead).foregroundStyle(Palette.muted)
+                Text(Self.plusRowTitle).font(.apHeadline)
+                Text(Self.plusRowDetail).font(.apFootnote).foregroundStyle(Palette.muted)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            // Un solo grupo sin bordes (menos tarjetas, como la maqueta): filas separadas por una línea fina.
-            VStack(spacing: 0) {
-                ForEach(Array(Self.plusRows.enumerated()), id: \.offset) { i, row in
-                    HStack(spacing: 14) {
-                        Image(systemName: row.symbol).font(.system(size: 16)).foregroundStyle(Palette.muted)
-                            .frame(width: 36, height: 36)
-                            .background(Palette.secondary, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
-                            .accessibilityHidden(true)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(row.title).font(.apHeadline)
-                            Text(row.detail).font(.apFootnote).foregroundStyle(Palette.muted)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        Image(systemName: "lock.fill").font(.system(size: 13, weight: .semibold)).foregroundStyle(Palette.gold)
-                            .accessibilityLabel("Incluido en Plus")
-                    }
-                    .padding(.horizontal, 16).padding(.vertical, 12)
-                    .frame(maxWidth: .infinity, minHeight: 72, alignment: .leading)
-                    .overlay(alignment: .bottom) {
-                        if i < Self.plusRows.count - 1 {
-                            Rectangle().fill(Palette.separator).frame(height: 0.5).padding(.leading, 66)
-                        }
-                    }
-                }
-            }
-            .surface()
-            Text("Incluido en Plus").font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.gold)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            PlusBadge()
         }
+        .padding(.horizontal, 16).padding(.vertical, 12)
+        .frame(maxWidth: .infinity, minHeight: 72, alignment: .leading)
+        .surface()
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(Self.plusRowTitle), incluido en Plus. \(Self.plusRowDetail)")
     }
 
     @ViewBuilder private var content: some View {
@@ -179,25 +168,24 @@ struct NutritionView: View {
             VStack(alignment: .leading, spacing: 32) {
                 if let id = session.userId { MacrosWeightCard(userId: id) { await load() } }
                 if hasAccess == false {
-                    // Sin Plus (la RLS no deja leer el plan): «Más en Plus» debajo, como la web.
-                    plusSection
+                    // Sin Plus (la RLS no deja leer el plan): la fila de Plus debajo, como la web.
+                    plusRow
                 }
             }
         } else {
-            // Una sola columna, como la web (también en Mac): el resumen arriba y las comidas debajo.
+            // Una sola columna, como la web (también en Mac): el anillo arriba y las comidas debajo.
             VStack(alignment: .leading, spacing: 32) {
-                VStack(alignment: .leading, spacing: 32) {
-                    // Sin comidas, la tarjeta de calorías de la maqueta; con comidas, el resumen con su anillo.
-                    // Anillo de calorías y barras de macros (maqueta de ChatGPT); con comidas suman lo marcado.
-                    if showTargets {
-                        nutritionHero(kcal: kcal, p: p, c: c, f: f, eaten: hasMeals ? eatenToday : nil,
-                                      note: hasMeals ? "Al marcar una comida se suman sus macros del plan. Es una estimación: no se pesa lo que comes."
-                                        : "Estimación inicial según tus datos y objetivo. No sustituye una valoración nutricional individual.")
-                    } else if hasMeals {
-                        mealsSummary
+                if showTargets {
+                    VStack(alignment: .leading, spacing: 12) {
+                        // Anillo de calorías y barras de macros, la única protagonista; con comidas suman lo marcado.
+                        nutritionHero(kcal: kcal, p: p, c: c, f: f, eaten: hasMeals ? eatenToday : nil)
+                        // Sin comidas que marcar, los objetivos son una estimación: el aviso va bajo el anillo.
+                        if !hasMeals { estimateNoteView }
                     }
-                    if hasMeals && macros == nil { macroNotice }
+                } else if hasMeals {
+                    mealsSummary
                 }
+                if hasMeals && macros == nil { macroNotice }
                 if hasMeals {
                     mealsSection
                 } else {
@@ -208,52 +196,93 @@ struct NutritionView: View {
                         }
                     } else if hasAccess == false {
                         // Como `NutritionPlusSection` de la web; en iOS sin enlace a pagos externos.
-                        plusSection
+                        plusRow
                     } else if generating {
-                        EmptyCard(photo: Self.defaultDish, title: "Preparando tus comidas…",
-                                  message: "Autopilot está creando tus comidas con tus gustos y lo que no comes.")
+                        MealsStateCard(title: Self.preparingTitle, message: Self.preparingDetail, loading: true)
                     } else if hasAccess == nil || preparing {
                         // Aún no se sabe si hay Plus: nada de «preparando» ni foto de plato (eso es de Plus).
                         EmptyView()
                     } else {
-                        VStack(alignment: .leading, spacing: 12) {
-                            EmptyCard(photo: Self.defaultDish, title: "Sin comidas todavía",
-                                      message: "No hemos podido prepararlas. Revisa tus datos en Ajustes o vuelve a intentarlo.")
-                            if generateFailed {
-                                Button("Volver a intentarlo") { Task { await generateMeals() } }.buttonStyle(.pillSecondary)
-                            }
-                        }
+                        MealsStateCard(title: Self.readyTitle, message: Self.readyDetail, loading: false,
+                                       action: (Self.readyAction, { Haptics.tap(); Task { await generateMeals() } }))
                     }
                 }
             }
         }
     }
 
-    /// Aviso de macros sin personalizar: las comidas de abajo siguen siendo orientativas.
-    private var macroNotice: some View {
-        HStack(alignment: .top, spacing: 16) {
-            Image(systemName: "person").font(.inter(size: 24)).foregroundStyle(Palette.gold).frame(width: 40)
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Tus macros aún no están personalizados").font(.apHeadline)
-                Text("Añade tu peso actual para calcularlos. Mientras tanto, las comidas de abajo son orientativas.").font(.apSubhead).foregroundStyle(Palette.muted)
+    /// Pie de los objetivos estimados (sin comidas): el aviso en una línea tranquila y «Actualizar mis
+    /// datos» como acción de texto, como `NutritionEstimateNote` en la web.
+    private var estimateNoteView: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(Self.estimateNote).font(.apFootnote).foregroundStyle(Palette.muted)
+                .fixedSize(horizontal: false, vertical: true)
+            Button { openSettings() } label: {
+                Text("Actualizar mis datos").font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.foreground)
+                    .frame(minHeight: 44).contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
+            .accessibilityHint("Abre Ajustes para revisar tu peso y tu objetivo")
         }
+        .padding(.horizontal, 4)
     }
 
-    /// «Comidas de hoy»: cabecera con la acción de regenerar (como «Editar» de la maqueta) y filas
-    /// marcables con su foto, sus kcal y sus macros.
+    /// Comidas sin macros personalizados: aviso tranquilo con «Añadir peso» (como `QuietNotice` en la web).
+    private var macroNotice: some View {
+        HStack(alignment: .top, spacing: 14) {
+            Image(systemName: "person").font(.system(size: 15, weight: .medium)).foregroundStyle(Palette.muted)
+                .frame(width: 32, height: 32)
+                .background(Palette.secondary, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(Self.weightTitle).font(.apHeadline)
+                Text(Self.weightDetail).font(.apFootnote).foregroundStyle(Palette.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button("Añadir peso") { openSettings() }
+                    .buttonStyle(PillButtonStyle(kind: .secondary, height: 44))
+                    .fixedSize()
+                    .padding(.top, 10)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .surface()
+    }
+
+    /// «Comidas de hoy»: título en Title 3, «···» con «Regenerar comidas» y «Actualizar mis datos», y
+    /// las filas en un grupo sin borde (foto, nombre, plato, kcal con macros y el check).
     private var mealsSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .firstTextBaseline) {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .center) {
                 Text("Comidas de hoy").font(.apTitle3)
                     .accessibilityAddTraits(.isHeader)
                 Spacer(minLength: 8)
-                Button(generating ? "Regenerando…" : "Regenerar") { Haptics.tap(); confirmingNew = true }
-                    .font(.apSubhead.weight(.semibold))
-                    .foregroundStyle(generating ? Palette.muted : Palette.gold)
+                if generating {
+                    HStack(spacing: 8) {
+                        BrandLoader(size: 16)
+                        Text("Regenerando…").font(.apFootnote).foregroundStyle(Palette.muted)
+                    }
                     .frame(minHeight: 44)
-                    .disabled(generating)
-                    .accessibilityHint("Cambia las comidas de hoy por otras nuevas")
+                    .accessibilityElement(children: .combine)
+                } else {
+                    Menu {
+                        Button { Haptics.selection(); confirmingNew = true } label: {
+                            Label("Regenerar comidas", systemImage: "arrow.triangle.2.circlepath")
+                        }
+                        Button { openSettings() } label: {
+                            Label("Actualizar mis datos", systemImage: "person")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis").font(.system(size: 17, weight: .semibold)).foregroundStyle(Palette.muted)
+                            .frame(width: 44, height: 44).contentShape(Circle())
+                    }
+                    #if os(macOS)
+                    .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+                    #endif
+                    .padding(.trailing, -10)
+                    .accessibilityLabel("Más opciones de las comidas")
+                }
             }
             VStack(spacing: 0) {
                 let split = perMeal
@@ -263,13 +292,10 @@ struct NutritionView: View {
             }
             .surface()
             if generateFailed && !generating {
-                HStack(spacing: 10) {
-                    Image(systemName: "exclamationmark.triangle").foregroundStyle(Palette.muted)
-                    Text("No se pudieron regenerar las comidas. Inténtalo de nuevo en unos minutos.")
-                        .font(.apFootnote).foregroundStyle(Palette.muted)
-                }
-                .padding(.top, 2)
-                .accessibilityElement(children: .combine)
+                Text(Self.regenerateFailed)
+                    .font(.apFootnote).foregroundStyle(Palette.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 4)
             }
         }
         .alert("¿Regenerar tus comidas?", isPresented: $confirmingNew) {
@@ -280,51 +306,41 @@ struct NutritionView: View {
         }
     }
 
-    /// Error de red: un vacío aquí parecería «no tienes plan», así que se explica y se reintenta.
+    /// Error de red: un vacío aquí parecería «no tienes plan», así que se dice con calma y se reintenta.
     private var retryCard: some View {
-        Card(padding: 20) {
-            // Icono alineado con la primera línea del título (no con el centro del bloque).
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Image(systemName: "wifi.exclamationmark").font(.inter(size: 20)).foregroundStyle(Palette.gold)
-                Text("No hemos podido cargar tu plan").font(.apTitle3)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            Text("Revisa tu conexión y vuelve a intentarlo. Tus macros y comidas siguen guardados.")
-                .font(.apSubhead).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
+        VStack(spacing: 0) {
+            EmptyStateView(symbol: "wifi.exclamationmark", title: Self.loadErrorTitle, message: Self.loadErrorMessage)
             Button {
                 // Mientras se repite la petición vuelve el skeleton.
+                Haptics.tap()
                 failed = false
                 Task { await load() }
             } label: { Text("Reintentar") }
-                .buttonStyle(.pill)
-                .padding(.top, 6)
+                .buttonStyle(.pillSecondary)
+                .frame(maxWidth: 320)
                 .accessibilityHint("Vuelve a pedir tu plan de comidas")
         }
-        // En iPad/Mac el error no se estira a todo el ancho: se queda como una tarjeta de columna.
-        .frame(maxWidth: 560)
+        .frame(maxWidth: .infinity)
     }
 
-    /// Cabecera de la maqueta de ChatGPT (`NutritionHero.tsx`): el anillo de calorías manda y a su
-    /// lado las tres barras de macros. Con comidas marcables suman lo marcado; sin ellas, el anillo
-    /// reparte la energía del día entre proteína, hidratos y grasas.
-    private func nutritionHero(kcal: Double, p: Double, c: Double, f: Double, eaten: MealMacros?, note: String) -> some View {
+    /// Cabecera de Nutrición (`NutritionHero.tsx`), la única protagonista: el anillo de calorías y a su
+    /// lado las tres barras de macros, en una tarjeta de 28 sin textos de relleno. Con comidas
+    /// marcables suman lo marcado; sin ellas, el anillo reparte la energía del día entre proteína,
+    /// hidratos y grasas. Con letra muy grande, el anillo arriba y las barras debajo.
+    private func nutritionHero(kcal: Double, p: Double, c: Double, f: Double, eaten: MealMacros?) -> some View {
         let energy = p * 4 + c * 4 + f * 9
         let share = { (e: Double) in energy > 0 ? e / energy : 0 }
         let layout = dynamicTypeSize.isAccessibilitySize
             ? AnyLayout(VStackLayout(alignment: .leading, spacing: 20))
             : AnyLayout(HStackLayout(alignment: .center, spacing: 20))
-        return VStack(alignment: .leading, spacing: 16) {
-            layout {
-                if let eaten { kcalRing(target: kcal, eaten: eaten.kcal) } else { macroRing(kcal: kcal, p: p, c: c, f: f) }
-                VStack(alignment: .leading, spacing: 14) {
-                    heroMacro("Proteína", grams: p, eaten: eaten?.protein, share: share(p * 4), shade: Self.splitShades[0])
-                    heroMacro("Hidratos", grams: c, eaten: eaten?.carbs, share: share(c * 4), shade: Self.splitShades[1])
-                    heroMacro("Grasas", grams: f, eaten: eaten?.fats, share: share(f * 9), shade: Self.splitShades[2])
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
+        return layout {
+            if let eaten { kcalRing(target: kcal, eaten: eaten.kcal) } else { macroRing(kcal: kcal, p: p, c: c, f: f) }
+            VStack(alignment: .leading, spacing: 14) {
+                heroMacro("Proteína", grams: p, eaten: eaten?.protein, share: share(p * 4), shade: Self.splitShades[0])
+                heroMacro("Hidratos", grams: c, eaten: eaten?.carbs, share: share(c * 4), shade: Self.splitShades[1])
+                heroMacro("Grasas", grams: f, eaten: eaten?.fats, share: share(f * 9), shade: Self.splitShades[2])
             }
-            Text(note).font(.apFootnote).foregroundStyle(Palette.muted)
-                .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -348,7 +364,7 @@ struct NutritionView: View {
     /// Cifra del centro del anillo y su pie.
     private func ringCenter(value: Int, caption: String) -> some View {
         VStack(spacing: 2) {
-            Text(NumberText.integer(value)).font(.figure(size: 32)).lineLimit(1).minimumScaleFactor(0.6)
+            Text(NumberText.grouped(Double(value))).font(.figure(size: 32)).lineLimit(1).minimumScaleFactor(0.6)
                 .contentTransition(.numericText())
                 .animation(reduceMotion ? nil : .snappy, value: value)
             Text(caption).font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(1).minimumScaleFactor(0.7)
@@ -364,7 +380,7 @@ struct NutritionView: View {
             Circle().trim(from: 0, to: ratio)
                 .stroke(Palette.gold, style: StrokeStyle(lineWidth: 12, lineCap: .round)).rotationEffect(.degrees(-90))
                 .animation(reduceMotion ? nil : .snappy, value: ratio)
-            ringCenter(value: eaten, caption: "de \(NumberText.integer(Int(target.rounded()))) kcal")
+            ringCenter(value: eaten, caption: "de \(NumberText.grouped(target)) kcal")
         }
         .frame(width: 136, height: 136)
         .accessibilityElement(children: .ignore)
@@ -397,8 +413,8 @@ struct NutritionView: View {
     private func heroMacro(_ label: String, grams: Double, eaten: Int?, share: Double, shade: Color) -> some View {
         let target = Int(grams.rounded())
         let fill = eaten.map { target > 0 ? Double($0) / Double(target) : 0 } ?? share
-        let figure = eaten.map { Text(NumberText.integer($0)) + Text("/\(NumberText.integer(target)) g").foregroundColor(Palette.muted) }
-            ?? Text("\(NumberText.integer(target)) g")
+        let figure = eaten.map { Text(NumberText.grouped(Double($0))) + Text("/\(NumberText.grouped(Double(target))) g").foregroundColor(Palette.muted) }
+            ?? Text("\(NumberText.grouped(Double(target))) g")
         return VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 HStack(spacing: 6) {
@@ -432,14 +448,9 @@ struct NutritionView: View {
             : AnyLayout(HStackLayout(alignment: .center, spacing: 20))
         return layout {
             mealsRing(doneCount: doneCount)
-            VStack(alignment: .leading, spacing: 6) {
-                Text(remaining == 0 ? "Día completo" : "Te \(remaining == 1 ? "queda" : "quedan") \(remaining) \(remaining == 1 ? "comida" : "comidas")")
-                    .font(.apHeadline).fixedSize(horizontal: false, vertical: true)
-                Text(remaining == 0 ? "Has marcado todas las comidas de hoy." : "Márcalas según las vayas haciendo.")
-                    .font(.apSubhead).foregroundStyle(Palette.muted)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            Text(remaining == 0 ? "Día completo" : "Te \(remaining == 1 ? "queda" : "quedan") \(remaining) \(remaining == 1 ? "comida" : "comidas")")
+                .font(.apHeadline).fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -467,49 +478,46 @@ struct NutritionView: View {
         .accessibilityElement(children: .ignore).accessibilityLabel("\(doneCount) de \(meals.count) comidas hechas hoy")
     }
 
+    /// Línea tranquila de cada comida, detrás de sus kcal: «P 40 g · H 62 g · G 14 g» (`mealMacroDetail` en la web).
+    static func macroDetail(_ m: MealMacros) -> String {
+        "P \(m.protein) g · H \(m.carbs) g · G \(m.fats) g"
+    }
+
+    /// Lo mismo para VoiceOver (`mealMacroLabel` en la web).
+    static func macroLabel(_ m: MealMacros) -> String {
+        "\(NumberText.grouped(Double(m.kcal))) kcal: \(m.protein) g de proteína, \(m.carbs) g de hidratos y \(m.fats) g de grasas"
+    }
+
+    /// Fila de «Comidas de hoy», como la web: la foto propia del plato (48, radio 14) si la hay, el
+    /// nombre, el plato en dos líneas como mucho, las kcal con sus macros en una línea tranquila y el
+    /// check a la derecha. El separador nace donde empieza el texto.
     private func mealRow(_ meal: Meal, own: MealMacros?, last: Bool) -> some View {
         let name = meal.name ?? "Comida"
         let isDone = done.contains(name)
         let photoURL = photos[Self.dish(meal)]
         return Button { toggle(name) } label: {
-            HStack(spacing: 14) {
-                // Foto del plato a la izquierda (maqueta): la fila se reconoce de un vistazo.
+            HStack(spacing: 12) {
                 if let url = photoURL {
-                    MealPhoto(url: url).frame(width: 60, height: 60)
+                    MealPhoto(url: url).frame(width: 48, height: 48)
                         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                         .opacity(isDone ? 0.5 : 1)
                         .accessibilityHidden(true)
                 }
-                VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(name).font(.apHeadline).foregroundStyle(isDone ? Palette.muted : Palette.foreground)
                         .fixedSize(horizontal: false, vertical: true)
-                    if let own {
-                        Text("\(NumberText.integer(own.kcal)) kcal")
-                            .font(.apSubhead.weight(.semibold).monospacedDigit())
-                            .foregroundStyle(isDone ? Palette.muted : Palette.gold)
-                    }
-                    if let d = meal.description {
-                        Text(d).font(.apFootnote).foregroundStyle(Palette.muted.opacity(isDone ? 0.6 : 1)).lineLimit(2)
-                    }
-                    let weighed = meal.weighed
-                    if !weighed.isEmpty {
-                        // Peso de cada ingrediente para pesarlo en báscula.
-                        VStack(alignment: .leading, spacing: 2) {
-                            ForEach(Array(weighed.enumerated()), id: \.offset) { _, item in
-                                HStack(alignment: .firstTextBaseline, spacing: 12) {
-                                    Text(item.food).fixedSize(horizontal: false, vertical: true)
-                                    Spacer(minLength: 0)
-                                    Text(item.amount).monospacedDigit()
-                                }
-                            }
-                        }
-                        .font(.apFootnote).foregroundStyle(isDone ? Palette.muted.opacity(0.6) : Palette.foreground.opacity(0.8))
-                        .padding(.top, 4)
+                    if let d = meal.description, !d.isEmpty {
+                        Text(d).font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                     if let own {
-                        Text("P \(own.protein) g · C \(own.carbs) g · G \(own.fats) g")
-                            .font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted.opacity(isDone ? 0.6 : 1))
-                            .padding(.top, 1)
+                        (Text("\(NumberText.grouped(Double(own.kcal))) kcal").fontWeight(.semibold)
+                            .foregroundColor(isDone ? Palette.muted : Palette.foreground)
+                         + Text(" · \(Self.macroDetail(own))"))
+                            .font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.top, 2)
+                            .accessibilityLabel(Self.macroLabel(own))
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -519,20 +527,21 @@ struct NutritionView: View {
                         Image("lu-check").renderingMode(.template).resizable().frame(width: 14, height: 14)
                             .foregroundStyle(Palette.background)
                     } else {
-                        Circle().strokeBorder(Palette.muted.opacity(0.45), lineWidth: 1.5)
+                        Circle().strokeBorder(Palette.muted.opacity(0.5), lineWidth: 1.5)
                     }
                 }
                 .frame(width: 26, height: 26)
                 .accessibilityHidden(true)
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .frame(minHeight: 68)
+            .padding(.leading, 16).padding(.trailing, 16)
+            .padding(.vertical, 12)
+            .frame(minHeight: 72)
             .contentShape(Rectangle())
             .overlay(alignment: .bottom) {
                 if !last {
-                    Rectangle().fill(Palette.foreground.opacity(0.06)).frame(height: 1)
-                        .padding(.leading, photoURL == nil ? 14 : 88)
+                    // 16 + 48 (foto) + 12: el separador arranca donde el texto.
+                    Rectangle().fill(Palette.separator).frame(height: 0.5)
+                        .padding(.leading, photoURL == nil ? 16 : 76)
                 }
             }
         }
@@ -811,27 +820,27 @@ private struct NutritionSkeleton: View {
         .surface(Radius.hero)
     }
 
-    /// Fantasma de «Comidas de hoy»: tres filas con check, textos y foto.
+    /// Fantasma de «Comidas de hoy»: el título y tres filas con foto, textos y check (como las reales).
     private var mealsSkeleton: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 12) {
             // Mismo eje que las tarjetas (sin sangría).
-            bar(width: 110, height: 11)
+            bar(width: 132, height: 16)
             VStack(spacing: 0) {
                 ForEach(0..<3, id: \.self) { i in
                     HStack(spacing: 12) {
-                        Circle().fill(Palette.secondary).frame(width: 24, height: 24)
+                        RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Palette.secondary).frame(width: 48, height: 48)
                         VStack(alignment: .leading, spacing: 6) {
-                            bar(height: 12)
-                            bar(width: 140, height: 10)
+                            bar(width: 110, height: 12)
+                            bar(height: 10)
+                            bar(width: 160, height: 10)
                         }
-                        Spacer(minLength: 0)
-                        RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Palette.secondary).frame(width: 56, height: 56)
+                        Circle().strokeBorder(Palette.secondary, lineWidth: 1.5).frame(width: 26, height: 26)
                     }
                     .padding(.horizontal, 16)
                     .frame(minHeight: 72)
                     .overlay(alignment: .bottom) {
-                        // 16 + 24 (check) + 12: el separador arranca donde el texto.
-                        if i < 2 { Rectangle().fill(Palette.separator).frame(height: 0.5).padding(.leading, 52).padding(.trailing, 16) }
+                        // 16 + 48 (foto) + 12: el separador arranca donde el texto.
+                        if i < 2 { Rectangle().fill(Palette.separator).frame(height: 0.5).padding(.leading, 76) }
                     }
                 }
             }
@@ -876,13 +885,18 @@ private struct MacrosWeightCard: View {
         Double(weight.replacingOccurrences(of: ",", with: ".")).flatMap { $0 > 30 && $0 <= 300 ? $0 : nil }
     }
 
+    /// Mismos textos que `MACROS_WEIGHT_COPY` en la web.
+    static let title = "Calcula tus macros"
+    static let message = "Con tu peso calculamos tus calorías y tus macros del día. Gratis."
+
+    /// Tarjeta de 28 sin borde: título, una línea, el campo y la acción dorada (sin icono suelto).
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Image(systemName: "flame.fill").font(.system(size: 28, weight: .semibold)).foregroundStyle(Palette.gold).accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 4) {
-                Text("Calcula tus macros").font(.apTitle2).accessibilityAddTraits(.isHeader)
-                Text("Dinos tu peso y te damos tus calorías y tu proteína del día. Gratis.")
+                Text(Self.title).font(.apTitle2).accessibilityAddTraits(.isHeader)
+                Text(Self.message)
                     .font(.apSubhead).foregroundStyle(Palette.muted)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             PillField(label: "Tu peso en kg", text: $weight).decimalKeyboard()
             Button { Task { await save() } } label: {
@@ -921,87 +935,60 @@ private struct MacrosWeightCard: View {
     }
 }
 
-/// Tarjeta vacía de la web (EmptyState card), con foto opcional arriba.
-private struct EmptyCard: View {
-    let photo: String?
+/// Plus sin comidas todavía (EmptyState con foto de la web): la foto del plato de referencia fundida
+/// a la tarjeta y el texto abajo. Mientras se preparan, el AP latiendo; si no salieron, la acción
+/// para prepararlas. Sin adornos ni iconos sueltos.
+private struct MealsStateCard: View {
     let title: String
     let message: String
+    let loading: Bool
+    var action: (label: String, run: () -> Void)? = nil
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var url: URL?
 
-    init(photo: String?, title: String, message: String) {
-        self.photo = photo
+    init(title: String, message: String, loading: Bool, action: (label: String, run: () -> Void)? = nil) {
         self.title = title
         self.message = message
+        self.loading = loading
+        self.action = action
         // Caché sincrónica: si el plato ya tiene portada, se pinta en el primer frame.
-        _url = State(initialValue: photo.flatMap { AiCover.cachedMeal($0) ?? AiCover.mealFallback })
+        _url = State(initialValue: AiCover.cachedMeal(NutritionView.defaultDish) ?? AiCover.mealFallback)
     }
 
-    /// EmptyState de la web: con foto, tarjeta alta con el texto abajo; sin foto, icono en su cuadrado tintado.
     var body: some View {
-        Group {
-            if let url {
-                VStack(alignment: .leading, spacing: 0) {
-                    Image("lu-clock").renderingMode(.template).resizable().frame(width: 24, height: 24).foregroundStyle(Palette.gold)
-                    Text(title).font(.inter(size: 28, weight: .bold)).tracking(-0.7).padding(.top, 8)
-                    Text(message).font(.apSubhead).foregroundStyle(Palette.muted).padding(.top, 4)
-                }
-                .padding(20)
-                .frame(maxWidth: .infinity, minHeight: 288, alignment: .bottomLeading)
-                .background {
-                    // La foto se ajusta al hueco de la tarjeta (en Mac la tarjeta es ancha y, sin
-                    // este marco, la imagen no se dibujaba). El plato va en el propio paquete:
-                    // se ve al instante y, si la foto de la IA no llega, nunca queda en blanco.
-                    Color.clear
-                        .overlay { EmptyCardPhoto(url: url) }
-                        .clipped()
-                        .opacity(0.9)
-                        .overlay { LinearGradient(colors: [Palette.card, Palette.card.opacity(0.7), .clear], startPoint: .bottom, endPoint: .top) }
-                }
-                .background(Palette.card)
-                .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-                .transition(.opacity)
-            } else {
-                VStack(alignment: .leading, spacing: 0) {
-                    Spacer(minLength: 144)
-                    Text(title).font(.inter(size: 28, weight: .bold)).tracking(-0.7).padding(.top, 8)
-                    Text(message).font(.apSubhead).foregroundStyle(Palette.muted).padding(.top, 4)
-                }
-                .padding(20)
-                .frame(maxWidth: .infinity, minHeight: 288, alignment: .bottomLeading)
-                .background {
-                    GeometryReader { geo in
-                        ZStack(alignment: .topLeading) {
-                            Circle().fill(RadialGradient(colors: [Palette.gold.opacity(0.25), .clear], center: .center, startRadius: 0, endRadius: 144))
-                                .frame(width: 288, height: 288).offset(x: geo.size.width - 288 + 64, y: -80)
-                            ZStack {
-                                Circle().stroke(Palette.gold.opacity(0.2), lineWidth: 1.5).frame(width: 112, height: 112)
-                                Circle().fill(Palette.gold.opacity(0.12)).frame(width: 112, height: 112)
-                                Circle().stroke(Palette.gold.opacity(0.3), lineWidth: 1.5).frame(width: 80, height: 80)
-                                Circle().fill(Palette.gold.opacity(0.18)).frame(width: 80, height: 80)
-                                Circle().stroke(Palette.gold.opacity(0.5), lineWidth: 2).frame(width: 40, height: 40)
-                            }
-                            .shadow(color: Palette.gold.opacity(0.35), radius: 30)
-                            .offset(x: geo.size.width - 112 - 32, y: 32)
-                            ForEach([(0.22, 0.28), (0.38, 0.62), (0.16, 0.76), (0.50, 0.36), (0.30, 0.48)], id: \.0) { t, l in
-                                Circle().fill(Palette.gold.opacity(0.4)).frame(width: 4, height: 4)
-                                    .offset(x: l * geo.size.width, y: t * geo.size.height)
-                            }
-                        }
-                    }
-                    .accessibilityHidden(true)
-                }
-                .background(Palette.card)
-                .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        VStack(alignment: .leading, spacing: 0) {
+            Text(title).font(.inter(size: 26, weight: .semibold)).tracking(-0.5)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityAddTraits(.isHeader)
+            Text(message).font(.apSubhead).foregroundStyle(Palette.muted).padding(.top, 4)
+                .fixedSize(horizontal: false, vertical: true)
+            if loading {
+                BrandLoader(size: 28).padding(.top, 20)
+            } else if let action {
+                Button(action.label, action: action.run)
+                    .buttonStyle(.pillSecondary)
+                    .padding(.top, 20)
             }
         }
-        .task(id: photo) {
-            guard let photo else { return }
-            // Si cambia el plato se resuelve ya su foto (caché o respaldo), nunca la anterior.
+        .padding(20)
+        .frame(maxWidth: .infinity, minHeight: 288, alignment: .bottomLeading)
+        .background {
+            // La foto se ajusta al hueco de la tarjeta (en Mac la tarjeta es ancha y, sin este marco,
+            // la imagen no se dibujaba). El plato va en el propio paquete: se ve al instante y, si la
+            // foto de la IA no llega, nunca queda en blanco.
+            Color.clear
+                .overlay { EmptyCardPhoto(url: url) }
+                .clipped()
+                .opacity(0.9)
+                .overlay { LinearGradient(colors: [Palette.card, Palette.card.opacity(0.7), .clear], startPoint: .bottom, endPoint: .top) }
+        }
+        .background(Palette.card)
+        .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
+        .task {
             // Solo se usa una foto que de verdad descarga; si no, la del plato de referencia.
-            let cached = AiCover.cachedMeal(photo)
+            let cached = AiCover.cachedMeal(NutritionView.defaultDish)
             if let cached, await ImageCache.shared.load(cached) != nil { url = cached } else { url = AiCover.mealFallback }
-            let resolved = await AiCover.meal(photo)
+            let resolved = await AiCover.meal(NutritionView.defaultDish)
             guard !Task.isCancelled, let resolved, resolved != url, await ImageCache.shared.load(resolved) != nil else { return }
             withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { url = resolved }
         }

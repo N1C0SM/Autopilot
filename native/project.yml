@@ -35,8 +35,14 @@ targets:
     sources:
       - Autopilot
       - Shared
+      # Atributos de la Live Activity del entreno: los mismos en la app y en la extensión (solo iOS, con #if os(iOS)).
+      - path: AutopilotWidgets/WorkoutActivityAttributes.swift
     dependencies:
       - package: Supabase
+      # Live Activity del entreno (pantalla de bloqueo e isla dinámica): solo iPhone, el Mac no la lleva.
+      - target: AutopilotWidgets
+        embed: true
+        platformFilter: iOS
     settings:
       base:
         # Mismos identificadores que las apps que mostraban la web: la nativa las sustituye.
@@ -52,6 +58,29 @@ targets:
         ENABLE_USER_SELECTED_FILES[sdk=macosx*]: readwrite
         CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]: Autopilot/App.entitlements
         CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]: Autopilot/App.entitlements
+        # El entreno en la pantalla de bloqueo y en la isla dinámica (ActivityKit, sin push).
+        INFOPLIST_KEY_NSSupportsLiveActivities[sdk=iphoneos*]: YES
+        INFOPLIST_KEY_NSSupportsLiveActivities[sdk=iphonesimulator*]: YES
+
+  # Extensión de widgets del iPhone: pinta la Live Activity del entreno (WorkoutLiveActivity.swift)
+  # con el AP (Shared/BrandShape.swift) y las fuentes de la app (Inter y Big Shoulders).
+  AutopilotWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: AutopilotWidgets
+      - path: Shared/BrandShape.swift
+      - path: Shared/Fonts
+        buildPhase: resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.lovable.aa0029da00154c05a2b503e61df0f87c.widgets
+        PRODUCT_NAME: AutopilotWidgets
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: AutopilotWidgets/Info.plist
+        TARGETED_DEVICE_FAMILY: "1"
+        SKIP_INSTALL: YES
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks"
 
 # Esquema compartido generado por xcodegen: sin él, xcodebuild no encuentra «Autopilot»
 # en una copia recién clonada (Xcode solo crea esquemas al abrir el proyecto a mano).

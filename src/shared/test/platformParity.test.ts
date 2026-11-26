@@ -71,21 +71,40 @@ describe("paridad web ↔ apps nativas", () => {
     expect(app).toMatch(/group\.addTask \{ \(dish, await AiCover\.ownMeal\(dish\)\) \}/);
   });
 
-  it("Nutrición web: comidas compactas y los cálculos de macros intactos en ambas plataformas", () => {
+  it("Nutrición: «Comidas de hoy» como una lista limpia igual en la web y en la app, y los cálculos de macros intactos", () => {
     const web = read("src/app/components/dashboard/MealsList.tsx");
     const app = read("native/Autopilot/Features/Other/OtherViews.swift");
+    const lib = read("src/shared/lib/mealMacros.ts");
+    // Sin textos de relleno bajo el anillo: la explicación de marcar comidas ya no se pinta.
     const note = "Al marcar una comida se suman sus macros del plan. Es una estimación: no se pesa lo que comes.";
-    expect(web).toContain(note);
-    expect(app).toContain(note);
-    const webRow = web.slice(web.indexOf("<div className=\"space-y-3\">"), web.indexOf("Regenerar comidas"));
+    expect(web).not.toContain(note);
+    expect(app).not.toContain(note);
+    const webRow = web.slice(web.indexOf("{meals.map((meal, i) => {"), web.indexOf("MEALS_COPY.regenerateFailed}</p>"));
     const appRow = app.slice(app.indexOf("private func mealRow"), app.indexOf("private func toggle", app.indexOf("private func mealRow")));
-    expect(webRow).toMatch(/min-h-\[60px\]/);
-    expect(webRow).toMatch(/line-clamp-1/);
-    expect(webRow).not.toContain("mealIngredients");
-    expect(webRow).not.toMatch(/own\.(protein|carbs|fats)/);
-    // Esta petición solo compacta la web: la fila nativa mantiene su diseño actual.
-    expect(appRow).toContain("let weighed = meal.weighed");
-    expect(appRow).toMatch(/own\.protein/);
+    // Foto de 48 con radio 14 a la izquierda, nombre, plato en dos líneas, kcal y macros en una línea tranquila y el check.
+    expect(webRow).toContain("min-h-[72px]");
+    expect(webRow).toContain("line-clamp-2");
+    expect(webRow).toContain("{fmt(own.kcal)} kcal");
+    expect(webRow).toContain("mealMacroDetail(own)");
+    expect(webRow).toContain("mealMacroLabel(own)");
+    expect(web).toContain("h-12 w-12 shrink-0 overflow-hidden rounded-[14px]");
+    expect(appRow).toContain("MealPhoto(url: url).frame(width: 48, height: 48)");
+    expect(appRow).toContain(".lineLimit(2)");
+    expect(appRow).toContain("Self.macroDetail(own)");
+    expect(appRow).toContain(".accessibilityLabel(Self.macroLabel(own))");
+    expect(appRow).toContain(".frame(minHeight: 72)");
+    // La línea de macros es la misma: «P 40 g · H 62 g · G 14 g» y su lectura para VoiceOver.
+    expect(lib).toContain("`P ${m.protein} g · H ${m.carbs} g · G ${m.fats} g`");
+    expect(app).toContain('"P \\(m.protein) g · H \\(m.carbs) g · G \\(m.fats) g"');
+    expect(lib).toContain("g de proteína, ${m.carbs} g de hidratos y ${m.fats} g de grasas");
+    expect(app).toContain("g de proteína, \\(m.carbs) g de hidratos y \\(m.fats) g de grasas");
+    // Cifras con punto de miles siempre («2.366 kcal»), como el resto de la app.
+    expect(read("src/app/components/dashboard/NutritionHero.tsx")).toContain("const fmt = groupedInt;");
+    expect(web).toContain("const fmt = groupedInt;");
+    expect(appRow).toContain('Text("\\(NumberText.grouped(Double(own.kcal))) kcal")');
+    expect(app).toContain('caption: "de \\(NumberText.grouped(target)) kcal"');
+    // Sin ingredientes pesados en la fila (ni en la web ni en la app).
+    for (const row of [webRow, appRow]) expect(row).not.toMatch(/mealIngredients|weighed/);
     // El reparto exacto vive en mealMacros.ts y la app lo replica.
     expect(web).toMatch(/mealMacros\(meals, \{ kcal, protein: p, carbs: c, fats: f \}\)/);
     expect(app).toMatch(/static func splitExact\(_ total: Double, _ weights: \[Double\]\) -> \[Int\]/);
@@ -397,32 +416,111 @@ describe("paridad web ↔ apps nativas", () => {
     expect(quizApp).toContain("selectMark(on)");
   });
 
-  it("Nutrición de ChatGPT: anillo de calorías con macros al lado y Plus en un solo grupo, igual en la web y en la app", () => {
-    // Nutrición de ChatGPT: anillo de calorías con las barras de macros al lado y «Registra tus comidas» (Plus) en un solo grupo con candados, sin pagos externos en la app.
+  it("Nutrición minimalista: el anillo con las barras de macros como única protagonista y lo de Plus en una sola fila tranquila, igual en la web y en la app", () => {
     const nutritionWeb = read("src/app/components/dashboard/BasicNutrition.tsx") + read("src/app/components/dashboard/NutritionPlusSection.tsx") + read("src/app/components/dashboard/NutritionHero.tsx");
     const nutritionApp = read("native/Autopilot/Features/Other/OtherViews.swift");
-    for (const text of ["Controla tu alimentación y alcanza tu objetivo.", "kcal al día", "Proteína", "Hidratos", "Grasas", "Registra tus comidas", "Disponible en Plus.",
-      "Objetivo de", "Resumen de hoy",
-      "Comidas de cada día", "Ajustadas a tus macros y a lo que te gusta.", "Seguimiento de macros", "Marca cada comida y se suman sus macros.", "Menú a tu gusto", "Regenera tus comidas cuando quieras.", "Incluido en Plus",
-      "Estimación inicial según tus datos y objetivo. No sustituye una valoración nutricional individual."]) {
+    for (const text of ["kcal al día", "Proteína", "Hidratos", "Grasas", "Objetivo de", "Resumen de hoy",
+      "Comidas de cada día", "Ajustadas a tus macros y a lo que te gusta.", "Actualizar mis datos",
+      "Estimación según tus datos y objetivo. No sustituye una valoración nutricional individual.",
+      "No hemos podido cargar tu plan", "Revisa tu conexión y vuelve a intentarlo. Tus datos siguen guardados."]) {
       expect(nutritionWeb, text).toContain(text);
       expect(nutritionApp, text).toContain(text);
     }
-    expect(nutritionWeb).toContain("onUpgrade && !isIOSNative()");
-    expect(nutritionApp).not.toContain("Descubre Autopilot Plus");
+    // Sin subtítulo de relleno ni la lista de ventajas de Plus con su título y su botón dorado.
+    for (const text of ["Controla tu alimentación y alcanza tu objetivo.", "Registra tus comidas", "Disponible en Plus.", "Seguimiento de macros", "Menú a tu gusto", "Descubre Autopilot Plus"]) {
+      expect(nutritionWeb, text).not.toContain(text);
+      expect(nutritionApp, text).not.toContain(text);
+    }
+    // La fila de Plus: losa de 32 con radio 9, título, una línea y la insignia; en iOS sin pagos externos.
+    expect(nutritionWeb).toContain("<PlusBadge />");
+    expect(nutritionApp).toContain("PlusBadge()");
+    expect(nutritionWeb).toContain('className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-secondary"');
+    expect(nutritionApp).toContain(".background(Palette.secondary, in: RoundedRectangle(cornerRadius: 9, style: .continuous))");
+    expect(nutritionWeb).toContain("Boolean(onUpgrade) && !isIOSNative()");
     expect(nutritionWeb).toContain("carbs: targets.carbs");
     expect(nutritionWeb).toContain("fats: targets.fats");
-    // La misma cabecera en las dos: anillo de 136 con trazo 12 (reparto en oro, oro 60 % y oro 32 %, o lo marcado) y una tarjeta de 28.
+    // La misma cabecera en las dos: anillo de 136 con trazo 12 (reparto en oro, oro 60 % y oro 32 %, o lo marcado), tarjeta de 28 y nada más dentro.
     const hero = read("src/app/components/dashboard/NutritionHero.tsx");
     expect(hero).toMatch(/size=\{136\} stroke=\{12\}/);
     expect(hero).toContain('"hsl(var(--primary) / 0.6)", "hsl(var(--primary) / 0.32)"');
     expect(hero).toContain("rounded-[28px]");
+    expect(hero).not.toMatch(/footnote:|children\?: ReactNode;\n\}\) \{/);
     expect(nutritionApp).toContain("[Palette.gold, Palette.gold.opacity(0.6), Palette.gold.opacity(0.32)]");
     expect(nutritionApp).toMatch(/\.frame\(width: 136, height: 136\)/);
     expect(nutritionApp).toContain(".surface(Radius.hero)");
+    expect(nutritionApp).toContain("private func nutritionHero(kcal: Double, p: Double, c: Double, f: Double, eaten: MealMacros?) -> some View");
     expect(read("src/app/components/dashboard/MealsList.tsx")).toContain("<NutritionHero");
     expect(read("src/app/components/dashboard/BasicNutrition.tsx")).toContain("<NutritionHero");
-    expect(nutritionApp).toContain("nutritionHero(kcal: kcal, p: p, c: c, f: f, eaten: hasMeals ? eatenToday : nil");
+    expect(nutritionApp).toContain("nutritionHero(kcal: kcal, p: p, c: c, f: f, eaten: hasMeals ? eatenToday : nil)");
+    // El aviso de la estimación va bajo el anillo solo sin comidas que marcar, en las dos.
+    expect(read("src/app/components/dashboard/MealsList.tsx")).toContain("{estimate && <NutritionEstimateNote onEdit={onOpenProfile} />}");
+    expect(nutritionApp).toContain("if !hasMeals { estimateNoteView }");
+    // Carga: esqueleto con la forma final (anillo y barras), nunca un spinner suelto ni iOS.
+    expect(read("src/app/components/dashboard/BasicNutrition.tsx")).toContain("<NutritionHeroSkeleton />");
+    expect(nutritionApp).toContain("NutritionSkeleton()");
+    expect(nutritionApp + read("native/Autopilot/Features/Other/NutritionSetupView.swift")).not.toContain("ProgressView(");
+  });
+
+  it("Nutrición con Plus: «Comidas de hoy» con «···» (Regenerar comidas, Actualizar mis datos), y los estados de preparar, regenerar y sin peso con los mismos textos, en la web y en la app", () => {
+    const web = read("src/app/components/dashboard/MealsList.tsx");
+    const app = read("native/Autopilot/Features/Other/OtherViews.swift");
+    // «Regenerar» ya no está a la vista: vive en el «···» de «Comidas de hoy», con «Actualizar mis datos».
+    expect(web).toContain('aria-label="Más opciones de las comidas"');
+    expect(app).toContain('.accessibilityLabel("Más opciones de las comidas")');
+    for (const src of [web, app]) {
+      expect(src).toContain("Regenerar comidas");
+      expect(src).toContain("Actualizar mis datos");
+      expect(src).not.toMatch(/>Regenerar<|"Regenerar"\)/);
+    }
+    // Mismos textos (MEALS_COPY en la web, constantes de NutritionView en la app).
+    const copy: [string, string][] = [
+      ["preparingTitle", "Preparando tus comidas…"], ["preparingDetail", "Con tus macros, tus gustos y lo que no comes."],
+      ["readyTitle", "Tus comidas de hoy"], ["readyDetail", "Te las preparamos con tus macros y lo que te gusta."],
+      ["readyAction", "Preparar mis comidas"], ["regenerateFailed", "Tus comidas siguen aquí. Prueba a regenerarlas en unos minutos."],
+      ["weightTitle", "Añade tu peso"], ["weightDetail", "Con tu peso calculamos tus macros. Hasta entonces, las comidas son orientativas."],
+    ];
+    for (const [key, text] of copy) {
+      expect(web, key).toContain(`${key}: "${text}"`);
+      expect(app, key).toContain(`static let ${key} = "${text}"`);
+    }
+    // Nada de negativos que desanimen ni de tarjetas decorativas.
+    for (const text of ["Sin comidas todavía", "No hemos podido prepararlas", "No se pudieron regenerar las comidas", "Tus macros aún no están personalizados", "Aún no hay plan de comidas"]) {
+      expect(web, text).not.toContain(text);
+      expect(app, text).not.toContain(text);
+    }
+    expect(app).not.toContain("private struct EmptyCard: View");
+    // Mientras se preparan, el AP; si no salieron, la acción secundaria para prepararlas.
+    expect(web).toContain("<Spinner size=\"lg\" label={MEALS_COPY.preparingTitle} />");
+    expect(app).toContain("BrandLoader(size: 28)");
+    // Las tarjetas con foto de Nutrición van sin borde (tarjeta de 28).
+    expect(web).not.toContain("border border-border");
+    expect(read("src/app/components/dashboard/BasicNutrition.tsx")).not.toContain("border border-border");
+    expect(app).toContain(".clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))");
+    expect(web.match(/className="rounded-\[28px\] border-0"/g)?.length).toBe(3);
+    // Plus sin peso: al guardarlo, Nutrición vuelve a leer el plan (en la app, `load()`).
+    expect(web).toContain('onSaved={() => window.dispatchEvent(new Event("autopilot:nutrition-plan-updated"))}');
+    expect(app).toContain("MacrosWeightCard(userId: id) { await load() }");
+  });
+
+  it("Nutrición (Plus, primera vez): el cuestionario con títulos en Title 3, fichas en dorado tenue y una sola acción dorada, igual en la web y en la app", () => {
+    const web = read("src/app/components/dashboard/NutritionSetup.tsx");
+    const app = read("native/Autopilot/Features/Other/NutritionSetupView.swift");
+    for (const text of ["hechas para ti", "Cuatro preguntas y te preparamos las comidas de cada día, ajustadas a tus macros.",
+      "Comidas al día", "¿Te gusta cocinar?", "¿Qué te gusta comer?", "¿Qué no comes?", "¿Algo más que evitar?", "Opcional: avena, champiñones…", "Preparar mis comidas"]) {
+      expect(web, text).toContain(text);
+      expect(app, text).toContain(text);
+    }
+    // Sin cabeceras en mayúsculas ni el icono suelto de antes.
+    expect(web).not.toContain("type-group-header");
+    expect(app).not.toContain(".uppercased()");
+    expect(web).not.toContain("Sparkles");
+    expect(app).not.toContain("sparkles");
+    expect(web).toContain('<h3 className="type-title3">{title}</h3>');
+    expect(app).toContain("Text(title).font(.apTitle3)");
+    // Seleccionado = dorado al 15 %, como las fichas del resto de la app.
+    expect(web).toContain('meals === n ? "bg-primary/15 text-primary" : "bg-card"');
+    expect(app).toContain("background(meals == n ? Palette.gold.opacity(0.15) : Palette.card, in: Capsule())");
+    expect(app).toContain("background(on ? Palette.gold.opacity(0.15) : Palette.card, in: Capsule())");
   });
 
   it("Web ancha, iPad y Mac: Hoy, Nutrición, Ejercicios y Progreso en la misma columna centrada de 680, como el iPhone ampliado", () => {
@@ -444,7 +542,7 @@ describe("paridad web ↔ apps nativas", () => {
   it("Nutrición sin peso: Gratis ve «Calcula tus macros» en la web y en la app, no solo la tarjeta de Plus", () => {
     const web = read("src/app/components/dashboard/BasicNutrition.tsx");
     const app = read("native/Autopilot/Features/Other/OtherViews.swift");
-    for (const text of ["Calcula tus macros", "Dinos tu peso y te damos tus calorías y tu proteína del día. Gratis.", "Tu peso en kg", "Calcular mis macros", "No se pudo guardar tu peso. Vuelve a intentarlo.", "sync-nutrition-macros"]) {
+    for (const text of ["Calcula tus macros", "Con tu peso calculamos tus calorías y tus macros del día. Gratis.", "Tu peso en kg", "Calcular mis macros", "No se pudo guardar tu peso. Vuelve a intentarlo.", "sync-nutrition-macros"]) {
       expect(web, text).toContain(text);
       expect(app, text).toContain(text);
     }
@@ -554,7 +652,10 @@ describe("paridad web ↔ apps nativas", () => {
     expect(icons).toContain('path("BRAND_P")');
     // El monograma AP (12-11-2026): misma geometría en la web y en nativo, sin el rayo de antes.
     const markGeometry = read("src/shared/components/ui/brand-mark.tsx");
-    const nativeMark = read("native/Autopilot/Design/Components.swift");
+    // Una sola geometría nativa, compartida por la app y la extensión de la Live Activity.
+    const nativeMark = read("native/Shared/BrandShape.swift");
+    expect(read("native/Autopilot/Design/Components.swift")).toContain("BrandShape(part: .a).fill(color)");
+    expect(read("native/AutopilotWidgets/WorkoutLiveActivity.swift")).toContain("BrandShape(part: .a).fill(LA.gold)");
     expect(markGeometry).not.toContain("BRAND_BOLT");
     for (const anchor of ["382 50", "396 34", "775 378", "770 148"]) expect(markGeometry, anchor).toContain(anchor);
     for (const anchor of ["pt(382, 50)", "pt(396, 34)", "pt(775, 211.5)", "pt(770, 210)"]) expect(nativeMark, anchor).toContain(anchor);
@@ -1090,11 +1191,11 @@ describe("paridad web ↔ apps nativas", () => {
     // Sin kilos en una sesión de peso corporal: la cifra pasa a ser las series.
     expect(share).toContain('return { label: "Series completadas", value: fmt(p.sets), unit: p.sets === 1 ? "serie" : "series" };');
     expect(app).toContain('("Series completadas", NumberText.grouped(Double(sets)), sets == 1 ? "serie" : "series")');
-    // Firma: el AP y la web, sin la palabra «Autopilot» ni el dominio antiguo.
+    // Firma: el AP y la web (piezas comunes de las historias), sin la palabra «Autopilot» ni el dominio antiguo.
     expect(share).not.toContain('ctx.fillText("Autopilot"');
-    expect(share).toContain("drawSignature(ctx, W, H);");
-    expect(app).toContain('Text("autopilotplan.com")');
-    expect(app).toContain("BrandMark(size: 24)");
+    expect(share).toContain("drawSignature(ctx);");
+    expect(app).toContain("ShareStorySignature()");
+    expect(read("native/Autopilot/Design/ShareStory.swift")).toContain("BrandMark(size: ShareStory.markSize)");
     expect(app).not.toContain("autopilotplan.app");
     expect(app).not.toContain('eyebrow("');
   });
@@ -1225,19 +1326,18 @@ describe("paridad web ↔ apps nativas", () => {
     const format = read("src/shared/lib/scanResultFormat.ts");
     const app = read("native/Autopilot/Features/Scan/ScanShareCardView.swift");
     const appFormat = read("native/Autopilot/Features/Scan/ScanView.swift");
-    // Firma del entreno (e77db4e8): el AP de 72 px a 1080 (24 pt a ×3) y la web debajo; sin el nombre de la marca.
-    expect(web).toContain("drawBrandA(ctx, W / 2 - 36, H - 224, 72)");
-    expect(web).toContain('ctx.fillText("autopilotplan.com", W / 2, H - 120)');
-    expect(app).toContain("BrandMark(size: 24)");
-    expect(app).toContain('Text("autopilotplan.com")');
+    // Firma y rejilla comunes con el entreno (storyCanvas.ts / ShareStory.swift); sin el nombre de la marca.
+    expect(web).toContain("drawSignature(ctx);");
+    expect(app).toContain("ShareStorySignature()");
     for (const src of [web, app]) expect(src).not.toMatch(/>Autopilot<|Text\("Autopilot"\)|autopilot-logo|autopilotplan\.com\/scan"\)/);
-    // Mismo lienzo (1080 × 1920 = 360 × 640 a ×3), misma cifra en Big Shoulders y mismos textos.
-    expect(web).toContain("const W = 1080;");
-    expect(web).toContain("const H = 1920;");
-    expect(app).toContain(".frame(width: 360, height: 640)");
+    // Mismo lienzo (1080 × 1920 = 360 × 640 a ×3), la nota en Big Shoulders dentro de su anillo dorado y mismos textos.
+    expect(web).toContain("createStoryCanvas()");
+    expect(app).toContain(".frame(width: ShareStory.width, height: ShareStory.height)");
     expect(appFormat).toContain("renderer.scale = 3");
-    expect(web).toContain('"Big Shoulders"');
-    expect(app).toContain(".font(.figure(size: 80))");
+    expect(web).toContain("drawScoreRing(ctx, r.physique)");
+    expect(app).toContain("Circle().trim(from: 0, to: fraction)");
+    expect(web).toContain('drawHeroFigure(ctx, scoreText(score), hasScore ? "/10" : "", cy + 62, 170)');
+    expect(app).toContain("baseline: ShareStory.ringCenter + 62 / ShareStory.scale, size: 170 / ShareStory.scale)");
     for (const [key, text] of [["title", "Mi análisis físico"], ["subtitle", "Estimación visual con IA"], ["hero", "Físico"], ["focus", "Foco"]]) {
       expect(format, text).toContain(`${key}: "${text}"`);
       expect(appFormat, text).toContain(`static let share${key[0].toUpperCase()}${key.slice(1)} = "${text}"`);
@@ -1247,10 +1347,132 @@ describe("paridad web ↔ apps nativas", () => {
     expect(appFormat).toContain('[("Potencial", r.potential), ("Grasa est.", fat), ("Atractivo", r.attractiveness)]');
     expect(format).toContain('[["Potencial", r.potential], ["Atractivo", r.attractiveness], ["Estilo", r.style]]');
     expect(appFormat).toContain('[("Potencial", r.potential), ("Atractivo", r.attractiveness), ("Estilo", r.style)]');
-    expect(web).toContain("wrapText(ctx, headline, 1250, 58, 3)");
+    expect(web).toContain("wrapCentered(ctx, headline, HEADLINE_Y, 56, 3)");
+    expect(web).toContain("const HEADLINE_Y = 1090;");
+    expect(app).toContain("private static let headlineY: CGFloat = 1090 / ShareStory.scale");
     expect(app).toContain(".lineLimit(3)");
     // La web la dibuja en un lienzo (como la historia del entreno), no capturando el DOM.
     expect(read("src/app/pages/Scan.tsx")).not.toContain("html-to-image");
+  });
+
+  it("Historias para compartir (entreno y scan): la misma rejilla de 1080 × 1920 con márgenes seguros, una cifra en Big Shoulders, dos o tres de apoyo y el AP con autopilotplan.com, en la web y en la app", () => {
+    const spec = read("src/shared/lib/shareStory.ts");
+    const canvas = read("src/shared/lib/storyCanvas.ts");
+    const app = read("native/Autopilot/Design/ShareStory.swift");
+    // Cada medida de la web (`STORY`) existe en la app dividida entre 3.
+    const block = spec.slice(spec.indexOf("export const STORY = {"), spec.indexOf("} as const;"));
+    const entries = [...block.matchAll(/^\s+(\w+): (\d+),$/gm)].map((m) => [m[1], m[2]]);
+    expect(entries.length).toBeGreaterThan(20);
+    for (const [key, value] of entries) {
+      expect(app, key).toContain(`static let ${key}: CGFloat = ${value} / scale`);
+    }
+    // Nada importante en las franjas de Instagram (≈ 250 px arriba y abajo): contenido de 240 a 1660.
+    const value = (key: string) => Number(entries.find(([k]) => k === key)?.[1]);
+    expect(value("figureTop")).toBeGreaterThanOrEqual(240);
+    expect(value("url")).toBeLessThanOrEqual(1920 - 250);
+    expect(value("side")).toBeGreaterThanOrEqual(96);
+    // Firma común: el AP de 72 y la web, sin la palabra «Autopilot».
+    expect(spec).toContain('export const STORY_URL = "autopilotplan.com";');
+    expect(app).toContain('static let urlText = "autopilotplan.com"');
+    expect(canvas).toContain("drawBrandA(ctx, W / 2 - size / 2, STORY.mark - size / 2, size);");
+    expect(app).toContain("BrandMark(size: ShareStory.markSize)");
+    // Inter para el texto y Big Shoulders para las cifras, también en el lienzo de la web.
+    expect(canvas).toContain('export const STORY_FONT = `"Inter Variable", "Inter"');
+    expect(canvas).toContain('export const STORY_FIGURE = `"Big Shoulders", ${STORY_FONT}`;');
+    expect(app).toContain("Font.custom(InterFont.name, fixedSize: size)");
+    expect(app).toContain("Font.custom(FigureFont.name, fixedSize: size).weight(.heavy).monospacedDigit()");
+    // Foto real arriba fundida a negro (con el mismo tratamiento), o el mapa muscular solo en dorado.
+    expect(canvas).toContain('ctx.filter = "saturate(0.85) contrast(1.04)";');
+    expect(app).toContain(".saturation(0.85).contrast(1.04)");
+    expect(canvas).toContain('fade.addColorStop(0.55, "rgba(0,0,0,0.62)");');
+    expect(app).toContain(".init(color: .black.opacity(0.62), location: 0.55)");
+    expect(read("src/shared/lib/palette.ts")).toContain('light: "rgba(216, 178, 94, 0.45)"');
+    const story = read("src/app/components/dashboard/WorkoutStoryShare.tsx");
+    expect(story).toContain("n >= 3 ? SHARE_MUSCLE.strong : SHARE_MUSCLE.light");
+    expect(story).not.toContain("MUSCLE_HEAT");
+    // La foto: la del primer ejercicio hecho (sin cambiar) con foto, a 1000 px, en las dos.
+    expect(read("src/app/components/dashboard/WorkoutTracker.tsx")).toContain("if (swaps[exercise.name]) continue;");
+    const workoutApp = read("native/Autopilot/Features/Train/WorkoutView.swift");
+    expect(workoutApp).toContain("for ex in workout.exercises where workout.swaps[ex.name] == nil {");
+    // «Compartir» no espera a la red: la historia sale al momento (con la foto si ya está en caché) y se rehace al llegar.
+    expect(workoutApp).toContain("let cached = source.flatMap { ImageCache.shared.cached($0, maxSide: MediaSizing.hero) }");
+    expect(workoutApp).toContain("let photo = await ImageCache.shared.load(source, maxSide: MediaSizing.hero)");
+    expect(read("src/shared/lib/storyCanvas.ts")).toContain("export function loadStoryImage(src: string | null | undefined, timeoutMs = 6000)");
+    // Las mismas cifras de apoyo, con su singular: Series, Ejercicios y Minutos/Horas o Músculos.
+    for (const text of ['"Serie" : "Series"', '"Ejercicio" : "Ejercicios"', '"Minuto" : "Minutos"', '"Horas"', '"Músculo" : "Músculos"']) {
+      expect(spec, text).toContain(text);
+      expect(app, text).toContain(text);
+    }
+    expect(workoutApp).toContain("ShareStory.workoutStats(volumeKg: volumeKg, sets: sets, exercises: exercises,");
+    expect(story).toContain("drawStats(ctx, workoutStoryStats(p));");
+    // Sin crecer con la letra del sistema: la imagen siempre sale igual.
+    for (const file of ["native/Autopilot/Features/Train/WorkoutView.swift", "native/Autopilot/Features/Scan/ScanShareCardView.swift"]) {
+      expect(read(file), file).toContain(".environment(\\.dynamicTypeSize, .large)");
+    }
+  });
+
+  it("Live Activity del entreno (solo iPhone): el AP, el ejercicio, «Serie X de Y», el descanso y el tiempo que cuentan solos, la pausa y el final, con la extensión bien montada", () => {
+    const attrs = read("native/AutopilotWidgets/WorkoutActivityAttributes.swift");
+    const widget = read("native/AutopilotWidgets/WorkoutLiveActivity.swift");
+    const controller = read("native/Autopilot/Features/Train/WorkoutActivityController.swift");
+    const view = read("native/Autopilot/Features/Train/WorkoutView.swift");
+    const project = read("native/project.yml");
+    const plist = read("native/AutopilotWidgets/Info.plist");
+    // Mismos textos en la app y en la extensión (el archivo de atributos se compila en las dos).
+    for (const text of ['paused = "En pausa"', 'rest = "Descanso"', 'finished = "Entreno completado"', 'nextSet = "Siguiente serie"',
+      '"Serie \\(s.setNumber) de \\(s.setCount)"', '"Ejercicio \\(s.exerciseNumber) de \\(s.exerciseCount)"',
+      '"\\(s.doneSets) de \\(s.totalSets) \\(s.totalSets == 1 ? "serie" : "series")"']) {
+      expect(attrs, text).toContain(text);
+    }
+    // El avance es el mismo que la barra del entreno («3 de 12 series»).
+    expect(view).toContain('"\\(NumberText.integer(workout.doneSets)) de \\(plural(workout.totalSets, "serie", "series"))"');
+    // El AP en todas las presentaciones: pantalla de bloqueo, isla expandida, compacta y mínima.
+    expect(widget).toMatch(/DynamicIslandExpandedRegion\(\.leading\) \{\s*APMark\(width: 30\)/);
+    expect(widget).toMatch(/compactLeading: \{\s*APMark\(width: 22\)/);
+    expect(widget).toMatch(/minimal: \{\s*APMark\(width: 20\)/);
+    expect(widget).toMatch(/HStack\(alignment: \.center, spacing: 8\) \{\s*APMark\(width: 26\)/);
+    // El tiempo y el descanso los cuenta el sistema, quietos en pausa o al terminar.
+    expect(widget).toContain("Text(timerInterval: state.elapsedRange, pauseTime: state.elapsedFrozenAt, countsDown: false, showsHours: true)");
+    expect(widget).toContain("Text(timerInterval: range, pauseTime: state.pausedAt, countsDown: true, showsHours: false)");
+    expect(widget).toContain("ProgressView(timerInterval: range, countsDown: true)");
+    expect(attrs).toContain("var elapsedFrozenAt: Date? { finishedAt ?? pausedAt }");
+    // Al acabar el descanso pasa sola a «Siguiente serie» (fecha de caducidad = fin del descanso).
+    expect(controller).toContain("state.pausedAt == nil && state.finishedAt == nil ? state.restEndsAt : nil");
+    expect(widget).toContain("var restOver: Bool { isStale && state.pausedAt == nil && state.restEndsAt != nil }");
+    // Sin repetir textos: «Siguiente serie» solo abajo en dorado, «En pausa» solo en la línea de estado y,
+    // al terminar, el avance solo arriba.
+    expect(widget).not.toContain("if restOver { return");
+    expect(widget).not.toContain("\\(WorkoutActivityText.rest) · \\(WorkoutActivityText.paused)");
+    expect(widget).toContain("if !display.finished {");
+    // Un entreno ya guardado no empieza otra actividad.
+    expect(controller).toContain("guard workout.finishedAt == nil, ActivityAuthorizationInfo().areActivitiesEnabled else { return }");
+    // Solo el dorado de la marca como acento, Big Shoulders en las cifras.
+    expect(widget).toContain("static let gold = Color(red: 0.847, green: 0.698, blue: 0.369)");
+    expect(read("native/Autopilot/Design/Theme.swift")).toContain("static let gold = dynamic(dark: (0.847, 0.698, 0.369)");
+    expect(widget).not.toMatch(/Color\.(orange|red|green|blue|yellow)|systemImage: "dumbbell/);
+    expect(widget).toContain('.custom("BigShoulders-Bold", size: size, relativeTo: style).weight(.heavy).monospacedDigit()');
+    expect(widget).toContain(".keylineTint(LA.gold)");
+    // Ciclo: empieza con la sesión, sigue cada cambio, termina al finalizar (unos minutos) o al descartar (al momento).
+    expect(view).toContain("WorkoutActivityController.shared.track(workout, title: sessionTitle)");
+    expect(view).toContain("WorkoutActivityController.shared.finish(workout)");
+    expect(view).toContain("WorkoutActivityController.shared.discard()");
+    expect(view).toContain(".onDisappear { WorkoutActivityController.shared.stopTracking() }");
+    expect(controller).toContain("workout.objectWillChange");
+    expect(controller).toContain("dismissalPolicy: .after(dismissal)");
+    expect(controller).toContain("await running.end(nil, dismissalPolicy: .immediate)");
+    expect(controller).toContain("static let finishedDismissal: TimeInterval = 15 * 60");
+    // Solo iPhone: el Mac compila sin ActivityKit.
+    expect(attrs.startsWith("#if os(iOS)")).toBe(true);
+    expect(controller).toContain("#if os(iOS)\nimport ActivityKit");
+    // La extensión: objetivo propio de iOS incrustado solo en el iPhone, Info.plist de WidgetKit con las fuentes y la app con NSSupportsLiveActivities.
+    expect(project).toMatch(/AutopilotWidgets:\n\s+type: app-extension\n\s+platform: iOS/);
+    expect(project).toMatch(/- target: AutopilotWidgets\n\s+embed: true\n\s+platformFilter: iOS/);
+    expect(project).toContain("- path: AutopilotWidgets/WorkoutActivityAttributes.swift");
+    expect(project).toContain("- path: Shared/BrandShape.swift");
+    expect(project).toContain("INFOPLIST_KEY_NSSupportsLiveActivities[sdk=iphoneos*]: YES");
+    expect(project).toContain("PRODUCT_BUNDLE_IDENTIFIER: app.lovable.aa0029da00154c05a2b503e61df0f87c.widgets");
+    expect(plist).toContain("<string>com.apple.widgetkit-extension</string>");
+    for (const font of ["InterVariable.ttf", "BigShoulders-Bold.ttf"]) expect(plist, font).toContain(`<string>${font}</string>`);
   });
 
   it("Scan: solo Gratis y Plus, sin «tu entrenador» ni Coach, en la web y en la app", () => {

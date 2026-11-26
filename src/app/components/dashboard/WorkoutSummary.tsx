@@ -36,6 +36,8 @@ interface Props {
   previous: ReviewExercise[];
   /** Acción secundaria bajo las páginas (p. ej. «Guardar como rutina» tras un entreno vacío). */
   extraAction?: ReactNode;
+  /** Foto real de un ejercicio hecho, para la historia que se comparte. */
+  sharePhoto?: string | null;
 }
 
 const bestWeight = (exercise: ReviewExercise | undefined) =>
@@ -66,6 +68,7 @@ export function WorkoutSummary({
   current,
   previous,
   extraAction,
+  sharePhoto = null,
 }: Props) {
   const reduced = useReducedMotion();
   const scrollerRef = useRef<HTMLDivElement>(null);
@@ -288,6 +291,8 @@ export function WorkoutSummary({
       muscles={muscles}
       muscleSetCounts={muscleSetCounts}
       previousVolumeKg={previousVolume}
+      photo={sharePhoto}
+      durationMs={durationMs}
     />
   );
 

@@ -1226,6 +1226,18 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
     addExerciseLoad(counts, swaps[exercise.name] || exercise.name, exercise.muscle_group || metadata?.muscle_group, completedSetsForExercise);
     return counts;
   }, {});
+  // Foto real para la historia que se comparte: la del primer ejercicio hecho (sin cambiar) que
+  // tenga foto, a 1000 px. Igual que `sharePhotoURL` en la app.
+  const sharePhoto = (() => {
+    for (const exercise of activePlan?.exercises || []) {
+      if (swaps[exercise.name]) continue;
+      if (!(exerciseLogs[exercise.name] || []).some((set) => set.done && !isWorkoutSetWarmup(set))) continue;
+      const meta = exerciseMetadata.byId[exercise.exercise_id] || exerciseMetadata.byName[exercise.name];
+      const url = meta?.image_url || exercise.image_url;
+      if (url) return fastImage(url, 1000);
+    }
+    return null;
+  })();
   const previousVolume = Object.values(previousLogs).flat().reduce((total, set) => {
     const weight = set.done && !isWorkoutSetWarmup(set) ? parsePositiveWeight(set.weight) : null;
     return total + (weight !== null ? weight * Math.max(0, set.reps) : 0);
@@ -1277,6 +1289,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
       current={Object.entries(exerciseLogs).map(([name, sets]) => ({ name, sets }))}
       previous={Object.entries(previousLogs).map(([name, sets]) => ({ name, sets }))}
       extraAction={saveAsRoutine}
+      sharePhoto={sharePhoto}
     />
   );
 

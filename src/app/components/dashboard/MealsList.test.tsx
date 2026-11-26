@@ -27,14 +27,15 @@ describe("meal check-ins", () => {
   it("adds each checked meal's macros and all of them add up to the daily target", () => {
     const meals = [{ name: "Desayuno", description: "Avena" }, { name: "Cena", description: "Pescado" }];
     render(<MealsList meals={meals} macros={{ protein: 140, carbs: 220, fats: 65 }} />);
-    expect(screen.getByText(/^de 2\.?025 kcal$/)).toBeVisible();
+    expect(screen.getByText("de 2.025 kcal")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: /Desayuno Avena/ }));
     expect(screen.getByRole("listitem", { name: "Proteína: 70 de 140 gramos" })).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: /Cena Pescado/ }));
     expect(screen.getByRole("listitem", { name: "Proteína: 140 de 140 gramos" })).toBeVisible();
     expect(screen.getByRole("listitem", { name: "Hidratos: 220 de 220 gramos" })).toBeVisible();
     expect(screen.getByRole("listitem", { name: "Grasas: 65 de 65 gramos" })).toBeVisible();
-    expect(screen.getByText(/Es una estimación/)).toBeVisible();
+    // Minimalista: el anillo sin textos de relleno debajo.
+    expect(screen.queryByText(/Es una estimación/)).not.toBeInTheDocument();
   });
   it("flags existing invalid targets while preserving the saved meal", () => {
     render(<MealsList meals={[{ name: "Cena", description: "Guardada" }]} macros={{ protein: 50, carbs: 100, fats: 500 }} />);
@@ -65,9 +66,9 @@ describe("meal check-ins", () => {
       />,
     );
 
-    expect(screen.getByText("Tus macros aún no están personalizados")).toBeVisible();
-    expect(screen.getByText(/Añade tu peso actual para calcularlos/)).toBeVisible();
-    expect(screen.getByText(/las comidas de abajo son orientativas/)).toBeVisible();
+    expect(screen.getByText("Añade tu peso")).toBeVisible();
+    expect(screen.getByText(/Con tu peso calculamos tus macros/)).toBeVisible();
+    expect(screen.getByText(/las comidas son orientativas/)).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Añadir peso" }));
     expect(onOpenProfile).toHaveBeenCalledOnce();
     expect(mocks.hapticTap).toHaveBeenCalledOnce();
@@ -99,7 +100,7 @@ describe("day summary", () => {
   it("without meals, shows each macro target with its real share of the day's energy", () => {
     render(<MealsList meals={[]} macros={{ protein: 140, carbs: 220, fats: 65 }} />);
 
-    expect(screen.getByText("2025")).toBeVisible();
+    expect(screen.getByText("2.025")).toBeVisible();
     expect(screen.getByRole("listitem", { name: "Proteína: objetivo diario de 140 gramos, 28 % de las calorías" })).toBeVisible();
     expect(screen.getByRole("listitem", { name: "Hidratos: objetivo diario de 220 gramos, 43 % de las calorías" })).toBeVisible();
     expect(screen.getByRole("listitem", { name: "Grasas: objetivo diario de 65 gramos, 29 % de las calorías" })).toBeVisible();
@@ -108,15 +109,18 @@ describe("day summary", () => {
   it("keeps the plan's calorie target when it is set explicitly", () => {
     render(<MealsList meals={[]} macros={{ protein: 140, carbs: 220, fats: 65, calories: 2000 }} />);
 
-    expect(screen.getByText("2000")).toBeVisible();
+    expect(screen.getByText("2.000")).toBeVisible();
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
-    expect(screen.getByText("Sin comidas todavía")).toBeVisible();
+    // Sin comidas que marcar: el aviso de la estimación bajo el anillo y la acción para prepararlas.
+    expect(screen.getByText(/^Estimación según tus datos y objetivo\./)).toBeVisible();
+    expect(screen.getByText("Tus comidas de hoy")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Preparar mis comidas" })).toBeVisible();
   });
 
   it("does not draw a summary while the plan is still being prepared", () => {
     render(<MealsList meals={[]} macros={null} />);
 
-    expect(screen.getByText("Aún no hay plan de comidas")).toBeVisible();
+    expect(screen.getByText("Tu plan de comidas, en camino")).toBeVisible();
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
     expect(screen.queryByRole("list", { name: "Macros del día" })).not.toBeInTheDocument();
   });
@@ -187,8 +191,11 @@ describe("regenerate meals", () => {
       name === "sync-nutrition-macros" ? { data: { updated: true, meals_updated: true }, error: null } : { data: { url: null }, error: null },
     ));
     render(<MealsList meals={[{ name: "Comida", description: "Plato" }]} onMealsGenerated={onMealsGenerated} />);
-    fireEvent.click(screen.getByRole("button", { name: "Regenerar" }));
-    expect(screen.getByText("¿Regenerar tus comidas?")).toBeVisible();
+    // «Regenerar comidas» vive en el «···» de «Comidas de hoy», no a la vista.
+    expect(screen.queryByRole("button", { name: "Regenerar" })).not.toBeInTheDocument();
+    fireEvent.keyDown(screen.getByRole("button", { name: "Más opciones de las comidas" }), { key: "Enter" });
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Regenerar comidas" }));
+    expect(await screen.findByText("¿Regenerar tus comidas?")).toBeVisible();
     expect(mocks.invoke).not.toHaveBeenCalledWith("sync-nutrition-macros", expect.anything());
     fireEvent.click(screen.getByRole("button", { name: "Regenerar comidas" }));
     await waitFor(() => expect(onMealsGenerated).toHaveBeenCalled());
@@ -197,7 +204,7 @@ describe("regenerate meals", () => {
 });
 
 describe("meal rows", () => {
-  it("keeps Plus meal rows compact and omits weighed ingredient details and per-meal macros", () => {
+  it("keeps Plus meal rows clean: name, dish, kcal and macros on one quiet line, without weighed ingredients", () => {
     const { container } = render(
       <MealsList
         meals={[{
@@ -213,12 +220,12 @@ describe("meal rows", () => {
     );
 
     const meal = screen.getByRole("button", { name: /Comida/ });
-    expect(meal.className).toContain("min-h-[60px]");
-    expect(meal.querySelector(".line-clamp-1")).toHaveTextContent("Pollo con arroz y verduras");
-    expect(meal).toHaveTextContent("2025 kcal");
+    expect(meal.className).toContain("min-h-[72px]");
+    expect(meal.querySelector(".line-clamp-2")).toHaveTextContent("Pollo con arroz y verduras");
+    expect(meal).toHaveTextContent("2.025 kcal · P 140 g · H 220 g · G 65 g");
+    expect(meal).toHaveTextContent("2.025 kcal: 140 g de proteína, 220 g de hidratos y 65 g de grasas");
     expect(meal).not.toHaveTextContent("Arroz integral");
     expect(meal).not.toHaveTextContent("80 g");
-    expect(meal).not.toHaveTextContent("Proteína");
     expect(meal.querySelector("img")).toBeNull();
     expect(container.querySelectorAll("button")).toHaveLength(2);
   });

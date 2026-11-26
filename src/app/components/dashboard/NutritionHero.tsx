@@ -1,12 +1,18 @@
 import type { ReactNode } from "react";
 import { ProgressRing } from "@/shared/components/ui/progress-ring";
+import { hapticTap } from "@/shared/lib/native";
+import { groupedInt } from "@/shared/lib/workoutSummaryFormat";
 
 export type NutritionTotals = { kcal: number; protein: number; carbs: number; fats: number };
 
-const fmt = (n: number) => Math.round(n).toLocaleString("es-ES");
+/** Enteros con punto de miles siempre («2.366 kcal»), como `NumberText.grouped` en la app. */
+const fmt = groupedInt;
 
 /** Reparto de la energía del día en el anillo cuando aún no se marca nada (oro, oro 60 %, oro 32 %). */
 const SPLIT_SHADES = ["hsl(var(--primary))", "hsl(var(--primary) / 0.6)", "hsl(var(--primary) / 0.32)"];
+
+/** Aviso de los objetivos estimados, bajo el anillo (el mismo texto en la app). */
+export const NUTRITION_ESTIMATE_NOTE = "Estimación según tus datos y objetivo. No sustituye una valoración nutricional individual.";
 
 const SplitRing = ({ parts, size, stroke, children, label }: { parts: number[]; size: number; stroke: number; children: ReactNode; label: string }) => {
   const r = (size - stroke) / 2;
@@ -34,23 +40,16 @@ const SplitRing = ({ parts, size, stroke, children, label }: { parts: number[]; 
   );
 };
 
-/** Subtítulo bajo el título grande, como en el iPhone (en escritorio la barra lleva su pista). */
-export const NutritionIntro = () => (
-  <p className="-mt-3 mb-4 type-subhead text-muted-foreground md:hidden">Controla tu alimentación y alcanza tu objetivo.</p>
-);
-
 /**
- * Cabecera de Nutrición (maqueta de ChatGPT): el anillo de calorías manda y a su lado las tres
- * barras de macros. Con comidas marcables el anillo y las barras suman lo marcado; sin ellas,
- * el anillo reparte la energía del día entre proteína, hidratos y grasas. Igual que
- * `nutritionHero` en la app nativa.
+ * Cabecera de Nutrición, la única protagonista de la pantalla: el anillo de calorías y, a su lado,
+ * las tres barras de macros, en una tarjeta de 28 sin textos de relleno. Con comidas marcables el
+ * anillo y las barras suman lo marcado; sin ellas, el anillo reparte la energía del día entre
+ * proteína, hidratos y grasas. Igual que `nutritionHero` en la app nativa.
  */
-export default function NutritionHero({ target, eaten, footnote, children }: {
+export default function NutritionHero({ target, eaten }: {
   target: NutritionTotals;
   /** Lo marcado hoy (estimado con el reparto del plan); null = solo objetivos. */
   eaten?: NutritionTotals | null;
-  footnote: string;
-  children?: ReactNode;
 }) {
   const energy = target.protein * 4 + target.carbs * 4 + target.fats * 9;
   const rows = [
@@ -63,15 +62,16 @@ export default function NutritionHero({ target, eaten, footnote, children }: {
     return { ...m, share, bar };
   });
   const center = (
-    <span className="flex flex-col items-center">
+    <span className="flex max-w-[104px] flex-col items-center">
       <span className="type-figure text-[32px] font-bold leading-none tabular-nums text-foreground">{fmt(eaten ? eaten.kcal : target.kcal)}</span>
-      <span className="mt-1 type-footnote tabular-nums text-muted-foreground">{eaten ? `de ${fmt(target.kcal)} kcal` : "kcal al día"}</span>
+      <span className="mt-1 whitespace-nowrap type-footnote tabular-nums text-muted-foreground">{eaten ? `de ${fmt(target.kcal)} kcal` : "kcal al día"}</span>
     </span>
   );
 
   return (
     <section aria-label="Resumen de hoy" className="rounded-[28px] bg-card p-5">
-      <div className="flex items-center gap-5">
+      {/* Con letra grande el anillo pasa arriba y las barras debajo, sin cortar ninguna cifra. */}
+      <div className="flex flex-wrap items-center gap-5">
         {eaten ? (
           <ProgressRing value={target.kcal > 0 ? (eaten.kcal / target.kcal) * 100 : 0} size={136} stroke={12}
             label={`${fmt(eaten.kcal)} de ${fmt(target.kcal)} kcal`}>
@@ -83,7 +83,7 @@ export default function NutritionHero({ target, eaten, footnote, children }: {
             {center}
           </SplitRing>
         )}
-        <ul aria-label="Macros del día" className="min-w-0 flex-1 space-y-3.5">
+        <ul aria-label="Macros del día" className="min-w-[160px] flex-1 space-y-3.5">
           {rows.map((m, i) => (
             <li key={m.label} aria-label={eaten
               ? `${m.label}: ${fmt(m.eaten)} de ${fmt(m.value)} gramos`
@@ -93,7 +93,7 @@ export default function NutritionHero({ target, eaten, footnote, children }: {
                   {!eaten && <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: SPLIT_SHADES[i] }} />}
                   {m.label}
                 </span>
-                <span className="shrink-0 type-subhead font-semibold tabular-nums">
+                <span className="shrink-0 whitespace-nowrap type-subhead font-semibold tabular-nums">
                   {eaten ? <>{fmt(m.eaten)}<span className="text-muted-foreground">/{fmt(m.value)} g</span></> : `${fmt(m.value)} g`}
                 </span>
               </div>
@@ -105,8 +105,44 @@ export default function NutritionHero({ target, eaten, footnote, children }: {
           ))}
         </ul>
       </div>
-      <p className="mt-4 type-footnote text-muted-foreground">{footnote}</p>
-      {children}
     </section>
+  );
+}
+
+/**
+ * Pie de los objetivos estimados (sin comidas): el aviso en una línea tranquila y «Actualizar mis
+ * datos» como acción de texto, sin otra tarjeta. Va justo debajo del anillo. Igual que
+ * `estimateNote` en la app.
+ */
+export function NutritionEstimateNote({ onEdit }: { onEdit?: () => void }) {
+  return (
+    <div className="px-1">
+      <p className="type-footnote text-muted-foreground">{NUTRITION_ESTIMATE_NOTE}</p>
+      {onEdit && (
+        <button
+          type="button"
+          onClick={() => { void hapticTap(); onEdit(); }}
+          className="-ml-1 mt-0.5 inline-flex min-h-11 items-center rounded-full px-1 type-footnote font-semibold text-foreground transition-opacity active:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          Actualizar mis datos
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** Esqueleto con la forma final (anillo y tres barras) mientras llegan los objetivos, como la app. */
+export function NutritionHeroSkeleton() {
+  return (
+    <div role="status" aria-label="Cargando tus objetivos" className="rounded-[28px] bg-card p-5">
+      <div aria-hidden="true" className="flex animate-pulse items-center gap-5 motion-reduce:animate-none">
+        <span className="h-[136px] w-[136px] shrink-0 rounded-full border-[12px] border-secondary" />
+        <span className="flex-1 space-y-[22px]">
+          <span className="block h-3 rounded-full bg-secondary" />
+          <span className="block h-3 rounded-full bg-secondary" />
+          <span className="block h-3 rounded-full bg-secondary" />
+        </span>
+      </div>
+    </div>
   );
 }

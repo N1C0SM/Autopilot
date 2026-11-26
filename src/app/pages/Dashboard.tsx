@@ -808,7 +808,7 @@ const Dashboard = () => {
       )}
       {!campaign && !coaching && section === "nutrition" && user && (
         // Los macros son gratis (estimados con los datos del onboarding); las comidas son Plus.
-        // Igual que el nativo: BasicNutrition muestra los macros y MealsPlusCard el upsell.
+        // Igual que el nativo: BasicNutrition muestra los macros y lo de Plus en una sola fila.
         <BasicNutrition userId={user.id} onEdit={() => setSection("settings")} onUpgrade={() => void handleCompletePayment("training")} />
       )}
 
@@ -998,16 +998,16 @@ const Dashboard = () => {
       )}
 
       {/* Un plan de pago incluye nutrición: si aún no hay macros calculados no es un
-          muro de pago, es que falta generarlos. Antes se pedía subir a Coach. */}
+          muro de pago, es que falta generarlos. Calmado y sin nombrar a nadie: solo Gratis y Plus. */}
       {!campaign && hasPlan && section === "nutrition" && coaching && !nutrition && (
-        <div className="flex w-full flex-1 flex-col">
+        <div className="mx-auto flex w-full max-w-[680px] flex-1 flex-col">
           {consumerPlan === "coach" ? (
-            // Con Coach la nutrición la prepara la persona, no el botón.
+            // Planes antiguos: la nutrición se prepara aparte, no con el botón.
             <EmptyState
               className="flex-1"
               icon={Clock}
               title="Tu nutrición, en camino"
-              description="Nicolás está preparando tus macros y tus comidas con los datos que nos has dado."
+              description="Estamos preparando tus macros y tus comidas con tus datos."
             />
           ) : (
             <>
@@ -1015,14 +1015,14 @@ const Dashboard = () => {
                 className="flex-1"
                 icon={Apple}
                 title="Tu plan incluye nutrición"
-                description="Con tu peso y tu objetivo calculamos tus macros y tus comidas del día. Puedes ajustarlo cuando quieras en Ajustes."
+                description="Calculamos tus macros y tus comidas del día con tu peso y tu objetivo."
               />
               <div className="flex w-full flex-col gap-2 md:flex-row md:justify-center">
                 <Button size="lg" className="w-full md:w-auto" disabled={preparingNutrition} onClick={() => { void hapticTap(); void prepareNutrition(); }}>
-                  {preparingNutrition ? "Preparando…" : "Preparar mi nutrición"}
+                  {preparingNutrition ? <><Spinner size="sm" className="text-primary-foreground" label="Preparando" /> Preparando…</> : "Preparar mi nutrición"}
                 </Button>
                 <Button variant="plain" size="lg" className="w-full md:w-auto" onClick={() => { void hapticTap(); setSection("settings"); }}>
-                  Revisar mis datos
+                  Actualizar mis datos
                 </Button>
               </div>
             </>

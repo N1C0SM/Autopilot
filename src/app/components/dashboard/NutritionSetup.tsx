@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Check, Sparkles } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { Check } from "lucide-react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -11,10 +11,19 @@ import { cn } from "@/shared/lib/utils";
 
 const MEALS = [2, 3, 4, 5];
 
+/** Bloque del cuestionario: título en Title 3 (solo la primera en mayúscula) y su contenido. */
+const Group = ({ title, children }: { title: string; children: ReactNode }) => (
+  <section className="space-y-3">
+    <h3 className="type-title3">{title}</h3>
+    {children}
+  </section>
+);
+
 /**
  * Onboarding de comidas de Plus. El onboarding general ya no pregunta por comidas (el plan
  * Gratis no las incluye): se piden aquí, la primera vez que alguien con Plus abre Nutrición.
  * Guarda las mismas columnas que antes (`nutrition_preferences`, `allergies`, `availability`).
+ * Igual que `NutritionSetupView` en la app: titular, cuatro bloques en Title 3 y una acción dorada.
  */
 export default function NutritionSetup({ userId, onDone }: { userId: string; onDone: () => void }) {
   const [meals, setMeals] = useState(3);
@@ -44,36 +53,30 @@ export default function NutritionSetup({ userId, onDone }: { userId: string; onD
   };
 
   return (
-    <section className="space-y-8">
-      <div className="text-center">
-        <div className="mx-auto mb-4 flex h-[72px] w-[72px] items-center justify-center rounded-[22%] bg-card">
-          <Sparkles className="h-8 w-8 text-primary" strokeWidth={1.75} aria-hidden="true" />
-        </div>
-        <p className="type-subhead text-muted-foreground">Incluido en Plus</p>
-        <h2 className="mt-1 type-title1">Tus comidas, <span className="text-primary">hechas para ti</span></h2>
-        <p className="mt-2 type-subhead text-muted-foreground">Cuatro preguntas y Autopilot te prepara las comidas de cada día, ajustadas a tus macros.</p>
+    <section aria-labelledby="nutrition-setup-title" className="mx-auto w-full max-w-[680px] space-y-8">
+      <div>
+        <h2 id="nutrition-setup-title" className="type-title1">Tus comidas, <span className="text-primary">hechas para ti</span></h2>
+        <p className="mt-2 type-subhead text-muted-foreground">Cuatro preguntas y te preparamos las comidas de cada día, ajustadas a tus macros.</p>
       </div>
 
-      <section>
-        <h3 className="type-group-header px-4 pb-1.5">Comidas al día</h3>
-        <div className="grid grid-cols-4 gap-2">
+      <Group title="Comidas al día">
+        <div role="radiogroup" aria-label="Comidas al día" className="grid grid-cols-4 gap-2">
           {MEALS.map((n) => (
-            <button key={n} type="button" aria-pressed={meals === n}
+            <button key={n} type="button" role="radio" aria-checked={meals === n}
               onClick={() => { void hapticSelection(); setMeals(n); }}
-              className={cn("h-12 rounded-full type-headline transition-colors", meals === n ? "bg-primary text-primary-foreground" : "bg-card")}>
+              className={cn("h-12 rounded-full type-headline tabular-nums transition-colors active:scale-[0.97]", meals === n ? "bg-primary/15 text-primary" : "bg-card")}>
               {n}
             </button>
           ))}
         </div>
-      </section>
+      </Group>
 
-      <section>
-        <h3 className="type-group-header px-4 pb-1.5">¿Te gusta cocinar?</h3>
-        <div className="overflow-hidden rounded-media bg-card">
+      <Group title="¿Te gusta cocinar?">
+        <div role="radiogroup" aria-label="¿Te gusta cocinar?" className="overflow-hidden rounded-[22px] bg-card">
           {COOKING.map((o) => {
             const on = o.v === cooking;
             return (
-              <button key={o.v} type="button" aria-pressed={on}
+              <button key={o.v} type="button" role="radio" aria-checked={on}
                 onClick={() => { void hapticSelection(); setCooking(o.v); }}
                 className="group/row flex min-h-[56px] w-full items-center gap-3 pl-4 text-left transition-colors active:bg-accent">
                 <span className="flex min-h-[56px] min-w-0 flex-1 items-center gap-3 py-3 pr-4 group-[:not(:last-child)]/row:sep-b">
@@ -87,15 +90,18 @@ export default function NutritionSetup({ userId, onDone }: { userId: string; onD
             );
           })}
         </div>
-      </section>
+      </Group>
 
-      <ChipGroup header="¿Qué te gusta comer?" options={FOOD_LIKES} isOn={(v) => likes.includes(v)} onToggle={(v) => setLikes(toggleInList(likes, v))} />
-      <ChipGroup header="¿Qué no comes?" options={FOOD_AVOID} isOn={(v) => dislikes.includes(v)} onToggle={(v) => setDislikes(toggleInList(dislikes, v))} />
+      <Group title="¿Qué te gusta comer?">
+        <ChipGroup options={FOOD_LIKES} isOn={(v) => likes.includes(v)} onToggle={(v) => setLikes(toggleInList(likes, v))} />
+      </Group>
+      <Group title="¿Qué no comes?">
+        <ChipGroup options={FOOD_AVOID} isOn={(v) => dislikes.includes(v)} onToggle={(v) => setDislikes(toggleInList(dislikes, v))} />
+      </Group>
 
-      <section>
-        <h3 className="type-group-header px-4 pb-1.5">¿Algo más que evitar? (opcional)</h3>
-        <Input autoComplete="off" enterKeyHint="done" aria-label="Otros alimentos que no quieres ver" placeholder="Ej. avena, champiñones…" value={avoid} onChange={(e) => setAvoid(e.target.value)} />
-      </section>
+      <Group title="¿Algo más que evitar?">
+        <Input autoComplete="off" enterKeyHint="done" aria-label="Otros alimentos que no quieres ver (opcional)" placeholder="Opcional: avena, champiñones…" value={avoid} onChange={(e) => setAvoid(e.target.value)} />
+      </Group>
 
       {failed && <p role="alert" className="type-footnote text-destructive">No se pudo guardar. Revisa tu conexión e inténtalo otra vez.</p>}
       <Button variant="hero" size="lg" className="w-full" onClick={() => void save()} disabled={saving}>

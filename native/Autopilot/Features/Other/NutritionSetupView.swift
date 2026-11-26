@@ -3,7 +3,8 @@ import Supabase
 
 /// Onboarding de comidas de Plus, como `NutritionSetup` de la web. El onboarding general no
 /// pregunta por comidas (el plan Gratis no las incluye): se piden aquí, la primera vez que
-/// alguien con Plus abre Nutrición. Guarda las mismas columnas que la web.
+/// alguien con Plus abre Nutrición. Guarda las mismas columnas que la web. Titular, cuatro
+/// bloques en Title 3 (solo la primera en mayúscula), fichas en dorado tenue y una acción dorada.
 struct NutritionSetupView: View {
     let userId: UUID
     let onDone: () -> Void
@@ -27,26 +28,27 @@ struct NutritionSetupView: View {
     @State private var failed = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 28) {
-            VStack(spacing: 8) {
-                Image(systemName: "sparkles").font(.system(size: 30)).foregroundStyle(Palette.gold)
-                    .frame(width: 72, height: 72).surface(16)
-                Text("Incluido en Plus").font(.apSubhead).foregroundStyle(Palette.muted)
-                (Text("Tus comidas, ") + Text("hechas para ti").foregroundColor(Palette.gold)).font(.apTitle1).multilineTextAlignment(.center)
-                Text("Cuatro preguntas y Autopilot te prepara las comidas de cada día, ajustadas a tus macros.")
-                    .font(.apSubhead).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
+        VStack(alignment: .leading, spacing: 32) {
+            VStack(alignment: .leading, spacing: 8) {
+                (Text("Tus comidas, ") + Text("hechas para ti").foregroundColor(Palette.gold)).font(.apTitle1)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityAddTraits(.isHeader)
+                Text("Cuatro preguntas y te preparamos las comidas de cada día, ajustadas a tus macros.")
+                    .font(.apSubhead).foregroundStyle(Palette.muted)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .frame(maxWidth: .infinity)
 
             group("Comidas al día") {
                 HStack(spacing: 8) {
                     ForEach([2, 3, 4, 5], id: \.self) { n in
                         Button { Haptics.selection(); meals = n } label: {
-                            Text("\(n)").font(.apHeadline).frame(maxWidth: .infinity, minHeight: 48)
-                                .foregroundStyle(meals == n ? Color.black : Color.white)
-                                .background(meals == n ? Palette.gold : Palette.card, in: Capsule())
+                            Text("\(n)").font(.apHeadline.monospacedDigit()).frame(maxWidth: .infinity, minHeight: 48)
+                                .foregroundStyle(meals == n ? Palette.gold : Palette.foreground)
+                                .background(meals == n ? Palette.gold.opacity(0.15) : Palette.card, in: Capsule())
+                                .contentShape(Capsule())
                         }
                         .buttonStyle(.plain)
+                        .accessibilityLabel("\(n) comidas al día")
                         .accessibilityAddTraits(meals == n ? .isSelected : [])
                     }
                 }
@@ -64,10 +66,12 @@ struct NutritionSetupView: View {
                                 }
                                 Spacer()
                                 Image(systemName: "checkmark").font(.apHeadline).foregroundStyle(Palette.gold).opacity(cooking == o.v ? 1 : 0)
+                                    .accessibilityHidden(true)
                             }
-                            .padding(.horizontal, 16).frame(minHeight: 56).contentShape(Rectangle())
+                            .padding(.horizontal, 16).padding(.vertical, 8).frame(minHeight: 56).contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
+                        .accessibilityElement(children: .combine)
                         .accessibilityAddTraits(cooking == o.v ? .isSelected : [])
                     }
                 }
@@ -76,10 +80,12 @@ struct NutritionSetupView: View {
 
             group("¿Qué te gusta comer?") { chips(Self.likesOptions, selection: $likes) }
             group("¿Qué no comes?") { chips(Self.avoidOptions, selection: $dislikes) }
-            group("¿Algo más que evitar? (opcional)") {
-                TextField("Ej. avena, champiñones…", text: $avoid)
-                    .padding(.horizontal, 18).frame(minHeight: 48)
-                    .background(Palette.card, in: Capsule())
+            group("¿Algo más que evitar?") {
+                TextField("Opcional: avena, champiñones…", text: $avoid)
+                    .font(.apBody)
+                    .padding(.horizontal, 20).frame(minHeight: 52)
+                    .background(Palette.secondary, in: Capsule())
+                    .accessibilityLabel("Otros alimentos que no quieres ver (opcional)")
             }
 
             if failed {
@@ -87,7 +93,7 @@ struct NutritionSetupView: View {
             }
             Button { Task { await save() } } label: {
                 HStack(spacing: 8) {
-                    if saving { ProgressView().tint(.black) }
+                    if saving { BrandLoader().tint(Palette.background).accessibilityHidden(true) }
                     Text("Preparar mis comidas")
                 }
                 .frame(maxWidth: .infinity)
@@ -97,25 +103,32 @@ struct NutritionSetupView: View {
         }
     }
 
+    /// Bloque del cuestionario: título en Title 3 y su contenido (como `Group` en la web).
     private func group<Content: View>(_ title: String, @ViewBuilder _ content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title.uppercased()).font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.muted).padding(.horizontal, 4)
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title).font(.apTitle3).accessibilityAddTraits(.isHeader)
             content()
         }
     }
 
+    /// Fichas de selección múltiple como `ChipGroup` en la web: a su medida, en dorado tenue con
+    /// check si están marcadas.
     private func chips(_ options: [String], selection: Binding<[String]>) -> some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 104), spacing: 8)], alignment: .leading, spacing: 8) {
+        FlowRow(spacing: 8) {
             ForEach(options, id: \.self) { o in
                 let on = selection.wrappedValue.contains(o)
                 Button {
                     Haptics.selection()
                     if on { selection.wrappedValue.removeAll { $0 == o } } else { selection.wrappedValue.append(o) }
                 } label: {
-                    Text(o).font(.apSubhead.weight(.medium)).lineLimit(1).minimumScaleFactor(0.8)
-                        .frame(maxWidth: .infinity, minHeight: 40)
-                        .foregroundStyle(on ? Color.black : Color.white)
-                        .background(on ? Palette.gold : Palette.card, in: Capsule())
+                    HStack(spacing: 6) {
+                        if on { Image(systemName: "checkmark").font(.system(size: 13, weight: .bold)).accessibilityHidden(true) }
+                        Text(o).font(.apSubhead.weight(.medium)).lineLimit(1)
+                    }
+                    .padding(.horizontal, 16).frame(minHeight: 40)
+                    .foregroundStyle(on ? Palette.gold : Palette.foreground)
+                    .background(on ? Palette.gold.opacity(0.15) : Palette.card, in: Capsule())
+                    .contentShape(Capsule())
                 }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(on ? .isSelected : [])
