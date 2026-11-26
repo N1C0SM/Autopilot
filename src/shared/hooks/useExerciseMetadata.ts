@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/shared/integrations/supabase/client";
 import type { DayPlan } from "@/shared/types/training";
-import { fastImage } from "@/shared/lib/fastImage";
+import { fastImage, HERO_SIDE } from "@/shared/lib/fastImage";
+import { prefetchImages, thumbnailMedia } from "@/shared/lib/mediaPrefetch";
 
 export interface ExerciseMetadata {
   id: string;
@@ -101,7 +102,8 @@ export function useExerciseMetadata(dayPlans: DayPlan[]): ExerciseMetadataIndex 
               load_level: row.load_level,
               skill_tag: row.skill_tag,
               video_url: row.video_url,
-              image_url: fastImage(row.image_url, 800),
+              // A tamaño de portada (visor del entreno, tarjeta de Hoy); las miniaturas lo bajan a 192 px.
+              image_url: fastImage(row.image_url, HERO_SIDE),
             };
             index.byId[item.id] = item;
             index.byName[item.name] = item;
@@ -111,15 +113,11 @@ export function useExerciseMetadata(dayPlans: DayPlan[]): ExerciseMetadataIndex 
         }
         if (!cancelled) {
           setMetadata(index);
-          // Precarga proactiva en caché de navegador para carga instantánea
-          if (typeof window !== "undefined") {
-            for (const item of Object.values(index.byId)) {
-              if (item.image_url) {
-                const img = new Image();
-                img.src = item.image_url;
-              }
-            }
-          }
+          // Miniaturas de todas las sesiones por detrás (Hoy, Entrenar, Mis rutinas y el entreno): al
+          // abrir una ya están. Antes se bajaba la foto de 800 px de cada ejercicio del plan, que
+          // nadie pintaba a ese tamaño y competía con las fotos de la pantalla.
+          const thumbs = thumbnailMedia(Object.values(index.byId).map((item) => item.image_url)).thumbs;
+          prefetchImages(thumbs);
         }
       } catch (error) {
         if (cancelled) return;

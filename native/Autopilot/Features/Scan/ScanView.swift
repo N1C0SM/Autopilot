@@ -217,7 +217,7 @@ struct ScanView: View {
         } label: {
             ZStack(alignment: .bottomLeading) {
                 Color.clear.overlay {
-                    CachedAsyncImage(url: p.image_url.flatMap(URL.init(string:)), maxSide: 240) {
+                    CachedAsyncImage(url: p.image_url.flatMap(URL.init(string:)), maxSide: 112) {
                         $0.resizable().scaledToFill()
                     } placeholder: { Palette.card }
                 }
@@ -1124,7 +1124,7 @@ struct ScanResultView: View {
         } else if let objectiveURL {
             Color.clear.frame(width: 66, height: 88)
                 .overlay {
-                    CachedAsyncImage(url: objectiveURL, maxSide: 240) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
+                    CachedAsyncImage(url: objectiveURL, maxSide: 112) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                 .accessibilityHidden(true)

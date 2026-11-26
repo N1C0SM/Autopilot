@@ -1,5 +1,6 @@
 import SwiftUI
 import ImageIO
+import os
 
 /// Tarjeta de descanso de la web (`EmptyState rest`): luna dorada con halo, estrellas, título y acción.
 struct RestCard<Action: View>: View {
@@ -27,7 +28,7 @@ struct RestCard<Action: View>: View {
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(alignment: .trailing) {
-            CachedAsyncImage(url: URL(string: photo)) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
+            CachedAsyncImage(url: URL(string: photo), maxSide: 210) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
                 .frame(width: 210).frame(maxHeight: .infinity).clipped()
                 .opacity(0.8)
                 .overlay { LinearGradient(colors: [Palette.card, Palette.card.opacity(0.8), Palette.card.opacity(0.1)], startPoint: .leading, endPoint: .trailing) }
@@ -98,7 +99,7 @@ struct HeaderButtons: View {
                     Circle().fill(Palette.secondary)
                     Text(initial).font(.apFootnote.weight(.semibold))
                     if let a = avatar, let u = URL(string: a) {
-                        CachedAsyncImage(url: u) { $0.resizable().scaledToFill() } placeholder: { Color.clear }
+                        CachedAsyncImage(url: u, maxSide: 30) { $0.resizable().scaledToFill() } placeholder: { Color.clear }
                     }
                 }
                 .frame(width: 30, height: 30).clipShape(Circle())
@@ -253,14 +254,68 @@ extension AppSection {
     }
 }
 
+/// Tamaños de foto: cada miniatura y cada portada pide la foto al tamaño al que se pinta (sus
+/// puntos × 3, subidos al escalón siguiente), nunca la original ni una de 1000 px para un hueco
+/// de 48 pt. Los escalones hacen que la misma foto se comparta: todas las miniaturas de 32 a 64 pt
+/// de un ejercicio son la misma petición (192 px) en Hoy, Entrenar y el entreno. Los mismos valores
+/// que `IMAGE_SIDES` en la web (src/shared/lib/fastImage.ts).
+enum MediaSizing {
+    /// Lados en px que se piden al render de Supabase.
+    static let sides: [CGFloat] = [96, 192, 384, 480, 640, 1000]
+    /// Densidad de pantalla con la que se calcula (iPhone @3x; el Mac @2x recibe de sobra).
+    static let scale: CGFloat = 3
+    /// Miniaturas de ejercicio, comida y rutina (32–64 pt): 192 px.
+    static let thumb: CGFloat = 64
+    /// Portadas, visor del entreno y ficha a todo el ancho: 1000 px.
+    static let hero: CGFloat = 400
+
+    /// Px que se piden para algo pintado a `points`: el escalón que cubre points × 3.
+    static func pixels(_ points: CGFloat) -> CGFloat {
+        sides.first { $0 >= points * scale } ?? sides[sides.count - 1]
+    }
+
+    /// Una miniatura de `points` (nunca por debajo de `thumb`): así todas las de 32 a 64 pt de un
+    /// ejercicio son la misma foto en memoria y en disco.
+    static func thumbSide(_ points: CGFloat) -> CGFloat { max(points, thumb) }
+}
+
+/// Tiempo hasta la primera foto de una pantalla (Hoy, el entreno), para medirlo con Instruments
+/// (intervalo «first-image» del subsistema `app.autopilotplan`, categoría `media`). Los signposts no
+/// cuestan nada si nadie graba, y el log va en `debug` (no se guarda): no deja ruido en producción.
+/// Igual que `mediaTiming.ts` en la web (`performance.measure`, solo con el modo de medida).
+@MainActor
+enum MediaTiming {
+    private static let signposter = OSSignposter(subsystem: "app.autopilotplan", category: "media")
+    private static let log = Logger(subsystem: "app.autopilotplan", category: "media")
+    private static var open: [String: (state: OSSignpostIntervalState, start: Date)] = [:]
+
+    /// Empieza a contar al abrir la pantalla (una vez por apertura).
+    static func begin(_ screen: String) {
+        guard open[screen] == nil else { return }
+        let state = signposter.beginInterval("first-image", id: signposter.makeSignpostID(), "\(screen, privacy: .public)")
+        open[screen] = (state, Date())
+    }
+
+    /// Una foto ya está en pantalla: cierra las pantallas que esperaban su primera foto.
+    static func imageShown() {
+        guard !open.isEmpty else { return }
+        for (screen, interval) in open {
+            signposter.endInterval("first-image", interval.state, "\(screen, privacy: .public)")
+            let ms = Int(Date().timeIntervalSince(interval.start) * 1000)
+            log.debug("first-image \(screen, privacy: .public): \(ms) ms")
+        }
+        open.removeAll()
+    }
+}
+
 /// Imagen remota con caché en memoria y disco: no se vuelve a descargar ni decodificar en cada
 /// redibujado (AsyncImage lo hace y frena los toques en listas con fotos).
 @MainActor
 final class ImageCache {
     static let shared = ImageCache()
     private let memory = NSCache<NSString, PlatformImage>()
-    /// Una sola descarga en vuelo por URL: varias vistas con la misma foto comparten la petición.
-    private var inflight: [URL: Task<PlatformImage?, Never>] = [:]
+    /// Una sola descarga en vuelo por URL y tamaño: varias vistas con la misma foto comparten la petición.
+    private var inflight: [NSString: Task<PlatformImage?, Never>] = [:]
     private let session: URLSession = {
         let c = URLSessionConfiguration.default
         c.urlCache = URLCache(memoryCapacity: 60_000_000, diskCapacity: 500_000_000)
@@ -268,37 +323,45 @@ final class ImageCache {
         return URLSession(configuration: c)
     }()
 
-    /// La clave incluye el tamaño: una miniatura de 200 px no compite con la foto grande.
+    /// La clave es el escalón de tamaño (`MediaSizing`): una miniatura de 192 px no compite con la
+    /// foto grande, y las miniaturas de 48 y de 64 pt comparten la misma.
     private func key(_ url: URL, _ maxSide: CGFloat) -> NSString {
-        "\(url.absoluteString)|#\(Int(maxSide))" as NSString
+        "\(url.absoluteString)|#\(Int(MediaSizing.pixels(maxSide)))" as NSString
     }
 
-    func cached(_ url: URL, maxSide: CGFloat = 900) -> PlatformImage? {
+    func cached(_ url: URL, maxSide: CGFloat = MediaSizing.hero) -> PlatformImage? {
         memory.object(forKey: key(url, maxSide))
     }
 
-    func load(_ url: URL, maxSide: CGFloat = 900) async -> PlatformImage? {
+    func load(_ url: URL, maxSide: CGFloat = MediaSizing.hero) async -> PlatformImage? {
         let k = key(url, maxSide)
         if let hit = memory.object(forKey: k) { return hit }
-        if let running = inflight[url] { return await running.value }
+        if let running = inflight[k] { return await running.value }
         let task = Task { [weak self] () -> PlatformImage? in
             guard let self else { return nil }
             return await self.download(url, maxSide: maxSide)
         }
-        inflight[url] = task
+        inflight[k] = task
         let image = await task.value
-        inflight[url] = nil
+        inflight[k] = nil
         if let image { memory.setObject(image, forKey: k) }
         return image
     }
 
-    /// Calienta la caché con las fotos que se van a ver (rutina, sesión, próximas comidas).
-    func prefetch(_ urls: [URL], maxSide: CGFloat = 900) {
-        guard !urls.isEmpty else { return }
-        Task { [weak self] in
-            for url in urls.prefix(24) {
+    /// Calienta la caché con las fotos que se van a ver (rutina, sesión, próximas comidas), al tamaño
+    /// al que se van a pintar. De tres en tres y con prioridad baja: lo que ya está en pantalla manda.
+    func prefetch(_ urls: [URL], maxSide: CGFloat = MediaSizing.hero) {
+        var seen = Set<URL>()
+        let pending = Array(urls.filter { seen.insert($0).inserted && cached($0, maxSide: maxSide) == nil }.prefix(24))
+        guard !pending.isEmpty else { return }
+        Task(priority: .utility) { [weak self] in
+            for start in stride(from: 0, to: pending.count, by: 3) {
                 guard let self else { return }
-                _ = await self.load(url, maxSide: maxSide)
+                await withTaskGroup(of: Void.self) { group in
+                    for url in pending[start..<min(start + 3, pending.count)] {
+                        group.addTask { _ = await self.load(url, maxSide: maxSide) }
+                    }
+                }
             }
         }
     }
@@ -313,7 +376,8 @@ final class ImageCache {
               let path = base.components(separatedBy: object).dropFirst().first
                 ?? base.components(separatedBy: render).dropFirst().first,
               let root = base.components(separatedBy: "/storage/v1/").first else { return nil }
-        let side = Int(min(max(maxSide * 3, 64), 1000))
+        // El escalón que cubre el tamaño pintado (máximo 1000 px), el mismo que pide la web.
+        let side = Int(MediaSizing.pixels(maxSide))
         guard let fast = URL(string: "\(root)\(render)\(path)?width=\(side)&height=\(side)&resize=contain&quality=55") else { return nil }
         var request = URLRequest(url: fast)
         // Sin esta cabecera Supabase devuelve PNG (~500 KB) en vez de WebP.
@@ -345,16 +409,25 @@ final class ImageCache {
         return nil
     }
 
+    /// Carpeta de las copias en disco. v3: la clave es el escalón en px (`MediaSizing`); la de v2
+    /// (por puntos) se borra una vez para no dejar fotos huérfanas ocupando espacio.
+    private static let diskDirectory: URL? = {
+        guard let base = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else { return nil }
+        let dir = base.appendingPathComponent("images-alpha-v3", isDirectory: true)
+        if !FileManager.default.fileExists(atPath: dir.path) {
+            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            let old = base.appendingPathComponent("images-alpha-v2", isDirectory: true)
+            Task.detached(priority: .background) { try? FileManager.default.removeItem(at: old) }
+        }
+        return dir
+    }()
+
     /// Copia en disco de la miniatura ya reducida: al reabrir la app las fotos salen de aquí,
     /// no de la red. PNG conserva el canal alfa de los ejercicios.
     private static func diskURL(_ url: URL, maxSide: CGFloat) -> URL? {
-        guard let base = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else { return nil }
-        let dir = base.appendingPathComponent("images-alpha-v2", isDirectory: true)
-        if !FileManager.default.fileExists(atPath: dir.path) {
-            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        }
+        guard let dir = diskDirectory else { return nil }
         var hash: UInt64 = 0xcbf2_9ce4_8422_2325
-        for byte in "\(url.absoluteString)|#\(Int(maxSide))".utf8 {
+        for byte in "\(url.absoluteString)|#\(Int(MediaSizing.pixels(maxSide)))".utf8 {
             hash ^= UInt64(byte)
             hash = hash &* 0x0000_0100_0000_01b3
         }
@@ -394,7 +467,7 @@ final class ImageCache {
     private static func decode(_ data: Data, maxSide: CGFloat) async -> PlatformImage? {
         await Task.detached(priority: .userInitiated) { () -> PlatformImage? in
             guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
-            let opts: [CFString: Any] = [kCGImageSourceCreateThumbnailFromImageAlways: true, kCGImageSourceThumbnailMaxPixelSize: maxSide * 3, kCGImageSourceCreateThumbnailWithTransform: true]
+            let opts: [CFString: Any] = [kCGImageSourceCreateThumbnailFromImageAlways: true, kCGImageSourceThumbnailMaxPixelSize: MediaSizing.pixels(maxSide), kCGImageSourceCreateThumbnailWithTransform: true]
             guard let cg = CGImageSourceCreateThumbnailAtIndex(source, 0, opts as CFDictionary) else { return nil }
             #if os(iOS)
             return UIImage(cgImage: cg)
@@ -407,7 +480,8 @@ final class ImageCache {
 
 struct CachedAsyncImage<Content: View, Placeholder: View>: View {
     let url: URL?
-    /// Tamaño máximo de decodificación (px en pantalla × 3). Las miniaturas usan menos.
+    /// Tamaño al que se pinta, en puntos: se pide y se decodifica su escalón (`MediaSizing`). Las
+    /// miniaturas pasan su lado (o `MediaSizing.thumb`); las portadas a todo el ancho, `MediaSizing.hero`.
     let maxSide: CGFloat
     @ViewBuilder var content: (Image) -> Content
     @ViewBuilder var placeholder: () -> Placeholder
@@ -415,7 +489,7 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
     /// URL de la imagen que hay ahora mismo en `image`: al cambiar de URL no se queda la anterior.
     @State private var imageURL: URL?
 
-    init(url: URL?, maxSide: CGFloat = 900,
+    init(url: URL?, maxSide: CGFloat = MediaSizing.hero,
          @ViewBuilder content: @escaping (Image) -> Content,
          @ViewBuilder placeholder: @escaping () -> Placeholder) {
         self.url = url; self.maxSide = maxSide
@@ -449,15 +523,17 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
                 if frames != nil { return }
             } else { frames = nil }
             // Misma URL ya resuelta (normalmente leída de caché): no hay nada que hacer.
-            guard imageURL != url else { return }
+            guard imageURL != url else { MediaTiming.imageShown(); return }
             // La URL cambió (p. ej. del respaldo a la portada de la IA): se descarta la imagen vieja.
             if let hit = ImageCache.shared.cached(url, maxSide: maxSide) {
                 image = hit; imageURL = url
+                MediaTiming.imageShown()
                 return
             }
             image = nil; imageURL = nil
             guard let loaded = await ImageCache.shared.load(url, maxSide: maxSide), !Task.isCancelled else { return }
             image = loaded; imageURL = url
+            MediaTiming.imageShown()
         }
     }
 }
@@ -695,7 +771,7 @@ struct SearchPill: View {
                 .buttonStyle(.plain).accessibilityLabel("Borrar búsqueda")
             }
         }
-        .padding(.leading, 16).padding(.trailing, text.isEmpty ? 16 : 4).frame(height: 44)
+        .padding(.leading, 16).padding(.trailing, text.isEmpty ? 16 : 4).frame(minHeight: 44)
         .background(Palette.card, in: Capsule())
     }
 }

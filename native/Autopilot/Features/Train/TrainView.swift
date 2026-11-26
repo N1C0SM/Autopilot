@@ -248,8 +248,9 @@ struct TrainView: View {
         // Entreno a medias guardado: la rutina lo ofrece como «Continuar entreno».
         resumableDay = session.userIdString.flatMap { ActiveWorkout.restore(userId: $0)?.day.day }
         await loadTrainingDays()
+        // Entrenar y Mis rutinas: las miniaturas de todas las sesiones, por detrás (al abrir una ya están).
         let urls = model.days.flatMap { ($0.exercises ?? []).compactMap(\.image_url) }.compactMap(URL.init(string:))
-        ImageCache.shared.prefetch(urls, maxSide: 140)
+        MediaPrefetch.thumbnails(urls)
     }
 
     /// Tus días de entreno (`trainingDays`) mientras el plan no tenga sesiones del piloto automático
@@ -396,15 +397,16 @@ struct ExerciseListRow: View {
     }
 }
 
-/// Miniatura única de ejercicio (como `ExerciseThumb` en la web): la foto y, sin foto (o mientras
-/// carga), la huella del ejercicio, la de su patrón o la deducida del nombre y el grupo. Nunca un
-/// cuadro gris vacío. Con clip de técnica, el ejercicio se mueve encima en bucle (`ExerciseLoopView`):
-/// la foto y el clip salen de la biblioteca por su nombre (en tandas) y, mientras llegan, del plan.
+/// Miniatura única de ejercicio (como `ExerciseThumb` en la web): la foto (192 px, la misma petición
+/// en toda la app) y, sin foto, la silueta con su músculo en dorado. Nunca un cuadro gris vacío. Con
+/// clip de técnica, el ejercicio se mueve encima en bucle (`ExerciseLoopView`): la foto y el clip
+/// salen de la biblioteca por su nombre (en tandas) y, mientras llegan, del plan.
 struct ExerciseThumb: View {
     let url: String?
     var completed = false
     var size: CGFloat = 52
-    /// Nombre y datos de la ficha para dibujar la huella. Sin nombre queda el hueco con la mancuerna.
+    /// Nombre (busca la foto y el clip en la biblioteca) y grupo muscular (la silueta sin foto).
+    /// `pattern`, `stimulus` y `load` se aceptan por compatibilidad: la huella dibujada se retiró.
     var name: String = ""
     var muscleGroup: String? = nil
     var pattern: String? = nil
@@ -428,12 +430,10 @@ struct ExerciseThumb: View {
         ZStack {
             RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Palette.secondary)
             ExerciseLoopView(url: clip, paused: completed) {
-                if let photo, let u = URL(string: photo) {
-                    CachedAsyncImage(url: u, maxSide: max(140, size * 2)) { $0.resizable().scaledToFill() } placeholder: { glyph }
-                } else if name.isEmpty {
-                    Image(systemName: "dumbbell").foregroundStyle(Palette.muted)
+                if let photo, !photo.isEmpty, let u = URL(string: photo) {
+                    CachedAsyncImage(url: u, maxSide: MediaSizing.thumbSide(size)) { $0.resizable().scaledToFill() } placeholder: { Color.clear }
                 } else {
-                    glyph
+                    silhouette
                 }
             }
             if completed {
@@ -447,11 +447,10 @@ struct ExerciseThumb: View {
         .task(id: name) { if moves, !fresh { loops.want(name) } }
     }
 
-    @ViewBuilder private var glyph: some View {
-        if !name.isEmpty {
-            ExerciseMotionGlyph(spec: ExerciseMotion.specFor(name: name, pattern: pattern, stimulus: stimulus, load: load, muscleGroup: muscleGroup))
-                .padding(6).opacity(completed ? 0.6 : 1)
-        }
+    private var silhouette: some View {
+        ExerciseSilhouette(muscleGroup: muscleGroup)
+            .padding(.vertical, size * 0.1)
+            .opacity(completed ? 0.6 : 1)
     }
 }
 
@@ -587,7 +586,7 @@ struct RoutineListView: View {
         }
         .sheet(item: $detail) { ex in
             // Sin foto, la ficha abre con la huella del ejercicio (nunca un hueco).
-            TechniqueSheet(exercise: ex, motion: ExerciseMotion.specFor(name: ex.name, pattern: nil, stimulus: nil, load: nil, muscleGroup: ex.muscle_group))
+            TechniqueSheet(exercise: ex)
                 .presentationBackground(Palette.card)
         }
         .sheet(item: $personalizing) { plan in
@@ -685,7 +684,7 @@ struct RoutineListView: View {
                 .background(Palette.secondary, in: shape)
                 .accessibilityHidden(true)
         } else if let cover = plan.cover_url, !cover.isEmpty, let u = URL(string: cover) {
-            CachedAsyncImage(url: u, maxSide: 300) {
+            CachedAsyncImage(url: u, maxSide: MediaSizing.thumb) {
                 $0.resizable().scaledToFill()
             } placeholder: {
                 Palette.secondary

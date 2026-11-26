@@ -10,6 +10,7 @@ import { kgText } from "@/shared/lib/workoutSummaryFormat";
 import { BRAND_PHOTOS, useBrandPhotos } from "@/shared/lib/brandPhotos";
 import { ProgressHero } from "@/app/components/progress/ProgressHero";
 import { useExerciseImages } from "@/shared/hooks/useExerciseImages";
+import { fastImage, THUMB_SIDE } from "@/shared/lib/fastImage";
 
 interface PR {
   id: string;
@@ -187,7 +188,7 @@ const PRsList = ({ userId, onGoTrain }: Props) => {
         {prs.slice(0, 20).map((pr) => (
           <ListRow
             key={pr.id}
-            leading={<span aria-hidden="true" className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-media bg-secondary">{images[pr.exercise_name] ? <img src={images[pr.exercise_name]} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover object-[50%_30%]" /> : <Dumbbell className="h-[18px] w-[18px] text-muted-foreground" strokeWidth={1.75} />}</span>}
+            leading={<span aria-hidden="true" className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-media bg-secondary">{images[pr.exercise_name] ? <img src={fastImage(images[pr.exercise_name], THUMB_SIDE)} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover object-[50%_30%]" /> : <Dumbbell className="h-[18px] w-[18px] text-muted-foreground" strokeWidth={1.75} />}</span>}
             title={pr.exercise_name}
             subtitle={isThisMonth(pr)
               ? <span className="inline-flex items-center gap-1.5">{formatDate(pr.achieved_at)}<span className="rounded-full bg-primary/15 px-2 py-px type-footnote font-semibold text-primary">Nuevo</span></span>

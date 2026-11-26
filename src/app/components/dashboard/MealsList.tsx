@@ -20,6 +20,7 @@ import { ProgressRing } from "@/shared/components/ui/progress-ring";
 import type { MacroTargets } from "@/shared/lib/nutrition";
 import { nutritionMacroError } from "@/shared/lib/nutritionValidation";
 import { useMealPhoto } from "@/shared/hooks/useSessionCover";
+import { fastImage, THUMB_SIDE } from "@/shared/lib/fastImage";
 import { BRAND_PHOTOS } from "@/shared/lib/brandPhotos";
 import { mealMacros, sumMacros, type PlanMeal } from "@/shared/lib/mealMacros";
 import MealsPlusCard from "@/app/components/dashboard/MealsPlusCard";
@@ -35,7 +36,8 @@ const MealPhoto = ({ dish, dim }: { dish: string; dim: boolean }) => {
   if (!src) return null;
   return <span aria-hidden="true" className="shrink-0 py-2">
     <span className={cn("relative block h-10 w-10 overflow-hidden rounded-[14px] bg-secondary transition-opacity", dim && "opacity-50")}>
-      <img src={src} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover animate-in fade-in duration-500" />
+      {/* Miniatura de 40 px: 192 px, no la foto de 1000 de la tarjeta grande. */}
+      <img src={fastImage(src, THUMB_SIDE)} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover animate-in fade-in duration-500" />
     </span>
   </span>;
 };

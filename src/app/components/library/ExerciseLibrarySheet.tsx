@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, Heart, Search, WifiOff } from "lucide-react"
 import { supabase } from "@/shared/integrations/supabase/client";
 import ResponsiveSheet from "@/app/components/dashboard/ResponsiveSheet";
 import ExerciseMedia, { ExerciseThumb } from "@/app/components/ExerciseMedia";
-import { ExerciseMotionGlyph } from "@/app/components/ExerciseMotion";
+import { MuscleMap } from "@/app/components/MuscleMap";
 import { Button } from "@/shared/components/ui/button";
 import { ChipGroup } from "@/shared/components/ui/chip-group";
 import { EmptyState } from "@/shared/components/ui/empty-state";
@@ -14,7 +14,6 @@ import {
   EMPTY_FILTERS, EQUIPMENT, FILTER_GROUPS, MODALITIES, activeFilterCount, attribution, exerciseCount, filterLibrary,
   similarExercises, subtitle, type LibraryExercise, type LibraryFilters,
 } from "@/shared/lib/exerciseLibrary";
-import { exerciseMotionFor } from "@/shared/lib/exerciseMotion";
 import { fastImage } from "@/shared/lib/fastImage";
 import { hapticSelection, hapticTap } from "@/shared/lib/native";
 import { cn } from "@/shared/lib/utils";
@@ -201,12 +200,10 @@ const SectionTitle = ({ children }: { children: string }) => (
   <h3 className="mb-2.5 type-title3">{children}</h3>
 );
 
-/** La huella de un grupo muscular (la deducida de su nombre): el visual de la tarjeta sin foto. */
-const groupGlyph = (group: string) => exerciseMotionFor({ name: group, muscleGroup: group });
-
 /**
- * Tarjeta de grupo muscular: la foto real de uno de sus ejercicios con su degradado o, si el
- * grupo aún no tiene ninguna, su huella dorada en el centro. Nunca un bloque vacío.
+ * Tarjeta de grupo muscular: la foto real de uno de sus ejercicios con su degradado (a 640 px, la
+ * misma petición que la app) o, si el grupo aún no tiene ninguna, la silueta con ese músculo en
+ * dorado. Nunca un bloque vacío. Como `groupTile` en la app.
  */
 const GroupTile = ({ group, count, image, onSelect }: { group: string; count: number; image: string | null; onSelect: () => void }) => {
   const [broken, setBroken] = useState(false);
@@ -225,7 +222,7 @@ const GroupTile = ({ group, count, image, onSelect }: { group: string; count: nu
         </>
       ) : (
         <span aria-hidden className="absolute inset-x-0 top-0 bottom-12 flex items-center justify-center">
-          <span className="h-[54px] w-24"><ExerciseMotionGlyph spec={groupGlyph(group)} /></span>
+          <MuscleMap primary={[group]} size={40} dots={false} />
         </span>
       )}
       <span aria-hidden className="absolute bottom-3 left-3 right-3">

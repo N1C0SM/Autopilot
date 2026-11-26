@@ -188,8 +188,8 @@ struct AccountView: View {
             hubRow("person.2", "Cuentas en este dispositivo", "Cambia de cuenta sin cerrar sesión", to: .cuentas)
         }
         group("Preferencias") {
-            hubRow("dumbbell", "Tu forma de entrenar", "Vista, disposición y descanso del entreno", to: .entreno)
-            hubRow("key", "Contraseña", "Contraseña y cuentas vinculadas", to: .contrasena)
+            hubRow("dumbbell", "Tu forma de entrenar", "Vista del entreno y descanso entre series", to: .entreno)
+            hubRow("key", "Contraseña", "Cambia tu contraseña", to: .contrasena)
         }
         group("Apariencia") {
             HStack {

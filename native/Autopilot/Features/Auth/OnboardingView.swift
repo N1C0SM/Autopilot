@@ -234,9 +234,9 @@ struct OnboardingDraft: Codable, Equatable {
         try await Backend.client.from("onboarding").upsert(row, onConflict: "user_id").execute()
         UserDefaults.standard.set(appearance, forKey: "appearance")
         UserDefaults.standard.set(workoutLayout, forKey: "workout-layout")
-        try? await Backend.client.from("user_consents")
+        _ = try? await Backend.client.from("user_consents")
             .insert(["terms", "privacy", "health_data"].map { Consent(user_id: userId, consent_type: $0) }).execute()
-        try? await Backend.client.from("profiles").update(["plan_status": "plan_pending"]).eq("user_id", value: userId).execute()
+        _ = try? await Backend.client.from("profiles").update(["plan_status": "plan_pending"]).eq("user_id", value: userId).execute()
         _ = await TrainingRepo.generateStarterPlan(userId: userId)
     }
 }

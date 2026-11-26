@@ -13,6 +13,7 @@ import ExerciseFocus from "@/app/components/ExerciseFocus";
 import { useExerciseMetadata } from "@/shared/hooks/useExerciseMetadata";
 import { cachedSessionCover, useSessionCover } from "@/shared/hooks/useSessionCover";
 import { BRAND_PHOTOS, useBrandPhotos } from "@/shared/lib/brandPhotos";
+import { fastImage, THUMB_SIDE } from "@/shared/lib/fastImage";
 import { doneSessionCount, nextPendingSession, routineSessions } from "@/shared/lib/routineOrder";
 import { cleanSessionIcon } from "@/shared/lib/sessionIdentity";
 import SessionIdentitySheet from "@/app/components/dashboard/SessionIdentitySheet";
@@ -97,7 +98,8 @@ const SessionRow = ({ number, plan, isNext, done, expanded, photo, onSelect }: S
         </span>
       ) : gym ? (
         <span aria-hidden className="relative h-16 w-16 shrink-0 overflow-hidden rounded-media bg-secondary">
-          {cover && <img src={cover} alt="" decoding="async" loading="lazy" className="absolute inset-0 h-full w-full object-cover object-[50%_30%]" />}
+          {/* Miniatura de 64 px: 192 px, la misma que las de ejercicio (no la portada de 1000). */}
+          {cover && <img src={fastImage(cover, THUMB_SIDE)} alt="" decoding="async" loading="lazy" className="absolute inset-0 h-full w-full object-cover object-[50%_30%]" />}
         </span>
       ) : (
         <span aria-hidden className="flex h-16 w-16 shrink-0 items-center justify-center rounded-media bg-secondary text-primary">

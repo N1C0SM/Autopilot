@@ -425,6 +425,136 @@ struct AdminErrorCard: View {
     }
 }
 
+/// Una opción de una lista cerrada (valor guardado y texto que se lee). `""` / `0` es «sin valor».
+struct AdminOption<Value: Hashable>: Hashable {
+    let value: Value
+    let label: String
+}
+
+/// Filtro en píldora a todo el ancho: etiqueta pequeña arriba y el valor elegido (dorado si filtra),
+/// con un menú del sistema. Con letra grande el texto crece y la píldora con él.
+struct AdminMenuField<Value: Hashable>: View {
+    let label: String
+    @Binding var selection: Value
+    let options: [AdminOption<Value>]
+
+    private var current: AdminOption<Value>? { options.first { $0.value == selection } }
+    private var isDefault: Bool { selection == options.first?.value }
+
+    var body: some View {
+        Menu {
+            Picker(label, selection: $selection) {
+                ForEach(options, id: \.self) { Text($0.label).tag($0.value) }
+            }
+        } label: {
+            HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(label).font(.apCaption).foregroundStyle(Palette.muted)
+                    Text(current?.label ?? "—").font(.apSubhead.weight(.semibold))
+                        .foregroundStyle(isDefault ? Palette.foreground : Palette.gold)
+                        .lineLimit(2).multilineTextAlignment(.leading)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                Image(systemName: "chevron.up.chevron.down").font(.inter(.footnote).weight(.semibold))
+                    .foregroundStyle(Palette.muted).accessibilityHidden(true)
+            }
+            .padding(.horizontal, 18).padding(.vertical, 6)
+            .frame(maxWidth: .infinity, minHeight: 52)
+            .background(Palette.card, in: Capsule())
+            .contentShape(Capsule())
+        }
+        .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden)
+        .accessibilityLabel(label)
+        .accessibilityValue(current?.label ?? "")
+    }
+}
+
+/// Fila de una lista agrupada con su valor a la derecha y un menú para cambiarlo (como las filas de
+/// Ajustes). Si la etiqueta y el valor no caben en una línea (un nombre largo, letra grande o el
+/// iPhone estrecho), el valor baja debajo de la etiqueta: nada se corta ni se monta.
+struct AdminPickerRow<Value: Hashable>: View {
+    let label: String
+    @Binding var selection: Value
+    let options: [AdminOption<Value>]
+
+    private var current: String { options.first { $0.value == selection }?.label ?? "—" }
+
+    private var chevron: some View {
+        Image(systemName: "chevron.up.chevron.down").font(.inter(.footnote).weight(.semibold))
+            .foregroundStyle(Palette.muted).accessibilityHidden(true)
+    }
+
+    var body: some View {
+        Menu {
+            Picker(label, selection: $selection) {
+                ForEach(options, id: \.self) { Text($0.label).tag($0.value) }
+            }
+        } label: {
+            ViewThatFits(in: .horizontal) {
+                // Una línea: etiqueta a la izquierda, valor y flechas a la derecha.
+                HStack(spacing: 12) {
+                    Text(label).font(.apBody).foregroundStyle(Palette.foreground).fixedSize()
+                    Spacer(minLength: 8)
+                    Text(current).font(.apBody).foregroundStyle(Palette.muted).fixedSize()
+                    chevron
+                }
+                // No cabe: el valor debajo, entero (hasta tres líneas para un nombre de ejercicio largo).
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(label).font(.apBody).foregroundStyle(Palette.foreground)
+                        Text(current).font(.apBody).foregroundStyle(Palette.muted).lineLimit(3)
+                    }
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    chevron
+                }
+                .padding(.vertical, 10)
+            }
+            .padding(.horizontal, 16)
+            .frame(maxWidth: .infinity, minHeight: 50, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden)
+        .accessibilityLabel(label)
+        .accessibilityValue(current)
+    }
+}
+
+/// Acción de una lista agrupada (como «Subir imagen» o «Quitar imagen» en la web): icono y texto en
+/// dorado, o en rojo si es destructiva, con 50 pt de alto y el texto que crece con la letra.
+struct AdminActionRow: View {
+    let title: String
+    let symbol: String
+    var tint: Color = Palette.gold
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) { AdminActionLabel(title: title, symbol: symbol, tint: tint) }
+            .buttonStyle(.plain)
+    }
+}
+
+/// Lo que se ve de `AdminActionRow`, para usarlo también como etiqueta de un `PhotosPicker`.
+struct AdminActionLabel: View {
+    let title: String
+    let symbol: String
+    var tint: Color = Palette.gold
+    @Environment(\.isEnabled) private var isEnabled
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: symbol).font(.inter(.body).weight(.semibold)).frame(width: 24).accessibilityHidden(true)
+            Text(title).font(.apBody).multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .foregroundStyle(tint)
+        .opacity(isEnabled ? 1 : 0.4)
+        .padding(.horizontal, 16).padding(.vertical, 12)
+        .frame(maxWidth: .infinity, minHeight: 50, alignment: .leading)
+        .contentShape(Rectangle())
+    }
+}
+
 /// Campo numérico compacto (cifra a la derecha y teclado numérico en iOS).
 struct AdminNumberField: View {
     let label: String

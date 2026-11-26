@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { cn } from "@/shared/lib/utils";
 import { LOOP_START_DELAY_MS, MAX_LIVE_LOOPS, MAX_WARM_LOOPS, loopUrl, loopsAllowed } from "@/shared/lib/exerciseLoop";
+import { prefetchImages, whenIdle, type MediaPlan } from "@/shared/lib/mediaPrefetch";
 
 /**
  * Ejercicio en movimiento (como un GIF, pero nuestro clip de técnica): un `<video>` mudo, en bucle,
@@ -101,6 +102,17 @@ export const preloadExerciseLoop = (src: string | null | undefined) => {
     element.load();
     warm.delete(oldest);
   }
+};
+
+/**
+ * Precarga lo de una pantalla (`todayMedia`, `workoutMedia`, `thumbnailMedia`): las fotos por detrás
+ * y los clips con `preloadExerciseLoop` (el service worker los guarda en `autopilot-video`). Como
+ * `MediaPrefetch` en la app. Nunca bloquea: la pantalla ya pinta mientras tanto.
+ */
+export const prefetchMedia = (plan: MediaPlan) => {
+  prefetchImages([...plan.thumbs, ...plan.heroes]);
+  // Los clips, también cuando el navegador está libre: nunca compiten con la primera foto.
+  if (plan.videos.length > 0) whenIdle(() => plan.videos.forEach((video) => preloadExerciseLoop(video)));
 };
 
 /** Arranca el clip mudo (iOS exige el atributo `muted` antes de `play()`); si no puede, se queda la foto. */

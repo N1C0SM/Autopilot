@@ -349,11 +349,11 @@ struct HomeView: View {
         ZStack {
             Palette.secondary
             if let cover = plan.cover_url, let url = URL(string: cover) {
-                CachedAsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
+                CachedAsyncImage(url: url, maxSide: MediaSizing.thumb) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
             } else if let firstPhoto {
                 // Sin portada propia, la sesión se mueve con el clip de su primer ejercicio (como la web).
                 NamedExerciseLoop(name: first?.name ?? "", plan: first?.video_url) {
-                    CachedAsyncImage(url: firstPhoto) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
+                    CachedAsyncImage(url: firstPhoto, maxSide: MediaSizing.thumb) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
                 }
             } else if let icon = SessionIdentity.clean(plan.session_icon) {
                 Image(systemName: icon).font(.inter(size: 22, weight: .semibold)).foregroundStyle(Palette.gold)
@@ -405,7 +405,12 @@ struct HomeView: View {
                 return
             }
             #endif
+            // Hoy: cuenta hasta la primera foto (Instruments) y precarga la sesión de hoy por detrás,
+            // primero con lo guardado y, al llegar la red, con lo nuevo. Como `todayMedia` en la web.
+            MediaTiming.begin("Hoy")
+            prefetchToday()
             await load()
+            prefetchToday()
             if Self.pendingStartToday {
                 Self.pendingStartToday = false
                 if let plan = snapshot?.plan { await startRoutine(plan) }
@@ -480,6 +485,17 @@ struct HomeView: View {
         (snapshot?.plan?.exercises ?? []).compactMap { $0.image_url }.first.flatMap(URL.init(string:))
     }
 
+    /// La sesión de hoy: miniaturas, la foto grande del primer ejercicio (la portada de la tarjeta y
+    /// la primera del entreno) y su clip. Nunca bloquea: la tarjeta ya se pinta mientras tanto.
+    private func prefetchToday() {
+        guard let plan = snapshot?.plan, plan.isGym else { return }
+        let exercises = plan.exercises ?? []
+        let loops = ExerciseLoops.shared
+        MediaPrefetch.today(photos: exercises.compactMap { (loops.images[$0.name] ?? $0.image_url).flatMap(URL.init(string:)) },
+                            hero: todayCover,
+                            videos: exercises.compactMap { loops.video($0.name, plan: $0.video_url) })
+    }
+
     // MARK: Lo único de hoy (empezar, resultados o descanso)
 
     @ViewBuilder private var mainAction: some View {
@@ -522,7 +538,7 @@ struct HomeView: View {
         return Button { Haptics.tap(); openSheet() } label: {
             VStack(alignment: .leading, spacing: 0) {
                 ZStack(alignment: .bottomLeading) {
-                    CachedAsyncImage(url: cover) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
+                    CachedAsyncImage(url: cover, maxSide: MediaSizing.hero) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
                         .frame(maxWidth: .infinity).frame(height: 210).clipped()
                         .overlay { LinearGradient(colors: [.clear, .black.opacity(0.82)], startPoint: .center, endPoint: .bottom) }
                     HStack(spacing: 6) {
@@ -617,7 +633,8 @@ struct HomeView: View {
                 .frame(maxWidth: .infinity, minHeight: wideLayout ? 240 : 188, alignment: .topLeading)
                 .background(alignment: .trailing) {
                     if let cover {
-                        CachedAsyncImage(url: cover) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
+                        // A tamaño de portada: es la misma foto que abre el entreno (una sola descarga).
+                        CachedAsyncImage(url: cover, maxSide: MediaSizing.hero) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
                             .frame(width: wideLayout ? 390 : 210).frame(maxHeight: .infinity).clipped()
                             // Fundida con una máscara (no con el color de la tarjeta): sin corte sobre su luz.
                             .mask {

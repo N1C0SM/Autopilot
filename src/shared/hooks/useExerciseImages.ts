@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
-import { fastImage } from "@/shared/lib/fastImage";
+import { fastImage, HERO_SIDE } from "@/shared/lib/fastImage";
 
 /**
- * Foto de cada ejercicio por nombre (biblioteca de ejercicios). Es decoración:
+ * Foto de cada ejercicio por nombre (biblioteca de ejercicios), a tamaño de portada. Las
+ * miniaturas la piden a su tamaño (`ExerciseThumb`, o `fastImage(url, THUMB_SIDE)`). Es decoración:
  * si falla la consulta, las pantallas se quedan sin foto en vez de avisar.
  */
 export function useExerciseImages(names: string[]): Record<string, string> {
@@ -18,7 +19,7 @@ export function useExerciseImages(names: string[]): Record<string, string> {
         const { data } = await supabase.from("exercises").select("name, image_url").in("name", key.split("\n"));
         if (!alive) return;
         const next: Record<string, string> = {};
-        for (const row of data ?? []) if (row.image_url) next[row.name] = fastImage(row.image_url, 800);
+        for (const row of data ?? []) if (row.image_url) next[row.name] = fastImage(row.image_url, HERO_SIDE);
         setImages(next);
       } catch { /* sin fotos */ }
     })();

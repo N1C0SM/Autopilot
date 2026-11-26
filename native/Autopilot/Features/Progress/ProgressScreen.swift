@@ -2095,7 +2095,7 @@ private struct ProgressRecordThumb: View {
         ZStack {
             RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Palette.secondary)
             if let u = url.flatMap(URL.init(string:)) {
-                RemoteThumb(url: u, maxSide: 140) { Color.clear }
+                RemoteThumb(url: u, maxSide: MediaSizing.thumbSide(size)) { Color.clear }
             } else {
                 Image(systemName: "dumbbell").foregroundStyle(Palette.muted)
             }

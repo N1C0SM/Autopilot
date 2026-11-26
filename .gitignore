@@ -39,3 +39,6 @@ audit/antes/
 audit/despues/
 audit/tmp/
 audit/.auth/
+
+# Compilación nativa del Mac (xcodebuild -derivedDataPath build-mac): nunca se versiona.
+native/build-mac/

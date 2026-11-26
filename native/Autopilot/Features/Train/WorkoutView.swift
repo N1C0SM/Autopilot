@@ -5,13 +5,6 @@ import UIKit
 import AppKit
 #endif
 
-private struct ExerciseMetaRow: Decodable {
-    let name: String
-    let movement_pattern: String?
-    let stimulus_type: String?
-    let load_level: String?
-}
-
 /// Campo enfocado en la sesión: identifica el input activo para la barra del teclado.
 struct WorkoutField: Hashable {
     enum Kind { case weight, reps }
@@ -50,8 +43,6 @@ struct WorkoutView: View {
     /// y permite centrar la serie sin que el teclado la tape.
     @FocusState private var focus: WorkoutField?
     @State private var addingExercise = false
-    /// Metadatos del ejercicio (patrón/estímulo/carga) para el glifo de movimiento.
-    @State private var motionMeta: [String: (pattern: String?, stimulus: String?, load: String?)] = [:]
     /// Vista elegida en «···» o en Ajustes: lista de toda la sesión (por defecto) o ejercicio a ejercicio.
     @AppStorage("workout-view") private var workoutView = "focus"
     @AppStorage("workout-layout") private var workoutLayout = "rows"
@@ -62,27 +53,6 @@ struct WorkoutView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     private var progress: Double { workout.totalSets > 0 ? Double(workout.doneSets) / Double(workout.totalSets) : 0 }
-
-    private func loadMotionMeta() async {
-        let ids = workout.exercises.map(\.exercise_id).filter { !$0.isEmpty }
-        let names = workout.exercises.map(\.name)
-        var result: [String: (pattern: String?, stimulus: String?, load: String?)] = [:]
-        if !ids.isEmpty {
-            if let rows: [ExerciseMetaRow] = try? await Backend.client.from("exercises")
-                .select("name,movement_pattern,stimulus_type,load_level")
-                .in("id", values: ids).execute().value {
-                for r in rows { result[r.name] = (r.movement_pattern, r.stimulus_type, r.load_level) }
-            }
-        }
-        if !names.isEmpty {
-            if let rows: [ExerciseMetaRow] = try? await Backend.client.from("exercises")
-                .select("name,movement_pattern,stimulus_type,load_level")
-                .in("name", values: names).execute().value {
-                for r in rows { result[r.name] = (r.movement_pattern, r.stimulus_type, r.load_level) }
-            }
-        }
-        motionMeta = result
-    }
 
     private func handleScenePhase(_ phase: ScenePhase) {
         if phase != .active { workout.persistNow() }
@@ -162,6 +132,14 @@ struct WorkoutView: View {
 
     private func handleSummaryDismiss() { onClose(true) }
 
+    /// Fotos y clips del entreno, con lo más nuevo de la biblioteca si ya llegó (`ExerciseLoops`).
+    private func prefetchWorkout() {
+        let loops = ExerciseLoops.shared
+        MediaPrefetch.workout(
+            photos: workout.exercises.compactMap { (loops.images[$0.name] ?? $0.image_url).flatMap(URL.init(string:)) },
+            videos: workout.exercises.compactMap { loops.video($0.name, plan: $0.video_url) })
+    }
+
     private var finishIncompleteChoice: some View {
         ChoiceSheet(title: "¿Terminar con series pendientes?",
                     message: finishIncompleteMessage,
@@ -187,11 +165,13 @@ struct WorkoutView: View {
         }
         .screenBackground()
         .task {
-            // Calienta las miniaturas de la sesión: al hacer scroll ya están.
-            let urls = workout.exercises.compactMap(\.image_url).compactMap(URL.init(string:))
-            ImageCache.shared.prefetch(urls, maxSide: 140)
-            // Metadatos del ejercicio (patrón/estímulo/carga) para el glifo de movimiento.
-            await loadMotionMeta()
+            // Entreno que empieza: todas sus fotos (miniatura y grande) y los dos primeros clips, por
+            // detrás; primero con lo que guarda el plan y, en cuanto llega, con lo de la biblioteca.
+            // Como `workoutMedia` en la web. Y, con Instruments, el tiempo hasta su primera foto.
+            MediaTiming.begin("Entreno")
+            prefetchWorkout()
+            await ExerciseLoops.shared.load(workout.exercises.map(\.name))
+            prefetchWorkout()
         }
         .navigationTitle(workout.draft.day.routine_name?.trimmingCharacters(in: .whitespaces).nilIfEmpty ?? workout.draft.day.title)
         #if os(iOS)
@@ -358,11 +338,11 @@ struct WorkoutView: View {
         let si = field.set
         guard var sets = workout.draft.logs[name], sets.indices.contains(si) else { return }
         if field.kind == .weight {
-            let current = Double(sets[si].weight ?? "0") ?? 0
+            let current = Double(sets[si].weight) ?? 0
             let next = max(0, current + Double(direction) * 2.5)
             sets[si].weight = next > 0 ? String(next) : "0"
         } else {
-            let current = sets[si].reps ?? 0
+            let current = sets[si].reps
             sets[si].reps = max(1, current + direction)
         }
         workout.draft.logs[name] = sets
@@ -411,7 +391,7 @@ struct WorkoutView: View {
         if !focusMode { listHeader }
         let currentIdx = min(workout.draft.currentExercise, max(workout.exercises.count - 1, 0))
         if focusMode, let ex = workout.exercises[safe: currentIdx] {
-            FocusViewer(workout: workout, index: currentIdx, motion: motionMeta, onAdd: { Haptics.selection(); addingExercise = true })
+            FocusViewer(workout: workout, index: currentIdx, onAdd: { Haptics.selection(); addingExercise = true })
             SessionExerciseCard(workout: workout, exercise: ex, index: currentIdx, userId: userId, focused: true)
                 .onAppear { workout.openExercises.insert(currentIdx) }
                 .id(ex.id)
@@ -641,13 +621,6 @@ struct SessionExerciseCard: View {
     @State private var justCompleted = false
     @State private var swapSheet = false
     @State private var swapOptions: [String] = []
-    @State private var motionMeta: (pattern: String?, stimulus: String?, load: String?)? = nil
-
-    /// Huella del ejercicio (patrón de la ficha o el deducido): la miniatura sin foto nunca es un hueco.
-    private var motionSpec: ExerciseMotion.Spec {
-        ExerciseMotion.specFor(name: exercise.name, pattern: motionMeta?.pattern, stimulus: motionMeta?.stimulus,
-                               load: motionMeta?.load, muscleGroup: exercise.muscle_group)
-    }
 
     private var indexBadge: some View {
         Text("\(index + 1)")
@@ -665,7 +638,7 @@ struct SessionExerciseCard: View {
     private var cardHeader: some View {
         HStack(spacing: 12) {
             if !focused {
-                WorkoutThumb(url: exercise.image_url, completed: allDone, motion: motionSpec,
+                WorkoutThumb(url: exercise.image_url, completed: allDone, muscleGroup: exercise.muscle_group,
                              video: loops.video(exercise.name, plan: exercise.video_url))
                     .overlay(alignment: .topLeading) { indexBadge }
             }
@@ -821,25 +794,9 @@ struct SessionExerciseCard: View {
             }
         }
         .accessibilityHint("Mantén pulsado para cambiar el ejercicio o hacer una superserie")
-        .sheet(isPresented: $technique) { TechniqueSheet(exercise: exercise, motion: motionSpec) }
+        .sheet(isPresented: $technique) { TechniqueSheet(exercise: exercise) }
         .sheet(isPresented: $swapSheet) { swapSheetContent }
-        .task { await loadMotionMeta() }
         .task(id: exercise.name) { loops.want(exercise.name) }
-    }
-
-    private func loadMotionMeta() async {
-        if let rows: [ExerciseMetaRow] = try? await Backend.client.from("exercises")
-            .select("name,movement_pattern,stimulus_type,load_level")
-            .eq("name", value: exercise.name).execute().value,
-           let r = rows.first {
-            motionMeta = (r.movement_pattern, r.stimulus_type, r.load_level)
-        } else if !exercise.exercise_id.isEmpty,
-                  let rows: [ExerciseMetaRow] = try? await Backend.client.from("exercises")
-            .select("name,movement_pattern,stimulus_type,load_level")
-            .eq("id", value: exercise.exercise_id).execute().value,
-                  let r = rows.first {
-            motionMeta = (r.movement_pattern, r.stimulus_type, r.load_level)
-        }
     }
 
     private func openSwapSheet() async {
@@ -933,12 +890,10 @@ struct ChoiceSheet: View {
 }
 
 /// Modo foco: carrusel de toda la sesión arriba y el ejercicio activo en grande debajo (desliza
-/// para cambiar), como el visor de `WorkoutTracker.tsx`. Sin foto, la huella del ejercicio.
+/// para cambiar), como el visor de `WorkoutTracker.tsx`. Sin foto, el ejercicio por su músculo.
 struct FocusViewer: View {
     @ObservedObject var workout: ActiveWorkout
     let index: Int
-    /// Patrón, estímulo y carga de cada ejercicio (por nombre) para su huella.
-    var motion: [String: (pattern: String?, stimulus: String?, load: String?)] = [:]
     var onAdd: () -> Void = {}
     @ObservedObject private var loops = ExerciseLoops.shared
     @ObservedObject private var policy = LoopPolicy.shared
@@ -954,13 +909,6 @@ struct FocusViewer: View {
         Haptics.selection()
     }
 
-    /// La huella de cada ejercicio: su patrón o el deducido del nombre y el músculo.
-    private func spec(_ item: GymExercise) -> ExerciseMotion.Spec {
-        let m = motion[item.name]
-        return ExerciseMotion.specFor(name: item.name, pattern: m?.pattern ?? nil, stimulus: m?.stimulus ?? nil,
-                                      load: m?.load ?? nil, muscleGroup: item.muscle_group)
-    }
-
     var body: some View {
         let ex = workout.exercises[index]
         VStack(spacing: 12) {
@@ -972,7 +920,7 @@ struct FocusViewer: View {
                         let sets = workout.draft.logs[item.name] ?? []
                         let done = !sets.isEmpty && sets.allSatisfy(\.done)
                         Button { go(i) } label: {
-                            WorkoutThumb(url: loops.images[item.name] ?? item.image_url, completed: done, size: 48, motion: spec(item))
+                            WorkoutThumb(url: loops.images[item.name] ?? item.image_url, completed: done, size: 48, muscleGroup: item.muscle_group)
                                 .padding(2)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -1060,7 +1008,7 @@ struct FocusViewer: View {
                     guard workout.exercises.indices.contains(index + offset) else { return nil }
                     return workout.exercises[index + offset].image_url.flatMap(URL.init(string:))
                 }
-                ImageCache.shared.prefetch(urls, maxSide: 900)
+                ImageCache.shared.prefetch(urls, maxSide: MediaSizing.hero)
                 preloadNext()
             }
         }
@@ -1079,9 +1027,10 @@ struct FocusViewer: View {
         if let url = loops.video(item.name, plan: item.video_url) { ExerciseLoopPool.shared.preload(url) }
     }
 
-    /// Una página del carrusel: la foto del ejercicio a todo el visor o, sin foto, su huella en grande.
-    /// El ejercicio actual se mueve encima en bucle (mudo, sin controles) en cuanto su primer fotograma
-    /// está listo; sin vídeo todavía, la huella dorada en una esquina de la foto. Como la web.
+    /// Una página del carrusel: la foto del ejercicio a todo el visor (1000 px, la que precargó el
+    /// inicio del entreno) o, sin foto, la silueta con su músculo. El ejercicio actual se mueve encima
+    /// en bucle (mudo, sin controles) en cuanto su primer fotograma está listo; sin vídeo, la foto
+    /// sola. Como la web.
     /// La foto va en un `overlay` del fondo: así «rellenar» se recorta al tamaño de la página y no
     /// invade la foto vecina del carrusel.
     @ViewBuilder private func photoPage(_ item: GymExercise, current: Bool) -> some View {
@@ -1091,16 +1040,11 @@ struct FocusViewer: View {
             .overlay {
                 ExerciseLoopView(url: current ? clip : nil, hero: true) {
                     if let url = photo {
-                        CachedAsyncImage(url: url, maxSide: 900) { $0.resizable().scaledToFill() } placeholder: {
-                            ExerciseMotionHero(spec: spec(item)).padding(.horizontal, 24).padding(.vertical, 16)
-                        }
+                        CachedAsyncImage(url: url, maxSide: MediaSizing.hero) { $0.resizable().scaledToFill() } placeholder: { Palette.card }
                     } else {
-                        ExerciseMotionHero(spec: spec(item)).padding(.horizontal, 24).padding(.vertical, 16)
+                        ExerciseSilhouette(muscleGroup: item.muscle_group).padding(.vertical, 12)
                     }
                 }
-            }
-            .overlay(alignment: .bottomLeading) {
-                if photo != nil, clip == nil { ExerciseMotionBadge(spec: spec(item)).padding(10) }
             }
             .clipped()
     }
@@ -1208,21 +1152,18 @@ struct ExerciseSwapMenu: View {
 /// Ficha de técnica del ejercicio (ExerciseFocus): imagen o vídeo, series, reps, descanso y músculo.
 struct TechniqueSheet: View {
     let exercise: GymExercise
-    /// Huella del ejercicio: «Ritmo» y el héroe cuando no hay foto (como `ExerciseMedia` en la web).
-    var motion: ExerciseMotion.Spec? = nil
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var loops = ExerciseLoops.shared
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                // El mismo héroe que la ficha de la biblioteca: el clip en bucle sobre su foto, la foto
-                // con «Ritmo / Foto» o la huella; nunca un bloque vacío.
+                // El mismo héroe que la ficha de la biblioteca: el clip en bucle sobre su foto, la foto o,
+                // sin foto, la silueta con su músculo; nunca un bloque vacío.
                 ExerciseHeroMedia(
                     name: exercise.name,
                     image: loops.images[exercise.name] ?? exercise.image_url,
                     video: loops.video(exercise.name, plan: exercise.video_url)?.absoluteString,
-                    motion: motion,
-                    glyph: motion ?? ExerciseMotion.specFor(name: exercise.name, pattern: nil, stimulus: nil, load: nil, muscleGroup: exercise.muscle_group)
+                    muscleGroup: exercise.muscle_group
                 )
                 Text(exercise.name).font(.apTitle1).tracking(-0.4)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1507,15 +1448,15 @@ struct NumberField: View {
     }
 }
 
-/// Miniatura de ejercicio de la sesión: misma apariencia que `ExerciseThumb` (TrainView.swift), pero
-/// decodificando a tamaño de miniatura en vez de los ~2700 px de `CachedAsyncImage`. Con 6-8
-/// tarjetas abiertas eso eran cientos de MB de decodificado y tirones al abrir la sesión.
+/// Miniatura de ejercicio de la sesión: misma apariencia que `ExerciseThumb` (TrainView.swift) y la
+/// misma foto de 192 px (`MediaSizing.thumbSide`), decodificada a ese tamaño: la que ya precargó
+/// `MediaPrefetch.workout` al empezar, sin volver a la red ni decodificar fotos grandes.
 private struct WorkoutThumb: View {
     let url: String?
     var completed = false
     var size: CGFloat = 52
-    /// Huella del ejercicio: sin foto (o mientras carga) se dibuja ella, nunca un icono repetido.
-    var motion: ExerciseMotion.Spec? = nil
+    /// Grupo muscular: sin foto, la silueta con ese músculo (nunca un hueco ni un icono repetido).
+    var muscleGroup: String? = nil
     /// Clip de técnica: en la lista de la sesión el ejercicio se mueve sobre su foto (hecho, quieto).
     var video: URL? = nil
 
@@ -1524,7 +1465,7 @@ private struct WorkoutThumb: View {
             RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Palette.secondary)
             ExerciseLoopView(url: video, paused: completed) {
                 if let u = url.flatMap(URL.init(string:)) {
-                    RemoteThumb(url: u, maxSide: max(140, size * 2)) { fallback }
+                    CachedAsyncImage(url: u, maxSide: MediaSizing.thumbSide(size)) { $0.resizable().scaledToFill() } placeholder: { Color.clear }
                 } else {
                     fallback
                 }
@@ -1539,12 +1480,10 @@ private struct WorkoutThumb: View {
         .accessibilityHidden(true)
     }
 
-    @ViewBuilder private var fallback: some View {
-        if let motion {
-            ExerciseMotionGlyph(spec: motion).padding(6).opacity(completed ? 0.6 : 1)
-        } else {
-            Image(systemName: "dumbbell").foregroundStyle(Palette.muted)
-        }
+    private var fallback: some View {
+        ExerciseSilhouette(muscleGroup: muscleGroup)
+            .padding(.vertical, size * 0.1)
+            .opacity(completed ? 0.6 : 1)
     }
 }
 

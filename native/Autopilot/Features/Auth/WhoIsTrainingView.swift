@@ -202,7 +202,7 @@ struct AvatarView: View {
     var body: some View {
         Group {
             if let url, let u = URL(string: url) {
-                CachedAsyncImage(url: u) { image in image.resizable().scaledToFill() } placeholder: { initial }
+                CachedAsyncImage(url: u, maxSide: size) { image in image.resizable().scaledToFill() } placeholder: { initial }
             } else {
                 initial
             }

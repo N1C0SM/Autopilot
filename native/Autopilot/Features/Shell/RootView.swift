@@ -518,7 +518,6 @@ struct SectionView: View {
             case .adminExercises: AdminExercisesView()
             case .adminDrive: AdminDriveView()
             case .adminLanding: AdminLandingView()
-            default: AdminWebSectionView(section: section)
             }
         }
         // Al cambiar o recuperar la cuenta, cada pantalla vuelve a cargar con el usuario correcto.

@@ -765,23 +765,24 @@ enum ExerciseCatalogStore {
     }
 
     static func store(_ rows: [ExercisePickerRow]) {
-        lock.lock(); memory = rows; lock.unlock()
+        lock.withLock { memory = rows }
         Snapshots.save(rows, key)
     }
 
     /// Descarga el catálogo una vez por arranque. Sin red se queda la copia del disco.
     static func warm() async {
-        lock.lock()
-        let skip = warmed || warming
-        if !skip { warming = true }
-        lock.unlock()
+        let skip = lock.withLock { () -> Bool in
+            let s = warmed || warming
+            if !s { warming = true }
+            return s
+        }
         guard !skip else { return }
-        defer { lock.lock(); warming = false; lock.unlock() }
+        defer { lock.withLock { warming = false } }
         if let rows: [ExercisePickerRow] = try? await Backend.client.from("exercises")
             .select(ExercisePickerRow.columns).order("name").limit(200).execute().value,
            !rows.isEmpty {
             store(rows)
-            lock.lock(); warmed = true; lock.unlock()
+            lock.withLock { warmed = true }
         }
     }
 }

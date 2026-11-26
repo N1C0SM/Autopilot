@@ -1015,7 +1015,8 @@ struct MealPhoto: View {
     var body: some View {
         ZStack {
             Palette.secondary
-            CachedAsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { Color.clear }
+            // Miniatura de 60 pt: 192 px, no la foto grande de la tarjeta.
+            CachedAsyncImage(url: url, maxSide: MediaSizing.thumb) { $0.resizable().scaledToFill() } placeholder: { Color.clear }
         }
         .accessibilityHidden(true)
     }

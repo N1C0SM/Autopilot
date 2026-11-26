@@ -331,9 +331,14 @@ interface MuscleMapProps {
   className?: string;
   /** Size in px of the SVG container */
   size?: number;
+  /**
+   * Puntos de vista frontal / trasera bajo el cuerpo. Sin ellos (miniaturas de ejercicio sin foto)
+   * queda solo la silueta, decorativa: el nombre del ejercicio ya está al lado.
+   */
+  dots?: boolean;
 }
 
-export function MuscleMap({ primary, synergists = [], className = "", size = 160 }: MuscleMapProps) {
+export function MuscleMap({ primary, synergists = [], className = "", size = 160, dots = true }: MuscleMapProps) {
   const targetView = resolveView(primary, synergists);
   const [view, setView] = useState<"front" | "back">(targetView);
   const [flipping, setFlipping] = useState(false);
@@ -361,8 +366,7 @@ export function MuscleMap({ primary, synergists = [], className = "", size = 160
   return (
     <div
       className={`relative flex flex-col items-center gap-2 ${className}`}
-      role="img"
-      aria-label={`Mapa muscular – ${primary.join(", ")} (${viewLabel})`}
+      {...(dots ? { role: "img", "aria-label": `Mapa muscular – ${primary.join(", ")} (${viewLabel})` } : { "aria-hidden": true })}
     >
       <motion.div
         animate={{ opacity: flipping ? 0 : 1, scaleX: flipping ? 0.05 : 1 }}
@@ -377,10 +381,12 @@ export function MuscleMap({ primary, synergists = [], className = "", size = 160
       </motion.div>
 
       {/* View indicator dots */}
-      <div className="flex items-center gap-1.5" aria-hidden="true">
-        <span className={`h-1.5 w-1.5 rounded-full transition-colors duration-300 ${view === "front" ? "bg-primary" : "bg-muted-foreground/30"}`} />
-        <span className={`h-1.5 w-1.5 rounded-full transition-colors duration-300 ${view === "back"  ? "bg-primary" : "bg-muted-foreground/30"}`} />
-      </div>
+      {dots && (
+        <div className="flex items-center gap-1.5" aria-hidden="true">
+          <span className={`h-1.5 w-1.5 rounded-full transition-colors duration-300 ${view === "front" ? "bg-primary" : "bg-muted-foreground/30"}`} />
+          <span className={`h-1.5 w-1.5 rounded-full transition-colors duration-300 ${view === "back"  ? "bg-primary" : "bg-muted-foreground/30"}`} />
+        </div>
+      )}
     </div>
   );
 }

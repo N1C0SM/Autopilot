@@ -101,7 +101,7 @@ final class SessionModel: ObservableObject {
         // si sigue siendo la misma cuenta (antes, al cambiar de admin a usuario, podía quedar .admin).
         // No se pone `.user` por defecto a propósito: MainShell reinicia la sección al cambiar el rol
         // y un cambio transitorio devolvería al usuario a Inicio.
-        func has(_ r: String) async -> Bool {
+        @Sendable func has(_ r: String) async -> Bool {
             (try? await Backend.client.rpc("has_role", params: ["_user_id": id.uuidString, "_role": r]).execute().value as Bool) ?? false
         }
         // Las dos consultas a la vez (antes, una detrás de otra).

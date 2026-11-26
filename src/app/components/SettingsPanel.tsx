@@ -751,7 +751,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false, page: controlledPage, onP
             { title: "Preferencias", rows: [
               { id: "ajustes-entreno", icon: Dumbbell, title: "Tu forma de entrenar", subtitle: "Vista del entreno y descanso entre series", show: true },
               { id: "ajustes-apariencia", icon: Moon, title: "Apariencia", subtitle: "Modo oscuro o del sistema", show: true },
-              { id: "ajustes-contrasena", icon: KeyRound, title: "Contraseña", subtitle: "Contraseña y cuentas vinculadas", show: true },
+              { id: "ajustes-contrasena", icon: KeyRound, title: "Contraseña", subtitle: "Cambia tu contraseña", show: true },
             ] },
             { title: "Privacidad y legal", rows: [
               { id: "ajustes-privacidad", icon: ShieldCheck, title: "Privacidad y mis datos", subtitle: "Exporta tus datos y política de privacidad", show: true },

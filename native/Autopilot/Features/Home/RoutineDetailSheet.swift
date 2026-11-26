@@ -208,16 +208,17 @@ struct RoutineDetailSheet: View {
     }
 
     /// Portada: la generada, el icono elegido o, si no hay, la foto del primer ejercicio (o la de
-    /// marca) con la huella mientras carga. Nunca un cuadro gris con una mancuerna.
+    /// marca). Mientras carga, el fondo; sin foto posible, el músculo del primer ejercicio en la
+    /// silueta. Nunca un cuadro gris con una mancuerna.
     @ViewBuilder private var cover: some View {
         ZStack {
             Palette.secondary
             if let url = coverUrl, let u = URL(string: url) {
-                CachedAsyncImage(url: u) { $0.resizable().scaledToFill() } placeholder: { coverGlyph }
+                CachedAsyncImage(url: u, maxSide: 88) { $0.resizable().scaledToFill() } placeholder: { Color.clear }
             } else if let icon, !icon.isEmpty, !icon.hasPrefix("http") {
                 Image(systemName: icon).font(.inter(size: 28, weight: .semibold)).foregroundStyle(Palette.gold)
             } else if let photo = URL(string: exercises.compactMap(\.image_url).first(where: { !$0.isEmpty }) ?? BrandPhotos.string(.gym)) {
-                CachedAsyncImage(url: photo, maxSide: 300) { $0.resizable().scaledToFill() } placeholder: { coverGlyph }
+                CachedAsyncImage(url: photo, maxSide: 88) { $0.resizable().scaledToFill() } placeholder: { Color.clear }
             } else {
                 coverGlyph
             }
@@ -228,15 +229,12 @@ struct RoutineDetailSheet: View {
         }
     }
 
-    @ViewBuilder private var coverGlyph: some View {
-        if let first = exercises.first {
-            ExerciseMotionGlyph(spec: ExerciseMotion.specFor(name: first.name, pattern: nil, stimulus: nil, load: nil, muscleGroup: first.muscle_group))
-                .padding(12)
-        }
+    private var coverGlyph: some View {
+        ExerciseSilhouette(muscleGroup: exercises.first?.muscle_group).padding(10)
     }
 
     private func generateCover() async {
-        guard let userId = session.userId else { return }
+        guard session.userId != nil else { return }
         let ids = exerciseIds
         guard !ids.isEmpty else { return }
         generatingCover = true

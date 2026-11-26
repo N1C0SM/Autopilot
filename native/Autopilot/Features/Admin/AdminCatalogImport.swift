@@ -70,7 +70,7 @@ struct AdminCatalogImportCard: View {
         (counts?.draftCredits ?? 0).formatted(.number.precision(.fractionLength(0...1)).locale(Locale(identifier: "es")))
     }
 
-    private func call<T: Decodable>(_ body: ImportRequest) async throws -> T {
+    private func call<T: Decodable & Sendable>(_ body: ImportRequest) async throws -> T {
         do {
             return try await Backend.client.functions.invoke("exercise-import", options: FunctionInvokeOptions(body: body))
         } catch FunctionsError.httpError(_, let data) {

@@ -117,7 +117,7 @@ struct AdminSidebarView: View {
                     .font(.apSubhead.weight(.semibold))
                     .foregroundStyle(Palette.gold)
                 if let a = account?.avatar, let u = URL(string: a) {
-                    CachedAsyncImage(url: u) { $0.resizable().scaledToFill() } placeholder: { Color.clear }
+                    CachedAsyncImage(url: u, maxSide: 44) { $0.resizable().scaledToFill() } placeholder: { Color.clear }
                 }
             }
             .frame(width: 44, height: 44)

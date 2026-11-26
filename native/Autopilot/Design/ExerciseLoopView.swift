@@ -93,6 +93,159 @@ final class ExerciseLoops: ObservableObject {
     }
 }
 
+/// Copia en disco de los clips de técnica (mp4 de 4 s): un clip visto una vez no se vuelve a
+/// descargar, ni al volver a la lista ni al reabrir la app. El reproductor siempre lee del disco;
+/// mientras el clip baja (una sola descarga por URL, compartida) se ve la foto. Tope de
+/// `capacity` en Caches con expulsión del menos usado (LRU por la fecha de último uso, que se
+/// actualiza en cada lectura). Es la misma idea que la caché `autopilot-video` del service worker web.
+@MainActor
+final class ExerciseVideoCache {
+    static let shared = ExerciseVideoCache()
+    /// 300 MB: unos 150–300 clips; al pasarlo se borran los usados hace más tiempo hasta quedar al 80 %.
+    nonisolated static let capacity: Int64 = 300_000_000
+    private var inflight: [URL: Task<URL?, Never>] = [:]
+    /// Sin URLCache: el archivo ya es la caché (no se guarda dos veces).
+    private let session: URLSession = {
+        let c = URLSessionConfiguration.default
+        c.urlCache = nil
+        c.requestCachePolicy = .reloadIgnoringLocalCacheData
+        c.timeoutIntervalForRequest = 30
+        return URLSession(configuration: c)
+    }()
+
+    nonisolated private static let directory: URL? = {
+        guard let base = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else { return nil }
+        let dir = base.appendingPathComponent("exercise-loops-v1", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
+    }()
+
+    /// Nombre estable por URL (FNV-1a): la URL cambia al regenerar el clip, así que nunca sale uno viejo.
+    nonisolated static func file(for remote: URL) -> URL? {
+        guard let directory else { return nil }
+        var hash: UInt64 = 0xcbf2_9ce4_8422_2325
+        for byte in remote.absoluteString.utf8 {
+            hash ^= UInt64(byte)
+            hash = hash &* 0x0000_0100_0000_01b3
+        }
+        let ext = remote.pathExtension.isEmpty ? "mp4" : remote.pathExtension.lowercased()
+        return directory.appendingPathComponent("\(String(hash, radix: 16)).\(ext)")
+    }
+
+    /// El clip en disco si ya se descargó; cada lectura lo marca como recién usado (LRU).
+    nonisolated static func local(_ remote: URL) -> URL? {
+        guard let file = file(for: remote), FileManager.default.fileExists(atPath: file.path) else { return nil }
+        try? FileManager.default.setAttributes([.modificationDate: Date()], ofItemAtPath: file.path)
+        return file
+    }
+
+    /// Descargas a la vez como mucho (las miniaturas y la precarga hacen cola; el visor, no).
+    private static let parallel = 3
+    private var active = 0
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    private func acquireSlot() async {
+        if active < Self.parallel { active += 1; return }
+        await withCheckedContinuation { waiters.append($0) }
+    }
+
+    private func releaseSlot() {
+        if waiters.isEmpty { active -= 1 } else { waiters.removeFirst().resume() }
+    }
+
+    /// El clip en disco, descargándolo una sola vez (varias vistas esperan la misma descarga).
+    /// `urgent` (el visor del entreno, la ficha y el siguiente ejercicio) no hace cola; una miniatura
+    /// que sale de la pantalla mientras espera turno ya no se descarga. `nil` si no hay red: el
+    /// reproductor prueba entonces con la URL remota.
+    func file(_ remote: URL, urgent: Bool = false) async -> URL? {
+        if let hit = Self.local(remote) { return hit }
+        if let running = inflight[remote] { return await running.value }
+        if !urgent {
+            await acquireSlot()
+            if Task.isCancelled { releaseSlot(); return nil }
+            if let running = inflight[remote] { releaseSlot(); return await running.value }
+            if let hit = Self.local(remote) { releaseSlot(); return hit }
+        }
+        let session = session
+        let task = Task.detached(priority: .utility) { await Self.download(remote, session: session) }
+        inflight[remote] = task
+        let result = await task.value
+        inflight[remote] = nil
+        if !urgent { releaseSlot() }
+        return result
+    }
+
+    /// Baja a disco los clips que se van a ver (sesión de hoy, entreno que empieza). Nunca bloquea:
+    /// la foto se ve mientras tanto. Con la foto fija (reducir movimiento, ahorro de datos o bajo
+    /// consumo) no se descarga nada.
+    func prefetch(_ urls: [URL]) {
+        guard LoopPolicy.shared.allows(reduceMotion: A11y.reduceMotion) else { return }
+        for url in urls where Self.local(url) == nil && inflight[url] == nil {
+            Task(priority: .utility) { _ = await file(url) }
+        }
+    }
+
+    nonisolated private static func download(_ remote: URL, session: URLSession) async -> URL? {
+        guard let target = file(for: remote),
+              let (temporary, response) = try? await session.download(from: remote),
+              let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else { return nil }
+        let manager = FileManager.default
+        try? manager.removeItem(at: target)
+        guard (try? manager.moveItem(at: temporary, to: target)) != nil else { return nil }
+        trim()
+        return target
+    }
+
+    /// LRU: si los clips pasan del tope, se borran primero los usados hace más tiempo.
+    nonisolated static func trim(capacity: Int64 = capacity) {
+        let keys: [URLResourceKey] = [.contentModificationDateKey, .fileSizeKey]
+        guard let directory,
+              let files = try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: keys) else { return }
+        var entries = files.compactMap { url -> (url: URL, used: Date, size: Int64)? in
+            guard let values = try? url.resourceValues(forKeys: Set(keys)) else { return nil }
+            return (url, values.contentModificationDate ?? .distantPast, Int64(values.fileSize ?? 0))
+        }
+        var total = entries.reduce(Int64(0)) { $0 + $1.size }
+        guard total > capacity else { return }
+        entries.sort { $0.used < $1.used }
+        for entry in entries where total > capacity * 8 / 10 {
+            try? FileManager.default.removeItem(at: entry.url)
+            total -= entry.size
+        }
+    }
+}
+
+/// Lo que se precarga para que la primera foto y el primer clip salgan al instante, igual que
+/// `mediaPrefetch.ts` en la web: al abrir Hoy, la sesión de hoy (miniaturas, la foto grande del
+/// primer ejercicio y su clip); al empezar un entreno, todas sus fotos grandes y los dos primeros
+/// clips; en Entrenar y Mis rutinas, las miniaturas. Siempre por detrás: nunca bloquea la pantalla.
+@MainActor
+enum MediaPrefetch {
+    /// Clips que se bajan al abrir Hoy y al empezar un entreno.
+    static let todayVideos = 1
+    static let workoutVideos = 2
+
+    /// Hoy: miniaturas de la sesión, la foto grande del primer ejercicio (`hero`, la misma URL que
+    /// pinta la tarjeta de la sesión; si no se pasa, la primera foto) y el primer clip.
+    static func today(photos: [URL], hero: URL? = nil, videos: [URL]) {
+        ImageCache.shared.prefetch(photos, maxSide: MediaSizing.thumb)
+        ImageCache.shared.prefetch([hero ?? photos.first].compactMap { $0 }, maxSide: MediaSizing.hero)
+        ExerciseVideoCache.shared.prefetch(Array(videos.prefix(todayVideos)))
+    }
+
+    /// Entreno que empieza: todas sus fotos (miniatura y grande) y los dos primeros clips.
+    static func workout(photos: [URL], videos: [URL]) {
+        ImageCache.shared.prefetch(photos, maxSide: MediaSizing.thumb)
+        ImageCache.shared.prefetch(photos, maxSide: MediaSizing.hero)
+        ExerciseVideoCache.shared.prefetch(Array(videos.prefix(workoutVideos)))
+    }
+
+    /// Entrenar y Mis rutinas: las miniaturas de todas las sesiones, para que al abrir una ya estén.
+    static func thumbnails(_ photos: [URL]) {
+        ImageCache.shared.prefetch(photos, maxSide: MediaSizing.thumb)
+    }
+}
+
 /// Lo que decide el sistema: bajo consumo y «Modo de datos reducidos» (red limitada). «Reducir
 /// movimiento» llega por el entorno de SwiftUI en cada vista.
 @MainActor
@@ -136,7 +289,8 @@ final class ExerciseLoopPool {
         var lastUse = Date()
 
         init(url: URL) {
-            let item = AVPlayerItem(url: url)
+            // Del disco si ya se descargó (`ExerciseVideoCache`): sin red y sin esperar.
+            let item = AVPlayerItem(url: ExerciseVideoCache.local(url) ?? url)
             item.preferredForwardBufferDuration = 4
             player.isMuted = true
             player.preventsDisplaySleepDuringVideoPlayback = false
@@ -191,12 +345,20 @@ final class ExerciseLoopPool {
         DispatchQueue.main.async { NotificationCenter.default.post(name: Self.freed, object: nil) }
     }
 
-    /// Precarga el siguiente ejercicio del entreno: al pasar a él, su vídeo ya tiene datos.
+    /// Precarga el siguiente ejercicio del entreno: al pasar a él, su vídeo ya está en disco y con
+    /// el reproductor listo. Si aún no está en disco, primero se descarga (una sola vez).
     func preload(_ url: URL) {
         let key = Self.key(url, hero: true)
         guard entries[key] == nil else { return }
+        guard ExerciseVideoCache.local(url) != nil else {
+            Task { [weak self] in
+                guard await ExerciseVideoCache.shared.file(url, urgent: true) != nil, ExerciseVideoCache.local(url) != nil else { return }
+                self?.preload(url)
+            }
+            return
+        }
         prepareAudio()
-        entries[key] = Entry(url: url) // parado: AVFoundation va cargando el principio
+        entries[key] = Entry(url: url) // parado: lee el principio del archivo local
         trim()
     }
 
@@ -281,6 +443,8 @@ private struct LoopLayer: View {
     @State private var player: AVQueuePlayer?
     @State private var ready = false
     @State private var onScreen = false
+    /// El clip ya está en disco (o se intentó bajar): antes de eso no se pide reproductor.
+    @State private var fetched = false
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -298,6 +462,11 @@ private struct LoopLayer: View {
             onScreen = true
             if !hero { try? await Task.sleep(for: .milliseconds(LoopRules.startDelayMs)) }
             guard !Task.isCancelled else { return }
+            // El clip se lee del disco: la primera vez se descarga entero (la foto se ve mientras) y
+            // ya no vuelve a bajar. Sin red, el reproductor prueba con la URL remota.
+            _ = await ExerciseVideoCache.shared.file(url, urgent: hero)
+            guard !Task.isCancelled else { return }
+            fetched = true
             take()
         }
         .onReceive(NotificationCenter.default.publisher(for: ExerciseLoopPool.freed)) { _ in take() }
@@ -309,7 +478,7 @@ private struct LoopLayer: View {
     }
 
     private func take() {
-        guard onScreen, player == nil else { return }
+        guard onScreen, fetched, player == nil else { return }
         player = ExerciseLoopPool.shared.acquire(url, hero: hero)
     }
 

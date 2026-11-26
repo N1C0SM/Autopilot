@@ -445,7 +445,7 @@ struct MuscleMapView: View {
         }
         .accessibilityLabel("Mapa muscular – \(primary.joined(separator: ", "))")
         .onAppear { showBack = targetBack }
-        .onChange(of: targetBack) { newVal in
+        .onChange(of: targetBack) { _, newVal in
             guard newVal != showBack else { return }
             if reduceMotion {
                 showBack = newVal
@@ -478,6 +478,20 @@ struct MuscleBodyFigure: View {
         }
         .aspectRatio(1 / 1.55, contentMode: .fit)
         .accessibilityHidden(true)
+    }
+}
+
+/// Sin foto: el ejercicio por su músculo, en dorado sobre la silueta (la cara del cuerpo donde
+/// está). Lo usan la miniatura, el héroe y el visor del entreno cuando el ejercicio aún no tiene
+/// foto: nunca un hueco gris. Sin grupo muscular, la silueta sola. Como `MuscleMap` con
+/// `dots={false}` en la web (`ExerciseThumb`, `ExerciseMedia`, el visor de `WorkoutTracker`).
+struct ExerciseSilhouette: View {
+    let muscleGroup: String?
+
+    var body: some View {
+        let group = muscleGroup?.trimmingCharacters(in: .whitespaces) ?? ""
+        let primary = group.isEmpty ? [] : [group]
+        MuscleBodyFigure(back: resolveView(primary: primary, synergists: []), primary: primary)
     }
 }
 

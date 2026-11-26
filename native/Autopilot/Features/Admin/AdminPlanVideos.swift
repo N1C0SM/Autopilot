@@ -156,18 +156,17 @@ struct AdminPlanVideosCard: View {
             Text(PlanVideos.body).font(.apFootnote).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
 
             if failed {
-                HStack(spacing: 12) {
-                    Text(PlanVideos.loadError).font(.apFootnote).foregroundStyle(Palette.muted)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    Button(PlanVideos.retry) { Haptics.tap(); Task { await count() } }
-                        .buttonStyle(.pillSecondary).fixedSize()
-                }
+                Text(PlanVideos.loadError).font(.apFootnote).foregroundStyle(Palette.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button(PlanVideos.retry) { Haptics.tap(); Task { await count() } }
+                    .buttonStyle(.pillSecondary).frame(maxWidth: 240)
             } else if let q = queue {
                 if q.inPlans > 0 {
-                    // Las dos cifras que deciden: cuántos faltan y cuánto cuestan.
-                    HStack(spacing: 12) {
-                        figure(PlanVideos.format(Double(missing)), "sin vídeo")
-                        figure("≈\(PlanVideos.format(PlanVideos.credits(ready)))", "créditos de Lovable")
+                    // Las dos cifras que deciden: cuántos faltan y cuánto cuestan. Una al lado de la otra
+                    // y, si no caben (iPhone con letra grande), una debajo de otra: nunca cortadas.
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 12) { figures }
+                        VStack(spacing: 12) { figures }
                     }
                 }
                 Text(q.inPlans == 0 ? PlanVideos.noPlans : missing == 0 ? PlanVideos.allDone : PlanVideos.summary(q))
@@ -237,10 +236,15 @@ struct AdminPlanVideosCard: View {
         }
     }
 
+    @ViewBuilder private var figures: some View {
+        figure(PlanVideos.format(Double(missing)), "sin vídeo")
+        figure("≈\(PlanVideos.format(PlanVideos.credits(ready)))", "créditos de Lovable")
+    }
+
     private func figure(_ value: String, _ label: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(value).font(.figure(size: 34)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.7)
-            Text(label).font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(1)
+            Text(value).font(.figure(size: 34)).monospacedDigit().lineLimit(1).fixedSize()
+            Text(label).font(.apFootnote).foregroundStyle(Palette.muted).fixedSize()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 16).padding(.vertical, 12)

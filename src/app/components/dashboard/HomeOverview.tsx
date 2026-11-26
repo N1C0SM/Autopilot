@@ -19,6 +19,10 @@ import { BRAND_PHOTOS, useBrandPhotos } from "@/shared/lib/brandPhotos";
 import { nextPendingSession, routineSessions } from "@/shared/lib/routineOrder";
 import ResponsiveSheet from "@/app/components/dashboard/ResponsiveSheet";
 import { ExerciseThumb } from "@/app/components/ExerciseMedia";
+import { prefetchMedia } from "@/app/components/ExerciseLoop";
+import { todayMedia } from "@/shared/lib/mediaPrefetch";
+import { fastImage, HERO_SIDE } from "@/shared/lib/fastImage";
+import { beginFirstImage, noteImageShown } from "@/shared/lib/mediaTiming";
 import { ListGroup, ListRow } from "@/shared/components/ui/list";
 import { RoutinesPreview } from "@/app/components/dashboard/MyRoutines";
 import { myRoutines } from "@/shared/lib/customRoutines";
@@ -235,11 +239,25 @@ const HomeOverview = ({
   const isGymDay = todayPlan?.type === "gimnasio";
   const exercisesForCover = isGymDay ? todayPlan.exercises ?? [] : [];
   const firstExercise = exercisesForCover[0];
+  // Siempre a tamaño de portada (1000 px), la misma que abre el entreno: la del plan puede ser la original de ~2 MB.
   const firstExerciseImage = firstExercise
-    ? (exerciseMetadata.byId[firstExercise.exercise_id] || exerciseMetadata.byName[firstExercise.name])?.image_url || firstExercise.image_url || null
+    ? fastImage((exerciseMetadata.byId[firstExercise.exercise_id] || exerciseMetadata.byName[firstExercise.name])?.image_url || firstExercise.image_url || null, HERO_SIDE) ?? null
     : null;
   const sessionCover = useSessionCover(exercisesForCover.map((exercise) => exercise.exercise_id), firstExerciseImage);
   const dayPhoto = isGymDay ? sessionCover || BRAND_PHOTOS.gym : null;
+
+  // Hoy: cuenta hasta la primera foto (solo en modo de medida) y precarga la sesión de hoy por
+  // detrás: sus miniaturas, la foto grande del primer ejercicio (la que abre el entreno) y su clip.
+  // Igual que `prefetchToday` en la app (`MediaPrefetch.today`).
+  useEffect(() => { beginFirstImage("hoy"); }, []);
+  const todayMediaKey = JSON.stringify(exercisesForCover.map((exercise) => {
+    const metadata = exerciseMetadata.byId[exercise.exercise_id] || exerciseMetadata.byName[exercise.name];
+    return [metadata?.image_url || exercise.image_url || null, metadata?.video_url || exercise.video_url || null];
+  }));
+  useEffect(() => {
+    const items = (JSON.parse(todayMediaKey) as [string | null, string | null][]).map(([image, video]) => ({ image, video }));
+    if (items.length > 0) prefetchMedia(todayMedia(items));
+  }, [todayMediaKey]);
 
   const exerciseCount = exercisesForCover.length;
   const firstName = profileName?.trim().split(/\s+/)[0];
@@ -444,7 +462,7 @@ const HomeOverview = ({
               {dayPhoto && (
                 // Fundida con una máscara (no con un degradado del color de la tarjeta): sin corte sobre la luz de la tarjeta.
                 <span aria-hidden="true" className="absolute inset-y-0 right-0 w-[58%] overflow-hidden [mask-image:linear-gradient(to_right,transparent,#000_60%)]">
-                  <img key={dayPhoto} src={dayPhoto} alt="" decoding="async" className="h-full w-full object-cover object-[50%_30%]" />
+                  <img key={dayPhoto} src={dayPhoto} alt="" decoding="async" onLoad={noteImageShown} className="h-full w-full object-cover object-[50%_30%]" />
                 </span>
               )}
               <span className={cn("relative flex min-w-0 flex-1 flex-col p-5 sm:p-7", dayPhoto ? "pr-36 sm:pr-64" : "pr-20")}>
@@ -478,7 +496,7 @@ const HomeOverview = ({
             aria-description="Abre el resumen del entreno de hoy"
           >
             <span aria-hidden="true" className="relative block h-[210px] w-full overflow-hidden bg-secondary">
-              <img src={BRAND_PHOTOS.gym} alt="" decoding="async" className="h-full w-full object-cover" />
+              <img src={BRAND_PHOTOS.gym} alt="" decoding="async" onLoad={noteImageShown} className="h-full w-full object-cover" />
               <span className="absolute inset-0 bg-gradient-to-b from-transparent via-black/10 to-black/80" />
               <span className="absolute bottom-[18px] left-[18px] inline-flex items-center gap-1.5 text-[12px] font-bold tracking-[0.067em] text-primary">
                 <Check className="h-3 w-3" strokeWidth={2.5} />
