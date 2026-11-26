@@ -378,7 +378,7 @@ struct AccountView: View {
                     Button { Task { await exportData() } } label: {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(busy ? "Generando…" : "Exportar mis datos").font(.apBody).foregroundStyle(Palette.gold)
-                            Text("Descarga un JSON con todo lo que tenemos sobre ti.").font(.apFootnote).foregroundStyle(Palette.muted)
+                            Text("Un archivo con todo lo que guardamos de ti.").font(.apFootnote).foregroundStyle(Palette.muted)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
                     }
@@ -471,7 +471,7 @@ struct AccountView: View {
                                     .disabled(switching != nil)
                                     .overlay(alignment: .trailing) {
                                         if switching == a.id {
-                                            BrandLoader().tint(Palette.gold).padding(.trailing, 6)
+                                            BrandLoader(color: Palette.gold).padding(.trailing, 6)
                                                 .accessibilityLabel("Cambiando de cuenta")
                                         }
                                     }
@@ -558,7 +558,9 @@ struct AccountView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) { sections(page) }
                 .padding(.horizontal, pagePadding).padding(.top, 8).padding(.bottom, 16)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                // En el iPad y el Mac, la misma columna centrada de 680 que la web ancha.
+                .frame(maxWidth: 680, alignment: .leading)
+                .frame(maxWidth: .infinity)
         }
         .screenBackground()
         .navigationTitle(page.title)
@@ -605,7 +607,9 @@ struct AccountView: View {
                 sessionSection
             }
             .padding(.horizontal, pagePadding).padding(.top, 8).padding(.bottom, 16)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            // Columna centrada de 680 en el iPad y el Mac, como Ajustes en la web ancha (`max-w-[680px]`).
+            .frame(maxWidth: 680, alignment: .leading)
+            .frame(maxWidth: .infinity)
         }
         .screenBackground()
         .navigationDestination(item: $openPage) { page($0) }
@@ -1108,13 +1112,11 @@ private struct AccountUnlockSheet: View {
             }
             .padding(.top, 8)
 
-            SecureField("Contraseña", text: $password)
-                .textContentType(.password)
+            // Campo en píldora, como «¿Quién entrena?» en la web y en la app.
+            PillField(label: "Contraseña", text: $password, secure: true, contentType: .password)
                 .submitLabel(.go)
                 .onSubmit { Task { await unlock() } }
-                .padding(14)
-                .background(Palette.secondary, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                .accessibilityLabel("Contraseña de \(target.name)")
+                .accessibilityHint("Contraseña de \(target.name)")
 
             if let error {
                 Text(error).font(.apFootnote).foregroundStyle(Palette.destructive)
@@ -1124,7 +1126,7 @@ private struct AccountUnlockSheet: View {
             Button {
                 Task { await unlock() }
             } label: {
-                if busy { BrandLoader().tint(.black) } else { Text("Entrar") }
+                if busy { BrandLoader(color: Palette.background) } else { Text("Entrar") }
             }
             .buttonStyle(PillButtonStyle(kind: .primary, height: 50))
             .disabled(busy || password.isEmpty)

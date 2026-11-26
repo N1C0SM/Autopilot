@@ -12,6 +12,7 @@ import { supabase } from "@/shared/integrations/supabase/client";
 import { buildExerciseHistory, type WorkoutLogRecord } from "@/shared/lib/workoutMetrics";
 import { getProgressionSuggestion } from "@/shared/lib/workoutProgression";
 import { musclesForExercise } from "@/shared/lib/muscleMapping";
+import { groupedInt } from "@/shared/lib/workoutSummaryFormat";
 import type { GymExerciseEntry } from "@/shared/types/training";
 
 // Cifras en formato español: 49,6 kg (no 49.6).
@@ -238,10 +239,10 @@ export const ExerciseFocus = ({
                 <ListRow
                   key={entry.date}
                   title={shortDate(entry.date)}
-                  subtitle={entry.bestSetLabel ? decimalComma(entry.bestSetLabel) : `${entry.completedSets} series`}
+                  subtitle={entry.bestSetLabel ? decimalComma(entry.bestSetLabel) : `${entry.completedSets} ${entry.completedSets === 1 ? "serie" : "series"}`}
                   value={
                     <span className="tabular-nums">
-                      {entry.bestEstimated1RmKg ? `${kg(entry.bestEstimated1RmKg)} kg` : `${Math.round(entry.volumeKg)} kg vol.`}
+                      {entry.bestEstimated1RmKg ? `${kg(entry.bestEstimated1RmKg)} kg` : `${groupedInt(entry.volumeKg)} kg vol.`}
                     </span>
                   }
                 />

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { CalendarDays, Dumbbell, Sparkles, Trophy, WifiOff } from "lucide-react";
 import { EmptyState } from "@/shared/components/ui/empty-state";
@@ -11,6 +11,7 @@ import { BRAND_PHOTOS, useBrandPhotos } from "@/shared/lib/brandPhotos";
 import { ProgressHero } from "@/app/components/progress/ProgressHero";
 import { useExerciseImages } from "@/shared/hooks/useExerciseImages";
 import { fastImage, THUMB_SIDE } from "@/shared/lib/fastImage";
+import { readScreen, writeScreen } from "@/shared/lib/screenCache";
 
 interface PR {
   id: string;
@@ -34,6 +35,9 @@ const RECORD_PERKS = [
   { icon: CalendarDays, text: "El día en que rompiste cada uno" },
 ];
 
+/** Caché de pantalla de Récords: al volver se pintan al instante y la red refresca por detrás (como la app). */
+const RECORDS_CACHE = "progress-records";
+
 /** «2026-11» de una fecha ISO o «YYYY-MM-DD», en hora local. */
 const toMonthKey = (date: string) => {
   const d = new Date(date);
@@ -42,8 +46,10 @@ const toMonthKey = (date: string) => {
 
 const PRsList = ({ userId, onGoTrain }: Props) => {
   useBrandPhotos(); // repinta las fotos de marca cuando llega su URL actual
-  const [prs, setPrs] = useState<PR[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [cached] = useState(() => readScreen<PR[]>(userId, RECORDS_CACHE));
+  const painted = useRef(cached !== null);
+  const [prs, setPrs] = useState<PR[]>(() => cached ?? []);
+  const [loading, setLoading] = useState(cached === null);
   const [loadError, setLoadError] = useState(false);
   const [reload, setReload] = useState(0);
   const images = useExerciseImages(prs.slice(0, 20).map((pr) => pr.exercise_name));
@@ -56,7 +62,8 @@ const PRsList = ({ userId, onGoTrain }: Props) => {
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
-      setLoading(true);
+      // Con récords ya pintados, la red refresca por detrás sin volver al AP.
+      if (!painted.current) setLoading(true);
       setLoadError(false);
       const { data, error } = await supabase
         .from("personal_records")
@@ -68,7 +75,8 @@ const PRsList = ({ userId, onGoTrain }: Props) => {
       if (cancelled) return;
       // Un fallo de red no puede parecer «Sin récords aún»: se muestra error y reintento.
       if (error || !data) {
-        setLoadError(true);
+        // Sin red pero con lo último visto, se queda en pantalla.
+        if (!painted.current) setLoadError(true);
         setLoading(false);
         return;
       }
@@ -80,7 +88,10 @@ const PRsList = ({ userId, onGoTrain }: Props) => {
           best[key] = pr;
         }
       }
-      setPrs(Object.values(best).sort((a, b) => (b.estimated_1rm ?? 0) - (a.estimated_1rm ?? 0)));
+      const sorted = Object.values(best).sort((a, b) => (b.estimated_1rm ?? 0) - (a.estimated_1rm ?? 0));
+      writeScreen(userId, RECORDS_CACHE, sorted);
+      painted.current = true;
+      setPrs(sorted);
       setLoading(false);
     };
     void load();

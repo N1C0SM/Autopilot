@@ -160,7 +160,7 @@ export default function WhoIsTraining() {
             onChange={(e) => { setPassword(e.target.value); setWrong(false); }} placeholder="Contraseña"
             className={`mt-6 h-12 w-full rounded-full bg-card px-5 text-center type-body outline-none ring-2 transition-shadow ${wrong ? "ring-destructive" : "ring-transparent focus:ring-primary"}`} />
           {wrong && <p role="alert" className="mt-2 type-footnote text-destructive">Contraseña incorrecta</p>}
-          <button type="submit" disabled={!password || !!busy} className="mt-5 h-12 w-full rounded-full bg-primary type-headline text-primary-foreground transition-opacity disabled:opacity-40 active:opacity-80">
+          <button type="submit" disabled={!password || !!busy} className="btn-gold mt-5 h-12 w-full rounded-full bg-primary type-headline text-primary-foreground transition-[opacity,transform] duration-150 disabled:opacity-40 active:scale-[0.98]">
             {busy ? "Entrando…" : "Entrar"}
           </button>
           <button type="button" onClick={() => setAsking(null)} className="mt-3 min-h-11 type-subhead text-muted-foreground active:opacity-60">Elegir otra cuenta</button>

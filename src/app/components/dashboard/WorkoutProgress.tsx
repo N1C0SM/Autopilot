@@ -1,5 +1,5 @@
 import { useExerciseImages } from "@/shared/hooks/useExerciseImages";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowUp, ChevronRight, ChevronsUpDown, Flame, TrendingUp, Trophy, WifiOff } from "lucide-react";
 import { BRAND_PHOTOS, useBrandPhotos } from "@/shared/lib/brandPhotos";
 import { ProgressHero } from "@/app/components/progress/ProgressHero";
@@ -11,6 +11,7 @@ import { hapticSelection, hapticTap } from "@/shared/lib/native";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { buildExerciseHistory, buildTrainingOverview, exerciseRecord, type ExerciseHistoryEntry, type WorkoutLogRecord } from "@/shared/lib/workoutMetrics";
 import { kgText } from "@/shared/lib/workoutSummaryFormat";
+import { readScreen, writeScreen } from "@/shared/lib/screenCache";
 import { TrainingOverviewCard } from "@/app/components/dashboard/TrainingOverviewCard";
 import ExerciseProgressChart from "@/app/components/dashboard/ExerciseProgressChart";
 
@@ -39,15 +40,31 @@ const GainChip = ({ kg }: { kg: number | null }) =>
     </span>
   ) : null;
 
+/** Caché de pantalla de Fuerza: al volver se pinta lo último visto y la red refresca por detrás (como la app). */
+const STRENGTH_CACHE = "progress-strength";
+
+/** El ejercicio con más sesiones (así la gráfica arranca con línea real). */
+const mostTrackedOf = (history: Record<string, ExerciseHistoryEntry[]>) =>
+  Object.entries(history).sort((a, b) =>
+    b[1].length - a[1].length ||
+    (b[1][b[1].length - 1]?.date || "").localeCompare(a[1][a[1].length - 1]?.date || ""),
+  )[0]?.[0] || "";
+
 /** «1 sesión» / «12 sesiones». */
 const sessionsText = (n: number) => `${n} ${n === 1 ? "sesión" : "sesiones"}`;
 
 const WorkoutProgress = ({ userId, compact = false, onGoTrain }: Props) => {
   useBrandPhotos(); // repinta las fotos de marca cuando llega su URL actual
-  const [historyByExercise, setHistoryByExercise] = useState<Record<string, ExerciseHistoryEntry[]>>({});
-  const [selectedExercise, setSelectedExercise] = useState("");
+  // Primer fotograma desde la caché: sin el AP girando cada vez que se vuelve a Progreso.
+  const [cached] = useState(() => {
+    const rows = readScreen<WorkoutLogRecord[]>(userId, STRENGTH_CACHE);
+    return rows ? buildExerciseHistory(rows) : null;
+  });
+  const painted = useRef(cached !== null);
+  const [historyByExercise, setHistoryByExercise] = useState<Record<string, ExerciseHistoryEntry[]>>(() => cached ?? {});
+  const [selectedExercise, setSelectedExercise] = useState(() => (cached ? mostTrackedOf(cached) : ""));
   const [metric, setMetric] = useState<"volumeKg" | "reps" | "bestEstimated1RmKg">("volumeKg");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(cached === null);
   const [loadError, setLoadError] = useState(false);
   const [reload, setReload] = useState(0);
   const [showAll, setShowAll] = useState(false);
@@ -55,7 +72,8 @@ const WorkoutProgress = ({ userId, compact = false, onGoTrain }: Props) => {
   useEffect(() => {
     let active = true;
     const loadHistory = async () => {
-      setLoading(true);
+      // Con algo ya pintado (caché o carga anterior) la red refresca por detrás, sin volver al AP.
+      if (!painted.current) setLoading(true);
       setLoadError(false);
       const { data, error } = await supabase
         .from("workout_logs")
@@ -66,17 +84,19 @@ const WorkoutProgress = ({ userId, compact = false, onGoTrain }: Props) => {
 
       if (!active) return;
       if (error) {
-        // El aviso va en la propia pantalla (con «Reintentar»), como en la app.
-        setHistoryByExercise({});
-        setLoadError(true);
+        // Sin red pero con lo último visto: se queda en pantalla. Sin nada, el aviso con «Reintentar», como en la app.
+        if (!painted.current) {
+          setHistoryByExercise({});
+          setLoadError(true);
+        }
       } else {
-        const history = buildExerciseHistory((data || []) as WorkoutLogRecord[]);
+        const rows = (data || []) as WorkoutLogRecord[];
+        writeScreen(userId, STRENGTH_CACHE, rows);
+        const history = buildExerciseHistory(rows);
+        painted.current = true;
         setHistoryByExercise(history);
         // Por defecto, el ejercicio con más sesiones (así la gráfica arranca con línea real).
-        const mostTracked = Object.entries(history).sort((a, b) =>
-          b[1].length - a[1].length ||
-          (b[1][b[1].length - 1]?.date || "").localeCompare(a[1][a[1].length - 1]?.date || ""),
-        )[0]?.[0] || "";
+        const mostTracked = mostTrackedOf(history);
         setSelectedExercise((current) => current in history ? current : mostTracked);
       }
       setLoading(false);

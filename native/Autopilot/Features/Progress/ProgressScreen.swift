@@ -180,7 +180,7 @@ struct ProgressScreen: View {
                 }
             } else {
                 // Cuenta recién creada: portada con foto real y el camino a Entrenar (en la app, desde Hoy).
-                progressHero(photo: Self.brandPullupPhoto, eyebrow: "TU FUERZA", title: "Tu progreso empieza con tu primer entreno",
+                progressHero(photo: Self.brandPullupPhoto, eyebrow: "Tu fuerza", title: "Tu progreso empieza con tu primer entreno",
                              message: "Marca tus series al entrenar y aquí verás tus kilos, tu racha y tus récords.",
                              perks: Self.strengthPerks, button: "Empezar a entrenar") { onNavigate(.home) }
             }
@@ -383,7 +383,7 @@ struct ProgressScreen: View {
 
     /// Sin fotos: portada con foto real y lo que tendrá aquí (como `ProgressPhotos` de la web).
     private var photosEmpty: some View {
-        progressHero(photo: Self.brandGymPhoto, eyebrow: "TU FÍSICO", title: "Empieza a documentar tu progreso",
+        progressHero(photo: Self.brandGymPhoto, eyebrow: "Tu físico", title: "Empieza a documentar tu progreso",
                      message: "Tus fotos se guardan solas cada vez que haces un análisis físico en Scan.",
                      perks: Self.physiquePerks, button: "Hacer mi primer scan") { tab = 3 }
     }
@@ -391,7 +391,7 @@ struct ProgressScreen: View {
     /// Sin récords: misma portada que Físico, con foto real, lo que guarda Récords y el camino a Entrenar
     /// (mismo texto que `PRsList` en la web).
     private var recordsEmpty: some View {
-        progressHero(photo: Self.brandDumbbellsPhoto, eyebrow: "TUS RÉCORDS", title: "Tu primer récord está a un entreno",
+        progressHero(photo: Self.brandDumbbellsPhoto, eyebrow: "Tus récords", title: "Tu primer récord está a un entreno",
                      message: "Cada vez que registras una serie con peso, guardamos tu mejor marca de ese ejercicio.",
                      perks: Self.recordPerks, button: "Ir a entrenar") { onNavigate(.home) }
     }
@@ -407,7 +407,8 @@ struct ProgressScreen: View {
                 .overlay { LinearGradient(colors: [.black.opacity(0.1), .black.opacity(0.45), Palette.card], startPoint: .top, endPoint: .bottom) }
                 .overlay(alignment: .bottomLeading) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(eyebrow).font(.apFootnote.weight(.semibold)).tracking(1.6).foregroundStyle(Palette.gold)
+                        // Antetítulo en minúsculas y sin espaciado (nunca en mayúsculas), como `ProgressHero` en la web.
+                        Text(eyebrow).font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.gold)
                         Text(title).font(.apTitle1).foregroundStyle(.white)
                             .fixedSize(horizontal: false, vertical: true)
                             .accessibilityAddTraits(.isHeader)
@@ -477,7 +478,7 @@ struct ProgressScreen: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel("Ver tu último scan, del \(latest.shortDate)")
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("TU ÚLTIMO SCAN").font(.apFootnote.weight(.semibold)).tracking(1.6).foregroundStyle(Palette.gold)
+                    Text("Tu último scan").font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.gold)
                     Text(latest.longDate.isEmpty ? "Sin fecha" : latest.longDate).font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted).padding(.top, 4)
                     Text("Compara tu evolución").font(.apHeadline).padding(.top, 12).accessibilityAddTraits(.isHeader)
                     Text("Con otro scan del mismo ángulo verás el antes y el ahora, lado a lado.").font(.apSubhead).foregroundStyle(Palette.muted)
@@ -843,8 +844,9 @@ struct ProgressPhotoViewer: View {
 
     private func scanDetail(_ info: PhotoScanInfo) -> some View {
         VStack(alignment: .leading, spacing: 16) {
+            // Etiqueta en minúsculas y sin espaciado (nunca un antetítulo en mayúsculas), como la web.
             Label("Scan", systemImage: "sparkles")
-                .font(.apCaption.weight(.bold)).tracking(1.6).textCase(.uppercase)
+                .font(.apFootnote.weight(.semibold))
                 .foregroundStyle(Palette.gold)
             if info.physique != nil || info.potential != nil || info.bodyFat != nil {
                 HStack(alignment: .top, spacing: 24) {
@@ -868,14 +870,14 @@ struct ProgressPhotoViewer: View {
                         HStack(alignment: .top, spacing: 12) {
                             Text("\(index + 1)")
                                 .font(.apFootnote.weight(.bold).monospacedDigit())
-                                .foregroundStyle(.black)
+                                .foregroundStyle(Palette.background)
                                 .frame(width: 24, height: 24)
                                 .background(Palette.gold, in: Circle())
                                 .accessibilityHidden(true)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(item.label ?? "").font(.apSubhead).fixedSize(horizontal: false, vertical: true)
                                 if let priority = item.priority, !priority.isEmpty {
-                                    Text("Prioridad \(priority.lowercased())").font(.apCaption.weight(.semibold)).foregroundStyle(Palette.gold)
+                                    Text("Prioridad \(priority.lowercased())").font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.gold)
                                 }
                             }
                         }
@@ -893,7 +895,8 @@ struct ProgressPhotoViewer: View {
     private func figure(_ value: String, unit: String, label: String, accent: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(alignment: .firstTextBaseline, spacing: 2) {
-                Text(value).font(.apFigureSmall).foregroundStyle(accent ? Palette.gold : Palette.foreground)
+                // Big Shoulders, como `.type-figure` de la ficha de la foto en la web.
+                Text(value).font(.figure(size: 28, relativeTo: .title)).foregroundStyle(accent ? Palette.gold : Palette.foreground)
                 Text(unit).font(.apFootnote).foregroundStyle(Palette.muted)
             }
             .lineLimit(1).minimumScaleFactor(0.7)

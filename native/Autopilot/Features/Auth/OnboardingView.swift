@@ -82,15 +82,15 @@ struct WelcomeView: View {
                             .tracking(0.18)
                             .foregroundStyle(.white)
                         Text("Entrenamiento adaptativo")
-                            .font(.inter(size: 13, weight: .medium))
-                            .foregroundStyle(.white.opacity(0.5))
+                            .font(.apFootnote.weight(.medium))
+                            .foregroundStyle(.white.opacity(0.6))
                     }
                 }
                 .padding(.bottom, 20)
 
                 // Titular
                 Text("Tu entrenamiento,\nen piloto automático.")
-                    .font(.inter(size: 36, weight: .bold))
+                    .font(.inter(size: 34, weight: .bold))
                     .tracking(-0.8)
                     .foregroundStyle(.white)
                     .lineLimit(3)
@@ -117,11 +117,12 @@ struct WelcomeView: View {
                         .background(.black.opacity(0.0))
                 }
 
+                // Legible (AA) sobre la foto oscura, como la web: nada de gris al 30 %.
                 Text("Al continuar aceptas los [términos](https://autopilotplan.com/legal/terminos) y la [política de privacidad](https://autopilotplan.com/legal/privacidad).")
-                    .font(.apCaption)
-                    .foregroundStyle(.white.opacity(0.3))
+                    .font(.apFootnote)
+                    .foregroundStyle(.white.opacity(0.55))
                     .multilineTextAlignment(.center)
-                    .tint(.white.opacity(0.5))
+                    .tint(.white.opacity(0.8))
                     .frame(maxWidth: .infinity)
                     .padding(.top, 8)
                     .padding(.bottom, 16)
@@ -145,8 +146,7 @@ struct WelcomeView: View {
                 .accessibilityHidden(true)
             Text(text)
                 .font(.apSubhead)
-                .foregroundStyle(.white.opacity(0.7))
-                .lineLimit(2)
+                .foregroundStyle(.white.opacity(0.75))
                 .fixedSize(horizontal: false, vertical: true)
         }
         .accessibilityElement(children: .combine)
@@ -349,8 +349,18 @@ struct OnboardingQuizView: View {
             .padding(.horizontal, 8)
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    ProgressView(value: Double(step + 1), total: Double(titles.count)).tint(Palette.gold)
-                        .accessibilityLabel("Paso \(step + 1) de \(titles.count)")
+                    // Barra de avance de 6 pt en píldora, como la de la web (`h-1.5 rounded-full`), no la de iOS.
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(Palette.secondary)
+                            Capsule().fill(Palette.gold)
+                                .frame(width: geo.size.width * CGFloat(step + 1) / CGFloat(max(1, titles.count)))
+                        }
+                    }
+                    .frame(height: 6)
+                    .apAnimation(.easeOut(duration: 0.3), value: step, reduceMotion: A11y.reduceMotion)
+                    .accessibilityElement()
+                    .accessibilityLabel("Paso \(step + 1) de \(titles.count)")
                     Text(titles[step]).font(.apTitle1).padding(.top, 24).accessibilityAddTraits(.isHeader)
                     Text(leads[step]).font(.apSubhead).foregroundStyle(Palette.muted).padding(.top, 8)
                     VStack(alignment: .leading, spacing: 32) { content }.padding(.top, 32).padding(.bottom, 16)
@@ -514,7 +524,7 @@ struct OnboardingQuizView: View {
         ZStack {
             if on {
                 Circle().fill(Palette.gold)
-                Image(systemName: "checkmark").font(.system(size: 11, weight: .heavy)).foregroundStyle(Color.black)
+                Image(systemName: "checkmark").font(.system(size: 11, weight: .heavy)).foregroundStyle(Palette.background)
             } else {
                 Circle().strokeBorder(Palette.foreground.opacity(0.25), lineWidth: 2)
             }
@@ -729,7 +739,7 @@ struct CreateAccountView: View {
                     }
                     VStack(spacing: 12) {
                         Button { Task { if codeSent { await verify() } else { await create() } } } label: {
-                            if loading { BrandLoader().tint(.black).accessibilityHidden(true) }
+                            if loading { BrandLoader(color: Palette.background).accessibilityHidden(true) }
                             else { Text(codeSent ? "Verificar cuenta" : "Crear cuenta gratis") }
                         }
                         .buttonStyle(.pill)

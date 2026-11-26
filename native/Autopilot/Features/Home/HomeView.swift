@@ -182,7 +182,7 @@ struct HomeView: View {
                 let isSelected = day.key == selected.key
                 Button { select(day) } label: {
                     VStack(spacing: 4) {
-                        Text(day.letter).font(.inter(size: 11, weight: .medium))
+                        Text(day.letter).font(.apCaption.weight(.medium))
                             .foregroundStyle(isSelected ? Palette.background.opacity(0.75) : Palette.muted)
                         Text("\(day.day)").font(.inter(size: 17, weight: .semibold)).monospacedDigit()
                             .foregroundStyle(isSelected ? Palette.background : Palette.foreground)
@@ -1246,7 +1246,7 @@ private struct TodaySessionSheet: View {
 
     /// Lectura de VoiceOver de una fila: «Press banca, 4 series de 10 repeticiones, 90s, Pecho».
     private func accessibilityLabel(for ex: GymExercise) -> String {
-        var parts = ["\(ex.name), \(ex.series) series de \(ex.reps) repeticiones"]
+        var parts = ["\(ex.name), \(ex.series) \(ex.series == 1 ? "serie" : "series") de \(ex.reps) repeticiones"]
         let info = [ex.rest, ex.muscle_group].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: ", ")
         if !info.isEmpty { parts.append(info) }
         return parts.joined(separator: ". ")

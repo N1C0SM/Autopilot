@@ -93,7 +93,7 @@ struct NutritionSetupView: View {
             }
             Button { Task { await save() } } label: {
                 HStack(spacing: 8) {
-                    if saving { BrandLoader().tint(Palette.background).accessibilityHidden(true) }
+                    if saving { BrandLoader(color: Palette.background).accessibilityHidden(true) }
                     Text("Preparar mis comidas")
                 }
                 .frame(maxWidth: .infinity)

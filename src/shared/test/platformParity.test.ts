@@ -696,7 +696,7 @@ describe("paridad web ↔ apps nativas", () => {
   it("Campana de avisos: la web y las apps leen los mismos avisos, con contador y la misma hoja", () => {
     const web = read("src/app/components/NotificationsBell.tsx");
     const native = read("native/Autopilot/Features/Shell/NotificationsBell.swift");
-    for (const text of ["Notificaciones", "Sin notificaciones", "Aquí verás los cambios en tu plan y los recordatorios."]) {
+    for (const text of ["Notificaciones", "Todo al día", "Aquí verás los cambios en tu plan y los recordatorios."]) {
       expect(web).toContain(text);
       expect(native).toContain(text);
     }
@@ -1575,8 +1575,8 @@ describe("paridad web ↔ apps nativas", () => {
     const app = read("native/Autopilot/Features/Progress/ProgressScreen.swift");
     const photos = read("src/app/components/dashboard/ProgressPhotos.tsx");
     const records = read("src/app/components/dashboard/PRsList.tsx");
-    expect(app).toContain('eyebrow: "TU FÍSICO"');
-    expect(app).toContain('eyebrow: "TUS RÉCORDS"');
+    expect(app).toContain('eyebrow: "Tu físico"');
+    expect(app).toContain('eyebrow: "Tus récords"');
     for (const text of ["Empieza a documentar", "El antes y el ahora, lado a lado", "Tus fotos ordenadas por mes", "Privadas: solo las ves tú", "Hacer mi primer scan"]) {
       expect(photos, text).toContain(text);
       expect(app, text).toContain(text);
@@ -1606,12 +1606,12 @@ describe("paridad web ↔ apps nativas", () => {
       expect(progressWeb, text).toContain(text);
       expect(progressApp, text).toContain(text);
     }
-    expect(progressApp).toContain('eyebrow: "TU FUERZA"');
+    expect(progressApp).toContain('eyebrow: "Tu fuerza"');
     // Tu constancia sin series con peso: entrenos en vez de «0 kg» y sin gráfica vacía.
     const noKg = "Registra series con peso y aquí verás tus kilos de cada semana.";
     expect(read("src/app/components/dashboard/TrainingOverviewCard.tsx")).toContain(noKg);
     expect(progressApp).toContain(noKg);
-    expect(progressApp).toContain('Text("TU ÚLTIMO SCAN")');
+    expect(progressApp).toContain('Text("Tu último scan")');
     expect(progressWeb).toContain(">Tu último scan<");
   });
 
@@ -2035,7 +2035,9 @@ describe("paridad web ↔ apps nativas", () => {
     expect(app).toContain(".background(GoldFill(shape: Capsule()))");
     expect(rest).toContain("Text(\"Hecha\").font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.foreground)");
     // Cifras en Big Shoulders con punto de miles («2.230»), y la unidad debajo, nunca partida.
-    expect(web).toContain('type-figure text-[34px] text-foreground sm:text-[44px]');
+    // Entera y sin «2.3…»: si es larga, baja un poco en pantallas estrechas (como `minimumScaleFactor`).
+    expect(web).toContain('"whitespace-nowrap type-figure text-foreground sm:text-[44px]", value.length >= 5 ? "text-[clamp(24px,8.6vw,34px)]" : "text-[34px]"');
+    expect(web).not.toContain("truncate type-figure");
     expect(app).toContain(".font(.figure(size: wideLayout ? 44 : 34))");
     // Con la letra grande la unidad baja de línea, nunca se corta («kcal al…»).
     expect(web).toContain('className="mt-1 line-clamp-2 max-w-full break-words type-footnote text-muted-foreground">{unit}');
@@ -2854,5 +2856,117 @@ describe("paridad web ↔ apps nativas", () => {
     expect(app).toContain("if model.failed || model.items?.isEmpty == true {");
     // El nombre va grande en la ficha: la barra del iPhone no lo repite (sigue como título para «‹ Atrás»).
     expect(detailApp).toContain(".toolbar { ToolbarItem(placement: .principal) { Color.clear.frame(width: 1, height: 1).accessibilityHidden(true) } }");
+  });
+
+  it("Repaso final: cargas con el AP también en botones dorados, avisos con su hora legible y en positivo, y estado vacío común igual en la web y en la app", () => {
+    // El AP, nunca las aspas: ni en la bienvenida ni en el aviso de «sin conexión».
+    for (const file of ["src/app/pages/Welcome.tsx", "src/app/components/mobile/OfflineBanner.tsx"]) {
+      const web = read(file);
+      expect(web, file).not.toMatch(/Loader2|animate-spin/);
+      expect(web, file).toContain("<Spinner");
+    }
+    // Ningún ProgressView en la app de usuario: la barra del cuestionario es la píldora dorada de la web.
+    const onboarding = read("native/Autopilot/Features/Auth/OnboardingView.swift");
+    expect(onboarding).not.toContain("ProgressView(");
+    expect(onboarding).toContain(".frame(height: 6)");
+    expect(read("src/app/pages/Configurator.tsx")).toContain('className="h-1.5 w-full overflow-hidden rounded-full bg-secondary" role="progressbar"');
+    // En un botón dorado el AP va del color de su texto (`.tint` no le afecta), como `text-primary-foreground`.
+    const components = read("native/Autopilot/Design/Components.swift");
+    expect(components).toContain("var color: Color = Palette.muted");
+    for (const file of ["Design/Components.swift", "Features/Auth/LoginView.swift", "Features/Auth/OnboardingView.swift", "Features/Other/OtherViews.swift", "Features/Other/NutritionSetupView.swift", "Features/Train/WorkoutView.swift", "Features/Account/AccountView.swift"]) {
+      const app = read(`native/Autopilot/${file}`);
+      expect(app, file).not.toMatch(/BrandLoader\(\)\.tint\(/);
+      expect(app, file).toContain("BrandLoader(color: Palette.");
+    }
+    // Avisos: «Ahora», «5 min», «3 h», «2 d» y la fecha pasada una semana, iguales en las dos; nunca «0m».
+    const bellWeb = read("src/app/components/NotificationsBell.tsx");
+    const bellApp = read("native/Autopilot/Features/Shell/NotificationsBell.swift");
+    const timeWeb = read("src/shared/lib/noticeTime.ts");
+    expect(bellWeb).toContain("noticeAgo(n.created_at)");
+    for (const text of ['"Ahora"', " min`", " h`", " d`", '"sept"']) expect(timeWeb, text).toContain(text);
+    for (const text of ['"Ahora"', ') min"', ') h"', ') d"', '"sept"']) expect(bellApp, text).toContain(text);
+    expect(bellWeb).not.toContain("Sin notificaciones");
+    expect(bellApp).toContain('EmptyStateView(symbol: "bell", title: "Todo al día"');
+    // Estado vacío común: icono gris, título en Title 2 y sin borde, en las dos.
+    const empty = read("src/shared/components/ui/empty-state.tsx");
+    expect(empty).not.toContain("border border-border");
+    expect(empty).toContain('<p className={cn("type-title2", Icon && "mt-5")}>{title}</p>');
+    expect(empty).toContain('className="h-7 w-7 text-muted-foreground"');
+    const theme = read("native/Autopilot/Design/Theme.swift");
+    const emptyApp = theme.slice(theme.indexOf("struct EmptyStateView"), theme.indexOf("enum NumberText"));
+    expect(emptyApp).toContain(".foregroundStyle(Palette.muted)");
+    expect(emptyApp).toContain("Text(title).font(.apTitle2)");
+    expect(emptyApp).not.toContain("Palette.gold");
+  });
+
+  it("Repaso final: cifras en Big Shoulders, sin antetítulos en mayúsculas, la marca sobre el dorado con su token y Ajustes en la columna de 680, igual en la web y en la app", () => {
+    // Cifras de KPI y de la ficha del scan en Big Shoulders (nunca Inter en negrita).
+    const theme = read("native/Autopilot/Design/Theme.swift");
+    expect(theme.slice(theme.indexOf("struct FigureTile"), theme.indexOf("struct EmptyStateView"))).toContain(".font(.figure(size: 28, relativeTo: .title))");
+    const progressApp = read("native/Autopilot/Features/Progress/ProgressScreen.swift");
+    const photosWeb = read("src/app/components/dashboard/ProgressPhotos.tsx");
+    expect(progressApp).not.toContain("apFigureSmall");
+    expect(photosWeb).toContain('className={`type-figure text-[28px] leading-none ${accent ? "text-primary" : "text-foreground"}`}');
+    const celebration = read("src/app/components/dashboard/RecordCelebration.tsx");
+    expect(celebration).toContain("type-figure text-[clamp(56px,22vw,88px)]");
+    expect(celebration).not.toContain("text-foreground");
+    // Ningún antetítulo en mayúsculas ni con espaciado en Progreso, el récord y el primer uso.
+    for (const file of ["src/app/components/progress/ProgressHero.tsx", "src/app/components/dashboard/ProgressPhotos.tsx", "src/app/components/dashboard/RecordCelebration.tsx", "src/app/pages/OnboardingChoice.tsx"]) {
+      expect(read(file), file).not.toMatch(/uppercase tracking|tracking-\[0\.1\d?em\] text-primary/);
+    }
+    expect(progressApp).not.toMatch(/\.tracking\(1\.6\)|textCase\(\.uppercase\)/);
+    expect(progressApp).toContain('Label("Scan", systemImage: "sparkles")\n                .font(.apFootnote.weight(.semibold))');
+    expect(photosWeb).toContain('className="flex items-center gap-1.5 type-footnote font-semibold text-primary"');
+    // Marcas sobre el dorado con el token (blanco en modo claro, como `text-primary-foreground`), nunca negro fijo.
+    for (const file of ["Features/Progress/ProgressScreen.swift", "Features/Auth/OnboardingView.swift", "Features/Scan/ScanView.swift"]) {
+      expect(read(`native/Autopilot/${file}`), file).not.toMatch(/foregroundStyle\((\.black|Color\.black)\)/);
+    }
+    // Ajustes en la misma columna centrada de 680 en el iPad y el Mac que en la web ancha.
+    const account = read("native/Autopilot/Features/Account/AccountView.swift");
+    expect(account.match(/\.frame\(maxWidth: 680, alignment: \.leading\)\s*\.frame\(maxWidth: \.infinity\)/g)?.length).toBe(2);
+    expect(read("src/app/pages/Dashboard.tsx")).toContain('<div className="mx-auto w-full max-w-[680px]"><SettingsPanel');
+    // El campo de la contraseña de una cuenta guardada es una píldora, como «¿Quién entrena?».
+    expect(account).toContain('PillField(label: "Contraseña", text: $password, secure: true, contentType: .password)');
+    expect(account).not.toContain("RoundedRectangle(cornerRadius: 14, style: .continuous))\n                .accessibilityLabel(\"Contraseña de");
+  });
+
+  it("Repaso final: Ajustes solo con Free y Plus y los mismos textos; Progreso pintado desde la caché al volver, en la web y en la app", () => {
+    const settingsWeb = read("src/app/components/SettingsPanel.tsx");
+    const settingsApp = read("native/Autopilot/Features/Account/AccountView.swift");
+    expect(settingsWeb).not.toContain("entrenador opcional");
+    expect(settingsWeb).not.toContain("Nicolás revisa tu plan");
+    expect(settingsWeb).not.toContain('onUpgrade("full")');
+    expect(settingsWeb + settingsApp).not.toContain("Descarga un JSON");
+    const footer = "Elige cuánto quieres descansar al marcar una serie. El temporizador se inicia solo durante tu entreno. La disposición cambia cómo se organizan las tarjetas, no la vista «Ejercicio a ejercicio».";
+    expect(settingsWeb).toContain(footer);
+    expect(settingsApp).toContain(footer);
+    for (const text of ['"Cuenta Free"', '"Descanso personalizado, en segundos"', "Un archivo con todo lo que guardamos de ti."]) {
+      expect(settingsWeb, text).toContain(text);
+      expect(settingsApp, text).toContain(text);
+    }
+    // Fuerza y Récords: al volver, lo último visto al instante y la red por detrás (la app ya lo hace con `Snapshots`).
+    expect(read("src/app/components/dashboard/WorkoutProgress.tsx")).toContain('readScreen<WorkoutLogRecord[]>(userId, STRENGTH_CACHE)');
+    expect(read("src/app/components/dashboard/PRsList.tsx")).toContain("readScreen<PR[]>(userId, RECORDS_CACHE)");
+    expect(read("native/Autopilot/Features/Progress/ProgressScreen.swift")).toContain("Snapshots.load(Snapshot.self, Self.cacheKey(userId))");
+  });
+
+  it("Repaso final: la bienvenida legible (AA) y la tarjeta vacía con foto en Title 1, igual en la web y en la app", () => {
+    // Bienvenida: titular de 34, subtítulo al 60 %, ventajas al 75 % sin cortar y el texto legal a 13 al 55 % (enlaces al 80 %).
+    const welcome = read("src/app/pages/Welcome.tsx");
+    const app = read("native/Autopilot/Features/Auth/OnboardingView.swift");
+    expect(welcome).toContain('className="mt-0.5 type-footnote font-medium text-white/60">Entrenamiento adaptativo');
+    expect(app).toMatch(/Text\("Entrenamiento adaptativo"\)\s*\.font\(\.apFootnote\.weight\(\.medium\)\)\s*\.foregroundStyle\(\.white\.opacity\(0\.6\)\)/);
+    expect(welcome).toContain('<h1 className="text-[34px] font-bold');
+    expect(app).toMatch(/Text\("Tu entrenamiento,\\nen piloto automático\."\)\s*\.font\(\.inter\(size: 34, weight: \.bold\)\)/);
+    expect(welcome).toContain('<p className="type-subhead text-white/75">{text}</p>');
+    expect(app).toMatch(/\.font\(\.apSubhead\)\s*\.foregroundStyle\(\.white\.opacity\(0\.75\)\)\s*\.fixedSize/);
+    expect(welcome).toContain('className="mt-2 text-center type-footnote text-white/55"');
+    expect(welcome).toContain('className="text-white/80 underline-offset-2 hover:underline"');
+    expect(app).toMatch(/\.font\(\.apFootnote\)\s*\.foregroundStyle\(\.white\.opacity\(0\.55\)\)\s*\.multilineTextAlignment\(\.center\)\s*\.tint\(\.white\.opacity\(0\.8\)\)/);
+    expect(welcome + app).not.toMatch(/text-white\/30|white\.opacity\(0\.3\)/);
+    // Tarjeta vacía con foto (comidas en preparación): título en Title 1 en las dos.
+    expect(read("src/shared/components/ui/empty-state.tsx")).toContain('<p className="mt-2 type-title1">{title}</p>');
+    const meals = read("native/Autopilot/Features/Other/OtherViews.swift");
+    expect(meals.slice(meals.indexOf("private struct MealsStateCard"))).toContain("Text(title).font(.apTitle1)");
   });
 });

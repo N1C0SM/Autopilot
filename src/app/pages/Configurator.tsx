@@ -399,7 +399,7 @@ const Configurator = () => {
       {restoredDraft ? (
         <div className="mt-3 flex items-center justify-between gap-3 rounded-media bg-card px-4 py-2">
           <p className="type-footnote text-muted-foreground">Hemos recuperado tus respuestas anteriores.</p>
-          <Button type="button" variant="plain" size="sm" className="h-9 shrink-0 px-3" onClick={restart}>
+          <Button type="button" variant="plain" size="sm" className="h-11 shrink-0 px-3" onClick={restart}>
             Empezar de nuevo
           </Button>
         </div>

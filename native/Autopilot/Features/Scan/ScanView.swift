@@ -232,7 +232,7 @@ struct ScanView: View {
             }
             .overlay(alignment: .topTrailing) {
                 if selected {
-                    Image(systemName: "checkmark").font(.inter(size: 10, weight: .heavy)).foregroundStyle(.black)
+                    Image(systemName: "checkmark").font(.inter(size: 10, weight: .heavy)).foregroundStyle(Palette.background)
                         .frame(width: 20, height: 20).background(Palette.gold, in: Circle()).padding(6)
                 }
             }
@@ -812,7 +812,7 @@ struct ScanAnalyzingView: View {
     @ViewBuilder private func indicator(_ state: ScanLoading.StepState) -> some View {
         switch state {
         case .done:
-            Image(systemName: "checkmark").font(.inter(size: 11, weight: .heavy)).foregroundStyle(.black)
+            Image(systemName: "checkmark").font(.inter(size: 11, weight: .heavy)).foregroundStyle(Palette.background)
                 .frame(width: 24, height: 24).background(Palette.gold, in: Circle())
         case .active:
             BrandMark(size: 20, beat: true)

@@ -26,15 +26,24 @@ enum NoticesRepo {
             .in("id", values: ids.map { $0.uuidString.lowercased() }).execute()
     }
 
-    /// «5m», «3h», «2d»: `timeAgo` de la web.
+    /// «Ahora», «5 min», «3 h», «2 d» y, pasada una semana, «12 nov» (con el año si no es este):
+    /// `noticeAgo` de la web (`src/shared/lib/noticeTime.ts`). Nunca «0m».
     static func ago(_ iso: String, now: Date = Date()) -> String {
         let withFraction = ISO8601DateFormatter()
         withFraction.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         guard let date = withFraction.date(from: iso) ?? ISO8601DateFormatter().date(from: iso) else { return "" }
         let mins = max(0, Int(now.timeIntervalSince(date) / 60))
-        if mins < 60 { return "\(mins)m" }
+        if mins < 1 { return "Ahora" }
+        if mins < 60 { return "\(mins) min" }
         let hours = mins / 60
-        return hours < 24 ? "\(hours)h" : "\(hours / 24)d"
+        if hours < 24 { return "\(hours) h" }
+        let days = hours / 24
+        if days < 7 { return "\(days) d" }
+        let months = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sept", "oct", "nov", "dic"]
+        let calendar = Calendar.current
+        let parts = calendar.dateComponents([.day, .month, .year], from: date)
+        let day = "\(parts.day ?? 1) \(months[max(0, min(11, (parts.month ?? 1) - 1))])"
+        return parts.year == calendar.component(.year, from: now) ? day : "\(day) \(parts.year ?? 0)"
     }
 
     /// Icono gris por tipo, como `typeIcon` de la web.
@@ -119,16 +128,10 @@ private struct NoticesSheet: View {
                     #endif
                 }
                 if notices.isEmpty {
-                    VStack(spacing: 10) {
-                        Image("lu-bell-off").renderingMode(.template).resizable().frame(width: 32, height: 32)
-                            .foregroundStyle(Palette.muted).accessibilityHidden(true)
-                        Text("Sin notificaciones").font(.apHeadline)
-                        Text("Aquí verás los cambios en tu plan y los recordatorios.")
-                            .font(.apSubhead).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 64)
-                    .accessibilityElement(children: .combine)
+                    // El estado vacío común y en positivo, como `EmptyState` en la web.
+                    EmptyStateView(symbol: "bell", title: "Todo al día",
+                                   message: "Aquí verás los cambios en tu plan y los recordatorios.")
+                        .padding(.vertical, 24)
                 } else {
                     VStack(spacing: 0) {
                         ForEach(Array(notices.enumerated()), id: \.element.id) { index, notice in
@@ -145,7 +148,7 @@ private struct NoticesSheet: View {
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 Text(NoticesRepo.ago(notice.created_at)).font(.apSubhead).monospacedDigit()
-                                    .foregroundStyle(Palette.muted)
+                                    .foregroundStyle(Palette.muted).lineLimit(1).fixedSize()
                             }
                             .padding(.horizontal, 16).padding(.vertical, 12)
                             .accessibilityElement(children: .combine)

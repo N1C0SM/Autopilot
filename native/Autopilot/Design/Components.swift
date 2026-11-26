@@ -80,7 +80,7 @@ struct StarterRoutineCard: View {
             EmptyStateView(symbol: "dumbbell", title: "Prepara tu rutina inicial gratis",
                            message: "Te la preparamos en unos segundos.")
             Button { Task { await prepare() } } label: {
-                if preparing { BrandLoader().tint(.black).accessibilityHidden(true) } else { Text("Preparar mi rutina gratis") }
+                if preparing { BrandLoader(color: Palette.background).accessibilityHidden(true) } else { Text("Preparar mi rutina gratis") }
             }
             .buttonStyle(.pill)
             .disabled(preparing)
@@ -822,11 +822,14 @@ struct SearchPill: View {
     }
 }
 
-/// Carga con la firma de marca en lugar del `ProgressView` genérico.
+/// Carga con la firma de marca en lugar del `ProgressView` genérico. Gris por defecto; dentro de
+/// un botón dorado va en el color de su texto (`Palette.background`), como `text-primary-foreground`
+/// en la web. (`.tint` no le afecta: el color se pasa aquí.)
 struct BrandLoader: View {
     var size: CGFloat = 20
+    var color: Color = Palette.muted
     var body: some View {
-        BrandMark(size: size, beat: true, color: Palette.muted)
+        BrandMark(size: size, beat: true, color: color)
             .accessibilityElement()
             .accessibilityLabel("Cargando")
     }

@@ -900,7 +900,7 @@ private struct MacrosWeightCard: View {
             }
             PillField(label: "Tu peso en kg", text: $weight).decimalKeyboard()
             Button { Task { await save() } } label: {
-                if saving { BrandLoader().tint(.black).accessibilityHidden(true) } else { Text("Calcular mis macros") }
+                if saving { BrandLoader(color: Palette.background).accessibilityHidden(true) } else { Text("Calcular mis macros") }
             }
             .buttonStyle(.pill)
             .disabled(saving || value == nil)
@@ -957,7 +957,8 @@ private struct MealsStateCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(title).font(.inter(size: 26, weight: .semibold)).tracking(-0.5)
+            // Title 1, como el título de `EmptyState` con foto en la web (`type-title1`).
+            Text(title).font(.apTitle1)
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.isHeader)
             Text(message).font(.apSubhead).foregroundStyle(Palette.muted).padding(.top, 4)

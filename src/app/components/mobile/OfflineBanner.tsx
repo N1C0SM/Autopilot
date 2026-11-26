@@ -1,5 +1,6 @@
-import { Loader2, WifiOff } from "lucide-react";
+import { WifiOff } from "lucide-react";
 import { useState } from "react";
+import { Spinner } from "@/shared/components/ui/spinner";
 
 interface Props {
   /** Reintento real (normalmente el mismo refresco del pull-to-refresh). */
@@ -39,9 +40,10 @@ const OfflineBanner = ({ onRetry }: Props) => {
           "calc(0.75rem + env(safe-area-inset-bottom, 0px) + var(--mobile-nav-height) + 1rem)",
       }}
     >
-      <div className="flex w-full max-w-sm items-center gap-2 rounded-full/60 bg-card/95 px-3 py-2 shadow-lg backdrop-blur">
+      {/* Píldora con la profundidad de las tarjetas (sin sombra escrita a mano) y texto a 13 px como mínimo. */}
+      <div className="flex min-h-12 w-full max-w-sm items-center gap-2.5 rounded-full bg-card py-1 pl-4 pr-1">
         <WifiOff className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-        <span className="flex-1 type-caption1 leading-tight">
+        <span className="min-w-0 flex-1 truncate type-footnote font-medium">
           {stillOffline ? "Sigue sin conexión" : "Sin conexión"}
         </span>
         {onRetry && (
@@ -49,9 +51,9 @@ const OfflineBanner = ({ onRetry }: Props) => {
             type="button"
             onClick={() => void retry()}
             disabled={retrying}
-            className="flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-3 py-1 type-caption1 font-semibold text-primary transition-transform active:scale-95 disabled:opacity-60"
+            className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-full bg-primary/15 px-4 type-footnote font-semibold text-primary transition-transform active:scale-95 disabled:opacity-60"
           >
-            {retrying && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
+            {retrying && <Spinner size="sm" className="text-primary" aria-hidden="true" />}
             {retrying ? "Comprobando" : "Reintentar"}
           </button>
         )}

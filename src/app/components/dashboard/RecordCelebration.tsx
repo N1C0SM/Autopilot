@@ -25,9 +25,11 @@ export default function RecordCelebration({ moment, onDone }: { moment: RecordMo
     >
       <span className="relative flex flex-col items-center text-center animate-in fade-in duration-300 motion-reduce:animate-none">
         <BrandMark size={40} />
-        <span className="mt-6 type-subhead font-semibold uppercase tracking-[0.12em] text-primary">Nuevo récord personal</span>
-        <span className="mt-2 text-[88px] font-semibold leading-none tracking-tight tabular-nums text-foreground">{moment.diff}</span>
-        <span className="mt-3 max-w-xs type-title3 text-muted-foreground">{moment.exercise}</span>
+        {/* Sobre el velo negro el texto va en blanco también en modo claro; la cifra en Big Shoulders y
+            sin partirse («+2,5 kg» entero), y el titular en minúsculas, nunca un antetítulo en mayúsculas. */}
+        <span className="mt-6 type-headline text-primary">Nuevo récord personal</span>
+        <span className="mt-2 whitespace-nowrap type-figure text-[clamp(56px,22vw,88px)] leading-none text-white">{moment.diff}</span>
+        <span className="mt-3 max-w-xs type-title3 text-white/75">{moment.exercise}</span>
       </span>
     </button>}
   </div>;

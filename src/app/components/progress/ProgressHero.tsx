@@ -33,7 +33,8 @@ export function ProgressHero({ photo, eyebrow, title, message, perks, action, ph
         <img src={photo} alt="" decoding="async" style={{ objectPosition: photoPosition }} className="absolute inset-0 h-full w-full object-cover" />
         <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-card via-black/45 to-black/10" />
         <div className="absolute inset-x-5 bottom-3">
-          <p className="type-footnote font-semibold uppercase tracking-[0.16em] text-primary">{eyebrow}</p>
+          {/* Antetítulo en minúsculas y sin espaciado: nunca en mayúsculas (igual que `progressHero` en la app). */}
+          <p className="type-footnote font-semibold text-primary">{eyebrow}</p>
           <h2 id={titleId} className="mt-1 type-title1 text-white">{title}</h2>
         </div>
       </div>

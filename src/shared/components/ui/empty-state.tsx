@@ -20,11 +20,12 @@ interface EmptyStateProps {
 }
 
 /**
- * Estado vacío único de la app: icono en su cuadrado tintado, título y una línea,
- * sin caja ni borde.
+ * Estado vacío único de la app: icono gris, título en Title 2 y una línea, sin caja ni borde.
+ * Las variantes en tarjeta (foto, descanso, nutrición o `card`) se separan del fondo por su luz y
+ * su sombra (`bg-card`), nunca por un borde. Es `EmptyStateView` en la app nativa.
  */
 const EmptyState = ({ icon: Icon, title, description, action, className, card, photo, rest, nutrition }: EmptyStateProps) => photo || rest || nutrition ? (
-  <div className={cn("relative overflow-hidden rounded-[22px] border border-border bg-card", className)}>
+  <div className={cn("relative overflow-hidden rounded-[28px] bg-card", className)}>
     {photo ? <>
       <img src={photo} alt="" decoding="async" className="absolute inset-0 h-full w-full object-cover object-[50%_25%] opacity-90" />
       <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-card via-card/70 to-transparent" />
@@ -37,13 +38,13 @@ const EmptyState = ({ icon: Icon, title, description, action, className, card, p
     </>}
     <div className={cn("relative flex min-h-[18rem] flex-col justify-end p-5 text-left", (rest || nutrition) && !photo && "pt-36")}>
       {Icon && photo ? <Icon aria-hidden="true" className="h-6 w-6 text-primary" strokeWidth={1.5} /> : null}
-      <p className="mt-2 text-[26px] font-semibold leading-tight tracking-tight">{title}</p>
+      <p className="mt-2 type-title1">{title}</p>
       {description ? <p className="mt-1 type-subhead text-muted-foreground">{description}</p> : null}
       {action ? <div className="mt-5 [&>*]:w-full">{action}</div> : null}
     </div>
   </div>
 ) : (
-  <div className={cn("flex flex-col items-center justify-center px-6 py-12 text-center", card && "rounded-[22px] border border-border bg-card py-10", className)}>
+  <div className={cn("flex flex-col items-center justify-center px-6 py-12 text-center", card && "rounded-card bg-card py-10", className)}>
     {Icon ? (
       <Icon aria-hidden="true" className="h-7 w-7 text-muted-foreground" strokeWidth={1.25} />
     ) : null}

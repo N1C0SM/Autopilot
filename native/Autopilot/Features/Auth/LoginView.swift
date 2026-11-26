@@ -76,7 +76,7 @@ struct LoginView: View {
                         if loading {
                             // El icono de carga no aporta nada a VoiceOver: el botón ya dice
                             // «Iniciando sesión» mientras dura la petición.
-                            BrandLoader().tint(.black).accessibilityHidden(true)
+                            BrandLoader(color: Palette.background).accessibilityHidden(true)
                         } else {
                             Text("Iniciar sesión")
                         }
@@ -199,7 +199,7 @@ struct ForgotPasswordSheet: View {
                 }
             }
             Button { if sent { dismiss() } else { Task { await send() } } } label: {
-                if loading { BrandLoader().tint(.black).accessibilityHidden(true) }
+                if loading { BrandLoader(color: Palette.background).accessibilityHidden(true) }
                 else { Text(sent ? "Volver al inicio de sesión" : "Enviar enlace") }
             }
             .buttonStyle(.pill)

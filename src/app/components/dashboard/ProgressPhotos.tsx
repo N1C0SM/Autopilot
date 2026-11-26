@@ -99,7 +99,7 @@ const longDate = (d: string) =>
 const Figure = ({ value, unit, label, accent }: { value: string; unit: string; label: string; accent?: boolean }) => (
   <div>
     <p className="whitespace-nowrap">
-      <span className={` text-[28px] font-bold leading-tight tabular-nums ${accent ? "text-primary" : "text-foreground"}`}>{value}</span>
+      <span className={`type-figure text-[28px] leading-none ${accent ? "text-primary" : "text-foreground"}`}>{value}</span>
       <span className="ml-0.5 type-footnote text-muted-foreground">{unit}</span>
     </p>
     <p className="type-footnote text-muted-foreground">{label}</p>
@@ -163,7 +163,8 @@ const PhotoInfoPanel = ({ photo, onClose }: { photo: Photo; onClose: () => void 
           <p className="type-subhead text-muted-foreground">Esta foto no tiene análisis. Las fotos que guarda cada scan muestran aquí sus resultados.</p>
         ) : (
           <div className="flex flex-col gap-4">
-            <span className="flex items-center gap-1.5 type-caption2 font-bold uppercase tracking-[0.15em] text-primary">
+            {/* Etiqueta en minúsculas y sin espaciado, nunca un antetítulo en mayúsculas (igual en la app). */}
+            <span className="flex items-center gap-1.5 type-footnote font-semibold text-primary">
               <Sparkles className="h-3.5 w-3.5" aria-hidden="true" /> Scan
             </span>
             {(physique !== null || potential !== null || fat !== null) && (
@@ -188,7 +189,7 @@ const PhotoInfoPanel = ({ photo, onClose }: { photo: Photo; onClose: () => void 
                     </span>
                     <div>
                       <p className="type-subhead">{i.label}</p>
-                      {i.priority && <p className="type-caption2 font-semibold text-primary">Prioridad {i.priority.toLowerCase()}</p>}
+                      {i.priority && <p className="type-footnote font-semibold text-primary">Prioridad {i.priority.toLowerCase()}</p>}
                     </div>
                   </div>
                 ))}
@@ -689,7 +690,7 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
                 : <PhotoPlaceholder />}
             </button>
             <div className="flex min-w-0 flex-1 flex-col">
-              <p className="type-footnote font-semibold uppercase tracking-[0.16em] text-primary">Tu último scan</p>
+              <p className="type-footnote font-semibold text-primary">Tu último scan</p>
               <p className="mt-1 type-footnote tabular-nums text-muted-foreground">{latest.taken_at ? longDate(latest.taken_at) : "Sin fecha"}</p>
               <h2 className="mt-3 type-headline">Compara tu evolución</h2>
               <p className="mt-1 type-subhead text-muted-foreground">Con otro scan del mismo ángulo verás el antes y el ahora, lado a lado.</p>

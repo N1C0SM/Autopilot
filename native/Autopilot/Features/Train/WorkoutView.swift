@@ -242,7 +242,7 @@ struct WorkoutView: View {
     private var finishButton: some View {
         Button { finish() } label: {
             if workout.saving {
-                BrandLoader().tint(Palette.background)
+                BrandLoader(color: Palette.background)
                     .frame(width: 128, height: 50)
                     .background(GoldFill(shape: Capsule()))
             } else {
@@ -596,7 +596,7 @@ struct WorkoutView: View {
                 }
                 VStack(spacing: 8) {
                     Button { complete(rpe: rpe) } label: {
-                        if workout.saving { BrandLoader().tint(Palette.background) } else { Text("Guardar esfuerzo y completar") }
+                        if workout.saving { BrandLoader(color: Palette.background) } else { Text("Guardar esfuerzo y completar") }
                     }
                     .buttonStyle(.pill)
                     .disabled(workout.saving)

@@ -1011,7 +1011,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false, page: controlledPage, onP
         id="ajustes-entreno"
         className={`order-4 scroll-mt-20${hideForAdmin}${only("ajustes-entreno")}`}
         header={page ? undefined : "Tu forma de entrenar"}
-        footer="Elige cuánto quieres descansar al marcar una serie. El temporizador se inicia solo durante tu entreno. Puedes cambiarlo cuando quieras. El descanso específico de cada ejercicio sigue apareciendo en tu plan. La disposición cambia cómo se organizan las tarjetas, no la vista «Ejercicio a ejercicio»."
+        footer="Elige cuánto quieres descansar al marcar una serie. El temporizador se inicia solo durante tu entreno. La disposición cambia cómo se organizan las tarjetas, no la vista «Ejercicio a ejercicio»."
       >
         <div className="px-4 py-3 sep-b">
           <p className="mb-2 type-body">Vista del entrenamiento</p>
@@ -1078,7 +1078,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false, page: controlledPage, onP
               const saved = setWorkoutRestSeconds(user.id, restSeconds);
               setRestSeconds(saved);
             }}
-            aria-label="Descanso personalizado en segundos"
+            aria-label="Descanso personalizado, en segundos"
             className={rowInput}
           />
           <span className="shrink-0 type-body text-muted-foreground">segundos</span>
@@ -1132,7 +1132,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false, page: controlledPage, onP
             subtitle={
               isActive
                 ? (subscriptionStatus === "trialing" ? "Prueba gratuita activa" : "Suscripción activa")
-                : hasPaidAccess ? "Acceso activo (pago único)" : "Cuenta Free · entrenador opcional"
+                : hasPaidAccess ? "Acceso activo (pago único)" : "Cuenta Free"
             }
           />
           {subscriptionEnd && isActive ? (
@@ -1185,11 +1185,6 @@ const SettingsPanel = ({ onUpgrade, adminMode = false, page: controlledPage, onP
             <Button variant="hero" size="lg" className="w-full" onClick={() => { void hapticTap(); onUpgrade("training"); }}>
               Mejorar a {plans.plusName} · {euro(plans.plusPrice)}/mes
             </Button>
-            {plans.coach && (
-              <Button variant="plain" className="w-full" onClick={() => { void hapticTap(); onUpgrade("full"); }}>
-                Ver {plans.coachName} · Nicolás revisa tu plan
-              </Button>
-            )}
           </div>
         )}
       </div>}
@@ -1251,7 +1246,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false, page: controlledPage, onP
           <ListRow
             icon={<Download className="text-muted-foreground" />}
             title={exporting ? "Generando…" : "Exportar mis datos"}
-            subtitle="Descarga un JSON con todo lo que tenemos sobre ti."
+            subtitle="Un archivo con todo lo que guardamos de ti."
             trailing={exporting ? <Spinner size="sm" /> : undefined}
             onClick={() => { if (!exporting) void exportMyData(); }}
           />

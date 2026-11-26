@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { Bell, BellOff, CalendarSync, Dumbbell, Inbox, Target } from "lucide-react";
+import { Bell, CalendarSync, Dumbbell, Inbox, Target } from "lucide-react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/shared/components/ui/sheet";
 import { Button } from "@/shared/components/ui/button";
 import { EmptyState } from "@/shared/components/ui/empty-state";
 import { ListGroup, ListRow } from "@/shared/components/ui/list";
 import { hapticTap } from "@/shared/lib/native";
+import { noticeAgo } from "@/shared/lib/noticeTime";
 import { skipAutoFocusOnTouch } from "@/app/components/user-core/skipAutoFocusOnTouch";
 
 interface Notification {
@@ -71,16 +72,6 @@ const NotificationsBell = ({ userId }: Props) => {
     }
   };
 
-  const timeAgo = (dateStr: string) => {
-    const diff = Date.now() - new Date(dateStr).getTime();
-    const mins = Math.floor(diff / 60000);
-    if (mins < 60) return `${mins}m`;
-    const hours = Math.floor(mins / 60);
-    if (hours < 24) return `${hours}h`;
-    const days = Math.floor(hours / 24);
-    return `${days}d`;
-  };
-
   // Iconos informativos: en gris; el dorado queda para lo seleccionado y la acción.
   const typeIcon = (type: string) => {
     switch (type) {
@@ -118,9 +109,10 @@ const NotificationsBell = ({ userId }: Props) => {
           <SheetDescription className="sr-only">Tus avisos recientes</SheetDescription>
         </SheetHeader>
         {notifications.length === 0 ? (
+          // En positivo: sin avisos pendientes estás al día (igual que la app).
           <EmptyState
-            icon={BellOff}
-            title="Sin notificaciones"
+            icon={Bell}
+            title="Todo al día"
             description="Aquí verás los cambios en tu plan y los recordatorios."
             className="py-16"
           />
@@ -132,7 +124,7 @@ const NotificationsBell = ({ userId }: Props) => {
                 icon={typeIcon(n.type)}
                 title={n.title}
                 subtitle={n.message}
-                value={timeAgo(n.created_at)}
+                value={<span className="whitespace-nowrap tabular-nums">{noticeAgo(n.created_at)}</span>}
               />
             ))}
           </ListGroup>

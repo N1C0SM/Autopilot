@@ -698,7 +698,9 @@ const DayFigure = ({ label, value, unit, progress, detail, spoken, empty = "Por 
     <span aria-hidden="true" className="max-w-full truncate type-footnote font-semibold text-muted-foreground">{label}</span>
     <span aria-hidden="true" className="mt-2 flex h-9 max-w-full items-end sm:h-11">
       {value
-        ? <span className="truncate type-figure text-[34px] text-foreground sm:text-[44px]">{value}</span>
+        // Nunca «2.3…»: la cifra va entera y, si es larga, baja un poco en pantallas estrechas
+        // (como `minimumScaleFactor` en la app).
+        ? <span className={cn("whitespace-nowrap type-figure text-foreground sm:text-[44px]", value.length >= 5 ? "text-[clamp(24px,8.6vw,34px)]" : "text-[34px]")}>{value}</span>
         : <span className="type-subhead font-semibold text-muted-foreground">{empty}</span>}
     </span>
     {/* La unidad baja de línea con la letra grande (nunca «kcal al…»). */}

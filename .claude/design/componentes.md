@@ -16,8 +16,8 @@ Antes de escribir una pieza nueva, busca aquí. Si no encaja, amplía el compone
     <Input type="email" placeholder="tu@correo.com" />
   </Field>
   ```
-- **`EmptyState`** — estados vacíos:
-  - normal: icono en ficha tintada + título + línea;
+- **`EmptyState`** (`EmptyStateView` en nativo, mismo aspecto) — estados vacíos, siempre sin borde:
+  - normal: icono gris fino + título en Title 2 + línea (en positivo: «Todo al día», no «Sin …»);
   - `photo={BRAND_PHOTOS.x}`: tarjeta alta con foto real y texto abajo;
   - `rest`: noche con luna dorada y estrellas (descanso). Nunca una foto de ejercicio para descansar.
 - **`IconTile`** — icono dentro de un cuadrado tintado; solo para listas y avisos, no como protagonista.

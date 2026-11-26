@@ -353,7 +353,8 @@ struct FigureTile: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(label).font(.apFootnote).foregroundStyle(Palette.muted)
                     .lineLimit(1).minimumScaleFactor(0.75)
-                Text(value).font(.apFigureSmall).foregroundStyle(accent ? Palette.gold : Palette.foreground)
+                // Cifra en Big Shoulders 800 con dígitos tabulares, como `.type-figure` en la web.
+                Text(value).font(.figure(size: 28, relativeTo: .title)).foregroundStyle(accent ? Palette.gold : Palette.foreground)
                     // Los dígitos ruedan al cambiar la cifra (sin animación con Reducir movimiento).
                     .contentTransition(.numericText())
                     .lineLimit(1).minimumScaleFactor(0.6)
@@ -368,18 +369,24 @@ struct FigureTile: View {
     }
 }
 
-/// Estado vacío común (como `EmptyState`).
+/// Estado vacío común, igual que `EmptyState` en la web: icono gris y fino (el dorado queda para la
+/// acción), título en Title 2 y una línea en gris de lectura cómoda.
 struct EmptyStateView: View {
     let symbol: String
     let title: String
     var message: String?
 
     var body: some View {
-        VStack(spacing: 10) {
-            Image(systemName: symbol).font(.system(size: 36, weight: .semibold)).foregroundStyle(Palette.gold)
+        VStack(spacing: 6) {
+            Image(systemName: symbol).font(.system(size: 28, weight: .light)).foregroundStyle(Palette.muted)
+                .padding(.bottom, 14)
                 .accessibilityHidden(true)
-            Text(title).font(.apHeadline).multilineTextAlignment(.center).accessibilityAddTraits(.isHeader)
-            if let message { Text(message).font(.apSubhead).foregroundStyle(Palette.muted).multilineTextAlignment(.center) }
+            Text(title).font(.apTitle2).multilineTextAlignment(.center).accessibilityAddTraits(.isHeader)
+                .fixedSize(horizontal: false, vertical: true)
+            if let message {
+                Text(message).font(.apSubhead).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
+                    .frame(maxWidth: 320).fixedSize(horizontal: false, vertical: true)
+            }
         }
         // Margen lateral: dentro de una tarjeta el texto no toca los bordes.
         .padding(.horizontal, 24)
