@@ -26,24 +26,32 @@ const handlers = () => ({
 });
 
 describe("Mis rutinas", () => {
-  it("cada rutina enseña nombre, recuento con músculos, miniaturas con «+N» y «Empezar»", () => {
+  it("cada rutina, compacta: nombre, recuento con músculos, tres miniaturas con «+N» y una sola acción, «Empezar»", () => {
     const h = handlers();
     render(<MyRoutines routines={[routine("Martes", "Pierna pesada", 6), routine("Jueves", "Brazos", 1)]} limitReached={false} {...h} />);
     expect(screen.getByRole("heading", { name: "Mis rutinas" })).toBeInTheDocument();
-    expect(screen.getByText("2 rutinas tuyas")).toBeInTheDocument();
+    // Sin el recuento repetido bajo el título: las tarjetas ya se cuentan solas.
+    expect(screen.queryByText("2 rutinas tuyas")).toBeNull();
     expect(screen.getByText("6 ejercicios · Pecho y espalda")).toBeInTheDocument();
     expect(screen.getByText("1 ejercicio · Pecho")).toBeInTheDocument();
-    expect(screen.getByText("+2")).toBeInTheDocument();
+    expect(screen.getByText("+3")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Empezar Pierna pesada" }));
     expect(h.onStart).toHaveBeenCalledWith("Martes");
     expect(screen.getByRole("button", { name: "Más acciones de Brazos" })).toBeInTheDocument();
+    // «Nueva rutina» es una píldora tranquila junto al título (secundaria, nunca dorada).
+    const add = screen.getByRole("button", { name: "Nueva rutina" });
+    expect(add.className).toContain("bg-secondary");
+    fireEvent.click(add);
+    expect(h.onNew).toHaveBeenCalled();
   });
 
   it("sin rutinas invita a crear la primera; con siete sesiones lo dice en claro", () => {
     const h = handlers();
     const { rerender } = render(<MyRoutines routines={[]} limitReached={false} {...h} />);
     expect(screen.getByText("Crea tu primera rutina")).toBeInTheDocument();
-    fireEvent.click(screen.getAllByRole("button", { name: /Nueva rutina/ })[0]);
+    // Sin rutinas, una sola «Nueva rutina»: la de la tarjeta (sin repetirla junto al título).
+    expect(screen.getAllByRole("button", { name: /Nueva rutina/ })).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: /Nueva rutina/ }));
     expect(h.onNew).toHaveBeenCalled();
     rerender(<MyRoutines routines={[routine("Lunes", "Torso", 2)]} limitReached {...h} />);
     expect(screen.getByRole("status")).toHaveTextContent("Tienes 7 sesiones: borra o edita una para añadir otra");
@@ -51,7 +59,7 @@ describe("Mis rutinas", () => {
 
   it("una rutina con entreno a medias se continúa y la hecha hoy no se vuelve a empezar", () => {
     render(<MyRoutines routines={[routine("Lunes", "Torso", 2), routine("Martes", "Pierna", 2)]} limitReached={false} resumableDay="Lunes" doneToday={["Martes"]} {...handlers()} />);
-    expect(screen.getByRole("button", { name: "Continuar Torso" })).toHaveTextContent("Continuar entreno");
+    expect(screen.getByRole("button", { name: "Continuar Torso" })).toHaveTextContent("Continuar");
     expect(screen.getByText("Hecha hoy")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Empezar Pierna" })).toBeNull();
   });

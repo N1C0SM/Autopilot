@@ -25,6 +25,8 @@ import { todayMedia } from "@/shared/lib/mediaPrefetch";
 import { fastImage, HERO_SIDE } from "@/shared/lib/fastImage";
 import { beginFirstImage, noteImageShown } from "@/shared/lib/mediaTiming";
 import { ListGroup, ListRow } from "@/shared/components/ui/list";
+// Músculos y duración de la sesión: la misma regla que Entrenar (`sessionSummary.ts`).
+import { countLabel as plural, estimateMinutes, sessionMuscles } from "@/shared/lib/sessionSummary";
 
 interface Macros {
   protein: number;
@@ -113,26 +115,6 @@ const planTitle = (plan: DayPlan) =>
   plan.type === "gimnasio"
     ? formatTrainingTitle(plan.routine_name, plan.muscle_focus) || "Entrenamiento de fuerza"
     : plan.sport || "Actividad";
-
-/** «1 ejercicio» / «7 ejercicios», con un espacio que no se parte: la cifra nunca queda sola al final de una línea. */
-const plural = (count: number, one: string, many: string) => `${count}\u00a0${count === 1 ? one : many}`;
-
-// Misma lectura del descanso que el registro de series ("90 s", "2 min", "60-90 s").
-const restSeconds = (rest: string) => {
-  const values = rest.match(/\d+/g)?.map(Number) || [];
-  if (values.length === 0) return 60;
-  const value = values[values.length - 1];
-  return /min/i.test(rest) ? value * 60 : value;
-};
-
-/** Duración orientativa: unos 45 s por serie más su descanso, redondeada a 5 min (`estimatedMinutes` en la app). */
-const estimateMinutes = (plan: DayPlan) => {
-  const seconds = (plan.exercises ?? []).reduce(
-    (total, exercise) => total + (Number(exercise.series) || 0) * (45 + restSeconds(String(exercise.rest ?? ""))),
-    0,
-  );
-  return seconds > 0 ? Math.max(5, Math.round(seconds / 300) * 5) : null;
-};
 
 /** Lo que dice la tarjeta del día elegido. Es `DayCard` en `HomeView.swift`. */
 type DayCard =
@@ -592,17 +574,6 @@ const HomeOverview = ({
       </ResponsiveSheet>
     </div>
   );
-};
-
-/** Músculos de la sesión, sin repetirlos: lo que el título lleva tras el «·» o, sin foco, los de sus ejercicios. */
-const sessionMuscles = (plan: DayPlan, metaMuscle: (exercise: { exercise_id: string; name: string }) => string | null | undefined) => {
-  const parts = planTitle(plan).split(" · ");
-  if (parts.length > 1) return parts.slice(1).join(" · ");
-  if (plan.type !== "gimnasio" || plan.muscle_focus?.trim()) return "";
-  const groups = [...new Set((plan.exercises ?? [])
-    .map((exercise) => (exercise.muscle_group || metaMuscle(exercise) || "").trim())
-    .filter(Boolean))].slice(0, 3);
-  return groups.length ? formatTrainingTitle(null, groups.join(", ")) : "";
 };
 
 /**

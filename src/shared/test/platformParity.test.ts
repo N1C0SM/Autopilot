@@ -324,16 +324,18 @@ describe("paridad web ↔ apps nativas", () => {
     expect(read("src/app/components/mobile/MobileHeader.tsx")).toContain("leading={brand ? <BrandLockup /> : undefined}");
     expect(read("src/app/components/mobile/MobileAppShell.tsx")).toContain('brand={active === "home"}');
     expect(read("native/Autopilot/Features/Shell/RootView.swift")).toContain("if current == .home { BrandLockup() }");
-    // Entrenar sin semana: cualquier sesión se hace cualquier día. Título «Entrenar», las sesiones
-    // en orden con foto («Sesión N», la siguiente destacada) y lo hecho esta semana; sin L–D ni descansos.
+    // Entrenar sin semana: cualquier sesión se hace cualquier día. Título «Entrenar», el modo en una frase,
+    // «Esta semana» con las sesiones en una sola lista (con foto, «Hoy», «Hecha» o «Siguiente») y lo hecho
+    // esta semana; sin L–D ni descansos, y sin la frase repetida de antes.
     const planWeb = read("src/app/components/dashboard/TrainingPlanView.tsx");
     const planApp = read("native/Autopilot/Features/Train/TrainView.swift");
     expect(read("src/app/pages/Dashboard.tsx")).toContain('training: "Entrenar"');
     expect(read("native/Autopilot/Features/Shell/RootView.swift")).toContain('case .train: "Entrenar"');
     for (const src of [planWeb, planApp]) {
-      for (const text of ["Tus sesiones en orden. Hazlas el día que te venga bien.", "Sesión ", "Siguiente", "Hecha", "esta semana", "Tu plan aún no tiene sesiones", "Edita tu rutina para añadir tus sesiones."]) {
+      for (const text of ["Esta semana", "Sesión ", "Hoy", "Siguiente", "Hecha", "Tu plan aún no tiene sesiones", "Edita tu rutina para añadir tus sesiones.", "Editar plan"]) {
         expect(src, text).toContain(text);
       }
+      expect(src).not.toContain("Tus sesiones en orden. Hazlas el día que te venga bien.");
       for (const text of ['"L", "M", "X", "J", "V", "S", "D"', "es día de descanso", "Recuperación"]) {
         expect(src, text).not.toContain(text);
       }
@@ -348,9 +350,9 @@ describe("paridad web ↔ apps nativas", () => {
       expect(src).toContain("El lunes empieza otra vuelta.");
       expect(src).not.toContain("Hoy toca descansar");
     }
-    // La tarjeta de la rutina va bajo las sesiones en las dos.
-    expect(planWeb).toContain("{tools}");
-    expect(planApp).toContain("if let routineBar { routineBar }");
+    // La cabecera (el modo en una frase y las píldoras tranquilas) va arriba, antes de las sesiones, en las dos.
+    expect(planWeb).toMatch(/planModeLine\(dayPlans\)[\s\S]*aria-labelledby="entrenar-semana"[\s\S]*\{routines\}/);
+    expect(planApp).toMatch(/if let header \{ header \}[\s\S]*Text\("Esta semana"\)[\s\S]*if let routines \{ routines \}/);
     // Progreso de ChatGPT: «Tu fuerza» con la mejor marca (no la última: es la serie de más 1RM), la subida en kg y «Tu constancia» debajo.
     const progressWeb = read("src/app/components/dashboard/WorkoutProgress.tsx") + read("src/app/pages/Dashboard.tsx");
     const progressApp = read("native/Autopilot/Features/Progress/ProgressScreen.swift");
@@ -1409,7 +1411,7 @@ describe("paridad web ↔ apps nativas", () => {
     }
     // Rediseño: cabeceras de sección en Title 3 (sin mayúsculas), filas en un grupo sin borde con chevron,
     // pasos con el número en un círculo dorado tenue y la columna de 680, igual en las dos.
-    expect(web).toContain('<h3 className="mb-2.5 type-title3">{children}</h3>');
+    expect(web).toContain('<h3 className="mb-3 type-title3">{children}</h3>');
     expect(app).toContain("Text(text).font(.apTitle3)");
     expect(web).toContain('<ul className="overflow-hidden rounded-[22px] bg-card">');
     expect(app.slice(app.indexOf("private struct ExerciseRows"))).toMatch(/chevron\.right[\s\S]*?\.surface\(\)/);
@@ -1534,8 +1536,9 @@ describe("paridad web ↔ apps nativas", () => {
     expect(pillApp).toContain("struct SearchPill: View");
     expect(pillApp).toContain(".frame(width: 44, height: 44).contentShape(Rectangle())");
     expect(pillApp).toContain('.accessibilityLabel("Borrar búsqueda")');
-    expect(web).toContain("flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-secondary");
-    expect(app).toContain(".frame(width: 44, height: 44).background(Palette.secondary, in: Circle())");
+    // Ficha: la acción (favoritos) al final, como píldora secundaria a todo el ancho, en las dos.
+    expect(web).toMatch(/variant="secondary"\s+size="lg"\s+className="w-full"[\s\S]{0,320}\{favorite \? "Quitar de favoritos" : "Añadir a favoritos"\}/);
+    expect(app).toMatch(/Text\(on \? "Quitar de favoritos" : "Añadir a favoritos"\)[\s\S]{0,240}\.buttonStyle\(\.pillSecondary\)/);
     expect(web).toContain('"flex h-10 shrink-0 items-center gap-1.5 rounded-full px-4');
     expect(app).toContain(".padding(.horizontal, 16).frame(height: 40)");
     // Autor y licencia solo cuando la licencia lo exige, a 13 (el suelo de la interfaz).
@@ -1781,15 +1784,20 @@ describe("paridad web ↔ apps nativas", () => {
       expect(app + rest, text).toContain(text);
     }
     // La cifra y su unidad nunca se separan al partir la línea («7 ejercicios», «40 min»): espacio que no se parte.
-    expect(web).toContain("`${count}\\u00a0${count === 1 ? one : many}`");
+    // La regla de la sesión (cuenta, duración y músculos) vive en un sitio y la comparten Hoy y Entrenar.
+    const summaryWeb = read("src/shared/lib/sessionSummary.ts");
+    const core = read("native/Autopilot/Core/Training.swift");
+    expect(web).toContain('import { countLabel as plural, estimateMinutes, sessionMuscles } from "@/shared/lib/sessionSummary";');
+    expect(app).toContain("let muscles = plan.sessionMuscles");
+    expect(summaryWeb).toContain("`${count}\\u00a0${count === 1 ? one : many}`");
     expect(app).toContain('"\\(count)\\u{00A0}\\(count == 1 ? one : many)"');
     expect(web).toContain("`${minutes}\\u00a0min`");
     expect(app).toContain('"\\($0)\\u{00A0}min"');
     // Misma duración orientativa (45 s por serie más su descanso, a 5 min) y los mismos músculos sin repetir.
-    expect(web).toContain("Math.max(5, Math.round(seconds / 300) * 5)");
-    expect(app).toContain("max(5, Int((Double(seconds) / 300).rounded()) * 5)");
-    expect(web).toContain('formatTrainingTitle(null, groups.join(", "))');
-    expect(app).toContain('DayPlan.formatFocus(shown.joined(separator: ", "))');
+    expect(summaryWeb).toContain("Math.max(5, Math.round(seconds / 300) * 5)");
+    expect(core).toContain("max(5, Int((Double(seconds) / 300).rounded()) * 5)");
+    expect(summaryWeb).toContain('formatTrainingTitle(null, groups.join(", "))');
+    expect(core).toContain('DayPlan.formatFocus(shown.joined(separator: ", "))');
     // Tarjetas de 28 sin borde y con profundidad, de la misma altura en todos los estados (la pantalla no salta).
     expect(web.match(/min-h-\[196px\]/g)?.length).toBeGreaterThanOrEqual(3);
     expect(web).toContain("sm:min-h-[248px]");
@@ -1828,7 +1836,7 @@ describe("paridad web ↔ apps nativas", () => {
       "Nueva rutina", "Editar rutina", "Ponle nombre, elige los ejercicios y ajusta series, repeticiones y descanso.", "Nombre",
       "Ej.: Pierna pesada", "Ejercicios", "Añadir ejercicios", "Busca por nombre o filtra por músculo", "Guardar rutina", "Guardando…",
       "Tienes cambios sin guardar en esta rutina.", "Descartar cambios", "Seguir editando", "No se pudo guardar la rutina. Inténtalo de nuevo.",
-      "Mis rutinas", "rutina tuya", "rutinas tuyas", "Crea tu primera rutina", "Elige tus ejercicios, series y descansos, y empiézala cuando quieras.",
+      "Mis rutinas", "Crea tu primera rutina", "Elige tus ejercicios, series y descansos, y empiézala cuando quieras.",
       "Empezar", "Continuar entreno", "Hecha hoy", "Editar", "Duplicar", "Borrar", "Más acciones de ", "Ver todas",
       "¿Borrar «", "Se quita de tu plan. Tu historial y tus récords se quedan como están.", "Borrar rutina", "Borrando…", "Cancelar",
       "Guardar como rutina", "Guardada en Mis rutinas", "tal como las has hecho.", "Entreno vacío",
@@ -1841,8 +1849,9 @@ describe("paridad web ↔ apps nativas", () => {
     const lib = read("src/shared/lib/customRoutines.ts");
     const core = read("native/Autopilot/Core/Training.swift");
     for (const text of [
-      "Tienes 7 sesiones: borra o edita una para añadir otra", "Mi rutina", " (copia)", "Entrenamiento libre", "Piloto automático",
-      "Rutina personalizada", "Creada por ti.", "Preparada por Autopilot.", "Preparada por Autopilot, con ", "rutina tuya", "rutinas tuyas", " más",
+      "Tienes 7 sesiones: borra o edita una para añadir otra", "Mi rutina", " (copia)", "Entrenamiento libre",
+      "Tu plan lo prepara el piloto automático.", "Tu plan lo has creado tú.", "Tu plan lo prepara el piloto automático, con ",
+      "rutina tuya", "rutinas tuyas", " más",
     ]) {
       expect(lib, text).toContain(text);
       expect(core, text).toContain(text);
@@ -2005,8 +2014,8 @@ describe("paridad web ↔ apps nativas", () => {
     const appCard = app.slice(app.indexOf("private var autopilotCard: some View"), app.indexOf("private func completeWithAutopilot"));
     expect(webCard.match(/variant="secondary"/g)).toHaveLength(2);
     expect(webCard).not.toMatch(/variant="(default|hero)"|btn-gold|bg-primary /);
-    expect(appCard.match(/\.buttonStyle\(\.pillSecondary\)/g)).toHaveLength(2);
-    expect(appCard).not.toContain(".buttonStyle(.pill)");
+    expect(appCard.match(/\.buttonStyle\(PillButtonStyle\(kind: \.secondary, height: 44\)\)/g)).toHaveLength(2);
+    expect(appCard).not.toMatch(/\.buttonStyle\(\.pill\)|GoldFill/);
     // La fila va bajo tus rutinas, en la misma tarjeta que el resto de la sección.
     expect(web).toMatch(/\{showFill && \(\s*<AutopilotFillCard/);
     expect(app).toContain("if showFill { autopilotCard }");
@@ -2492,5 +2501,132 @@ describe("paridad web ↔ apps nativas", () => {
         expect(chain, file).toContain('.order("id")');
       }
     }
+  });
+
+  it("Entrenar minimalista (como Fitness y Hevy): el modo en una frase, dos píldoras tranquilas, «Esta semana» en una sola lista con «Hoy» / «Hecha» y Mis rutinas compactas, igual en la web y en la app", () => {
+    const web = read("src/app/components/dashboard/TrainingPlanView.tsx");
+    const app = read("native/Autopilot/Features/Train/TrainView.swift");
+    const routinesWeb = read("src/app/components/dashboard/MyRoutines.tsx");
+    const routinesApp = read("native/Autopilot/Features/Train/RoutinesView.swift");
+    const lib = read("src/shared/lib/customRoutines.ts");
+    const core = read("native/Autopilot/Core/Training.swift");
+    const summary = read("src/shared/lib/sessionSummary.ts");
+    // El modo del plan en una sola frase corta, con las mismas tres frases en las dos.
+    const modeLines = [...lib.slice(lib.indexOf("export const planModeLine"), lib.indexOf("};", lib.indexOf("export const planModeLine"))).matchAll(/return [`"]([^`"$]+)/g)].map((m) => m[1]);
+    expect(modeLines).toEqual(["Tu plan lo has creado tú.", "Tu plan lo prepara el piloto automático.", "Tu plan lo prepara el piloto automático, con "]);
+    for (const text of modeLines) expect(core, text).toContain(text);
+    expect(web).toContain('<p className="type-subhead text-muted-foreground">{planModeLine(dayPlans)}</p>');
+    expect(app).toContain("Text(CustomRoutines.modeLine(model.days)).font(.apSubhead).foregroundStyle(Palette.muted)");
+    for (const gone of ["planModeCopy", "routineBar", "Tus sesiones en orden. Hazlas el día que te venga bien."]) {
+      expect(web + read("src/app/pages/Dashboard.tsx"), gone).not.toContain(gone);
+      expect(app, gone).not.toContain(gone);
+    }
+    // «Entreno vacío» y «Ejercicios»: píldoras secundarias con relieve, a su medida y sin dorado.
+    expect(web).toContain('<QuietPill icon={Play} label="Entreno vacío" onClick={onEmptyWorkout} />');
+    expect(web).toContain('<QuietPill icon={BookOpen} label="Ejercicios" onClick={onOpenLibrary} />');
+    expect(web).toContain("btn-raised flex h-11 items-center gap-2 whitespace-nowrap rounded-full bg-secondary px-4");
+    expect(app).toContain('quietPill("Entreno vacío", icon: "play")');
+    expect(app).toContain('quietPill("Ejercicios", icon: "book")');
+    expect(app).toMatch(/\.frame\(height: 44\)\s*\.background\(RaisedFill\(shape: Capsule\(\)\)\)/);
+    // «Esta semana» con «Editar» (se lee «Editar plan») y lo hecho en tramos con la cuenta corta.
+    expect(web).toContain('<h3 id="entrenar-semana" className="type-title3">Esta semana</h3>');
+    expect(app).toContain('Text("Esta semana").font(.apTitle3).accessibilityAddTraits(.isHeader)');
+    // Zona táctil de 44: en la web `min-h-11` en el botón; en la app, el marco y la forma dentro de la etiqueta.
+    expect(web).toMatch(/aria-label="Editar plan"[\s\S]{0,300}min-h-11[\s\S]{0,120}>\s*Editar\s*</);
+    expect(app).toMatch(/Button \{ Haptics\.tap\(\); onEditPlan\(\) \} label: \{\s*Text\("Editar"\)[^\n]*\n\s*\.frame\(minHeight: 44\)[^\n]*\.contentShape\(Rectangle\(\)\)[\s\S]{0,160}\.accessibilityLabel\("Editar plan"\)/);
+    expect(web).toContain("{`${doneCount} de ${sessions.length}`}");
+    expect(app).toContain('Text("\\(done) de \\(sessions.count)")');
+    // Las sesiones en una sola tarjeta (sin tarjetas por fila ni listas anidadas), con el separador donde empieza el texto.
+    expect(web).toContain('<ul data-session-list className="overflow-hidden rounded-card bg-card">');
+    expect(web).toContain("absolute left-[86px] right-4 top-0 sep-t");
+    expect(app).toContain(".padding(.leading, 86).padding(.trailing, 16)");
+    expect(app).toMatch(/if openKey == plan\.day \{ session\(plan\) \}\s*\}\s*\}\s*\.clipShape\(shape\)\s*\.background\(SurfaceBackground\(shape: shape\)\)/);
+    expect(web).not.toContain("<ListGroup");
+    // Cada fila: miniatura de 56 (radio 14), nombre, músculos, «6 ejercicios · ≈ 45 min» y su estado.
+    expect(web).toContain("relative h-14 w-14 shrink-0 overflow-hidden rounded-chip bg-secondary");
+    expect(app).toContain('RoundedRectangle(cornerRadius: 14, style: .continuous)');
+    expect(app).toContain(".frame(width: 56, height: 56)");
+    expect(web).toContain("const line = sessionLine(plan);");
+    expect(app).toContain("let line = plan.summaryLine");
+    expect(summary).toContain('if (count === 0) return "Añade sus ejercicios";');
+    expect(core).toContain('guard count > 0 else { return "Añade sus ejercicios" }');
+    expect(summary).toContain("`≈\\u00a0${minutes}\\u00a0min`");
+    expect(core).toContain('"≈\\u{00A0}\\($0)\\u{00A0}min"');
+    for (const text of ["Hoy", "Hecha", "Siguiente", "hecha esta semana", "para hoy", "siguiente", "Añade sus ejercicios con «Editar» y empiézala cuando quieras.",
+      "Empezar sesión", "Continuar entreno", "Entrenamiento completado", "Actividad completada", "Intensidad", "Duración", "Libre"]) {
+      expect(web, text).toContain(text);
+      expect(app, text).toContain(text);
+    }
+    // El descanso de cada ejercicio con su unidad, sin partir («Descanso 90 s»), y las líneas bajan de línea en vez de cortar la cifra.
+    expect(web).toContain('`Descanso\\u00a0${restLabel(ex.rest).replace(/ /g, "\\u00a0")}`');
+    expect(app).toContain('"Descanso\\u{00A0}\\(PlanEditorValues.restLabel(ex.rest).replacingOccurrences(of: " ", with: "\\u{00A0}"))"');
+    expect(web).toContain('<span className="mt-0.5 line-clamp-2 type-footnote tabular-nums text-muted-foreground">{line}</span>');
+    expect(app).toContain("Text(line).font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted).lineLimit(2)");
+    // «Hoy» es la siguiente mientras hoy no se haya entrenado (la misma que propone Hoy); si ya se entrenó, «Siguiente».
+    expect(web).toContain('next?.day === plan.day ? (doneToday.length === 0 ? "today" : "next") : null');
+    expect(app).toContain("if next?.day == plan.day { return doneToday.isEmpty ? .today : .next }");
+    // Lo que se abre va dentro de la misma tarjeta: la única acción dorada, los ejercicios (miniatura de 40) y,
+    // tranquilo y al final, «Nombre e icono».
+    expect(web).toContain('size="sm" />}');
+    expect(app).toContain("ExerciseThumb(url: ex.image_url, size: 40, name: ex.name, muscleGroup: ex.muscle_group, video: ex.video_url)");
+    expect(web).toContain('<Play fill="currentColor" strokeWidth={0} aria-hidden />');
+    expect(app).toContain('Label(resumableDay == plan.day ? "Continuar entreno" : "Empezar sesión", systemImage: "play.fill")');
+    expect(web.match(/variant="hero"/g)).toHaveLength(2);
+    // Sin frases que desanimen.
+    for (const gone of ["Sin ejercicios todavía", "Esta sesión no tiene ejercicios todavía.", "Desliza hacia abajo para volver a intentarlo."]) {
+      expect(web + summary, gone).not.toContain(gone);
+      expect(app + core, gone).not.toContain(gone);
+    }
+    // Sin conexión: el aviso común con «Reintentar» (en Mac no hay «deslizar para recargar»).
+    expect(app).toMatch(/message: "Revisa tu conexión y vuelve a intentarlo\."\)\s*Button\("Reintentar"\)/);
+    // Mis rutinas: «Nueva rutina» como píldora tranquila junto al título (y una sola sin rutinas), tarjetas
+    // compactas con tres miniaturas de 40, «+N» y una sola acción secundaria; el resto en «···».
+    expect(routinesWeb).toMatch(/\{count > 0 && \(\s*<Button\s+type="button"\s+variant="secondary"\s+size="sm"/);
+    expect(routinesApp).toMatch(/if !routines\.isEmpty \{\s*Button \{ Haptics\.tap\(\); onNew\(\) \}[\s\S]{0,500}\.frame\(height: 36\)\s*\.background\(RaisedFill\(shape: Capsule\(\)\)\)/);
+    expect(routinesWeb).toContain("const THUMBS = 3;");
+    expect(routinesApp).toContain("private let thumbs = 3");
+    // Con letra grande o «Hecha hoy», la miniatura que no cabe entera baja a una línea oculta: nunca se ve cortada.
+    expect(routinesWeb).toContain('className="flex h-10 min-w-0 flex-1 flex-wrap items-center gap-1.5 overflow-hidden"');
+    expect(routinesApp).toMatch(/FlowRow\(spacing: 6\) \{[\s\S]{0,700}\.frame\(height: 40, alignment: \.top\)\s*\.frame\(maxWidth: \.infinity, alignment: \.leading\)\s*\.clipped\(\)/);
+    expect(routinesWeb).toContain('className="grid h-10 w-10 shrink-0 place-items-center rounded-[12px] bg-secondary');
+    expect(routinesApp).toContain("ExerciseThumb(url: exercise.image_url, size: 40, name: exercise.name");
+    expect(routinesWeb).toContain('{resumableDay === routine.day ? "Continuar" : "Empezar"}');
+    expect(routinesApp).toContain('Button(resumableDay == routine.day ? "Continuar" : "Empezar")');
+    expect(routinesApp).toMatch(/Button\(resumableDay == routine\.day \? "Continuar" : "Empezar"\)[^\n]*\n\s*\.buttonStyle\(PillButtonStyle\(kind: \.secondary, height: 44\)\)/);
+    for (const gone of ["rutina tuya", "rutinas tuyas", "<SectionHeader"]) {
+      expect(routinesWeb, gone).not.toContain(gone);
+      expect(routinesApp, gone).not.toContain(gone);
+    }
+    // Columna centrada de 680 y 32 entre bloques, en las dos.
+    expect(web).toContain("mx-auto flex w-full max-w-[680px] flex-col gap-8");
+    expect(app).toContain("VStack(alignment: .leading, spacing: 32) {\n            if let header { header }");
+  });
+
+  it("Ficha de ejercicio minimalista: héroe, nombre grande, secciones en Title 3 con aire y la acción al final; la barra no repite el nombre, igual en la web y en la app", () => {
+    const web = read("src/app/components/library/ExerciseLibrarySheet.tsx");
+    const app = read("native/Autopilot/Features/Train/ExerciseLibraryView.swift");
+    const detailWeb = web.slice(web.indexOf("const ExerciseDetail"));
+    const detailApp = app.slice(app.indexOf("struct ExerciseDetailView"), app.indexOf("struct ExerciseHeroMedia"));
+    // Orden: héroe → nombre → datos → secciones → favoritos (al final) → autoría.
+    const order = (src: string, marks: string[]) => marks.map((m) => src.indexOf(m));
+    const webOrder = order(detailWeb, ["<ExerciseMedia", "type-title1", "<SectionTitle>Cómo se hace", "<SectionTitle>Músculos", "<SectionTitle>Consejos", "<SectionTitle>Alternativas", '"Añadir a favoritos"', "{credit && ("]);
+    const appOrder = order(detailApp, ["hero\n", ".font(.apTitle1)", 'section("Cómo se hace")', 'section("Músculos")', 'section("Consejos")', 'section("Alternativas")', '"Añadir a favoritos"', "if let credit = e.attribution"]);
+    for (const list of [webOrder, appOrder]) {
+      expect(list.every((i) => i >= 0)).toBe(true);
+      expect([...list].sort((a, b) => a - b)).toEqual(list);
+    }
+    // Sin el corazón suelto junto al nombre: la acción es una píldora secundaria a todo el ancho.
+    expect(detailWeb).not.toContain("aria-pressed={favorite}");
+    expect(detailApp).not.toContain(".frame(width: 44, height: 44).background(Palette.secondary, in: Circle())");
+    // Secciones con 12 entre el título y su contenido y 32 entre secciones, en las dos.
+    expect(web).toContain('<h3 className="mb-3 type-title3">{children}</h3>');
+    expect(detailWeb).toContain('<div className="mt-8 space-y-8">');
+    expect(detailApp).toContain("VStack(alignment: .leading, spacing: 12) {\n            LibrarySectionTitle(title)");
+    expect(detailApp).toContain("VStack(alignment: .leading, spacing: 32) {");
+    // Lista vacía (sin conexión o sin nada que leer): el aviso con «Reintentar», nunca «Grupos musculares» sin tarjetas.
+    expect(web).toContain("{lib.error || lib.items?.length === 0 ? (");
+    expect(app).toContain("if model.failed || model.items?.isEmpty == true {");
+    // El nombre va grande en la ficha: la barra del iPhone no lo repite (sigue como título para «‹ Atrás»).
+    expect(detailApp).toContain(".toolbar { ToolbarItem(placement: .principal) { Color.clear.frame(width: 1, height: 1).accessibilityHidden(true) } }");
   });
 });

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   addRoutine, autopilotFillSummary, canAddRoutine, canCompleteWithAutopilot, commitRoutineChange, copyName, deleteRoutine,
-  duplicateRoutine, markEditedDays, myRoutines, nextFreeKey, planMode, planModeCopy, routineFromWorkout, routineMeta,
+  duplicateRoutine, markEditedDays, myRoutines, nextFreeKey, planMode, planModeLine, routineFromWorkout, routineMeta,
   routineMuscles, SESSION_LIMIT_MESSAGE, updateRoutine,
 } from "@/shared/lib/customRoutines";
 import { planToSave } from "@/shared/lib/planEditorValues";
@@ -84,8 +84,11 @@ describe("rutinas propias en workouts_json", () => {
     expect(planMode([{ ...auto("Lunes"), custom: true }])).toBe("custom");
     const mixed = [auto("Lunes"), { ...auto("Martes"), custom: true }];
     expect(planMode(mixed)).toBe("mixed");
-    expect(planModeCopy(mixed)).toEqual({ title: "Piloto automático", detail: "Preparada por Autopilot, con 1 rutina tuya." });
-    expect(planModeCopy([{ ...auto("Lunes"), custom: true }]).title).toBe("Rutina personalizada");
+    // Una sola frase corta en la cabecera de Entrenar, con su singular.
+    expect(planModeLine(mixed)).toBe("Tu plan lo prepara el piloto automático, con 1 rutina tuya.");
+    expect(planModeLine([...mixed, { ...auto("Jueves"), custom: true }])).toBe("Tu plan lo prepara el piloto automático, con 2 rutinas tuyas.");
+    expect(planModeLine([auto("Lunes")])).toBe("Tu plan lo prepara el piloto automático.");
+    expect(planModeLine([{ ...auto("Lunes"), custom: true }])).toBe("Tu plan lo has creado tú.");
   });
 
   it("resumen de la rutina: recuento en singular o plural y músculos sin repetir", () => {

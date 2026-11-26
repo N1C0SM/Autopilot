@@ -103,6 +103,51 @@ struct DayPlan: Codable, Hashable, Identifiable {
     }
 }
 
+/// Lo que se lee de una sesión en una línea (Hoy y Entrenar), igual que `sessionSummary.ts` en la web:
+/// sus músculos, cuánto dura y cuántos ejercicios tiene.
+extension DayPlan {
+    /// «1 ejercicio» / «7 ejercicios», con espacio que no se parte (`countLabel` en la web).
+    static func countLabel(_ count: Int, _ one: String, _ many: String) -> String { "\(count)\u{00A0}\(count == 1 ? one : many)" }
+
+    /// El nombre sin sus músculos: «Full Body A» de «Full Body A · Pecho y espalda».
+    var sessionName: String { title.components(separatedBy: " · ")[0] }
+
+    /// Duración orientativa: unos 45 s por serie más su descanso, redondeada a 5 min (nil sin series).
+    var estimatedMinutes: Int? {
+        let seconds = (exercises ?? []).reduce(0) { total, exercise in total + max(exercise.series, 0) * (45 + exercise.restSeconds) }
+        guard seconds > 0 else { return nil }
+        return max(5, Int((Double(seconds) / 300).rounded()) * 5)
+    }
+
+    /// Músculos de la sesión, sin repetirlos: lo que el título lleva tras el «·» o, sin foco, los de sus
+    /// ejercicios (hasta tres). Igual que `sessionMuscles` en la web.
+    var sessionMuscles: String {
+        guard isGym else { return "" }
+        let parts = title.components(separatedBy: " · ")
+        if parts.count > 1 { return parts.dropFirst().joined(separator: " · ") }
+        guard (muscle_focus ?? "").trimmingCharacters(in: .whitespaces).isEmpty else { return "" }
+        var groups: [String] = []
+        for group in (exercises ?? []).compactMap({ $0.muscle_group?.trimmingCharacters(in: .whitespaces) }) where !group.isEmpty {
+            if !groups.contains(group) { groups.append(group) }
+        }
+        let shown = Array(groups.prefix(3))
+        return shown.isEmpty ? "" : DayPlan.formatFocus(shown.joined(separator: ", "))
+    }
+
+    /// La línea de la sesión en Entrenar: «6 ejercicios · ≈ 45 min» en el gimnasio (sin ejercicios, la
+    /// invitación a añadirlos) e «Intensidad media · 45 min» en una actividad (`sessionLine` en la web).
+    var summaryLine: String {
+        if isGym {
+            let count = exercises?.count ?? 0
+            guard count > 0 else { return "Añade sus ejercicios" }
+            return [DayPlan.countLabel(count, "ejercicio", "ejercicios"), estimatedMinutes.map { "≈\u{00A0}\($0)\u{00A0}min" }]
+                .compactMap { $0 }.joined(separator: " · ")
+        }
+        let parts = [intensity.map { "Intensidad \($0.lowercased())" }, duration].compactMap { $0 }.filter { !$0.isEmpty }
+        return parts.isEmpty ? "Actividad" : parts.joined(separator: " · ")
+    }
+}
+
 /// Lee números o texto indistintamente (el JSON del plan mezcla ambos).
 enum FlexibleValue {
     static func string<K: CodingKey>(_ c: KeyedDecodingContainer<K>, _ key: K) -> String? {
@@ -417,14 +462,14 @@ enum CustomRoutines {
         return min(max(days, 0), DayNames.all.count)
     }
 
-    /// Cabecera de Entrenar: el modo y de dónde sale («Piloto automático · 2 rutinas tuyas»).
-    static func mode(_ plans: [DayPlan]) -> (title: String, detail: String) {
+    /// Cabecera de Entrenar: el modo del plan en una sola frase corta (`planModeLine` en la web).
+    static func modeLine(_ plans: [DayPlan]) -> String {
         let sessions = RoutineOrder.sessions(plans)
         let mine = sessions.filter { $0.custom == true }.count
-        if mine == 0 { return ("Piloto automático", "Preparada por Autopilot.") }
-        if mine == sessions.count { return ("Rutina personalizada", "Creada por ti.") }
+        if mine == 0 { return "Tu plan lo prepara el piloto automático." }
+        if mine == sessions.count { return "Tu plan lo has creado tú." }
         let own = self.mine(plans).count
-        return ("Piloto automático", "Preparada por Autopilot, con \(own) \(own == 1 ? "rutina tuya" : "rutinas tuyas").")
+        return "Tu plan lo prepara el piloto automático, con \(own) \(own == 1 ? "rutina tuya" : "rutinas tuyas")."
     }
 
     /// «Guardar como rutina» tras un entreno vacío: cada ejercicio con series hechas pasa con esas

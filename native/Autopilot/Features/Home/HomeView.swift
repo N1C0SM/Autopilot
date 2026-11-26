@@ -348,20 +348,6 @@ struct HomeView: View {
         }
     }
 
-    /// Músculos de la sesión, sin repetirlos: lo que el título lleva tras el «·» o, sin foco, los de sus
-    /// ejercicios (`sessionMuscles` en la web).
-    private func sessionMuscles(_ plan: DayPlan) -> String {
-        let parts = plan.title.components(separatedBy: " · ")
-        if parts.count > 1 { return parts.dropFirst().joined(separator: " · ") }
-        guard plan.isGym, (plan.muscle_focus ?? "").trimmingCharacters(in: .whitespaces).isEmpty else { return "" }
-        var groups: [String] = []
-        for group in (plan.exercises ?? []).compactMap({ $0.muscle_group?.trimmingCharacters(in: .whitespaces) }) where !group.isEmpty {
-            if !groups.contains(group) { groups.append(group) }
-        }
-        let shown = Array(groups.prefix(3))
-        return shown.isEmpty ? "" : DayPlan.formatFocus(shown.joined(separator: ", "))
-    }
-
     /// «1 ejercicio» / «6 ejercicios», con espacio que no se parte (`plural` en la web): la cifra nunca queda
     /// sola al final de una línea.
     private func plural(_ count: Int, _ one: String, _ many: String) -> String { "\(count)\u{00A0}\(count == 1 ? one : many)" }
@@ -371,10 +357,11 @@ struct HomeView: View {
     /// abre la hoja con los ejercicios; la píldora dorada empieza a un toque. Hecha, la marca «Hecha».
     private func sessionCard(_ plan: DayPlan, status: SessionStatus, doneOn: String?, detail: String?) -> some View {
         let name = plan.title.components(separatedBy: " · ")[0]
-        let muscles = sessionMuscles(plan)
+        // Músculos y duración: la misma regla que Entrenar (`DayPlan.sessionMuscles`, `estimatedMinutes`).
+        let muscles = plan.sessionMuscles
         let count = plan.exercises?.count ?? 0
         let line = detail ?? (plan.isGym
-            ? [estimatedMinutes(plan).map { "\($0)\u{00A0}min" }, count > 0 ? plural(count, "ejercicio", "ejercicios") : nil]
+            ? [plan.estimatedMinutes.map { "\($0)\u{00A0}min" }, count > 0 ? plural(count, "ejercicio", "ejercicios") : nil]
                 .compactMap { $0 }.joined(separator: " · ")
             : [plan.intensity, plan.duration].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · "))
         let shape = RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
@@ -706,15 +693,6 @@ struct HomeView: View {
         MediaPrefetch.today(photos: exercises.compactMap { (loops.images[$0.name] ?? $0.image_url).flatMap(URL.init(string:)) },
                             hero: todayCover,
                             videos: exercises.compactMap { loops.video($0.name, plan: $0.video_url) })
-    }
-
-    /// Duración orientativa: unos 45 s por serie más su descanso, redondeada a 5 min (`estimateMinutes` en la web).
-    private func estimatedMinutes(_ plan: DayPlan) -> Int? {
-        let seconds = (plan.exercises ?? []).reduce(0) { total, exercise in
-            total + max(exercise.series, 0) * (45 + exercise.restSeconds)
-        }
-        guard seconds > 0 else { return nil }
-        return max(5, Int((Double(seconds) / 300).rounded()) * 5)
     }
 
     // MARK: Hoja de la sesión

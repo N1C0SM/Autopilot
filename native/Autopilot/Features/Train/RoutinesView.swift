@@ -164,10 +164,10 @@ struct RoutineLimitNote: View {
     }
 }
 
-/// «Mis rutinas» en Entrenar (`MyRoutines.tsx`): cada rutina con su nombre, cuántos ejercicios y
-/// qué músculos, sus miniaturas (foto o la huella del ejercicio) y «Empezar»; en «···», «Editar»,
-/// «Duplicar» y «Borrar» (con hoja de confirmación). Debajo, si tus rutinas no llegan a tus días de
-/// entreno, «Completar con el autopiloto».
+/// «Mis rutinas» en Entrenar (`MyRoutines.tsx`): «Nueva rutina» como píldora tranquila junto al título
+/// y cada rutina en una tarjeta compacta (nombre, cuántos ejercicios y qué músculos, tres miniaturas con
+/// «+N» y una sola acción, «Empezar»); en «···», «Editar», «Duplicar» y «Borrar» (con hoja de
+/// confirmación). Debajo, si tus rutinas no llegan a tus días de entreno, «Completar con el autopiloto».
 struct MyRoutinesSection: View {
     /// «Completar con el autopiloto» (`AutopilotOffer` en la web): lo ofrece Entrenar cuando
     /// `CustomRoutines.canCompleteWithAutopilot` (plan todo tuyo y menos sesiones que tus días).
@@ -197,29 +197,36 @@ struct MyRoutinesSection: View {
     @State private var busy = false
     /// El plan nuevo ya no pide la fila: el aviso de cómo fue (y la carga) se queda en su sitio.
     @State private var fill: Fill = .idle
-    /// Miniaturas que se enseñan por rutina; el resto, «+N».
-    private let thumbs = 4
+    /// Miniaturas que se enseñan por rutina (en la fila de «Empezar»); el resto, «+N».
+    private let thumbs = 3
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .bottom, spacing: 12) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Mis rutinas").font(.apTitle3).accessibilityAddTraits(.isHeader)
-                    if !routines.isEmpty {
-                        Text("\(routines.count) \(routines.count == 1 ? "rutina tuya" : "rutinas tuyas")")
-                            .font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted)
+            HStack(alignment: .center, spacing: 12) {
+                Text("Mis rutinas").font(.apTitle3).accessibilityAddTraits(.isHeader)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                // Con rutinas, «Nueva rutina» es una píldora tranquila; sin ninguna, la tarjeta de abajo ya la ofrece.
+                if !routines.isEmpty {
+                    Button { Haptics.tap(); onNew() } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "plus").font(.system(size: 13, weight: .bold))
+                            Text("Nueva rutina").font(.apSubhead.weight(.semibold))
+                        }
+                        .foregroundStyle(Palette.foreground)
+                        .lineLimit(1)
+                        .padding(.horizontal, 14)
+                        .frame(height: 36)
+                        .background(RaisedFill(shape: Capsule()))
+                        // Se ve compacta (36) pero su zona táctil mide 44, como `.btn-sm` en la web.
+                        .padding(.vertical, 4)
+                        .contentShape(Rectangle())
                     }
+                    .buttonStyle(.pressableCard(scale: 0.97))
+                    .fixedSize()
+                    .accessibilityHint(limitReached ? CustomRoutines.limitMessage : "Crea una rutina con tus ejercicios")
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                Button { Haptics.tap(); onNew() } label: {
-                    Label("Nueva rutina", systemImage: "plus")
-                        .font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.gold)
-                        .frame(minHeight: 44).contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .padding(.vertical, -8)
-                .accessibilityHint(limitReached ? CustomRoutines.limitMessage : "Crea una rutina con tus ejercicios")
             }
+            .frame(minHeight: 44)
             if limitReached {
                 Text("\(CustomRoutines.limitMessage).").font(.apFootnote).foregroundStyle(Palette.muted)
                     .fixedSize(horizontal: false, vertical: true).padding(.horizontal, 4)
@@ -230,7 +237,8 @@ struct MyRoutinesSection: View {
                     Text("Elige tus ejercicios, series y descansos, y empiézala cuando quieras.")
                         .font(.apSubhead).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
                     Button { Haptics.tap(); onNew() } label: { Label("Nueva rutina", systemImage: "plus") }
-                        .buttonStyle(.pillSecondary).padding(.top, 12)
+                        .buttonStyle(PillButtonStyle(kind: .secondary, height: 44)).fixedSize().padding(.top, 12)
+                        .accessibilityHint(limitReached ? CustomRoutines.limitMessage : "Crea una rutina con tus ejercicios")
                 }
                 .padding(20)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -265,9 +273,10 @@ struct MyRoutinesSection: View {
         }
     }
 
-    /// Fila secundaria (la acción dorada de la sección es «Nueva rutina»): cuánto cubren tus rutinas y
-    /// «Completar con el autopiloto»; mientras trabaja, el AP latiendo; al terminar, «Hemos respetado
-    /// tus N rutinas»; si falla, el aviso de error con «Reintentar». Igual que `AutopilotFillCard` en la web.
+    /// Tarjeta compacta bajo tus rutinas (secundaria: la acción dorada de la pantalla es «Empezar sesión»):
+    /// cuánto cubren tus rutinas y «Completar con el autopiloto»; mientras trabaja, el AP latiendo; al
+    /// terminar, «Hemos respetado tus N rutinas»; si falla, el aviso de error con «Reintentar». Igual que
+    /// `AutopilotFillCard` en la web.
     private var autopilotCard: some View {
         VStack(alignment: .leading, spacing: 0) {
             switch fill {
@@ -276,7 +285,7 @@ struct MyRoutinesSection: View {
                     IconTile(symbol: "checkmark", size: 40)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(PlanShield.keptTitle(kept)).font(.apHeadline)
-                        Text(PlanShield.description).font(.apSubhead).foregroundStyle(Palette.muted)
+                        Text(PlanShield.description).font(.apFootnote).foregroundStyle(Palette.muted)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -288,27 +297,27 @@ struct MyRoutinesSection: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(CustomRoutines.fillErrorTitle).font(.apHeadline)
                             .fixedSize(horizontal: false, vertical: true)
-                        Text(CustomRoutines.fillErrorDetail).font(.apSubhead).foregroundStyle(Palette.muted)
+                        Text(CustomRoutines.fillErrorDetail).font(.apFootnote).foregroundStyle(Palette.muted)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .accessibilityElement(children: .combine)
                 Button(CustomRoutines.fillRetry) { Task { await completeWithAutopilot() } }
-                    .buttonStyle(.pillSecondary)
-                    .padding(.top, 16)
+                    .buttonStyle(PillButtonStyle(kind: .secondary, height: 44))
+                    .padding(.top, 12)
             case .idle, .running:
                 let running = fill != .idle
                 let own: Int = { if case .running(let own, _) = fill { return own }; return autopilot?.own ?? 0 }()
                 let frequency: Int = { if case .running(_, let frequency) = fill { return frequency }; return autopilot?.frequency ?? 0 }()
                 Text(CustomRoutines.fillSummary(own: own, frequency: frequency))
                     .font(.apHeadline.monospacedDigit()).fixedSize(horizontal: false, vertical: true)
-                Text(CustomRoutines.fillDetail).font(.apSubhead).foregroundStyle(Palette.muted)
+                Text(CustomRoutines.fillDetail).font(.apFootnote).foregroundStyle(Palette.muted)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 2)
                 // Sin `.disabled` mientras trabaja: el AP se ve entero, no apagado; un segundo toque no hace nada.
                 Button { Task { await completeWithAutopilot() } } label: {
-                    // Con letra grande, el texto baja de línea centrado y con aire (`py-3` en la web).
+                    // Con letra grande, el texto baja de línea centrado y con aire (`py-2.5` en la web).
                     Group {
                         if running {
                             HStack(spacing: 10) {
@@ -320,11 +329,11 @@ struct MyRoutinesSection: View {
                         }
                     }
                     .multilineTextAlignment(.center)
-                    .padding(.vertical, 12)
+                    .padding(.vertical, 10)
                 }
-                .buttonStyle(.pillSecondary)
+                .buttonStyle(PillButtonStyle(kind: .secondary, height: 44))
                 .allowsHitTesting(!running)
-                .padding(.top, 16)
+                .padding(.top, 12)
                 .accessibilityLabel(running ? CustomRoutines.fillRunning : CustomRoutines.fillAction)
             }
         }
@@ -356,12 +365,12 @@ struct MyRoutinesSection: View {
         let exercises = routine.exercises ?? []
         let extra = exercises.count - thumbs
         let done = doneToday.contains(routine.day)
-        return VStack(alignment: .leading, spacing: 0) {
+        return VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(name).font(.apHeadline).lineLimit(2).fixedSize(horizontal: false, vertical: true)
                     Text(CustomRoutines.meta(routine)).font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted)
-                        .fixedSize(horizontal: false, vertical: true)
+                        .lineLimit(2).fixedSize(horizontal: false, vertical: true)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 Menu {
@@ -382,33 +391,37 @@ struct MyRoutinesSection: View {
                 .padding(.top, -10).padding(.trailing, -10)
                 .accessibilityLabel("Más acciones de \(name)")
             }
-            if !exercises.isEmpty {
-                HStack(spacing: 8) {
+            // Una sola fila: sus miniaturas y la acción. Con letra grande, la miniatura que no cabe entera baja
+            // a una segunda línea oculta (nunca se ve cortada ni aplasta el botón), como `flex-wrap` en la web.
+            HStack(spacing: 12) {
+                FlowRow(spacing: 6) {
                     ForEach(Array(exercises.prefix(thumbs).enumerated()), id: \.offset) { _, exercise in
-                        ExerciseThumb(url: exercise.image_url, size: 48, name: exercise.name, muscleGroup: exercise.muscle_group, video: exercise.video_url)
+                        ExerciseThumb(url: exercise.image_url, size: 40, name: exercise.name, muscleGroup: exercise.muscle_group, video: exercise.video_url)
                     }
                     if extra > 0 {
                         Text("+\(extra)").font(.apFootnote.weight(.semibold).monospacedDigit()).foregroundStyle(Palette.muted)
-                            .frame(width: 48, height: 48)
+                            .frame(width: 40, height: 40)
                             .background(Palette.secondary, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                     }
                 }
-                .padding(.top, 12)
+                .frame(height: 40, alignment: .top)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .clipped()
                 .accessibilityHidden(true)
-            }
-            if done {
-                Label("Hecha hoy", systemImage: "checkmark")
-                    .font(.apHeadline).foregroundStyle(Palette.gold)
-                    .frame(maxWidth: .infinity, minHeight: 50)
-                    .background(Palette.gold.opacity(0.14), in: Capsule())
-                    .accessibilityElement(children: .combine)
-                    .padding(.top, 16)
-            } else {
-                Button(resumableDay == routine.day ? "Continuar entreno" : "Empezar") { Haptics.tap(); onStart(routine.day) }
-                    .buttonStyle(.pillSecondary)
-                    .disabled(exercises.isEmpty)
-                    .padding(.top, 16)
-                    .accessibilityLabel("\(resumableDay == routine.day ? "Continuar" : "Empezar") \(name)")
+                if done {
+                    Label("Hecha hoy", systemImage: "checkmark")
+                        .font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.gold)
+                        .padding(.horizontal, 16).frame(height: 44)
+                        .background(Palette.gold.opacity(0.10), in: Capsule())
+                        .fixedSize()
+                        .accessibilityElement(children: .combine)
+                } else {
+                    Button(resumableDay == routine.day ? "Continuar" : "Empezar") { Haptics.tap(); onStart(routine.day) }
+                        .buttonStyle(PillButtonStyle(kind: .secondary, height: 44))
+                        .fixedSize()
+                        .disabled(exercises.isEmpty)
+                        .accessibilityLabel("\(resumableDay == routine.day ? "Continuar" : "Empezar") \(name)")
+                }
             }
         }
         .padding(16)

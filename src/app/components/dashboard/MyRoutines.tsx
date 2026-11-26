@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { Check, ChevronRight, Copy, MoreHorizontal, Pencil, Plus, Trash2, TriangleAlert } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { IconTile } from "@/shared/components/ui/icon-tile";
-import { SectionHeader } from "@/shared/components/ui/section-header";
 import { Spinner } from "@/shared/components/ui/spinner";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -15,8 +14,8 @@ import { AUTOPILOT_FILL, autopilotFillSummary, routineMeta, routineName, SESSION
 import { keptRoutinesTitle, SHIELD_COPY } from "@/shared/lib/planShield";
 import type { DayPlan } from "@/shared/types/training";
 
-/** Miniaturas que se enseñan por rutina; el resto, «+N». */
-const THUMBS = 4;
+/** Miniaturas que se enseñan por rutina (en la fila de «Empezar»); el resto, «+N». */
+const THUMBS = 3;
 
 /**
  * «Completar con el autopiloto»: lo ofrece Entrenar cuando `canCompleteWithAutopilot` (plan todo tuyo
@@ -57,9 +56,10 @@ interface Props {
 }
 
 /**
- * «Mis rutinas» en Entrenar (`MyRoutinesSection` en la app): cada rutina con su nombre, cuántos
- * ejercicios y qué músculos, sus miniaturas (foto o la huella del ejercicio) y «Empezar»; en «···»,
- * «Editar», «Duplicar» y «Borrar» (con hoja de confirmación).
+ * «Mis rutinas» en Entrenar (`MyRoutinesSection` en la app): «Nueva rutina» como píldora tranquila junto
+ * al título y cada rutina en una tarjeta compacta (nombre, cuántos ejercicios y qué músculos, tres
+ * miniaturas con «+N» y una sola acción, «Empezar»); en «···», «Editar», «Duplicar» y «Borrar» (con hoja
+ * de confirmación).
  */
 const MyRoutines = ({ routines, limitReached, resumableDay = null, doneToday = [], onNew, onStart, onEdit, onDuplicate, onDelete, focus = false, autopilot = null }: Props) => {
   const metadata = useExerciseMetadata(routines);
@@ -102,21 +102,22 @@ const MyRoutines = ({ routines, limitReached, resumableDay = null, doneToday = [
 
   return (
     <section ref={sectionRef} aria-labelledby="mis-rutinas" className="scroll-mt-20 space-y-3">
-      <SectionHeader
-        title={<span id="mis-rutinas">Mis rutinas</span>}
-        hint={count > 0 ? `${count} ${count === 1 ? "rutina tuya" : "rutinas tuyas"}` : undefined}
-        action={(
-          <button
+      <div className="flex min-h-11 items-center justify-between gap-3">
+        <h3 id="mis-rutinas" className="type-title3">Mis rutinas</h3>
+        {/* Con rutinas, «Nueva rutina» es una píldora tranquila; sin ninguna, la tarjeta de abajo ya la ofrece. */}
+        {count > 0 && (
+          <Button
             type="button"
+            variant="secondary"
+            size="sm"
+            className="shrink-0 font-semibold"
             onClick={() => { void hapticTap(); onNew(); }}
             aria-describedby={limitReached ? "mis-rutinas-limite" : undefined}
-            className="-my-2 inline-flex min-h-11 items-center gap-1 px-1 type-subhead font-semibold text-primary transition-opacity active:opacity-60"
           >
-            <Plus className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />
-            Nueva rutina
-          </button>
+            <Plus aria-hidden="true" /> Nueva rutina
+          </Button>
         )}
-      />
+      </div>
       {limitReached && (
         <p id="mis-rutinas-limite" role="status" className="px-1 type-footnote text-muted-foreground">{SESSION_LIMIT_MESSAGE}.</p>
       )}
@@ -125,7 +126,13 @@ const MyRoutines = ({ routines, limitReached, resumableDay = null, doneToday = [
         <div className="rounded-card bg-card p-5">
           <p className="type-headline">Crea tu primera rutina</p>
           <p className="mt-1 type-subhead text-muted-foreground">Elige tus ejercicios, series y descansos, y empiézala cuando quieras.</p>
-          <Button type="button" variant="secondary" size="lg" className="mt-4 w-full" onClick={() => { void hapticTap(); onNew(); }}>
+          <Button
+            type="button"
+            variant="secondary"
+            className="mt-4 font-semibold"
+            aria-describedby={limitReached ? "mis-rutinas-limite" : undefined}
+            onClick={() => { void hapticTap(); onNew(); }}
+          >
             <Plus aria-hidden="true" /> Nueva rutina
           </Button>
         </div>
@@ -140,8 +147,8 @@ const MyRoutines = ({ routines, limitReached, resumableDay = null, doneToday = [
               <li key={routine.day} className="rounded-card bg-card p-4">
                 <div className="flex items-start gap-3">
                   <div className="min-w-0 flex-1">
-                    <h3 className="line-clamp-2 type-headline">{name}</h3>
-                    <p className="mt-0.5 type-footnote tabular-nums text-muted-foreground">{routineMeta(routine)}</p>
+                    <h4 className="line-clamp-2 break-words type-headline">{name}</h4>
+                    <p className="mt-0.5 line-clamp-2 type-footnote tabular-nums text-muted-foreground">{routineMeta(routine)}</p>
                   </div>
                   {/* Sin modo modal: al abrir la hoja de editar o la de borrar desde el menú no queda la página bloqueada. */}
                   <DropdownMenu modal={false}>
@@ -169,8 +176,10 @@ const MyRoutines = ({ routines, limitReached, resumableDay = null, doneToday = [
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
-                {exercises.length > 0 && (
-                  <div aria-hidden="true" className="mt-3 flex items-center gap-2">
+                {/* Una sola fila: sus miniaturas y la acción. Con letra grande, la miniatura que no cabe entera
+                    baja a una segunda línea oculta (nunca se ve cortada ni aplasta el botón). */}
+                <div className="mt-3 flex items-center gap-3">
+                  <div aria-hidden="true" className="flex h-10 min-w-0 flex-1 flex-wrap items-center gap-1.5 overflow-hidden">
                     {exercises.slice(0, THUMBS).map((exercise, index) => {
                       const meta = metadata.byId[exercise.exercise_id] || metadata.byName[exercise.name];
                       return (
@@ -183,32 +192,31 @@ const MyRoutines = ({ routines, limitReached, resumableDay = null, doneToday = [
                           pattern={meta?.movement_pattern}
                           stimulus={meta?.stimulus_type}
                           load={meta?.load_level}
-                          size="md"
+                          size="sm"
                         />
                       );
                     })}
                     {extra > 0 && (
-                      <span className="grid h-12 w-12 place-items-center rounded-[12px] bg-secondary type-footnote font-semibold tabular-nums text-muted-foreground">+{extra}</span>
+                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[12px] bg-secondary type-footnote font-semibold tabular-nums text-muted-foreground">+{extra}</span>
                     )}
                   </div>
-                )}
-                {done ? (
-                  <p role="status" className="mt-4 flex min-h-12 items-center justify-center gap-2 rounded-full bg-primary/10 px-4 type-headline text-primary">
-                    <Check className="h-4 w-4" aria-hidden="true" />Hecha hoy
-                  </p>
-                ) : (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="lg"
-                    className="mt-4 w-full"
-                    disabled={exercises.length === 0}
-                    aria-label={`${resumableDay === routine.day ? "Continuar" : "Empezar"} ${name}`}
-                    onClick={() => { void hapticTap(); onStart(routine.day); }}
-                  >
-                    {resumableDay === routine.day ? "Continuar entreno" : "Empezar"}
-                  </Button>
-                )}
+                  {done ? (
+                    <p role="status" className="flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-primary/10 px-4 type-subhead font-semibold text-primary">
+                      <Check className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />Hecha hoy
+                    </p>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="shrink-0 px-5"
+                      disabled={exercises.length === 0}
+                      aria-label={`${resumableDay === routine.day ? "Continuar" : "Empezar"} ${name}`}
+                      onClick={() => { void hapticTap(); onStart(routine.day); }}
+                    >
+                      {resumableDay === routine.day ? "Continuar" : "Empezar"}
+                    </Button>
+                  )}
+                </div>
               </li>
             );
           })}
@@ -247,9 +255,9 @@ const MyRoutines = ({ routines, limitReached, resumableDay = null, doneToday = [
 };
 
 /**
- * Fila secundaria de «Mis rutinas» (la acción dorada de la sección es «Nueva rutina»): cuánto cubren
- * tus rutinas y «Completar con el autopiloto»; mientras trabaja, el AP latiendo; al terminar, «Hemos
- * respetado tus N rutinas»; si falla, el aviso de error con «Reintentar». Igual que en la app.
+ * Tarjeta compacta bajo tus rutinas (secundaria: la acción dorada de la pantalla es «Empezar sesión»):
+ * cuánto cubren tus rutinas y «Completar con el autopiloto»; mientras trabaja, el AP latiendo; al
+ * terminar, «Hemos respetado tus N rutinas»; si falla, el aviso de error con «Reintentar». Igual que en la app.
  */
 const AutopilotFillCard = ({ status, own, frequency, kept, onRun }: {
   status: FillState["status"];
@@ -266,7 +274,7 @@ const AutopilotFillCard = ({ status, own, frequency, kept, onRun }: {
           <IconTile icon={Check} size="md" />
           <div className="min-w-0 flex-1">
             <p className="type-headline">{keptRoutinesTitle(kept)}</p>
-            <p className="mt-0.5 type-subhead text-muted-foreground">{SHIELD_COPY.description}</p>
+            <p className="mt-0.5 type-footnote text-muted-foreground">{SHIELD_COPY.description}</p>
           </div>
         </div>
       ) : status === "error" ? (
@@ -275,24 +283,23 @@ const AutopilotFillCard = ({ status, own, frequency, kept, onRun }: {
             <IconTile icon={TriangleAlert} size="md" tone="destructive" />
             <div className="min-w-0 flex-1">
               <p className="type-headline">{AUTOPILOT_FILL.errorTitle}</p>
-              <p className="mt-0.5 type-subhead text-muted-foreground">{AUTOPILOT_FILL.errorDetail}</p>
+              <p className="mt-0.5 type-footnote text-muted-foreground">{AUTOPILOT_FILL.errorDetail}</p>
             </div>
           </div>
-          <Button type="button" variant="secondary" size="lg" className="mt-4 w-full" onClick={onRun}>
+          <Button type="button" variant="secondary" className="mt-3 w-full" onClick={onRun}>
             {AUTOPILOT_FILL.retry}
           </Button>
         </div>
       ) : (
         <>
           <p className="type-headline tabular-nums">{autopilotFillSummary(own, frequency)}</p>
-          <p className="mt-0.5 type-subhead text-muted-foreground">{AUTOPILOT_FILL.detail}</p>
+          <p className="mt-0.5 type-footnote text-muted-foreground">{AUTOPILOT_FILL.detail}</p>
           {/* Sin `disabled` mientras trabaja: el AP se ve entero, no apagado; un segundo toque no hace nada.
               Con letra grande, el texto baja de línea dentro de la píldora en vez de salirse. */}
           <Button
             type="button"
             variant="secondary"
-            size="lg"
-            className="mt-4 h-auto min-h-12 w-full whitespace-normal px-5 py-3 text-center"
+            className="mt-3 h-auto min-h-11 w-full whitespace-normal px-5 py-2.5 text-center"
             aria-disabled={running || undefined}
             aria-busy={running || undefined}
             onClick={running ? undefined : onRun}

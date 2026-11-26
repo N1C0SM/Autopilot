@@ -468,7 +468,8 @@ struct ExerciseLibraryView: View {
     private func clearFilters() { filters = LibraryFilters(query: filters.query) }
 
     @ViewBuilder private var content: some View {
-        if model.failed {
+        // Sin conexión o sin nada que leer (lista vacía): el mismo aviso con «Reintentar», nunca un título sin tarjetas.
+        if model.failed || model.items?.isEmpty == true {
             VStack(spacing: 0) {
                 EmptyStateView(symbol: "wifi.exclamationmark", title: "No hemos podido cargar los ejercicios",
                                message: "Revisa tu conexión y vuelve a intentarlo.")
@@ -685,7 +686,9 @@ private struct ExerciseRows: View {
     }
 }
 
-/// Ficha: clip en bucle, foto o la huella del ejercicio; datos clave y secciones con contenido.
+/// Ficha (`ExerciseDetail` en la web): el héroe (clip en bucle, foto o la silueta con su músculo), el nombre
+/// grande con sus datos clave, las secciones en Title 3 con aire entre ellas y, al final, la acción
+/// (favoritos) y la autoría.
 struct ExerciseDetailView: View {
     let exercise: LibraryExercise
     @ObservedObject var model: ExerciseLibraryModel
@@ -707,31 +710,18 @@ struct ExerciseDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 hero
-                HStack(alignment: .top, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(exercise.name).font(.apTitle1).tracking(-0.4)
+                // Nombre grande (Title 1 que crece con el tamaño de letra) y sus datos clave.
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(exercise.name).font(.apTitle1).tracking(-0.4)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityAddTraits(.isHeader)
+                    if !exercise.altNames.isEmpty {
+                        Text(exercise.altNames.joined(separator: " · ")).font(.apSubhead).foregroundStyle(Palette.muted)
                             .fixedSize(horizontal: false, vertical: true)
-                            .accessibilityAddTraits(.isHeader)
-                        if !exercise.altNames.isEmpty {
-                            Text(exercise.altNames.joined(separator: " · ")).font(.apSubhead).foregroundStyle(Palette.muted)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    if model.personal {
-                        let on = model.favorites.contains(exercise.id)
-                        Button {
-                            Haptics.selection()
-                            Task { await model.toggleFavorite(exercise.id, userId: userId) }
-                        } label: {
-                            Image(systemName: on ? "heart.fill" : "heart").font(.title3)
-                                .foregroundStyle(on ? Palette.gold : Palette.foreground)
-                                .frame(width: 44, height: 44).background(Palette.secondary, in: Circle())
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(on ? "Quitar de favoritos" : "Añadir a favoritos")
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 4)
                 if !chips.isEmpty {
                     FlowRow {
                         ForEach(chips, id: \.self) { c in
@@ -750,6 +740,8 @@ struct ExerciseDetailView: View {
         .navigationTitle(exercise.name)
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
+        // El nombre ya va grande en la ficha: la barra no lo repite (el título sigue para «‹ Atrás» y VoiceOver).
+        .toolbar { ToolbarItem(placement: .principal) { Color.clear.frame(width: 1, height: 1).accessibilityHidden(true) } }
         #endif
         .task(id: exercise.id) { variantIds = await model.variants(of: exercise.id) }
     }
@@ -813,6 +805,21 @@ struct ExerciseDetailView: View {
             if !e.safety.isEmpty { section("Seguridad") { list(e.safety) } }
             if !variants.isEmpty { section("Variantes") { ExerciseRows(items: variants, favorites: model.favorites, onOpen: open) } }
             if !alternatives.isEmpty { section("Alternativas") { ExerciseRows(items: alternatives, favorites: model.favorites, onOpen: open) } }
+            // Acciones al final, después de leer la ficha: guardar en favoritos (solo con cuenta).
+            if model.personal {
+                let on = model.favorites.contains(e.id)
+                Button {
+                    Haptics.selection()
+                    Task { await model.toggleFavorite(e.id, userId: userId) }
+                } label: {
+                    Label {
+                        Text(on ? "Quitar de favoritos" : "Añadir a favoritos")
+                    } icon: {
+                        Image(systemName: on ? "heart.fill" : "heart").foregroundStyle(on ? Palette.gold : Palette.foreground)
+                    }
+                }
+                .buttonStyle(.pillSecondary)
+            }
             // Autor y licencia solo cuando la licencia lo exige (CC BY / BY-SA).
             if let credit = e.attribution {
                 Group {
@@ -844,7 +851,7 @@ struct ExerciseDetailView: View {
     }
 
     private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             LibrarySectionTitle(title)
             content()
         }

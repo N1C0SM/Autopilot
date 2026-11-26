@@ -144,13 +144,16 @@ export const planMode = (plans: readonly DayPlan[]): PlanMode => {
   return mine === sessions.length ? "custom" : "mixed";
 };
 
-/** Cabecera de Entrenar: el modo y de dónde sale («Piloto automático · 2 rutinas tuyas»). */
-export const planModeCopy = (plans: readonly DayPlan[]): { title: string; detail: string } => {
+/**
+ * Cabecera de Entrenar: el modo del plan en una sola frase corta (`CustomRoutines.modeLine` en la app).
+ * «Tu plan lo prepara el piloto automático.», «Tu plan lo has creado tú.» o, mezclado, «…, con 2 rutinas tuyas.».
+ */
+export const planModeLine = (plans: readonly DayPlan[]): string => {
   const mode = planMode(plans);
-  if (mode === "custom") return { title: "Rutina personalizada", detail: "Creada por ti." };
-  if (mode === "auto") return { title: "Piloto automático", detail: "Preparada por Autopilot." };
+  if (mode === "custom") return "Tu plan lo has creado tú.";
+  if (mode === "auto") return "Tu plan lo prepara el piloto automático.";
   const mine = myRoutines(plans).length;
-  return { title: "Piloto automático", detail: `Preparada por Autopilot, con ${mine} ${mine === 1 ? "rutina tuya" : "rutinas tuyas"}.` };
+  return `Tu plan lo prepara el piloto automático, con ${mine} ${mine === 1 ? "rutina tuya" : "rutinas tuyas"}.`;
 };
 
 /**

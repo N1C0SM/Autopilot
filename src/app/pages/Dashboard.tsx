@@ -1,8 +1,7 @@
-import { BookOpen, Play } from "lucide-react";
 import { generatePlanGuarded } from "@/shared/lib/planShield";
 import {
   addRoutine, canAddRoutine, canCompleteWithAutopilot, commitRoutineChange, deleteRoutine, duplicateRoutine, FREE_WORKOUT_NAME,
-  myRoutines, planModeCopy, SESSION_LIMIT_MESSAGE, updateRoutine, type RoutineChange, type RoutineCommit,
+  myRoutines, SESSION_LIMIT_MESSAGE, updateRoutine, type RoutineChange, type RoutineCommit,
 } from "@/shared/lib/customRoutines";
 import { planTrainingDays } from "@/shared/lib/availability";
 import { routineSessions } from "@/shared/lib/routineOrder";
@@ -913,43 +912,13 @@ const Dashboard = () => {
         <div className="w-full min-w-0">
           <Suspense fallback={<SectionFallback />}>
               {trainingView === "plan" && !workoutMode && !autoStartWorkout ? (
-                <TrainingPlanView dayPlans={dayPlans} initialDay={planFocusDay} doneThisWeek={completedDays} doneToday={completedTodayDays} resumableDay={readActiveWorkout(user.id)?.plan.day} tools={(
-                // Cabecera de la rutina, arriba: el modo y de dónde sale con «Editar» a la derecha (como
-                // «Tu plan» en Hoy) y, debajo, «Entreno vacío» y «Ejercicios» con su nombre.
-                <div className="w-full rounded-card bg-card p-5">
-                  <div className="flex items-start gap-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="type-footnote font-semibold text-primary">{planModeCopy(dayPlans).title}</p>
-                      <p className="mt-0.5 type-subhead text-muted-foreground">{planModeCopy(dayPlans).detail}</p>
-                    </div>
-                    <button
-                      type="button"
-                      aria-label="Editar rutina"
-                      onClick={() => { void hapticTap(); setEditorOpen(true); }}
-                      className="-my-2 -mr-1 min-h-11 shrink-0 px-1 type-subhead font-semibold text-primary active:opacity-60"
-                    >
-                      Editar
-                    </button>
-                  </div>
-                  {/* Lado a lado si caben enteros; si no (estrecho o letra grande), uno bajo otro, sin cortar. */}
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {[
-                      { label: "Entreno vacío", Icon: Play, on: () => setFreeOpen(true) },
-                      { label: "Ejercicios", Icon: BookOpen, on: () => setLibraryOpen(true) },
-                    ].map(({ label, Icon, on }) => (
-                      <button
-                        key={label}
-                        type="button"
-                        onClick={() => { void hapticTap(); on(); }}
-                        className="btn-raised flex h-11 flex-[1_0_auto] items-center justify-center gap-2 whitespace-nowrap rounded-full bg-secondary px-4 type-subhead font-semibold transition-opacity active:opacity-60"
-                      >
-                        <Icon className="h-4 w-4 shrink-0 text-primary" strokeWidth={2} aria-hidden />
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                )} routines={(
+                <TrainingPlanView dayPlans={dayPlans} initialDay={planFocusDay} doneThisWeek={completedDays} doneToday={completedTodayDays} resumableDay={readActiveWorkout(user.id)?.plan.day}
+                // Cabecera de Entrenar: el modo en una frase (lo pinta la vista), «Entreno vacío» y «Ejercicios»
+                // en píldoras tranquilas y «Editar» junto a «Esta semana».
+                onEmptyWorkout={() => setFreeOpen(true)}
+                onOpenLibrary={() => setLibraryOpen(true)}
+                onEditPlan={() => setEditorOpen(true)}
+                routines={(
                   <MyRoutines
                     routines={routines}
                     limitReached={routineLimit}

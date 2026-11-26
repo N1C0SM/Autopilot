@@ -109,7 +109,8 @@ const ExerciseLibraryBody = ({ open, userId, page }: { open: boolean; userId: st
           )}
 
           <div className="-mx-1 mt-5 min-h-0 flex-1 overflow-y-auto px-1 pb-6">
-            {lib.error ? (
+            {/* Sin conexión o sin nada que leer (lista vacía): el mismo aviso con «Reintentar», nunca un título sin tarjetas. */}
+            {lib.error || lib.items?.length === 0 ? (
               <EmptyState
                 icon={WifiOff}
                 title="No hemos podido cargar los ejercicios"
@@ -197,7 +198,7 @@ const ExerciseList = ({ items, favorites, onOpen }: {
 );
 
 const SectionTitle = ({ children }: { children: string }) => (
-  <h3 className="mb-2.5 type-title3">{children}</h3>
+  <h3 className="mb-3 type-title3">{children}</h3>
 );
 
 /**
@@ -233,7 +234,7 @@ const GroupTile = ({ group, count, image, onSelect }: { group: string; count: nu
   );
 };
 
-/** Sin búsqueda: recientes, favoritos y los grupos musculares con foto real o su huella. */
+/** Sin búsqueda: recientes, favoritos y los grupos musculares con foto real o la silueta con su músculo. */
 const Browse = ({ items, recent, favorites, onOpen, onGroup }: {
   items: LibraryExercise[];
   recent: LibraryExercise[];
@@ -295,7 +296,10 @@ const Bullets = ({ items, numbered }: { items: string[]; numbered?: boolean }) =
   );
 };
 
-/** Ficha: héroe (clip, foto o la huella del ejercicio), datos clave y secciones con contenido. */
+/**
+ * Ficha: héroe (clip, foto o la silueta con su músculo), el nombre grande con sus datos clave, las
+ * secciones en Title 3 con aire entre ellas y, al final, la acción (favoritos) y la autoría.
+ */
 const ExerciseDetail = ({ exercise: e, all, byId, favorites, favorite, canFavorite, onFavorite, onBack, onOpen }: {
   exercise: LibraryExercise;
   all: LibraryExercise[];
@@ -328,25 +332,12 @@ const ExerciseDetail = ({ exercise: e, all, byId, favorites, favorite, canFavori
       <button type="button" onClick={onBack} className="mb-3 flex h-11 items-center gap-1 rounded-full pr-3 type-subhead font-semibold text-primary active:opacity-60">
         <ChevronLeft className="h-5 w-5" aria-hidden /> Ejercicios
       </button>
-      {/* Con foto, la foto (y «Ritmo» si tiene patrón); sin foto, su huella a todo el héroe. */}
+      {/* El clip en bucle sobre su foto, la foto sola o, sin foto, la silueta con su músculo a todo el héroe. */}
       <ExerciseMedia key={e.id} video={e.video} image={e.image} name={e.name} pattern={e.pattern} stimulus={e.stimulus} load={e.load} muscleGroup={e.groups[0]} className="rounded-sheet bg-card" />
-      <div className="mt-5 flex items-start gap-3">
-        <div className="min-w-0 flex-1">
-          {/* Title 1 (28) con el tamaño de letra del usuario, como `.apTitle1` en la app. */}
-          <h2 className="break-words type-title1">{e.name}</h2>
-          {e.altNames.length > 0 && <p className="mt-0.5 type-subhead text-muted-foreground">{e.altNames.join(" · ")}</p>}
-        </div>
-        {canFavorite && (
-          <button
-            type="button"
-            aria-pressed={favorite}
-            aria-label={favorite ? "Quitar de favoritos" : "Añadir a favoritos"}
-            onClick={() => { void hapticSelection(); onFavorite(); }}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-secondary transition active:scale-95"
-          >
-            <Heart className={cn("h-5 w-5", favorite ? "fill-primary text-primary" : "text-foreground")} aria-hidden />
-          </button>
-        )}
+      {/* Nombre grande (Title 1 que crece con el tamaño de letra, como `.apTitle1` en la app) y sus datos clave. */}
+      <div className="mt-5">
+        <h2 className="break-words type-title1">{e.name}</h2>
+        {e.altNames.length > 0 && <p className="mt-1 type-subhead text-muted-foreground">{e.altNames.join(" · ")}</p>}
       </div>
       {chips.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-2">
@@ -385,6 +376,19 @@ const ExerciseDetail = ({ exercise: e, all, byId, favorites, favorite, canFavori
         {e.safety.length > 0 && <section><SectionTitle>Seguridad</SectionTitle><Bullets items={e.safety} /></section>}
         {variants.length > 0 && <section><SectionTitle>Variantes</SectionTitle><ExerciseList items={variants} favorites={favorites} onOpen={onOpen} /></section>}
         {alternatives.length > 0 && <section><SectionTitle>Alternativas</SectionTitle><ExerciseList items={alternatives} favorites={favorites} onOpen={onOpen} /></section>}
+        {/* Acciones al final, después de leer la ficha: guardar en favoritos (solo con cuenta). */}
+        {canFavorite && (
+          <Button
+            type="button"
+            variant="secondary"
+            size="lg"
+            className="w-full"
+            onClick={() => { void hapticSelection(); onFavorite(); }}
+          >
+            <Heart className={cn(favorite ? "fill-primary text-primary" : "text-foreground")} aria-hidden />
+            {favorite ? "Quitar de favoritos" : "Añadir a favoritos"}
+          </Button>
+        )}
         {/* Autor y licencia solo cuando la licencia lo exige (CC BY / BY-SA). */}
         {credit && (
           <p className="px-1 type-footnote text-muted-foreground">

@@ -1,12 +1,14 @@
 import { useEffect, useState, type ReactNode, type SyntheticEvent } from "react";
-import { CalendarDays, Check, ChevronRight, Clock, Flame, Pencil } from "lucide-react";
+import { BookOpen, CalendarDays, Check, ChevronRight, Clock, Flame, Pencil, Play } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
-import { ListGroup, ListRow } from "@/shared/components/ui/list";
+import { ListRow } from "@/shared/components/ui/list";
 import { cn } from "@/shared/lib/utils";
-import { hapticSelection } from "@/shared/lib/native";
+import { hapticSelection, hapticTap } from "@/shared/lib/native";
 import type { DayPlan } from "@/shared/types/training";
 import { formatTrainingTitle } from "@/shared/lib/trainingDisplay";
 import { restLabel } from "@/shared/lib/planEditorValues";
+import { planModeLine } from "@/shared/lib/customRoutines";
+import { sessionLine, sessionMuscles, sessionName } from "@/shared/lib/sessionSummary";
 import AIDisclaimer from "@/shared/components/AIDisclaimer";
 import { ExerciseThumb } from "@/app/components/ExerciseMedia";
 import ExerciseFocus from "@/app/components/ExerciseFocus";
@@ -29,11 +31,14 @@ interface Props {
   /** Día de la rutina que tiene un borrador de entreno recuperable. */
   resumableDay?: string | null;
   onOpenWorkout?: (day: string) => void;
-  /** Cabecera de la rutina (modo del plan, Libre, Editar, Ejercicios): va arriba, antes de las sesiones. */
-  tools?: ReactNode;
-  /** Guarda el nombre y el icono de una sesión («Personalizar»); false si no se pudo. */
+  /** Cabecera: «Entreno vacío» y «Ejercicios», las dos píldoras tranquilas bajo el modo del plan. */
+  onEmptyWorkout?: () => void;
+  onOpenLibrary?: () => void;
+  /** «Editar» junto a «Esta semana» (y en el plan sin sesiones): el editor del plan. */
+  onEditPlan?: () => void;
+  /** Guarda el nombre y el icono de una sesión («Nombre e icono»); false si no se pudo. */
   onPersonalize?: (day: string, identity: { name: string; icon: string | null }) => Promise<boolean>;
-  /** «Mis rutinas» (rutinas propias con Empezar, Editar, Duplicar y Borrar): va bajo las sesiones. */
+  /** «Mis rutinas» (rutinas propias con «Empezar» y, en «···», Editar, Duplicar y Borrar): va bajo las sesiones. */
   routines?: ReactNode;
 }
 
@@ -42,94 +47,98 @@ const sessionTitle = (plan: DayPlan) =>
     ? formatTrainingTitle(plan.routine_name, plan.muscle_focus) || "Entrenamiento"
     : plan.sport || "Actividad";
 
-const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+/** Estado de la sesión en la lista: hecha esta semana, la de hoy (la que propone Hoy) o la siguiente. */
+type SessionState = "done" | "today" | "next" | null;
+const STATE_SPOKEN: Record<Exclude<SessionState, null>, string> = { done: "hecha esta semana", today: "para hoy", next: "siguiente" };
 
-const sessionSummary = (plan: DayPlan) => {
-  const exercises = plan.exercises ?? [];
-  if (exercises.length === 0) return null;
-  const sets = exercises.reduce((total, ex) => total + (Number(ex.series) || 0), 0);
-  return [plural(exercises.length, "ejercicio", "ejercicios"), sets > 0 ? plural(sets, "serie", "series") : null]
-    .filter(Boolean)
-    .join(" · ");
-};
-
-/** Detalle corto de la fila: series y ejercicios del gimnasio, intensidad y duración de la actividad. */
-const sessionMeta = (plan: DayPlan) => {
-  if (plan.type === "gimnasio") return sessionSummary(plan) || "Sin ejercicios todavía";
-  return [plan.intensity ? `Intensidad ${plan.intensity.toLocaleLowerCase("es-ES")}` : null, plan.duration].filter(Boolean).join(" · ") || "Actividad";
-};
+/** Píldora tranquila de la cabecera (secundaria, con relieve): «Entreno vacío» y «Ejercicios». */
+const QuietPill = ({ icon: Icon, label, onClick }: { icon: typeof Play; label: string; onClick: () => void }) => (
+  <button
+    type="button"
+    onClick={() => { void hapticTap(); onClick(); }}
+    className="btn-raised flex h-11 items-center gap-2 whitespace-nowrap rounded-full bg-secondary px-4 type-subhead font-semibold transition-transform duration-150 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+  >
+    <Icon className="h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={2} aria-hidden="true" />
+    {label}
+  </button>
+);
 
 interface SessionRowProps {
   number: number;
   plan: DayPlan;
-  isNext: boolean;
-  done: boolean;
+  state: SessionState;
   expanded: boolean;
-  /** Foto de respaldo (caché de la portada, foto del primer ejercicio o foto de marca). */
+  /** Foto de respaldo (portada propia o en caché, foto del primer ejercicio o foto de marca). */
   photo: string | null;
+  muscles: string;
   onSelect: () => void;
 }
 
-// Fila de la rutina: foto, «Sesión N» (con «Siguiente» u «Hecha esta semana»), nombre y detalle.
-// Sin días de la semana: cualquier sesión se hace el día que venga bien.
-// Solo la fila abierta pide la portada con IA; las demás usan la caché o su respaldo.
-const SessionRow = ({ number, plan, isNext, done, expanded, photo, onSelect }: SessionRowProps) => {
+// Fila de la lista: miniatura, nombre, músculos y «6 ejercicios · ≈ 45 min», con su estado a la
+// derecha («Hoy», «Hecha» o «Siguiente»). Sin días de la semana: cualquier sesión se hace el día que
+// venga bien. Solo la fila abierta pide la portada con IA; las demás usan la caché o su respaldo.
+const SessionRow = ({ number, plan, state, expanded, photo, muscles, onSelect }: SessionRowProps) => {
   const gym = plan.type === "gimnasio";
-  const ids = gym && expanded ? (plan.exercises ?? []).map((exercise) => exercise.exercise_id) : [];
+  const ids = gym && expanded && !plan.cover_url ? (plan.exercises ?? []).map((exercise) => exercise.exercise_id) : [];
   const cover = useSessionCover(ids, photo);
-  const title = sessionTitle(plan);
+  const name = sessionName(sessionTitle(plan));
+  const line = sessionLine(plan);
   const emoji = cleanSessionIcon(plan.session_icon);
-  const status = done ? "hecha esta semana" : isNext ? "siguiente" : null;
   return (
     <button
       type="button"
       aria-expanded={expanded}
-      aria-label={`Sesión ${number}: ${title}${status ? `, ${status}` : ""}`}
+      aria-label={`Sesión ${number}: ${name}${muscles ? `, ${muscles}` : ""}, ${line}${state ? `, ${STATE_SPOKEN[state]}` : ""}`}
       onClick={onSelect}
-      className={cn(
-        "flex min-h-[88px] w-full items-center gap-3.5 rounded-card border bg-card p-3 pr-4 text-left transition-transform duration-150 active:scale-[0.985] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        // Sin borde; la abierta, con el filo dorado tenue de «activo» (tokens.md).
-        expanded ? "border-primary/30" : "border-transparent",
-      )}
+      className="flex min-h-[80px] w-full items-center gap-3.5 px-4 py-3 text-left transition-colors duration-150 active:bg-accent focus-visible:bg-accent focus-visible:outline-none"
     >
       {emoji ? (
-        <span aria-hidden className="flex h-16 w-16 shrink-0 items-center justify-center rounded-media bg-secondary text-[32px] leading-none">
+        <span aria-hidden className="flex h-14 w-14 shrink-0 items-center justify-center rounded-chip bg-secondary text-[28px] leading-none">
           {emoji}
         </span>
       ) : gym ? (
-        <span aria-hidden className="relative h-16 w-16 shrink-0 overflow-hidden rounded-media bg-secondary">
-          {/* Miniatura de 64 px: 192 px, la misma que las de ejercicio (no la portada de 1000). */}
+        <span aria-hidden className="relative h-14 w-14 shrink-0 overflow-hidden rounded-chip bg-secondary">
+          {/* Miniatura de 56 px: 192 px, la misma que las de ejercicio (no la portada de 1000). */}
           {cover && <img src={fastImage(cover, THUMB_SIDE)} alt="" decoding="async" loading="lazy" className="absolute inset-0 h-full w-full object-cover object-[50%_30%]" />}
         </span>
       ) : (
-        <span aria-hidden className="flex h-16 w-16 shrink-0 items-center justify-center rounded-media bg-secondary text-primary">
+        <span aria-hidden className="flex h-14 w-14 shrink-0 items-center justify-center rounded-chip bg-secondary text-primary">
           <Flame className="h-6 w-6" />
         </span>
       )}
-      <span className="min-w-0 flex-1">
-        <span className="flex items-center gap-1.5 type-footnote font-medium text-muted-foreground">
-          {`Sesión ${number}`}
-          {done ? (
-            <span className="inline-flex items-center gap-0.5 text-primary">
-              · <Check className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />Hecha
-            </span>
-          ) : isNext ? (
-            <span className="text-primary">· Siguiente</span>
-          ) : null}
-        </span>
-        <h3 className="mt-0.5 line-clamp-2 type-headline">{title}</h3>
-        <span className="mt-0.5 block truncate type-footnote tabular-nums text-muted-foreground">{sessionMeta(plan)}</span>
+      <span aria-hidden className="min-w-0 flex-1">
+        <span className="line-clamp-2 break-words type-headline">{name}</span>
+        {/* Con letra grande bajan de línea (hasta dos), nunca se corta una cifra con su unidad. */}
+        {muscles && <span className="mt-0.5 line-clamp-2 type-subhead text-muted-foreground">{muscles}</span>}
+        <span className="mt-0.5 line-clamp-2 type-footnote tabular-nums text-muted-foreground">{line}</span>
       </span>
+      {state === "done" ? (
+        <span aria-hidden className="inline-flex shrink-0 items-center gap-1 type-footnote font-semibold text-primary">
+          <Check className="h-3.5 w-3.5" strokeWidth={3} />Hecha
+        </span>
+      ) : state === "today" ? (
+        <span aria-hidden className="shrink-0 rounded-full bg-primary/15 px-2.5 py-1 type-footnote font-semibold text-primary">Hoy</span>
+      ) : state === "next" ? (
+        <span aria-hidden className="shrink-0 type-footnote font-medium text-muted-foreground">Siguiente</span>
+      ) : null}
       <ChevronRight
         aria-hidden
-        className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-150", expanded && "rotate-90 text-primary")}
+        className={cn("h-4 w-4 shrink-0 text-muted-foreground/60 transition-transform duration-150", expanded && "rotate-90 text-primary")}
         strokeWidth={2.5}
       />
     </button>
   );
 };
 
-const TrainingPlanView = ({ dayPlans, initialDay, doneThisWeek = [], doneToday = [], resumableDay = null, onOpenWorkout, tools, onPersonalize, routines }: Props) => {
+/**
+ * Entrenar (`RoutineListView` + `TrainView` en la app): el modo del plan en una frase y «Entreno vacío» /
+ * «Ejercicios» como píldoras tranquilas; «Esta semana» con «Editar», lo hecho en tramos y las sesiones en
+ * una sola lista (la elegida se abre debajo, dentro de la misma tarjeta); después «Mis rutinas».
+ */
+const TrainingPlanView = ({
+  dayPlans, initialDay, doneThisWeek = [], doneToday = [], resumableDay = null, onOpenWorkout,
+  onEmptyWorkout, onOpenLibrary, onEditPlan, onPersonalize, routines,
+}: Props) => {
   useBrandPhotos(); // repinta las fotos de marca cuando llega su URL actual
   // La rutina en orden: solo sesiones, sin días de la semana ni días de descanso.
   const sessions = routineSessions(dayPlans);
@@ -165,13 +174,20 @@ const TrainingPlanView = ({ dayPlans, initialDay, doneThisWeek = [], doneToday =
     load?: string | null;
   } | null>(null);
   const exerciseMetadata = useExerciseMetadata(dayPlans);
+  const metaMuscle = (exercise: { exercise_id: string; name: string }) =>
+    (exerciseMetadata.byId[exercise.exercise_id] || exerciseMetadata.byName[exercise.name])?.muscle_group;
   /** Sesión que se está personalizando (nombre e icono). */
   const [personalizing, setPersonalizing] = useState<string | null>(null);
   const personalizePlan = sessions.find((session) => session.day === personalizing) ?? null;
+  // Lo secundario de la sesión, tranquilo y al final de lo que se abre.
   const personalizeButton = (plan: DayPlan) => onPersonalize && (
-    <Button type="button" variant="secondary" size="lg" className="w-full" onClick={() => { void hapticSelection(); setPersonalizing(plan.day); }}>
+    <button
+      type="button"
+      onClick={() => { void hapticSelection(); setPersonalizing(plan.day); }}
+      className="mx-auto mt-1 flex min-h-11 items-center gap-1.5 rounded-full px-4 type-subhead font-semibold text-muted-foreground transition-opacity active:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
       <Pencil className="h-4 w-4" aria-hidden /> Nombre e icono
-    </Button>
+    </button>
   );
   /** Imágenes de ejercicio que fallaron al cargar: la miniatura y la ficha usan su hueco compuesto, nunca la imagen rota. */
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
@@ -186,33 +202,43 @@ const TrainingPlanView = ({ dayPlans, initialDay, doneThisWeek = [], doneToday =
 
   const selectedPlan = sessions.find((session) => session.day === expandedDay);
   const hasExercises = Boolean(selectedPlan?.exercises && selectedPlan.exercises.length > 0);
+  // «Hoy» es la siguiente sesión mientras hoy no se haya entrenado (la misma que propone Hoy).
+  const stateOf = (plan: DayPlan): SessionState =>
+    doneThisWeek.includes(plan.day) ? "done" : next?.day === plan.day ? (doneToday.length === 0 ? "today" : "next") : null;
 
-  // Respaldo de la foto de cada fila: la portada ya generada (caché), la foto del primer
+  // Respaldo de la foto de cada fila: la portada propia, la ya generada (caché), la foto del primer
   // ejercicio y, si no hay, la foto de marca. Nunca se pide una portada nueva por fila cerrada.
   const rowPhoto = (plan: DayPlan) => {
     if (plan.type !== "gimnasio") return null;
+    if (plan.cover_url) return plan.cover_url;
     const exercises = plan.exercises ?? [];
     const first = exercises[0];
     const image = first ? (exerciseMetadata.byId[first.exercise_id] || exerciseMetadata.byName[first.name])?.image_url || first.image_url : null;
     return cachedSessionCover(exercises.map((exercise) => exercise.exercise_id)) || usableImage(image) || BRAND_PHOTOS.gym;
   };
 
-  // Lo que se abre bajo la fila elegida: empezar la sesión y sus ejercicios, la actividad o el descanso.
+  // Estado «hecho» de la sesión elegida: misma forma y alto que la píldora de acción, en dorado y sin acción.
+  const completed = (label: string) => (
+    <p role="status" className="flex min-h-12 items-center justify-center gap-2 rounded-full bg-primary/10 px-4 type-headline text-primary">
+      <Check className="h-4 w-4" aria-hidden />{label}
+    </p>
+  );
+
+  // Lo que se abre bajo la fila elegida, dentro de la misma tarjeta: la acción, los ejercicios y «Nombre e icono».
   const renderDetail = () => {
     if (selectedPlan?.type === "gimnasio") {
       return (
-        <section aria-label={`Ejercicios de ${sessionTitle(selectedPlan)}`} className="space-y-3">
-          {doneToday.includes(selectedPlan.day) ? (
-            <p role="status" className="flex min-h-12 items-center justify-center gap-2 rounded-full bg-primary/10 px-4 type-headline text-primary">
-              <Check className="h-4 w-4" aria-hidden />Entrenamiento completado
-            </p>
-          ) : onOpenWorkout && hasExercises ? (
-            <Button type="button" variant="hero" size="lg" className="w-full" onClick={() => onOpenWorkout(selectedPlan.day)}>
-              {resumableDay === selectedPlan.day ? "Continuar entreno" : "Empezar sesión"}
-            </Button>
-          ) : null}
-          {hasExercises && (
-            <ListGroup aria-label="Ejercicios">
+        <section aria-label={`Ejercicios de ${sessionTitle(selectedPlan)}`} className="pb-2">
+          <div className="px-4 pb-2 empty:hidden">
+            {doneToday.includes(selectedPlan.day) ? completed("Entrenamiento completado") : onOpenWorkout && hasExercises ? (
+              <Button type="button" variant="hero" size="lg" className="w-full" onClick={() => onOpenWorkout(selectedPlan.day)}>
+                <Play fill="currentColor" strokeWidth={0} aria-hidden />
+                {resumableDay === selectedPlan.day ? "Continuar entreno" : "Empezar sesión"}
+              </Button>
+            ) : null}
+          </div>
+          {hasExercises ? (
+            <div role="group" aria-label="Ejercicios">
               {selectedPlan.exercises?.map((ex, i) => {
                 const metadata = exerciseMetadata.byId[ex.exercise_id] || exerciseMetadata.byName[ex.name];
                 const video = metadata?.video_url || ex.video_url;
@@ -222,8 +248,8 @@ const TrainingPlanView = ({ dayPlans, initialDay, doneThisWeek = [], doneToday =
                 const pattern = metadata?.movement_pattern ?? null;
                 const stimulus = metadata?.stimulus_type ?? null;
                 const load = metadata?.load_level ?? null;
-                // Descanso con su unidad («90 s», «2 min»), como el resumen del editor y la app.
-                const info = [ex.rest ? restLabel(ex.rest) : null, category, exerciseType].filter(Boolean).join(" · ");
+                // Su músculo y el descanso con su unidad («90 s», «2 min»), sin partir; el tipo, en la ficha.
+                const info = [category, ex.rest ? `Descanso\u00a0${restLabel(ex.rest).replace(/ /g, "\u00a0")}` : null].filter(Boolean).join(" · ");
 
                 return (
                   <ListRow
@@ -231,8 +257,8 @@ const TrainingPlanView = ({ dayPlans, initialDay, doneThisWeek = [], doneToday =
                     // La miniatura se mueve con su clip de técnica (sobre la foto): al tocar la fila se abre la ficha.
                     leading={<ExerciseThumb image={usableImage(image)} video={video} name={ex.name} pattern={pattern} stimulus={stimulus} load={load} muscleGroup={category} size="sm" />}
                     title={<span className="line-clamp-2 whitespace-normal">{ex.name}</span>}
-                    subtitle={info ? <span className="block truncate">{info}</span> : undefined}
-                    value={<span className="tabular-nums">{ex.series} × {ex.reps}</span>}
+                    subtitle={info ? <span className="line-clamp-2">{info}</span> : undefined}
+                    value={<span className="tabular-nums">{`${ex.series}\u00a0×\u00a0${ex.reps}`}</span>}
                     chevron
                     onClick={() =>
                       setDetail({
@@ -252,29 +278,26 @@ const TrainingPlanView = ({ dayPlans, initialDay, doneThisWeek = [], doneToday =
                   />
                 );
               })}
-            </ListGroup>
+            </div>
+          ) : (
+            <p className="px-4 pb-2 type-subhead text-muted-foreground">Añade sus ejercicios con «Editar» y empiézala cuando quieras.</p>
           )}
-          {!hasExercises && <p className="px-1 type-subhead text-muted-foreground">Esta sesión no tiene ejercicios todavía.</p>}
           {personalizeButton(selectedPlan)}
         </section>
       );
     }
     if (selectedPlan?.type === "actividad") {
       return (
-        <section aria-label={`Detalle de ${sessionTitle(selectedPlan)}`} className="space-y-3">
-          {doneToday.includes(selectedPlan.day) ? (
-            <p role="status" className="flex min-h-12 items-center justify-center gap-2 rounded-full bg-primary/10 px-4 type-headline text-primary">
-              <Check className="h-4 w-4" aria-hidden />Actividad completada
-            </p>
-          ) : onOpenWorkout ? (
-            <Button type="button" variant="hero" size="lg" className="w-full" onClick={() => onOpenWorkout(selectedPlan.day)}>
-              Empezar actividad
-            </Button>
-          ) : null}
-          <ListGroup>
-            <ListRow icon={<Flame className="text-muted-foreground" />} title="Intensidad" value={selectedPlan.intensity} />
-            <ListRow icon={<Clock className="text-muted-foreground" />} title="Duración" value={selectedPlan.duration} />
-          </ListGroup>
+        <section aria-label={`Detalle de ${sessionTitle(selectedPlan)}`} className="pb-2">
+          <div className="px-4 pb-2 empty:hidden">
+            {doneToday.includes(selectedPlan.day) ? completed("Actividad completada") : onOpenWorkout ? (
+              <Button type="button" variant="hero" size="lg" className="w-full" onClick={() => onOpenWorkout(selectedPlan.day)}>
+                Empezar actividad
+              </Button>
+            ) : null}
+          </div>
+          <ListRow icon={<Flame className="text-muted-foreground" />} title="Intensidad" value={selectedPlan.intensity || "Libre"} />
+          <ListRow icon={<Clock className="text-muted-foreground" />} title="Duración" value={selectedPlan.duration || "Libre"} />
           {personalizeButton(selectedPlan)}
         </section>
       );
@@ -284,16 +307,36 @@ const TrainingPlanView = ({ dayPlans, initialDay, doneThisWeek = [], doneToday =
 
   return (
     // La columna centrada de 680 de Hoy y Nutrición, también en la web ancha (= Mac).
-    <div className="mx-auto flex w-full max-w-[680px] flex-col gap-5" onErrorCapture={handleImageError}>
+    <div className="mx-auto flex w-full max-w-[680px] flex-col gap-8" onErrorCapture={handleImageError}>
       <h2 className="sr-only">Entrenar</h2>
-      {/* En el móvil, bajo el título grande «Entrenar»; en escritorio la barra ya lleva su pista. */}
-      <p className="-mt-1 type-subhead text-muted-foreground md:hidden">Tus sesiones en orden. Hazlas el día que te venga bien.</p>
 
-      {tools}
+      {/* Cabecera: el modo del plan en una frase y, debajo, dos accesos tranquilos. */}
+      <div className="flex flex-col gap-4">
+        <p className="type-subhead text-muted-foreground">{planModeLine(dayPlans)}</p>
+        {(onEmptyWorkout || onOpenLibrary) && (
+          // Lado a lado si caben; si no (letra grande), uno bajo otro, sin cortar.
+          <div className="flex flex-wrap gap-2">
+            {onEmptyWorkout && <QuietPill icon={Play} label="Entreno vacío" onClick={onEmptyWorkout} />}
+            {onOpenLibrary && <QuietPill icon={BookOpen} label="Ejercicios" onClick={onOpenLibrary} />}
+          </div>
+        )}
+      </div>
 
       {sessions.length > 0 ? (
-        <section aria-labelledby="entrenar-tu-plan" className="flex flex-col gap-3">
-          <h3 id="entrenar-tu-plan" className="type-title3">Tu plan</h3>
+        <section aria-labelledby="entrenar-semana" className="flex flex-col gap-3">
+          <div className="flex items-baseline justify-between gap-3">
+            <h3 id="entrenar-semana" className="type-title3">Esta semana</h3>
+            {onEditPlan && (
+              <button
+                type="button"
+                aria-label="Editar plan"
+                onClick={() => { void hapticTap(); onEditPlan(); }}
+                className="-my-3 min-h-11 shrink-0 px-1 type-subhead font-semibold text-primary transition-opacity active:opacity-60"
+              >
+                Editar
+              </button>
+            )}
+          </div>
           {/* Lo hecho esta semana: un tramo por sesión, dorado si ya está hecha. */}
           <div className="flex items-center gap-3" aria-label={`Esta semana: ${doneCount} de ${sessions.length} sesiones`} role="group">
             <div aria-hidden="true" className="flex flex-1 gap-1.5">
@@ -301,22 +344,24 @@ const TrainingPlanView = ({ dayPlans, initialDay, doneThisWeek = [], doneToday =
                 <span key={session.day} className={cn("h-1.5 flex-1 rounded-full", doneThisWeek.includes(session.day) ? "bg-primary" : "bg-secondary")} />
               ))}
             </div>
-            <span aria-hidden="true" className="shrink-0 type-footnote tabular-nums text-muted-foreground">{`${doneCount} de ${sessions.length} esta semana`}</span>
+            <span aria-hidden="true" className="shrink-0 type-footnote tabular-nums text-muted-foreground">{`${doneCount} de ${sessions.length}`}</span>
           </div>
 
-          {/* La rutina en orden: la sesión elegida se abre debajo de su fila. */}
-          <ul data-session-list className="space-y-3">
+          {/* Una sola lista: la sesión elegida se abre debajo de su fila, en la misma tarjeta. */}
+          <ul data-session-list className="overflow-hidden rounded-card bg-card">
             {sessions.map((session, index) => {
               const expanded = expandedDay === session.day;
               return (
-                <li key={session.day} className="space-y-3">
+                <li key={session.day} className="relative">
+                  {/* El separador nace donde empieza el texto (16 + 56 + 14). */}
+                  {index > 0 && <span aria-hidden="true" className="absolute left-[86px] right-4 top-0 sep-t" />}
                   <SessionRow
                     number={index + 1}
                     plan={session}
-                    isNext={next?.day === session.day}
-                    done={doneThisWeek.includes(session.day)}
+                    state={stateOf(session)}
                     expanded={expanded}
                     photo={rowPhoto(session)}
+                    muscles={sessionMuscles(session, metaMuscle)}
                     onSelect={() => {
                       void hapticSelection();
                       // Tocar la abierta la pliega; tocar otra la abre.
@@ -331,12 +376,17 @@ const TrainingPlanView = ({ dayPlans, initialDay, doneThisWeek = [], doneToday =
         </section>
       ) : (
         // Plan sin sesiones: tarjeta sin borde con su icono en dorado y el siguiente paso (como la app).
-        <div className="flex min-h-[288px] flex-col items-center justify-center rounded-sheet bg-card px-5 py-6 text-center">
+        <div className="flex min-h-[260px] flex-col items-center justify-center rounded-sheet bg-card px-5 py-6 text-center">
           <span aria-hidden className="grid h-16 w-16 place-items-center rounded-full bg-primary/15 text-primary">
             <CalendarDays className="h-[26px] w-[26px]" strokeWidth={1.75} />
           </span>
           <p className="mt-4 type-headline">Tu plan aún no tiene sesiones</p>
           <p className="mt-1.5 max-w-[32ch] type-subhead text-muted-foreground">Edita tu rutina para añadir tus sesiones.</p>
+          {onEditPlan && (
+            <Button type="button" variant="secondary" className="mt-5" onClick={() => { void hapticTap(); onEditPlan(); }}>
+              Editar plan
+            </Button>
+          )}
         </div>
       )}
 
