@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Search, WifiOff } from "lucide-react";
 import { supabase } from "@/shared/integrations/supabase/client";
+import { fetchAllRows } from "@/shared/lib/fetchAllRows";
 import { Button } from "@/shared/components/ui/button";
 import { EmptyState } from "@/shared/components/ui/empty-state";
 import { SearchPill } from "@/shared/components/ui/search-pill";
@@ -75,10 +76,11 @@ const ExercisePicker = ({ open, onOpenChange, onPick, existing = [] }: Props) =>
     if (!open) return;
     let alive = true;
     setFailed(false);
-    void supabase
+    void fetchAllRows((from, to) => supabase
       .from("exercises")
       .select("id,name,muscle_group,exercise_type,movement_pattern,stimulus_type,load_level,image_url,video_url,tracking_mode,fatigue_level")
-      .order("name")
+      .order("name").order("id")
+      .range(from, to))
       .then(({ data, error }) => {
         if (!alive) return;
         if (error || !data) { setFailed(true); return; }

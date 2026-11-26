@@ -39,6 +39,7 @@ import { WithImageFallback } from "@/app/components/admin-library/WithImageFallb
 import CatalogImport from "@/app/components/admin-library/CatalogImport";
 import PlanVideos from "@/app/components/admin-library/PlanVideos";
 import ClipUpload from "@/app/components/admin-library/ClipUpload";
+import { fetchAllRows } from "@/shared/lib/fetchAllRows";
 
 /**
  * Versión del estilo visual actual. Debe coincidir con MEDIA_STYLE_VERSION de la
@@ -769,9 +770,10 @@ const ExerciseLibrary = () => {
   const MEDIA_COLUMNS ="media_style_version, image_generated_at, video_generated_at, media_error, video_priority";
 
   const fetchExercises = async () => {
-    const full = await supabase.from("exercises")
+    // Toda la biblioteca, no solo las primeras 1.000 filas que devuelve cada petición.
+    const full = await fetchAllRows((from, to) => supabase.from("exercises")
       .select(`${LEGACY_COLUMNS}, ${MEDIA_COLUMNS}`)
-      .order("muscle_group").order("recommended_order").order("name");
+      .order("muscle_group").order("recommended_order").order("name").order("id").range(from, to));
 
     if (!full.error) {
       setMediaColumnsReady(true);
@@ -780,10 +782,10 @@ const ExerciseLibrary = () => {
       return;
     }
 
-    console.warn("La biblioteca no pudo leer las columnas de medios; falta la migración", full.error.message);
-    const legacy = await supabase.from("exercises")
+    console.warn("La biblioteca no pudo leer las columnas de medios; falta la migración", errorMessage(full.error));
+    const legacy = await fetchAllRows((from, to) => supabase.from("exercises")
       .select(LEGACY_COLUMNS)
-      .order("muscle_group").order("recommended_order").order("name");
+      .order("muscle_group").order("recommended_order").order("name").order("id").range(from, to));
     setMediaColumnsReady(false);
     // Sin el dato de estilo no podemos afirmar que un medio sea antiguo, así que
     // lo damos por actual: no marcamos la biblioteca entera como pendiente.

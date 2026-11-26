@@ -16,6 +16,7 @@ vi.mock("@/shared/integrations/supabase/client", () => {
     const chain: Record<string, unknown> = {};
     chain.order = () => chain;
     chain.limit = () => chain;
+    chain.range = () => chain;
     chain.single = result;
     chain.then = (resolve: (v: unknown) => unknown, reject: (e: unknown) => unknown) => result().then(resolve, reject);
     return chain;

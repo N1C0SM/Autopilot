@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { bulkImportExerciseFiles, assignDriveFileToExercise, ensureBaseExerciseFolders, onDriveDeleted, onDriveFileUploaded, onDriveRenamed, syncLibraryToDrive } from "@/shared/lib/exerciseDrive";
 import { MUSCLE_GROUPS } from "@/shared/types/training";
 import { supabase } from "@/shared/integrations/supabase/client";
+import { fetchAllRows } from "@/shared/lib/fetchAllRows";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Textarea } from "@/shared/components/ui/textarea";
@@ -191,7 +192,8 @@ const LibraryDrive = () => {
   const [exerciseOptions, setExerciseOptions] = useState<{ id: string; name: string }[]>([]);
   const [assignTo, setAssignTo] = useState("");
   useEffect(() => {
-    supabase.from("exercises").select("id, name").order("name").then(({ data }) => setExerciseOptions((data as { id: string; name: string }[]) || []));
+    void fetchAllRows((from, to) => supabase.from("exercises").select("id, name").order("name").order("id").range(from, to))
+      .then(({ data }) => setExerciseOptions(data as { id: string; name: string }[]));
   }, []);
   const inExerciseTree = (id: string | null | undefined) => {
     let cur = books.find((b) => b.id === id);
