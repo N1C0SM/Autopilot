@@ -248,6 +248,37 @@ describe("routine navigation and saved session dates", () => {
     expect(mocks.writes.some((write) => write.table === "day_completions")).toBe(false);
   });
 
+  it("entreno profesional: tabla Serie · Anterior · kg · Reps, avance discreto abajo y «Saltar» termina el descanso", async () => {
+    render(<WorkoutTracker userId="user" dayPlans={[{ ...plan("Lunes", "Remo"), exercises: [...(plan("Lunes", "Remo").exercises || []), ...(plan("Lunes", "Press").exercises || [])] }]} initialDay="Lunes" />);
+    fireEvent.click(await screen.findByRole("button", { name: "Empezar entrenamiento" }));
+    // Una sola tabla a la vista, con sus columnas, y el avance en la barra de abajo.
+    for (const column of ["Serie", "Anterior", "kg", "Reps"]) expect(screen.getByText(column)).toBeInTheDocument();
+    const progress = () => screen.getByLabelText("Tiempo de sesión").nextElementSibling?.textContent;
+    expect(progress()).toBe("0 de 2 series");
+    expect(screen.queryByText("Tiempo transcurrido")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Marcar serie 1 de Remo" }));
+    expect(progress()).toBe("1 de 2 series");
+    expect(screen.getByRole("timer")).toHaveTextContent("1:00");
+    fireEvent.click(screen.getByRole("button", { name: "Saltar descanso" }));
+    expect(screen.queryByRole("timer")).not.toBeInTheDocument();
+    expect(readActiveWorkout("user")?.restEndsAt).toBeNull();
+  });
+  it("los ejercicios numerados abren cada ejercicio y el «···» del ejercicio enlaza la superserie", async () => {
+    render(<WorkoutTracker userId="user" dayPlans={[{ ...plan("Lunes", "Remo"), exercises: [...(plan("Lunes", "Remo").exercises || []), ...(plan("Lunes", "Press").exercises || [])] }]} initialDay="Lunes" />);
+    fireEvent.click(await screen.findByRole("button", { name: "Empezar entrenamiento" }));
+    act(() => { setWorkoutView("user", "focus"); });
+    expect(screen.getByRole("tab", { name: "1. Remo" })).toHaveAttribute("aria-selected", "true");
+    fireEvent.click(screen.getByRole("tab", { name: "2. Press" }));
+    await waitFor(() => expect(screen.getByRole("textbox", { name: "Peso de la serie 1 de Press" })).toBeVisible());
+    fireEvent.click(screen.getByRole("tab", { name: "1. Remo" }));
+    const options = await screen.findByRole("button", { name: "Opciones de Remo" });
+    fireEvent.keyDown(options, { key: "Enter" });
+    for (const item of ["Ver técnica", "Cambiar ejercicio"]) expect(await screen.findByRole("menuitem", { name: item })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("menuitem", { name: "Superserie con Press" }));
+    await waitFor(() => expect(readActiveWorkout("user")?.supersetLinks).toEqual({ Remo: true }));
+    expect(screen.getByText("Superserie 1/2")).toBeInTheDocument();
+  });
+
   it("permite marcar y desmarcar un día de actividad", async () => {
     const actividad: DayPlan = { day: "Viernes", type: "actividad", sport: "Running", intensity: "Media", duration: "30 min" };
     render(<WorkoutTracker userId="user" dayPlans={[actividad]} initialDay="Viernes" />);

@@ -43,6 +43,7 @@ Antes de escribir una pieza nueva, busca aquí. Si no encaja, amplía el compone
 - **`TrainingOverviewCard`** — cifra protagonista con halo + datos secundarios + gráfica en la misma tarjeta.
 - **`RecordCelebration`** — celebración de récord a pantalla completa (destello dorado, cifra, háptica).
 - **`AccountSwitcher`** (Ajustes) y **`WhoIsTraining`** («¿Quién entrena?») — cuentas del dispositivo en filas píldora con avatar circular; solo apps nativas (`supportsMultipleAccounts()`).
+- **Entreno activo** (`WorkoutTracker` en la web, `WorkoutView` en la app) — un foco por pantalla. Arriba «‹ Salir · sesión · ···» (añadir ejercicio, vista, «Más opciones por serie», descartar). Ejercicio a ejercicio: los ejercicios numerados en círculos de 44 (aro dorado el que ves, check sobre tinte dorado los hechos), el ejercicio en una portada de 28 con su clip o su foto (sin foto, su músculo en la silueta) y la ficha en (i), el nombre en Title 1 con su «···» (ver técnica, cambiar, superserie) y solo su tabla **Serie · Anterior · kg · Reps · ✓** (celdas de 44 con radio 14; hecha = fila dorada al 15 % sin cajas; la actual con filo dorado; calentamiento «C»). Pie fijo: el descanso en una barra tranquila con −15 s, +15 s y «Saltar», y Pausar · tiempo («3 de 12 series») · Finalizar, la única acción dorada. `ExerciseSwap` admite `open`/`trigger={false}` para abrirse desde un «···».
 
 ## Acceso (`src/app/components/auth/AuthScreenParts.tsx`)
 

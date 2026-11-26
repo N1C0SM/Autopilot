@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeftRight, Check, Dumbbell } from "lucide-react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import {
@@ -21,6 +21,11 @@ interface Props {
   movementPattern?: string | null;
   muscleGroup?: string | null;
   onSelect: (name: string | null) => void;
+  /** Apertura controlada desde fuera (el «···» del ejercicio en el entreno). */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** Sin botón propio: la hoja la abre otro control (`open`). */
+  trigger?: boolean;
 }
 
 type Option = { name: string; image: string | null; video: string | null; pattern: string | null; stimulus: string | null; load: string | null };
@@ -37,8 +42,13 @@ export function isAllowedForStyle(style: string, type: string | null, name: stri
   return true;
 }
 
-export function ExerciseSwap({ original, current, movementPattern, muscleGroup, onSelect }: Props) {
-  const [open, setOpen] = useState(false);
+export function ExerciseSwap({ original, current, movementPattern, muscleGroup, onSelect, open: openProp, onOpenChange, trigger = true }: Props) {
+  const [innerOpen, setInnerOpen] = useState(false);
+  const open = openProp ?? innerOpen;
+  const setOpen = (value: boolean) => {
+    if (openProp === undefined) setInnerOpen(value);
+    onOpenChange?.(value);
+  };
   const [loading, setLoading] = useState(false);
   const [options, setOptions] = useState<Option[] | null>(null);
 
@@ -84,6 +94,12 @@ export function ExerciseSwap({ original, current, movementPattern, muscleGroup, 
     }
   };
 
+  // Al abrirse (con su botón o desde fuera) se buscan las alternativas una sola vez.
+  useEffect(() => {
+    if (open) void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
   const choose = (name: string | null) => {
     onSelect(name);
     setOpen(false);
@@ -95,8 +111,8 @@ export function ExerciseSwap({ original, current, movementPattern, muscleGroup, 
     // The trigger lives inside the exercise row's <button>: no click from the trigger or the
     // portalled sheet (overlay included) may reach it, or the workout would start.
     <span className="contents" onClick={stop} onKeyDown={stop}>
-      <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (v) void load(); }}>
-        <DialogTrigger asChild>
+      <Dialog open={open} onOpenChange={setOpen}>
+        {trigger && <DialogTrigger asChild>
           <span
             role="button"
             tabIndex={0}
@@ -106,7 +122,7 @@ export function ExerciseSwap({ original, current, movementPattern, muscleGroup, 
           >
             <ArrowLeftRight className="h-5 w-5" strokeWidth={2} />
           </span>
-        </DialogTrigger>
+        </DialogTrigger>}
         <DialogContent className="gap-6 sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="type-title2 sm:type-title2">Cambiar ejercicio</DialogTitle>

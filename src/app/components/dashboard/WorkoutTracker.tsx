@@ -4,11 +4,12 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Check, ChevronLeft, CloudOff, Dumbbell, Flame, Clock, CalendarDays,
+  Check, ChevronLeft, CloudOff, Flame, Clock, CalendarDays,
   TrendingDown, Plus, X, Info, Play, Pause, MoreHorizontal, ChevronDown,
 } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Spinner } from "@/shared/components/ui/spinner";
+import { cn } from "@/shared/lib/utils";
 import { EmptyState } from "@/shared/components/ui/empty-state";
 import { Progress } from "@/shared/components/ui/progress";
 import { ListGroup, ListRow } from "@/shared/components/ui/list";
@@ -109,13 +110,26 @@ const plural = (n: number, one: string, many: string) => `${n.toLocaleString("es
 /** Pesos en español: «62,5» (no «62.5»). */
 const decimalComma = (text: string) => text.replace(/(\d)\.(\d)/g, "$1,$2");
 
-// Misma rejilla para la cabecera, las series y sus bajadas: n.º, previa, carga, valor, check.
-const SET_GRID = "grid grid-cols-[24px_52px_minmax(0,1fr)_minmax(0,1fr)_44px] items-center gap-2";
-const NUMBER_FIELD = "scroll-mb-40 h-11 w-full min-w-0 rounded-[10px] border-0 bg-secondary px-1 text-center font-rounded type-headline tabular-nums outline-none transition-colors duration-150 placeholder:font-normal placeholder:text-muted-foreground/60 focus:bg-accent focus:ring-1 focus:ring-inset focus:ring-primary/40 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-inset aria-[invalid=true]:ring-destructive";
-// La serie en curso: cifras más grandes que el resto.
-const CURRENT_FIGURE = "!text-[22px] !font-bold !leading-7";
-// Cápsula de 34 pt con el objetivo táctil ampliado a 44 pt.
-const CAPSULE_HIT = "relative before:absolute before:inset-x-0 before:-inset-y-[5px] before:content-['']";
+// Tabla de series como Hevy, igual en la app: Serie · Anterior · kg · Reps · ✓, con la misma
+// rejilla para la cabecera, las series y sus bajadas. Celdas de 44 pt (redondeo de celda, 14).
+const SET_GRID = "grid grid-cols-[32px_64px_minmax(0,1fr)_minmax(0,1fr)_44px] items-center gap-2";
+const NUMBER_FIELD = "scroll-mb-48 h-11 w-full min-w-0 rounded-chip border-0 bg-secondary px-1 text-center type-headline tabular-nums outline-none transition-colors duration-150 placeholder:font-normal placeholder:text-muted-foreground/60 focus:bg-accent focus:ring-1 focus:ring-inset focus:ring-primary/40 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-inset aria-[invalid=true]:ring-destructive";
+// Serie hecha: la fila entera se tiñe de dorado y las cifras quedan sobre el tinte, sin caja.
+const DONE_FIELD = "bg-transparent";
+/** «62,5 × 10» con espacios finos que no se parten. */
+const TIMES = "\u202F×\u202F";
+
+/** Columnas cortas de la tabla («kg», «Reps»), como `SetTableHeader` en la app. */
+const setColumns = (config: { weightLabel: string; valueLabel: string; fixedBodyweight?: boolean }) => ({
+  load: config.fixedBodyweight ? "PC"
+    : /lastre/i.test(config.weightLabel) ? "Lastre"
+      : /asist/i.test(config.weightLabel) ? "Asist."
+        : /km/i.test(config.weightLabel) ? "km" : "kg",
+  value: /seg/i.test(config.valueLabel) ? "Seg" : /min/i.test(config.valueLabel) ? "Min" : "Reps",
+});
+
+/** Descanso en «1:05». */
+const restClock = (seconds: number) => `${Math.floor(seconds / 60)}:${(seconds % 60).toString().padStart(2, "0")}`;
 
 const getMuscleIntensity = (sets: number) => sets >= 6
   ? MUSCLE_INTENSITY.high
@@ -263,6 +277,10 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
   // Ejercicios añadidos durante la sesión: viven solo en esta sesión, nunca en la rutina guardada.
   const [sessionExtras, setSessionExtras] = useState<GymExerciseEntry[]>([]);
   const [extraPickerOpen, setExtraPickerOpen] = useState(false);
+  // «Cambiar ejercicio» desde el «···» del ejercicio: abre su hoja de alternativas.
+  const [swapTarget, setSwapTarget] = useState<string | null>(null);
+  // Números del carrusel: el ejercicio que ves siempre queda a la vista.
+  const stepRefs = useRef<Record<number, HTMLButtonElement | null>>({});
   const currentPlan = basePlan && sessionExtras.length > 0
     ? { ...basePlan, exercises: [...(basePlan.exercises ?? []), ...sessionExtras] }
     : basePlan;
@@ -649,6 +667,8 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
     setRestTimer(next);
     if (next > restTarget) setRestTarget(next);
   };
+  // «Saltar»: el descanso termina ya (en una superserie, se vuelve al primero con series pendientes).
+  const skipRest = () => setRestTimer(null);
 
   // Pantalla siempre encendida durante la sesión
   useEffect(() => {
@@ -1265,16 +1285,27 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
   const listMode = started && !focusMode;
   const exerciseListClass = started && !focusMode
     ? workoutLayout === "columns" ? "grid grid-cols-1 gap-3 md:grid-cols-2" : "flex flex-col gap-3"
-    : focusMode ? "" : "overflow-hidden rounded-media bg-card";
+    : focusMode ? "" : "overflow-hidden rounded-card bg-card";
   const paused = started && pausedAt !== null;
   const currentExerciseIndex = (activePlan?.exercises || []).findIndex((exercise) => {
     const sets = exerciseLogs[exercise.name] || [];
     return !(sets.length > 0 && sets.every((set) => set.done));
   });
+  const sessionName = activePlan?.routine_name?.trim() || trainingTitle || "Entrenamiento";
+  const exerciseCount = currentPlan?.exercises?.length ?? 0;
+  // Avance en la barra de abajo, discreto: «3 de 12 series».
+  const seriesProgress = `${completedSets.toLocaleString("es-ES")} de ${plural(totalSets, "serie", "series")}`;
   // Si el usuario eligió «Ejercicio a ejercicio», nunca caemos a la lista vertical en plena sesión.
   useEffect(() => {
     if (started && workoutView === "focus" && expandedExercise === null && planExercises?.length) setExpandedExercise(0);
   }, [started, workoutView, expandedExercise, planExercises?.length]);
+  // El número del ejercicio que ves se desliza a la vista en el carrusel.
+  useEffect(() => {
+    if (!focusMode || expandedExercise === null) return;
+    stepRefs.current[expandedExercise]?.scrollIntoView?.({ block: "nearest", inline: "center", behavior: prefersReducedMotion ? "auto" : "smooth" });
+  }, [focusMode, expandedExercise, prefersReducedMotion]);
+  // Las hojas que se abren desde un menú esperan a que el menú se cierre (foco y capas limpias).
+  const afterMenu = (open: () => void) => { window.setTimeout(open, 0); };
 
   return (
     // En sesión ocupa la pantalla entera (el shell no pone barra ni pestañas): la barra
@@ -1295,10 +1326,10 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
       )}
       {started && !workoutCompleted && (
         // -mt-2 compensa el pt-2 del contenedor de sección: la barra nace pegada al borde superior.
+        // Arriba solo «Salir», el nombre de la sesión y «···»: el avance vive, discreto, en la barra de abajo.
         <div className="sticky top-0 z-30 -mt-2">
           <NavBar
-            title={activePlan?.routine_name?.trim() || trainingTitle || "Entrenamiento"}
-            subtitle={<span className="tabular-nums">{completedSets} de {plural(totalSets, "serie", "series")}</span>}
+            title={sessionName}
             titleVisible={!listMode}
             titleAsHeading={!listMode}
             leading={
@@ -1314,20 +1345,14 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
             }
             trailing={
               <>
-                {/* Estado del guardado automático, a la izquierda del «···». */}
+                {/* El guardado es automático y callado: solo se ve si falla. */}
                 {saveStatus === "error" && (
                   <span role="status" className="flex h-11 w-11 items-center justify-center text-destructive">
                     <CloudOff className="h-5 w-5" aria-hidden="true" />
                     <span className="sr-only">Error al guardar</span>
                   </span>
                 )}
-                {(saveStatus === "pending" || saveStatus === "saving") && (
-                  <span className="flex h-11 w-11 items-center justify-center">
-                    <Spinner size="sm" aria-live="polite" label={saveStatus === "pending" ? "Pendiente de guardar" : "Guardando…"} />
-                  </span>
-                )}
-                {saveStatus === "saved" && savedAt && <span role="status" className="sr-only">Guardado</span>}
-                {/* Opciones claras: cambiar de vista y de detalle; descartar, al final y en rojo. */}
+                {/* Opciones de la sesión: añadir, cambiar de vista y de detalle; descartar, al final y en rojo. */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button
@@ -1343,14 +1368,18 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onSelect={() => setWorkoutView(userId, workoutView === "list" ? "focus" : "list")}>
+                    {/* Todas las filas en la columna del check de «Más opciones por serie», como en iOS. */}
+                    <DropdownMenuItem className="pl-10 md:pl-8" disabled={paused} onSelect={() => afterMenu(() => setExtraPickerOpen(true))}>
+                      Añadir ejercicio
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="pl-10 md:pl-8" onSelect={() => setWorkoutView(userId, workoutView === "list" ? "focus" : "list")}>
                       {workoutView === "list" ? "Ver ejercicio a ejercicio" : "Ver toda la sesión"}
                     </DropdownMenuItem>
                     <DropdownMenuCheckboxItem checked={advanced} onCheckedChange={(on) => setWorkoutAdvanced(userId, on === true)}>
                       Más opciones por serie
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => setDiscardOpen(true)}>
+                    <DropdownMenuItem className="pl-10 text-destructive focus:text-destructive md:pl-8" onSelect={() => setDiscardOpen(true)}>
                       Descartar entrenamiento
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -1386,7 +1415,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
         <div
           role="tablist"
           aria-label="Elige la sesión"
-          className="no-scrollbar mb-4 flex gap-1 overflow-x-auto rounded-media bg-card p-1.5"
+          className="no-scrollbar mb-4 flex gap-1 overflow-x-auto rounded-card bg-card p-1.5"
         >
           {routineSessions(dayPlans).map((session, index) => {
             const active = session.day === selectedDay;
@@ -1408,12 +1437,12 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                   setCompletionReady(false);
                   setSelectedDay(session.day);
                 }}
-                className={`flex h-[50px] min-w-12 flex-1 shrink-0 flex-col items-center justify-center gap-0.5 rounded-media px-1 transition-colors duration-150 disabled:opacity-40 ${
-                  active ? "bg-primary text-primary-foreground" : "text-muted-foreground active:bg-accent"
+                className={`flex min-h-[52px] min-w-12 flex-1 shrink-0 flex-col items-center justify-center gap-0.5 rounded-full px-2 transition-colors duration-150 disabled:opacity-40 ${
+                  active ? "btn-gold bg-primary text-primary-foreground" : "text-muted-foreground active:bg-accent"
                 }`}
               >
                 <span className="type-subhead font-semibold tabular-nums">{index + 1}</span>
-                <span className="max-w-full truncate text-[11px] leading-none">{name}</span>
+                <span className="max-w-full truncate type-caption1">{name}</span>
               </button>
             );
           })}
@@ -1493,7 +1522,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                   onClick={() => { void hapticTap(); startWorkout(0); }}
                   disabled={!logsReady || loadError}
                   size="lg"
-                  className="mt-6 h-14 w-full gap-2 rounded-full text-[17px] font-semibold active:scale-[0.98]"
+                  className="mt-6 h-14 w-full gap-2 rounded-full type-headline active:scale-[0.98]"
                 >
                   <Play className="h-5 w-5 fill-current" aria-hidden />
                   Empezar entrenamiento
@@ -1518,7 +1547,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                 className="min-h-[50dvh] md:min-h-0"
                 icon={CloudOff}
                 title="No pudimos cargar tu entrenamiento"
-                description="No hemos cambiado ni reemplazado tus registros. Comprueba la conexión y vuelve a intentarlo."
+                description="Tus registros siguen intactos. Comprueba la conexión y vuelve a intentarlo."
                 action={
                   <Button type="button" variant="plain" onClick={() => { void hapticTap(); setReloadLogs((value) => value + 1); }}>
                     Reintentar
@@ -1557,7 +1586,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
             </div>
           )}
 
-          {/* Modo foco: carrusel de toda la sesión arriba y el ejercicio activo en grande debajo */}
+          {/* Ejercicio a ejercicio: los ejercicios numerados arriba y el ejercicio que toca, grande. */}
           {focusMode && !workoutCompleted && completionReady && !loadError && expandedExercise !== null && (() => {
             const active = currentPlan.exercises?.[expandedExercise];
             if (!active) return null;
@@ -1567,53 +1596,36 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
             const vid = meta?.video_url || active.video_url;
             const total = currentPlan.exercises?.length ?? 0;
             const activeName = swaps[active.name] || active.name;
-            // El movimiento en bucle corto (como un GIF) sobre la foto, que hace de portada hasta el
-            // primer fotograma; con «reducir movimiento» o ahorro de datos, la foto fija. Sin vídeo,
-            // la foto sola. Igual que `FocusViewer` en la app.
-            const moving = Boolean(loopUrl(vid)) && loopsAllowed;
             const activeMuscle = active.muscle_group || meta?.muscle_group;
             return (
-              <div className="mx-auto w-full max-w-[680px] space-y-3">
-                {/* Carrusel arriba y el movimiento en grande debajo: se ve en qué ejercicio estás. */}
-                <div className="no-scrollbar -mx-4 flex items-center gap-2.5 overflow-x-auto px-4 pb-1 pt-2">
-                  <div role="tablist" aria-label="Ejercicios de la sesión" className="flex shrink-0 gap-2.5">
+              <div className="mx-auto w-full max-w-[680px]">
+                {/* Carrusel numerado: el que ves con aro dorado, los hechos con su check y el resto en gris.
+                    Tocar un número abre ese ejercicio; deslizar la foto hace lo mismo. */}
+                <div className="no-scrollbar -mx-4 overflow-x-auto px-4">
+                  <div role="tablist" aria-label="Ejercicios de la sesión" className="flex w-max gap-2 py-0.5">
                     {(currentPlan.exercises || []).map((item, idx) => {
-                      const m = exerciseMetadata.byId[item.exercise_id] || exerciseMetadata.byName[item.name];
                       const itemSets = exerciseLogs[item.name] || [];
                       const done = itemSets.length > 0 && itemSets.every((set) => set.done);
                       const isActive = idx === expandedExercise;
                       return (
                         <button
                           key={`${item.name}-${idx}`}
+                          ref={(node) => { stepRefs.current[idx] = node; }}
                           type="button"
                           role="tab"
                           aria-selected={isActive}
-                          aria-label={`${idx + 1}. ${swaps[item.name] || item.name}${done ? " · hecho" : ""}`}
-                          onClick={() => { setExpandedExercise(idx); void hapticTap(); }}
-                          className={`relative shrink-0 rounded-[14px] p-0.5 transition-opacity duration-150 active:opacity-60 ${isActive ? "ring-2 ring-inset ring-primary" : "opacity-60"}`}
+                          aria-label={`${idx + 1}. ${swaps[item.name] || item.name}${done ? ", hecho" : ""}`}
+                          onClick={() => { if (!isActive) { setExpandedExercise(idx); void hapticSelection(); } }}
+                          className={cn(
+                            "flex h-11 w-11 shrink-0 items-center justify-center rounded-full type-headline tabular-nums transition-[transform,background-color,color] duration-200 active:scale-95 [touch-action:manipulation]",
+                            isActive ? "bg-card text-primary ring-2 ring-inset ring-primary" : done ? "bg-primary/15 text-primary" : "bg-card text-muted-foreground",
+                          )}
                         >
-                          {/* Sin foto, la huella del ejercicio (su patrón o el deducido): cada uno el suyo, nunca el mismo icono.
-                              Quietas: en el carrusel solo se mueve el ejercicio grande de abajo. */}
-                          <ExerciseThumb image={m?.image_url || item.image_url} name={item.name} muscleGroup={item.muscle_group || m?.muscle_group} completed={done} />
-                          {/* Número de orden en la esquina: dorado el que estás haciendo y los hechos. */}
-                          <span aria-hidden="true" className={`absolute -left-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full px-1 type-caption1 font-bold tabular-nums ring-2 ring-background ${isActive || done ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"}`}>
-                            {idx + 1}
-                          </span>
+                          {done && !isActive ? <Check className="h-5 w-5" strokeWidth={2.5} aria-hidden="true" /> : idx + 1}
                         </button>
                       );
                     })}
                   </div>
-                  <button
-                    type="button"
-                    aria-label="Añadir ejercicio a esta sesión"
-                    disabled={paused}
-                    onClick={() => { void hapticTap(); setExtraPickerOpen(true); }}
-                    className="shrink-0 rounded-[14px] p-0.5 transition-opacity duration-150 active:opacity-60 disabled:opacity-40"
-                  >
-                    <span className="flex h-12 w-12 items-center justify-center rounded-[10px] bg-secondary text-primary">
-                      <Plus className="h-5 w-5" strokeWidth={2} aria-hidden="true" />
-                    </span>
-                  </button>
                 </div>
                 <motion.div
                   key={expandedExercise}
@@ -1625,64 +1637,52 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                   dragElastic={0.35}
                   onDragEnd={(_, info) => {
                     const swipe = info.offset.x + info.velocity.x * 0.2;
-                    if (swipe < -60 && expandedExercise < total - 1) { setExpandedExercise(expandedExercise + 1); void hapticTap(); }
-                    else if (swipe > 60 && expandedExercise > 0) { setExpandedExercise(expandedExercise - 1); void hapticTap(); }
+                    if (swipe < -60 && expandedExercise < total - 1) { setExpandedExercise(expandedExercise + 1); void hapticSelection(); }
+                    else if (swipe > 60 && expandedExercise > 0) { setExpandedExercise(expandedExercise - 1); void hapticSelection(); }
                   }}
                   style={{ touchAction: "pan-y" }}
                   aria-label="Desliza para cambiar de ejercicio"
-                  // Foto grande siempre; sin foto, el ejercicio por su músculo en la silueta (nunca un hueco).
-                  className="relative aspect-[4/3] max-h-[26dvh] w-full overflow-hidden rounded-card bg-card [@media(max-height:700px)]:max-h-[22dvh] md:max-h-[40dvh] md:cursor-grab md:active:cursor-grabbing">
+                  // El ejercicio en grande: su clip en bucle sobre la foto; sin foto, el ejercicio por su
+                  // músculo en la silueta (nunca un hueco). Portada de 28, como las de Hoy.
+                  className="relative mt-3 aspect-[16/10] max-h-[32dvh] w-full overflow-hidden rounded-sheet bg-card md:max-h-[340px] md:cursor-grab md:active:cursor-grabbing">
                   {img ? (
                     <img src={img} alt={activeName} draggable={false} decoding="async" onLoad={noteImageShown} {...{ fetchpriority: "high" }} loading="eager" className="h-full w-full object-cover" />
                   ) : (
-                    <div className="pointer-events-none flex h-full w-full items-center justify-center px-6 py-3">
-                      <MuscleMap primary={activeMuscle ? [activeMuscle] : []} size={64} dots={false} />
+                    <div className="pointer-events-none flex h-full w-full items-center justify-center px-6 py-4">
+                      <MuscleMap primary={activeMuscle ? [activeMuscle] : []} size={84} dots={false} />
                     </div>
                   )}
                   <ExerciseLoop key={vid ?? active.name} src={vid} poster={img} priority />
-                  {/* Posición en la sesión, como el contador de la app. */}
-                  <span aria-hidden="true" className="pointer-events-none absolute bottom-2.5 right-2.5 rounded-full bg-background/70 px-2.5 py-1 type-footnote font-semibold tabular-nums text-foreground backdrop-blur-sm">
-                    {expandedExercise + 1} / {total}
-                  </span>
-                  {vid && (
-                    <button
-                      type="button"
-                      aria-label={`Ver vídeo de técnica de ${activeName}`}
-                      onClick={() => { void hapticTap(); setTechnique({ name: active.name, image: img, video: vid, series: active.series != null ? String(active.series) : undefined, reps: active.reps != null ? String(active.reps) : undefined, rest: active.rest, category: active.muscle_group || meta?.muscle_group, type: active.exercise_type || meta?.exercise_type, pattern: meta?.movement_pattern || inferMotionPattern(active.name, active.muscle_group || meta?.muscle_group), stimulus: meta?.stimulus_type, load: meta?.load_level }); }}
-                      className={`material absolute flex items-center justify-center rounded-full text-foreground transition-opacity active:opacity-60 ${moving ? "bottom-2 left-2 h-11 w-11" : "inset-0 m-auto h-14 w-14"}`}
-                    >
-                      <Play className="h-5 w-5 fill-current" aria-hidden="true" />
-                    </button>
-                  )}
+                  {/* La ficha de técnica, a un toque y sin tapar el ejercicio. */}
+                  <button
+                    type="button"
+                    aria-label={`Ver técnica de ${activeName}`}
+                    onClick={() => { void hapticTap(); setTechnique({ name: active.name, image: img, video: vid, series: active.series != null ? String(active.series) : undefined, reps: active.reps != null ? String(active.reps) : undefined, rest: active.rest, category: active.muscle_group || meta?.muscle_group, type: active.exercise_type || meta?.exercise_type, pattern: meta?.movement_pattern || inferMotionPattern(active.name, active.muscle_group || meta?.muscle_group), stimulus: meta?.stimulus_type, load: meta?.load_level }); }}
+                    className="absolute right-1.5 top-1.5 flex h-11 w-11 items-center justify-center transition-opacity active:opacity-60"
+                  >
+                    <span className="material flex h-9 w-9 items-center justify-center rounded-full text-foreground">
+                      <Info className="h-5 w-5" strokeWidth={1.75} aria-hidden="true" />
+                    </span>
+                  </button>
                 </motion.div>
               </div>
             );
           })()}
 
-          {/* Exercise list: lista agrupada en el resumen; en sesión, solo el ejercicio en foco */}
+          {/* Ejercicios: lista agrupada antes de empezar; en sesión, solo el ejercicio en foco o todos en tarjetas */}
           {!workoutCompleted && completionReady && !loadError && (
           <section className={started ? "mx-auto w-full max-w-[680px]" : "pb-28 md:pb-0"}>
           {listMode && (
-            // Cabecera de la sesión (diseño ChatGPT): estado, título grande y avance por ejercicios.
+            // Toda la sesión: el nombre grande y el avance por ejercicios; el tiempo y «Pausar», abajo.
             <header className="px-1 pb-4">
-              <p className={`flex items-center gap-1.5 type-footnote font-semibold ${paused ? "text-muted-foreground" : "text-primary"}`}>
-                {paused ? <Pause className="h-4 w-4" aria-hidden="true" /> : <Dumbbell className="h-4 w-4" aria-hidden="true" />}
-                {paused ? "Entrenamiento en pausa" : "Entrenamiento en curso"}
-              </p>
-              <h1 className="mt-1 line-clamp-2 type-title1">
-                {activePlan?.routine_name?.trim() || trainingTitle || "Entrenamiento"}
-              </h1>
-              <p className="mt-1 type-subhead tabular-nums text-muted-foreground">
-                {plural(currentPlan.exercises?.length ?? 0, "ejercicio", "ejercicios")} · {completedSets} de {plural(totalSets, "serie", "series")}
-              </p>
-              {/* Avance por ejercicios; el tiempo y «Pausar» viven en la barra de abajo. */}
+              <h1 className="line-clamp-2 type-title1">{sessionName}</h1>
               <div className="mt-3 flex items-center gap-3">
                 <Progress value={progressPercent} aria-valuenow={Math.round(progressPercent)} aria-label="Avance de la sesión" className="h-1.5 flex-1 [&>div]:bg-primary" />
-                <span className="shrink-0 type-footnote tabular-nums text-muted-foreground">{completedExercises} de {plural(currentPlan.exercises?.length ?? 0, "ejercicio", "ejercicios")}</span>
+                <span className="shrink-0 type-footnote tabular-nums text-muted-foreground">{completedExercises} de {plural(exerciseCount, "ejercicio", "ejercicios")}</span>
               </div>
             </header>
           )}
-          {!focusMode && !started && (currentPlan.exercises?.length ?? 0) > 0 && (
+          {!started && exerciseCount > 0 && (
             <h3 className="px-4 pb-2 type-title3 md:px-0">Ejercicios</h3>
           )}
           <div className={`${exerciseListClass} ${paused ? "pointer-events-none opacity-40 transition-opacity" : ""}`} aria-disabled={paused || undefined}>
@@ -1710,6 +1710,29 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
             const exerciseMotionPattern = exercisePattern || inferMotionPattern(ex.name, exerciseCategory);
             const exerciseStimulus = metadata?.stimulus_type ?? null;
             const exerciseLoad = metadata?.load_level ?? null;
+            const displayName = swaps[ex.name] || ex.name;
+            const exerciseMeta = <>{plural(ex.series, "serie", "series")} · {ex.reps} reps · {ex.rest}</>;
+
+            // Antes de empezar, la lista solo informa: cada fila abre la sesión en ese ejercicio.
+            if (!started) {
+              return (
+                <button
+                  key={`${selectedDay}-${i}`}
+                  type="button"
+                  onClick={() => { void hapticTap(); startWorkout(i); }}
+                  className="flex w-full items-center gap-3 pl-3 text-left transition-colors duration-150 active:bg-accent [touch-action:manipulation]"
+                >
+                  <span className="relative shrink-0">
+                    <ExerciseThumb image={metadata?.image_url || ex.image_url} video={exerciseVideo} name={ex.name} pattern={exerciseMotionPattern} stimulus={exerciseStimulus} load={exerciseLoad} muscleGroup={exerciseCategory} completed={allDone} />
+                  </span>
+                  <span className={`flex min-h-[68px] min-w-0 flex-1 flex-col justify-center py-2 pr-4 ${i > 0 ? "sep-t" : ""}`}>
+                    <span className={`line-clamp-2 type-headline ${allDone ? "text-muted-foreground" : ""}`}>{displayName}</span>
+                    <span className="mt-0.5 type-footnote tabular-nums text-muted-foreground">{exerciseMeta}</span>
+                  </span>
+                </button>
+              );
+            }
+
             const trackingConfig = getExerciseTrackingConfig({
               name: ex.name,
               skill_tag: metadata?.skill_tag ?? undefined,
@@ -1719,6 +1742,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
               exercise_type: exerciseType ?? undefined,
               tracking_mode: ex.tracking_mode ?? metadata?.tracking_mode ?? undefined,
             });
+            const columns = setColumns(trackingConfig);
             // La progresión se calcula solo con las series de trabajo de la sesión anterior.
             const progression = getProgressionSuggestion(
               ex,
@@ -1733,177 +1757,167 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
             const isSupersetLinked = Boolean(supersetLinks[ex.name]);
             const nextExercise = currentPlan.exercises?.[i + 1] ?? null;
             const nextExerciseName = nextExercise ? swaps[nextExercise.name] || nextExercise.name : "";
-            const supersetChainLabel = supersetChain
-              .map((chainIndex) => swaps[exerciseNames[chainIndex]] || exerciseNames[chainIndex])
-              .join(" → ");
+            const openTechnique = () => setTechnique({
+              name: ex.name,
+              image: metadata?.image_url || ex.image_url,
+              video: exerciseVideo,
+              series: ex.series != null ? String(ex.series) : undefined,
+              reps: ex.reps != null ? String(ex.reps) : undefined,
+              rest: ex.rest,
+              category: exerciseCategory,
+              type: exerciseType,
+              pattern: exerciseMotionPattern,
+              stimulus: exerciseStimulus,
+              load: exerciseLoad,
+            });
+            const toggleList = () => {
+              void hapticSelection();
+              setClosedExercises((closed) => closed.includes(i) ? closed.filter((index) => index !== i) : [...closed, i]);
+            };
+
+            // Nombre del ejercicio y una línea en gris: series, reps y descanso (y la superserie).
+            // En foco, el nombre es el titular de la pantalla (Title 1); en la lista, el de la fila.
+            const TextBox = focused ? "div" : "span";
+            const NameTag = focused ? "h2" : "span";
+            const exerciseText = (
+              <TextBox className="min-w-0 flex-1 text-left">
+                <NameTag className={cn("block", focused ? "line-clamp-2 type-title1" : `line-clamp-2 type-headline ${allDone ? "text-muted-foreground" : ""}`)}>
+                  {displayName}
+                </NameTag>
+                {swaps[ex.name] && <span className="block truncate type-footnote text-muted-foreground">En lugar de {ex.name}</span>}
+                <span className={cn("mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 tabular-nums text-muted-foreground", focused ? "type-subhead" : "type-footnote")}>
+                  <span>{exerciseMeta}</span>
+                  {isInSuperset && (
+                    <span className="shrink-0 rounded-full bg-secondary px-2.5 py-0.5 type-footnote font-medium text-muted-foreground">
+                      Superserie {supersetPosition}/{supersetChain.length}
+                    </span>
+                  )}
+                </span>
+              </TextBox>
+            );
+
+            // Lo secundario, detrás del «···» del ejercicio: técnica, cambiar y superserie.
+            const exerciseMenu = (
+              <DropdownMenu modal={false}>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label={`Opciones de ${displayName}`}
+                    onClick={() => void hapticTap()}
+                    className={cn("inline-flex h-11 w-11 shrink-0 items-center justify-center transition-opacity active:opacity-60 [touch-action:manipulation]", focused && "-mr-2.5 -mt-1.5")}
+                  >
+                    <span className="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-secondary text-foreground">
+                      <MoreHorizontal className="h-[18px] w-[18px]" strokeWidth={1.75} aria-hidden="true" />
+                    </span>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="max-w-[min(20rem,calc(100vw-2rem))]">
+                  <DropdownMenuItem onSelect={() => { void hapticTap(); afterMenu(openTechnique); }}>
+                    Ver técnica
+                  </DropdownMenuItem>
+                  {!allDone && (
+                    <DropdownMenuItem onSelect={() => afterMenu(() => setSwapTarget(ex.name))}>
+                      Cambiar ejercicio
+                    </DropdownMenuItem>
+                  )}
+                  {(isSupersetLinked || nextExercise) && (
+                    <DropdownMenuItem className="whitespace-normal" onSelect={() => { void hapticSelection(); setSupersetLinks((links) => toggleSupersetLink(links, ex.name)); }}>
+                      {isSupersetLinked ? "Quitar de la superserie" : `Superserie con ${nextExerciseName}`}
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            );
 
             return (
-              <div key={`${selectedDay}-${i}`} className={started && !focusMode ? "overflow-hidden rounded-card bg-card" : ""}>
-                {/* Exercise header: fila de lista en el resumen, título del ejercicio en foco */}
-                <Button
-                  variant="ghost"
-                  aria-expanded={started ? isExpanded : undefined}
-                  onClick={() => {
-                    if (!started) {
-                      void hapticTap();
-                      startWorkout(i);
-                    } else if (workoutView === "list") {
-                      setClosedExercises((closed) => closed.includes(i) ? closed.filter((index) => index !== i) : [...closed, i]);
-                    } else {
-                      setExpandedExercise(i);
-                    }
-                  }}
-                  className={focused
-                    ? "flex h-auto w-full cursor-default items-start whitespace-normal p-0 text-left"
-                    : "flex h-auto w-full items-center gap-3 whitespace-normal p-0 pl-3 text-left transition-colors duration-150 active:bg-accent has-[[role=button]:active]:bg-transparent"}
-                >
-                  {/* Miniatura única de ejercicio (misma que en el resto de la app); en foco ya está el visor */}
-                  {!focused && (
-                    <span className="relative shrink-0">
-                      <ExerciseThumb image={metadata?.image_url || ex.image_url} video={exerciseVideo} name={ex.name} pattern={exerciseMotionPattern} stimulus={exerciseStimulus} load={exerciseLoad} completed={allDone} />
-                      {/* Número de orden en la esquina: dorado el que toca ahora y los hechos. */}
-                      {listMode && (
+              <div key={`${selectedDay}-${i}`} className={focused ? "" : "overflow-hidden rounded-card bg-card"}>
+                {focused ? (
+                  <div className="flex items-start gap-2 pt-4">
+                    {exerciseText}
+                    {exerciseMenu}
+                  </div>
+                ) : (
+                  <div className="flex items-center pr-1">
+                    {/* Toca la cabecera para plegar o desplegar el ejercicio. */}
+                    <button
+                      type="button"
+                      aria-expanded={isExpanded}
+                      onClick={toggleList}
+                      className="flex min-h-[72px] min-w-0 flex-1 items-center gap-3 py-2.5 pl-3 text-left transition-opacity active:opacity-70 [touch-action:manipulation]"
+                    >
+                      <span className="relative shrink-0">
+                        <ExerciseThumb image={metadata?.image_url || ex.image_url} video={exerciseVideo} name={ex.name} pattern={exerciseMotionPattern} stimulus={exerciseStimulus} load={exerciseLoad} muscleGroup={exerciseCategory} completed={allDone} />
+                        {/* Número de orden en la esquina: dorado el que toca ahora y los hechos. */}
                         <span aria-hidden="true" className={`absolute -left-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full type-footnote font-bold tabular-nums ring-2 ring-card ${allDone || i === currentExerciseIndex ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"}`}>
                           {i + 1}
                         </span>
-                      )}
-                    </span>
-                  )}
-                  <div className={focused ? "flex min-w-0 flex-1 items-start" : `flex min-h-[68px] min-w-0 flex-1 items-center py-2 pr-1 ${i > 0 ? "sep-t" : ""}`}>
-                  <div className="min-w-0 flex-1 text-left">
-                    <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                      <span className={focused ? "type-title2" : `line-clamp-2 type-headline ${allDone ? "text-muted-foreground" : ""}`}>
-                        {swaps[ex.name] || ex.name}
                       </span>
-                      {isInSuperset && (
-                        <span className="shrink-0 rounded-full bg-secondary px-2.5 py-0.5 type-footnote font-medium tabular-nums text-muted-foreground">
-                          Superserie {supersetPosition}/{supersetChain.length}
-                        </span>
-                      )}
-                    </div>
-                    {swaps[ex.name] && <div className="truncate type-footnote text-muted-foreground">En lugar de {ex.name}</div>}
-                    <div className={`mt-0.5 tabular-nums text-muted-foreground ${focused ? "type-subhead" : "type-footnote"}`}>
-                      {plural(ex.series, "serie", "series")} · {ex.reps} reps · {ex.rest}
-                    </div>
+                      {exerciseText}
+                    </button>
+                    {exerciseMenu}
+                    <button type="button" tabIndex={-1} aria-hidden="true" onClick={toggleList} className="flex h-11 w-9 shrink-0 items-center justify-center text-muted-foreground">
+                      <ChevronDown className={`h-5 w-5 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`} />
+                    </button>
                   </div>
-                  {/* Antes de empezar, la lista solo informa: cambiar y ficha viven dentro de la sesión. */}
-                  <div className={`${started ? "flex" : "hidden"} shrink-0 items-center ${focused ? "-mr-2.5 -mt-2" : ""}`}>
-                    {allDone && !focused && (
-                      <span className="flex h-11 w-9 items-center justify-center text-primary">
-                        <Check className="h-5 w-5" strokeWidth={1.75} aria-hidden="true" />
-                      </span>
-                    )}
-                    {!allDone && (
-                      // El disparador de ExerciseSwap mide 32 px: aquí se amplía a 44 y se le da estado pulsado.
-                      <span className="flex h-11 w-11 items-center justify-center [&>[role=button]:active]:opacity-60 [&>[role=button]]:h-11 [&>[role=button]]:w-11">
-                      <ExerciseSwap
-                        original={ex.name}
-                        current={swaps[ex.name]}
-                        movementPattern={metadata?.movement_pattern}
-                        muscleGroup={metadata?.muscle_group}
-                        onSelect={async (name) => {
-                          setSwaps((s) => {
-                            const next = { ...s };
-                            if (name) next[ex.name] = name;
-                            else delete next[ex.name];
-                            return next;
-                          });
-                          // Save preference to database
-                          try {
-                            await supabase.from("exercise_user_preferences").upsert({
-                              user_id: userId,
-                              original_exercise_name: ex.name,
-                              preferred_exercise_name: name || null,
-                              last_used_at: new Date().toISOString(),
-                            }, {
-                              onConflict: "user_id,original_exercise_name",
-                            });
-                          } catch (error) {
-                            console.error("Failed to save exercise swap preference:", error);
-                          }
-                        }}
-                      />
-                      </span>
-                    )}
-                    <span
-                      role="button"
-                      tabIndex={0}
-                      aria-label={`Ver ficha de técnica de ${ex.name}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        void hapticTap();
-                        setTechnique({
-                          name: ex.name,
-                          image: metadata?.image_url || ex.image_url,
-                          video: exerciseVideo,
-                          series: ex.series != null ? String(ex.series) : undefined,
-                          reps: ex.reps != null ? String(ex.reps) : undefined,
-                          rest: ex.rest,
-                          category: exerciseCategory,
-                          type: exerciseType,
-                          pattern: exerciseMotionPattern,
-                          stimulus: exerciseStimulus,
-                          load: exerciseLoad,
+                )}
+                {!allDone && (
+                  <ExerciseSwap
+                    trigger={false}
+                    open={swapTarget === ex.name}
+                    onOpenChange={(open) => setSwapTarget(open ? ex.name : null)}
+                    original={ex.name}
+                    current={swaps[ex.name]}
+                    movementPattern={metadata?.movement_pattern}
+                    muscleGroup={metadata?.muscle_group}
+                    onSelect={async (name) => {
+                      setSwaps((s) => {
+                        const next = { ...s };
+                        if (name) next[ex.name] = name;
+                        else delete next[ex.name];
+                        return next;
+                      });
+                      // Save preference to database
+                      try {
+                        await supabase.from("exercise_user_preferences").upsert({
+                          user_id: userId,
+                          original_exercise_name: ex.name,
+                          preferred_exercise_name: name || null,
+                          last_used_at: new Date().toISOString(),
+                        }, {
+                          onConflict: "user_id,original_exercise_name",
                         });
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.stopPropagation();
-                          e.preventDefault();
-                          setTechnique({
-                            name: ex.name,
-                            image: metadata?.image_url || ex.image_url,
-                            video: exerciseVideo,
-                            series: ex.series != null ? String(ex.series) : undefined,
-                            reps: ex.reps != null ? String(ex.reps) : undefined,
-                            rest: ex.rest,
-                            category: exerciseCategory,
-                            type: exerciseType,
-                            pattern: exerciseMotionPattern,
-                            stimulus: exerciseStimulus,
-                            load: exerciseLoad,
-                          });
-                        }
-                      }}
-                      className="inline-flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition-opacity active:opacity-60"
-                    >
-                      <Info className="h-5 w-5" aria-hidden="true" />
-                    </span>
-                    {listMode && (
-                      <ChevronDown aria-hidden="true" className={`mr-2 h-5 w-5 text-muted-foreground transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`} />
-                    )}
-                  </div>
-                  </div>
-                </Button>
+                      } catch (error) {
+                        console.error("Failed to save exercise swap preference:", error);
+                      }
+                    }}
+                  />
+                )}
 
-                {/* Expanded set tracking */}
+                {/* Tabla de series del ejercicio */}
                 <AnimatePresence initial={false}>
-                  {started && isExpanded && (
+                  {isExpanded && (
                     <motion.div
-                      initial={{ height: 0, opacity: 0 }}
+                      initial={focused ? false : { height: 0, opacity: 0 }}
                       animate={{ height: "auto", opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.2 }}
+                      transition={{ duration: prefersReducedMotion ? 0 : 0.2 }}
                       className="overflow-hidden"
                     >
-                      <div className="px-2 pb-3 pt-2">
-                        {/* Column headers */}
-                        <div className={`${SET_GRID} pb-1.5 pl-3 pr-2 type-caption1 text-muted-foreground`}>
-                          <span className="whitespace-nowrap">Serie</span>
-                          <span className="text-center">Previa</span>
-                          <span className="truncate text-center">
-                            {trackingConfig.fixedBodyweight ? "PC" : trackingConfig.weightLabel === "Peso corporal" ? "Lastre" : trackingConfig.weightLabel}
-                          </span>
-                          <span className="truncate text-center">
-                            {trackingConfig.valueLabel}
-                          </span>
+                      <div className={focused ? "pt-4" : "px-2 pb-3"}>
+                        {/* Cabecera de columnas: Serie · Anterior · kg · Reps · ✓ */}
+                        {/* Alineada con las filas: el margen de la tarjeta (en foco) más el de cada fila. */}
+                        <div aria-hidden="true" className={cn(SET_GRID, "pb-1.5 type-caption1 font-medium text-muted-foreground", focused ? "px-3" : "px-1.5")}>
+                          <span className="text-center">Serie</span>
+                          <span className="text-center">Anterior</span>
+                          <span className="truncate text-center">{columns.load}</span>
+                          <span className="truncate text-center">{columns.value}</span>
                           <span className="flex items-center justify-center">
-                            <Check className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden="true" />
+                            <Check className="h-3.5 w-3.5" strokeWidth={2} />
                           </span>
                         </div>
 
                         {/* En foco la tabla es la tarjeta; en la lista ya va dentro de la del ejercicio. */}
-                        <div className={`overflow-hidden rounded-media ${focused ? "bg-card" : ""}`}>
+                        <div className={cn("flex flex-col gap-1", focused && "rounded-card bg-card p-1.5")}>
                         {sets.map((set, si) => {
                           const mainError = !set.done ? getWorkoutSetInputError(set) : null;
                           const dropsError = !set.done ? getWorkoutSetDropsInputError(set) : null;
@@ -1914,36 +1928,54 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                           const dropRepsMissing = drops.some((drop) => !Number.isInteger(drop.reps) || drop.reps <= 0);
                           const inputError = (repsMissing ? null : mainError) ?? (dropRepsMissing ? null : dropsError);
                           const isWarmup = isWorkoutSetWarmup(set);
+                          const isCurrent = si === firstPendingIndex;
                           const livePR = livePRs[`${ex.name}#${si}`];
-                          // Serie hecha: la fila se atenúa y el círculo se rellena con el tinte.
-                          // La de calentamiento va atenuada y nunca con el color de serie hecha.
-                          const dim = set.done ? "opacity-60" : "";
+                          const previous = prevSets?.[si];
+                          const suffix = trackingConfig.valueSuffix ?? "";
+                          const previousText = previous?.done
+                            ? trackingConfig.fixedBodyweight
+                              ? `${previous.reps}${suffix}`
+                              : `${decimalComma(previous.weight) || (trackingConfig.kind === "weighted_bodyweight" ? "PC" : "—")}${TIMES}${previous.reps}${suffix}`
+                            : "—";
+                          // Serie hecha: la fila entera se tiñe de dorado y el círculo se rellena.
+                          // La de calentamiento nunca lleva el color de serie hecha.
                           const checkClass = set.done
                             ? isWarmup
-                              ? "border-muted-foreground bg-muted-foreground text-background"
-                              : "border-primary bg-primary text-primary-foreground"
+                              ? "bg-muted-foreground text-background"
+                              : "bg-primary text-primary-foreground"
                             : inputError
-                              ? "border-destructive text-destructive"
-                              : "border-muted-foreground/40 text-muted-foreground/40";
+                              ? "bg-secondary text-destructive ring-2 ring-inset ring-destructive"
+                              : "bg-secondary text-muted-foreground";
+                          const fieldTone = (sameAsPrevious: boolean) => cn(
+                            NUMBER_FIELD,
+                            set.done && DONE_FIELD,
+                            (isWarmup || (!set.done && sameAsPrevious)) && "text-muted-foreground",
+                          );
                           return (
-                          <div key={si} aria-current={si === firstPendingIndex ? "step" : undefined} className={`pl-3 transition-colors duration-300 ${si === firstPendingIndex ? "rounded-chip ring-1 ring-inset ring-primary/40" : set.done && !isWarmup ? "rounded-chip bg-primary/15" : ""}`}>
-                            <div className={`py-2 pr-2 ${si > 0 ? "sep-t" : ""}`}>
+                          <div
+                            key={si}
+                            aria-current={isCurrent ? "step" : undefined}
+                            className={cn(
+                              "rounded-chip px-1.5 py-1.5 transition-colors duration-300",
+                              set.done && !isWarmup ? "bg-primary/15" : isCurrent ? "ring-1 ring-inset ring-primary/30" : "",
+                            )}
+                          >
                             {/* Segmento principal de la serie */}
                             <div className={SET_GRID}>
-                              {/* Set number */}
-                              <span className={`text-center type-headline tabular-nums ${si === firstPendingIndex ? "text-primary" : "text-muted-foreground"} ${dim}`}>
-                                {isWarmup ? <Flame className="mx-auto h-4 w-4" aria-hidden="true" /> : si + 1}
+                              {/* Número de serie; «C» en las de calentamiento */}
+                              <span className={cn("text-center type-headline tabular-nums", isCurrent ? "text-primary" : "text-muted-foreground")}>
+                                {isWarmup ? <><span aria-hidden="true">C</span><span className="sr-only">Calentamiento</span></> : si + 1}
                               </span>
-                              <span className={`truncate text-center type-caption1 tabular-nums text-muted-foreground ${dim}`}>
-                                {prevSets?.[si]?.done ? (trackingConfig.fixedBodyweight ? `${prevSets[si].reps}${trackingConfig.valueSuffix ?? ""}` : `${decimalComma(prevSets[si].weight) || (trackingConfig.kind === "weighted_bodyweight" ? "PC" : "—")}×${prevSets[si].reps}${trackingConfig.valueSuffix ?? ""}`) : "—"}
+                              <span className="truncate text-center type-caption1 tabular-nums text-muted-foreground">
+                                <span aria-hidden="true">{previousText}</span>
+                                <span className="sr-only">{previous?.done ? `Anterior: ${previousText.replace(TIMES, " por ")}` : "Sin serie anterior"}</span>
                               </span>
 
-                              {/* Weight input */}
-                              <div className={`min-w-0 ${dim}`}>
+                              {/* Peso */}
+                              <div className="min-w-0">
                                 {trackingConfig.fixedBodyweight ? (
-                                  <div aria-label="Peso corporal" className="flex h-11 w-full items-center justify-center rounded-[10px] bg-secondary type-body text-muted-foreground">PC</div>
+                                  <div aria-label="Peso corporal" className={cn("flex h-11 w-full items-center justify-center rounded-chip type-headline text-muted-foreground", set.done ? DONE_FIELD : "bg-secondary")}>PC</div>
                                 ) : (
-                                <>
                                 <input
                                   type="text"
                                   inputMode="decimal"
@@ -1955,14 +1987,13 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                                   onFocus={focusSetField}
                                   aria-label={`Peso de la serie ${si + 1} de ${ex.name}`}
                                   aria-invalid={Boolean(inputError && mainError && set.weight.trim())}
-                                  className={`${NUMBER_FIELD} ${si === firstPendingIndex ? CURRENT_FIGURE : ""} ${isWarmup || (!set.done && prevSets?.[si]?.done && set.weight === prevSets[si].weight) ? "text-muted-foreground" : ""}`}
+                                  className={fieldTone(Boolean(prevSets?.[si]?.done && set.weight === prevSets[si].weight))}
                                 />
-                                </>
                                 )}
                               </div>
 
-                              {/* Reps input */}
-                              <div className={`min-w-0 ${dim}`}>
+                              {/* Repeticiones */}
+                              <div className="min-w-0">
                                 <input
                                   type="text"
                                   inputMode="numeric"
@@ -1976,17 +2007,16 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                                   }}
                                   onFocus={focusSetField}
                                   aria-label={`Repeticiones de la serie ${si + 1} de ${ex.name}`}
-                                  className={`${NUMBER_FIELD} ${si === firstPendingIndex ? CURRENT_FIGURE : ""} ${isWarmup || repsMissing || (!set.done && prevSets?.[si]?.done && set.reps === prevSets[si].reps) ? "text-muted-foreground" : ""}`}
+                                  className={cn(fieldTone(Boolean(prevSets?.[si]?.done && set.reps === prevSets[si].reps)), repsMissing && "text-muted-foreground")}
                                 />
                               </div>
 
-                              {/* Done toggle: marca la serie entera (bajadas incluidas) y arranca el descanso */}
-                              <Button
+                              {/* ✓: marca la serie entera (bajadas incluidas) y arranca el descanso */}
+                              <button
                                 type="button"
-                                variant="ghost"
                                 onClick={() => toggleSetDone(ex.name, si, restSec, trackingConfig.fixedBodyweight ? undefined : String(progression?.weight || prevSets?.[si]?.weight || ex.weight || ""))}
                                 aria-label={`${set.done ? "Desmarcar" : "Marcar"} serie ${si + 1} de ${ex.name}`}
-                                className="flex h-11 w-11 items-center justify-center justify-self-center rounded-full p-0 transition-opacity duration-150 active:opacity-60 [touch-action:manipulation]"
+                                className="flex h-11 w-11 items-center justify-center justify-self-center rounded-full transition-opacity duration-150 active:opacity-60 [touch-action:manipulation]"
                               >
                                 {/* Al marcar, el círculo «salta» con un muelle (como Hevy/Fitness). */}
                                 <motion.span
@@ -1994,11 +2024,11 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                                   initial={set.done && !prefersReducedMotion ? { scale: 0.6 } : { opacity: 0.7 }}
                                   animate={prefersReducedMotion ? { opacity: 1 } : { scale: 1, opacity: 1 }}
                                   transition={prefersReducedMotion ? { duration: 0.15 } : { type: "spring", stiffness: 520, damping: 17 }}
-                                  className={`flex h-8 w-8 items-center justify-center rounded-full border-2 transition-colors duration-150 ${checkClass}`}
+                                  className={cn("flex h-9 w-9 items-center justify-center rounded-full transition-colors duration-150", checkClass)}
                                 >
-                                  <Check className="h-[18px] w-[18px]" strokeWidth={3} aria-hidden="true" />
+                                  <Check className="h-5 w-5" strokeWidth={3} aria-hidden="true" />
                                 </motion.span>
-                              </Button>
+                              </button>
                             </div>
 
                             {livePR && (
@@ -2006,112 +2036,113 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                                 initial={{ opacity: 0, y: 2 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.25, ease: "easeOut" }}
-                                className="mt-2 flex w-fit origin-left items-center gap-1.5 rounded-full bg-primary/15 px-2.5 py-0.5 type-footnote font-semibold tabular-nums text-primary">
+                                className="ml-10 mt-1.5 flex w-fit origin-left items-center gap-1.5 rounded-full bg-primary/15 px-2.5 py-0.5 type-footnote font-semibold tabular-nums text-primary">
                                 <span>Récord personal · {decimalComma(livePR)}</span>
                               </motion.div>
                             )}
 
                             {/* Dropset: bajadas dentro de la misma serie, sin descanso entre ellas */}
-                              {drops.map((drop, di) => {
-                                const dropError = !set.done ? getWorkoutSetDropInputError(drop) : null;
-                                return (
-                                <div key={di} className={`mt-3 ${SET_GRID}`}>
-                                  <span className={`flex items-center justify-center text-muted-foreground ${dim}`}>
-                                    <TrendingDown className="h-4 w-4" aria-hidden="true" />
+                            {drops.map((drop, di) => {
+                              const dropError = !set.done ? getWorkoutSetDropInputError(drop) : null;
+                              return (
+                              <div key={di} className={`mt-1.5 ${SET_GRID}`}>
+                                <span className="flex items-center justify-center text-muted-foreground">
+                                  <TrendingDown className="h-4 w-4" aria-hidden="true" />
+                                  <span className="sr-only">Bajada {di + 1}</span>
+                                </span>
+                                <span aria-hidden="true" />
+                                <input
+                                  type="text"
+                                  inputMode="decimal"
+                                  enterKeyHint="next"
+                                  autoComplete="off"
+                                  value={drop.weight}
+                                  onChange={(e) => updateDrop(ex.name, si, di, { weight: e.target.value })}
+                                  placeholder="kg"
+                                  onFocus={focusSetField}
+                                  aria-label={`Peso de la bajada ${di + 1} de la serie ${si + 1} de ${ex.name}`}
+                                  aria-invalid={Boolean(dropError && drop.weight.trim() && Number.isInteger(drop.reps) && drop.reps > 0)}
+                                  className={cn(NUMBER_FIELD, set.done && DONE_FIELD)}
+                                />
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  pattern="[0-9]*"
+                                  enterKeyHint="done"
+                                  autoComplete="off"
+                                  value={drop.reps}
+                                  onChange={(e) => {
+                                    const val = parseInt(e.target.value);
+                                    if (!isNaN(val)) updateDrop(ex.name, si, di, { reps: val });
+                                  }}
+                                  onFocus={focusSetField}
+                                  aria-label={`Repeticiones de la bajada ${di + 1} de la serie ${si + 1} de ${ex.name}`}
+                                  className={cn(NUMBER_FIELD, set.done && DONE_FIELD)}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => removeDrop(ex.name, si, di)}
+                                  aria-label={`Quitar la bajada ${di + 1} de la serie ${si + 1} de ${ex.name}`}
+                                  className="flex h-11 w-11 items-center justify-center justify-self-center rounded-full text-muted-foreground transition-opacity duration-150 active:opacity-60"
+                                >
+                                  <span className="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-secondary">
+                                    <X className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden="true" />
                                   </span>
-                                  <span aria-hidden="true" />
-                                  <input
-                                    type="text"
-                                    inputMode="decimal"
-                                    enterKeyHint="next"
-                                    autoComplete="off"
-                                    value={drop.weight}
-                                    onChange={(e) => updateDrop(ex.name, si, di, { weight: e.target.value })}
-                                    placeholder="kg"
-                                    onFocus={focusSetField}
-                                    aria-label={`Peso de la bajada ${di + 1} de la serie ${si + 1} de ${ex.name}`}
-                                    aria-invalid={Boolean(dropError && drop.weight.trim() && Number.isInteger(drop.reps) && drop.reps > 0)}
-                                    className={`${NUMBER_FIELD} ${dim}`}
-                                  />
-                                  <input
-                                    type="text"
-                                    inputMode="numeric"
-                                    pattern="[0-9]*"
-                                    enterKeyHint="done"
-                                    autoComplete="off"
-                                    value={drop.reps}
-                                    onChange={(e) => {
-                                      const val = parseInt(e.target.value);
-                                      if (!isNaN(val)) updateDrop(ex.name, si, di, { reps: val });
-                                    }}
-                                    onFocus={focusSetField}
-                                    aria-label={`Repeticiones de la bajada ${di + 1} de la serie ${si + 1} de ${ex.name}`}
-                                    className={`${NUMBER_FIELD} ${dim}`}
-                                  />
-                                  <button
-                                    type="button"
-                                    onClick={() => removeDrop(ex.name, si, di)}
-                                    aria-label={`Quitar la bajada ${di + 1} de la serie ${si + 1} de ${ex.name}`}
-                                    className="flex h-11 w-11 items-center justify-center justify-self-center rounded-full text-muted-foreground transition-opacity duration-150 active:opacity-60"
-                                  >
-                                    <span className="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-secondary">
-                                      <X className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden="true" />
-                                    </span>
-                                  </button>
-                                </div>
-                                );
-                              })}
-                              {si === firstPendingIndex && advanced && (
-                              <div className="mt-2 flex gap-2">
-                              <Button
-                                type="button"
-                                variant="secondary"
-                                size="sm"
-                                onClick={() => addDrop(ex.name, si)}
-                                className={`flex-1 px-2 ${CAPSULE_HIT}`}
-                              >
-                                <Plus aria-hidden="true" />
-                                Añadir bajada
-                              </Button>
-                              {/* Calentamiento: se guarda y se marca con ✓, pero no cuenta en tus métricas */}
-                              <Button
-                                type="button"
-                                variant={isWarmup ? "tinted" : "secondary"}
-                                size="sm"
-                                aria-pressed={isWarmup}
-                                aria-label={`${isWarmup ? "Quitar" : "Marcar"} la serie ${si + 1} de ${ex.name} como calentamiento`}
-                                onClick={() => toggleWarmup(ex.name, si)}
-                                className={`flex-1 px-2 ${CAPSULE_HIT}`}
-                              >
-                                <Flame fill={isWarmup ? "currentColor" : "none"} aria-hidden="true" />
-                                Calentamiento
-                              </Button>
+                                </button>
                               </div>
-                              )}
+                              );
+                            })}
+                            {isCurrent && advanced && (
+                              <div className="mt-2 flex gap-2 pl-10 pr-1">
+                                <Button
+                                  type="button"
+                                  variant="secondary"
+                                  size="sm"
+                                  aria-label={`Añadir una bajada a la serie ${si + 1} de ${ex.name}`}
+                                  onClick={() => addDrop(ex.name, si)}
+                                  className="flex-1 px-2"
+                                >
+                                  <TrendingDown aria-hidden="true" />
+                                  Bajada
+                                </Button>
+                                {/* Calentamiento: se guarda y se marca con ✓, pero no cuenta en tus métricas */}
+                                <Button
+                                  type="button"
+                                  variant={isWarmup ? "tinted" : "secondary"}
+                                  size="sm"
+                                  aria-pressed={isWarmup}
+                                  aria-label={`${isWarmup ? "Quitar" : "Marcar"} la serie ${si + 1} de ${ex.name} como calentamiento`}
+                                  onClick={() => toggleWarmup(ex.name, si)}
+                                  className="flex-1 px-2"
+                                >
+                                  <Flame fill={isWarmup ? "currentColor" : "none"} aria-hidden="true" />
+                                  Calentamiento
+                                </Button>
+                              </div>
+                            )}
 
                             {drops.length > 0 && (
-                              <p className="mt-2 type-footnote tabular-nums text-muted-foreground">
+                              <p className="mt-1.5 pl-10 type-footnote tabular-nums text-muted-foreground">
                                 {formatWorkoutSetSummary(set)}
                               </p>
                             )}
-                            {isWarmup && !set.done && (
-                              <p className="mt-2 type-footnote text-muted-foreground">
-                                Calentamiento: no cuenta en volumen, récords ni series completadas.
+                            {isWarmup && isCurrent && (
+                              <p className="mt-1.5 pl-10 type-footnote text-muted-foreground">
+                                Calentamiento: se guarda aparte de tus cifras.
                               </p>
                             )}
-                            {inputError && <p className="mt-2 type-footnote text-destructive">{inputError}</p>}
-                            </div>
+                            {inputError && <p className="mt-1.5 pl-10 type-footnote text-destructive">{inputError}</p>}
                           </div>
                           );
                         })}
                         </div>
-                        <Button type="button" variant="plain" className="mt-2 min-h-11 w-full" onClick={() => {
+                        <Button type="button" variant="secondary" className="mt-3 w-full" onClick={() => {
                           const last = sets[sets.length - 1];
                           setExerciseLogs((logs) => ({ ...logs, [ex.name]: [...(logs[ex.name] || []), {
                             weight: last?.weight ?? ex.weight ?? "", reps: last?.reps ?? ex.reps, done: false,
                           }] }));
                           void hapticTap();
-                        }}><Plus className="h-4 w-4" aria-hidden="true" />Añadir serie</Button>
+                        }}><Plus aria-hidden="true" />Añadir serie</Button>
                       </div>
                     </motion.div>
                   )}
@@ -2122,7 +2153,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
           </div>
           {started && !workoutCompleted && (
             <>
-              {/* En foco, «+» va al final del carrusel; en la lista, al final de los ejercicios. */}
+              {/* En la lista, «Añadir ejercicio» también va al final; en foco, en «···». */}
               {!focusMode && (
                 <Button type="button" variant="secondary" size="lg" disabled={paused} className="mt-3 w-full" onClick={() => { void hapticTap(); setExtraPickerOpen(true); }}>
                   <Plus aria-hidden="true" />Añadir ejercicio a esta sesión
@@ -2139,7 +2170,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
           </section>
           )}
 
-          {/* Finish workout. Pie fijo: descanso, estado de guardado y la única acción principal, sobre el indicador de inicio */}
+          {/* Estado del guardado para VoiceOver; visible solo si falla. */}
           {started && !loadError && (
             <p role="status" aria-live="polite" className={`sr-only ${saveError ? "not-sr-only mb-2 text-center type-footnote text-destructive" : ""}`}>
               {saveStatus === "error"
@@ -2153,8 +2184,8 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                       : "Se guarda automáticamente"}
             </p>
           )}
-          {/* Barra fija (diseño ChatGPT), igual en las dos vistas: el descanso cuando toca y
-              Pausar · tiempo · Finalizar, la única acción dorada de la pantalla. */}
+          {/* Barra fija, igual en las dos vistas: el descanso cuando toca, encima y sin tapar las series,
+              y Pausar · tiempo · Finalizar, la única acción dorada de la pantalla. */}
           <AnimatePresence initial={false}>
             {started && !workoutCompleted && (
               <motion.div
@@ -2166,30 +2197,23 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
               >
                 <div className="mx-auto w-full max-w-[680px]">
                 {restTimer !== null && (
-                  <div role="timer" aria-label="Descanso entre series" aria-disabled={paused || undefined} className={`transition-opacity ${paused ? "pointer-events-none opacity-40" : ""}`}>
-                    <div className="flex items-center justify-center gap-5 pb-3">
-                      <Button type="button" variant="secondary" aria-label="Restar 15 segundos" onClick={() => { void hapticSelection(); adjustRest(-15); }} className="h-11 min-w-[76px] tabular-nums [touch-action:manipulation]">−15 s</Button>
-                      <div aria-hidden="true" className="relative h-[92px] w-[92px] shrink-0">
-                        <svg width="92" height="92" viewBox="0 0 92 92" style={{ transform: "rotate(-90deg)" }}>
-                          <circle cx="46" cy="46" r="42" fill="none" stroke="hsl(var(--secondary))" strokeWidth="4" />
-                          <circle
-                            cx="46" cy="46" r="42" fill="none"
-                            stroke="hsl(var(--primary))" strokeWidth="4"
-                            strokeLinecap="round"
-                            strokeDasharray="263.89"
-                            strokeDashoffset={263.89 * (1 - Math.min(1, restTimer / Math.max(restTarget, 1)))}
-                            style={{ transition: "stroke-dashoffset 1s linear" }}
-                          />
-                        </svg>
-                        <div className="absolute inset-0 flex flex-col items-center justify-center">
-                          <span className="type-figure text-[30px] leading-none tabular-nums text-foreground">
-                            {Math.floor(restTimer / 60)}:{(restTimer % 60).toString().padStart(2, "0")}
-                          </span>
-                          <span className="mt-1 type-footnote text-muted-foreground">Descanso</span>
-                        </div>
+                  <div role="timer" aria-label="Descanso entre series" aria-disabled={paused || undefined} className={cn("mb-3 flex items-center gap-1.5 transition-opacity", paused && "pointer-events-none opacity-40")}>
+                    <div className="mr-1 min-w-0 flex-1">
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="type-figure text-[30px] leading-none text-foreground">{restClock(restTimer)}</span>
+                        <span className="truncate type-footnote text-muted-foreground">Descanso</span>
                       </div>
-                      <Button type="button" variant="secondary" aria-label="Sumar 15 segundos" onClick={() => { void hapticSelection(); adjustRest(15); }} className="h-11 min-w-[76px] tabular-nums [touch-action:manipulation]">+15 s</Button>
+                      {/* Una barra tranquila que se vacía; nada de anillos que salten. */}
+                      <div aria-hidden="true" className="mt-2 h-1 overflow-hidden rounded-full bg-secondary">
+                        <div
+                          className="h-full rounded-full bg-primary transition-[width] duration-1000 ease-linear motion-reduce:transition-none"
+                          style={{ width: `${Math.round(Math.min(1, restTimer / Math.max(restTarget, 1)) * 100)}%` }}
+                        />
+                      </div>
                     </div>
+                    <Button type="button" variant="secondary" size="sm" aria-label="Restar 15 segundos" onClick={() => { void hapticSelection(); adjustRest(-15); }} className="h-11 shrink-0 px-3 tabular-nums [touch-action:manipulation]">−15 s</Button>
+                    <Button type="button" variant="secondary" size="sm" aria-label="Sumar 15 segundos" onClick={() => { void hapticSelection(); adjustRest(15); }} className="h-11 shrink-0 px-3 tabular-nums [touch-action:manipulation]">+15 s</Button>
+                    <Button type="button" variant="secondary" size="sm" aria-label="Saltar descanso" onClick={() => { void hapticTap(); skipRest(); }} className="h-11 shrink-0 px-3.5 [touch-action:manipulation]">Saltar</Button>
                   </div>
                 )}
                 <div className="flex items-center gap-3">
@@ -2205,8 +2229,11 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                     {paused ? <Play className="fill-current" aria-hidden="true" /> : <Pause className="fill-current" aria-hidden="true" />}
                   </Button>
                   <div className="flex min-w-0 flex-1 flex-col items-center">
-                    <span aria-label="Tiempo de sesión" className="type-figure text-[28px] leading-none tabular-nums text-foreground">{formatElapsed(sessionElapsedMs)}</span>
-                    <span className={`mt-1 max-w-full truncate type-footnote ${paused ? "font-semibold text-primary" : "text-muted-foreground"}`}>{paused ? "En pausa" : "Tiempo transcurrido"}</span>
+                    <span aria-label="Tiempo de sesión" className="type-figure text-[28px] leading-none text-foreground">{formatElapsed(sessionElapsedMs)}</span>
+                    {/* Avance discreto: «3 de 12 series»; en pausa, «En pausa». */}
+                    <span className={cn("mt-1 max-w-full truncate type-footnote tabular-nums", paused ? "font-semibold text-foreground" : "text-muted-foreground")}>
+                      {paused ? "En pausa" : seriesProgress}
+                    </span>
                   </div>
                   <Button
                     type="button"
@@ -2252,7 +2279,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
           <DrawerHeader className="px-5 pt-4 text-center">
             <DrawerTitle>¿Terminar con series pendientes?</DrawerTitle>
             <DrawerDescription className="tabular-nums">
-              {totalSets - completedSets === 1 ? "Te queda" : "Te quedan"} {totalSets - completedSets} de {plural(totalSets, "serie", "series")}. Puedes terminarlo igualmente o seguir entrenando.
+              Llevas {seriesProgress}. Puedes terminar ahora y guardar lo hecho, o seguir entrenando.
             </DrawerDescription>
           </DrawerHeader>
           <DrawerFooter className="gap-2 px-5 pb-5">

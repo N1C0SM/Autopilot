@@ -486,20 +486,25 @@ describe("paridad web ↔ apps nativas", () => {
       expect(app, text).toContain(text);
     }
     // Bajada, calentamiento (y en la app RPE y fallo) solo con «Más opciones por serie».
-    expect(web).toContain("si === firstPendingIndex && advanced && (");
+    expect(web).toContain("isCurrent && advanced && (");
     expect(app).toContain("if isCurrent && advanced {");
     expect(app).toContain('if advanced { Text("RPE")');
-    // Carrusel antes que la foto, y la foto rellena el hueco.
-    const webFocus = web.slice(web.indexOf("Carrusel arriba"));
+    // Carrusel numerado antes que la foto, y la foto rellena el hueco.
+    const webFocus = web.slice(web.indexOf("Carrusel numerado"));
     expect(webFocus.indexOf('role="tablist"')).toBeLessThan(webFocus.indexOf("fetchpriority"));
     expect(webFocus).toContain('loading="eager" className="h-full w-full object-cover"');
     const appFocus = app.slice(app.indexOf("struct FocusViewer"));
     expect(appFocus.indexOf("ScrollView(.horizontal")).toBeLessThan(appFocus.indexOf("CachedAsyncImage"));
-    expect(appFocus).toContain(".frame(height: 220)");
-    expect(web).toContain("aspect-[4/3] max-h-[26dvh]");
-    // La foto no se repite: sin miniatura en la tarjeta del ejercicio en foco.
-    expect(web).toMatch(/\{!focused && \(\s*<span className="relative shrink-0">\s*<ExerciseThumb/);
-    expect(app).toMatch(/if !focused \{\s*WorkoutThumb\(url: exercise\.image_url/);
+    // El ejercicio en grande: 16:10 hasta un tercio de la pantalla en el móvil y 340 en ancho.
+    expect(appFocus).toContain(".frame(height: mediaHeight)");
+    expect(appFocus).toContain("sizeClass == .regular ? 340 : 230");
+    expect(web).toContain("aspect-[16/10] max-h-[32dvh]");
+    expect(web).toContain("md:max-h-[340px]");
+    // La foto no se repite: sin miniatura en la cabecera del ejercicio en foco.
+    expect(web).toMatch(/\{focused \? \(\s*<div className="flex items-start gap-2 pt-4">\s*\{exerciseText\}\s*\{exerciseMenu\}/);
+    const focusedHeader = app.slice(app.indexOf("private var focusedHeader"), app.indexOf("private var listHeader"));
+    expect(focusedHeader).not.toContain("WorkoutThumb");
+    expect(app.slice(app.indexOf("private var listHeader"))).toMatch(/^private var listHeader[\s\S]*?WorkoutThumb\(url: exercise\.image_url/);
   });
 
   it("Nombre e icono de cada sesión: mismos emojis, misma sugerencia y mismo campo `session_icon`, en la web y en la app", () => {
@@ -650,13 +655,15 @@ describe("paridad web ↔ apps nativas", () => {
     const app = read("native/Autopilot/Features/Train/WorkoutView.swift");
     expect(web).not.toContain("allSetsDone");
     expect(app).toContain('barLabel("Finalizar", symbol: "checkmark", primary: true)');
-    // Serie y ejercicio hechos en verde, nunca en dorado.
-    expect(web).toContain('"border-primary bg-primary text-primary-foreground"');
-    expect(web).toContain('<span className="flex h-11 w-9 items-center justify-center text-primary">');
-    expect(app).toContain("Circle().strokeBorder(set.done ? Palette.gold");
+    // Serie y ejercicio hechos en dorado (círculo relleno, fila y número del carrusel tintados), nunca en verde.
+    expect(web).toContain(': "bg-primary text-primary-foreground"');
+    expect(web).toContain('set.done && !isWarmup ? "bg-primary/15"');
+    expect(web).toContain('done ? "bg-primary/15 text-primary"');
+    expect(app).toContain("Circle().fill(set.done ? (isWarmup ? Palette.muted : Palette.gold) : Palette.secondary)");
+    expect(app).toContain(".fill(set.done && !isWarmup ? Palette.gold.opacity(0.15) : .clear)");
     expect(app).toContain('Image(systemName: "checkmark").font(.inter(size: 18, weight: .bold))');
-    // Título del ejercicio, «Salir» y «···» en blanco.
-    expect(app).toContain(".foregroundStyle(allDone ? Palette.muted : Palette.foreground)");
+    // Título del ejercicio, «Salir» y «···» en blanco (en la lista, el ejercicio hecho en gris).
+    expect(app).toContain(".foregroundStyle(allDone && !focused ? Palette.muted : Palette.foreground)");
     expect(web).not.toMatch(/pl-0\.5 pr-2 text-primary/);
     expect(app).not.toContain('Image(systemName: "ellipsis").font(.inter(size: 15, weight: .bold)).foregroundStyle(Palette.gold)');
   });
@@ -665,7 +672,7 @@ describe("paridad web ↔ apps nativas", () => {
     const web = read("src/app/components/dashboard/WorkoutTracker.tsx");
     const app = read("native/Autopilot/Features/Train/WorkoutView.swift");
     const model = read("native/Autopilot/Features/Train/ActiveWorkout.swift");
-    for (const text of ["Entrenamiento en curso", "Entrenamiento en pausa", "Pausar", "Reanudar", "Tiempo transcurrido", "En pausa", "Finalizar", "ejercicios"]) {
+    for (const text of ["Pausar", "Reanudar", "En pausa", "Finalizar", "ejercicios"]) {
       expect(web, text).toContain(text);
       expect(app, text).toContain(text);
     }
@@ -761,11 +768,11 @@ describe("paridad web ↔ apps nativas", () => {
     // músculo del ejercicio en dorado, nunca un hueco. Ninguna de las dos pinta ya la huella.
     expect(web).not.toContain("ExerciseMotionBadge");
     expect(app).not.toContain("ExerciseMotionBadge");
-    expect(web).toContain("<MuscleMap primary={activeMuscle ? [activeMuscle] : []} size={64} dots={false} />");
+    expect(web).toContain("<MuscleMap primary={activeMuscle ? [activeMuscle] : []} size={84} dots={false} />");
     expect(app).toContain("ExerciseSilhouette(muscleGroup: item.muscle_group).padding(.vertical, 12)");
-    // En el carrusel del entreno, quietas: solo se mueve el ejercicio grande. Sin foto, su músculo.
-    expect(web).toMatch(/<ExerciseThumb image=\{m\?\.image_url \|\| item\.image_url\} name=\{item\.name\} muscleGroup=\{item\.muscle_group \|\| m\?\.muscle_group\}/);
-    expect(app).toContain("WorkoutThumb(url: loops.images[item.name] ?? item.image_url, completed: done, size: 48, muscleGroup: item.muscle_group)");
+    // El carrusel del entreno son números: solo se mueve el ejercicio grande.
+    expect(web).toContain('aria-label={`${idx + 1}. ${swaps[item.name] || item.name}${done ? ", hecho" : ""}`}');
+    expect(app).toContain('.accessibilityLabel("\\(i + 1). \\(workout.swaps[item.name] ?? item.name)\\(done ? ", hecho" : "")")');
   });
 
   it("Ejercicio en movimiento en todas partes: entreno (lista y visor), ficha, biblioteca, añadir ejercicios, Hoy, rutina y Mis rutinas, igual en la web y en la app", () => {
@@ -904,18 +911,18 @@ describe("paridad web ↔ apps nativas", () => {
     const motionApp = read("native/Autopilot/Design/ExerciseMotion.swift");
     // Visor: la foto o, sin foto, la silueta con su músculo; nunca la barra de 48 px con un icono ni
     // un hueco. Mientras la foto llega, la tarjeta (no un dibujo que luego salta).
-    expect(web).toContain("<MuscleMap primary={activeMuscle ? [activeMuscle] : []} size={64} dots={false} />");
+    expect(web).toContain("<MuscleMap primary={activeMuscle ? [activeMuscle] : []} size={84} dots={false} />");
     expect(web).not.toMatch(/img \|\| loop \? "h-\[140px\]" : "h-12"/);
     expect(app).toContain("placeholder: { Palette.card }");
     expect(app).toMatch(/\} else \{\s*ExerciseSilhouette\(muscleGroup: item\.muscle_group\)/);
     // Sin la huella ya no se piden patrón, estímulo y carga de cada ejercicio al empezar (eran 2 + 1 por tarjeta).
     expect(app).not.toContain("loadMotionMeta");
     expect(app).not.toContain("movement_pattern");
-    // Carrusel: cada ejercicio con su foto o su músculo y su número, y «+» al final.
-    expect(web).toContain("muscleGroup={item.muscle_group || m?.muscle_group}");
-    expect(app).toContain("WorkoutThumb(url: loops.images[item.name] ?? item.image_url, completed: done, size: 48, muscleGroup: item.muscle_group)");
-    expect(web).toContain('aria-label="Añadir ejercicio a esta sesión"');
-    expect(app).toContain('.accessibilityLabel("Añadir ejercicio a esta sesión")');
+    // Lista y vista previa: cada ejercicio con su foto o su músculo; «Añadir ejercicio» en «···».
+    expect(web).toContain("muscleGroup={exerciseCategory} completed={allDone} />");
+    expect(app).toContain("WorkoutThumb(url: exercise.image_url, completed: allDone, muscleGroup: exercise.muscle_group,");
+    expect(web).toContain("Añadir ejercicio\n");
+    expect(app).toContain('Label("Añadir ejercicio", systemImage: "plus")');
     // Mismas pistas, en el mismo orden, y el mismo arco neutro sin pista.
     const hints = (block: string, re: RegExp) => [...block.matchAll(re)].map((m) => [m[1], m[2].split(",").map((h) => h.trim().replace(/"/g, ""))]);
     const webBlock = motionWeb.slice(motionWeb.indexOf("export const PATTERN_HINTS"), motionWeb.indexOf("];", motionWeb.indexOf("export const PATTERN_HINTS")));
@@ -931,7 +938,7 @@ describe("paridad web ↔ apps nativas", () => {
   it("Entreno activo (rediseño): barra Pausar · tiempo · Finalizar en las dos vistas, columna de 680 y los mismos textos con su plural, en la web y en la app", () => {
     const web = read("src/app/components/dashboard/WorkoutTracker.tsx");
     const app = read("native/Autopilot/Features/Train/WorkoutView.swift");
-    for (const text of ["Tiempo transcurrido", "En pausa", "Descanso", "Restar 15 segundos", "Sumar 15 segundos", "Añadir ejercicio a esta sesión", "¿Terminar con series pendientes?", "Terminar y guardar", "Seguir entrenando", "¿Descartar entrenamiento?", "Superserie"]) {
+    for (const text of ["En pausa", "Descanso", "Restar 15 segundos", "Sumar 15 segundos", "Saltar descanso", "Añadir ejercicio a esta sesión", "¿Terminar con series pendientes?", "Terminar y guardar", "Seguir entrenando", "¿Descartar entrenamiento?", "Superserie"]) {
       expect(web, text).toContain(text);
       expect(app, text).toContain(text);
     }
@@ -940,7 +947,7 @@ describe("paridad web ↔ apps nativas", () => {
     expect(app).toContain("ToolbarItem(placement: .topBarTrailing) { moreMenu }");
     expect(app).not.toContain("HStack(spacing: 16) { moreMenu; finishButton }");
     // Descanso con la misma cuenta («0:45») en Big Shoulders.
-    expect(web).toContain('<span className="type-figure text-[30px] leading-none tabular-nums text-foreground">');
+    expect(web).toContain('<span className="type-figure text-[30px] leading-none text-foreground">{restClock(restTimer)}</span>');
     expect(app).toContain('Text("\\(left / 60):\\(String(format: "%02d", left % 60))")');
     // Columna centrada de 680 (web ancha, iPad y Mac), como Hoy y Nutrición.
     expect(web).toContain('"mx-auto w-full min-w-0 max-w-[680px]"');
@@ -949,8 +956,10 @@ describe("paridad web ↔ apps nativas", () => {
     // Mismo texto con su plural.
     expect(web).toContain('{plural(ex.series, "serie", "series")} · {ex.reps} reps · {ex.rest}');
     expect(app).toContain('Text("\\(plural(exercise.series, "serie", "series")) · \\(exercise.reps) reps · \\(exercise.rest)")');
-    expect(web).toContain('"Te queda" : "Te quedan"');
-    expect(app).toContain('"Te queda" : "Te quedan"');
+    // Terminar antes: en positivo, lo que llevas (nunca «te quedan»).
+    expect(web).toContain("Llevas {seriesProgress}. Puedes terminar ahora y guardar lo hecho, o seguir entrenando.");
+    expect(app).toContain('"Llevas \\(seriesProgress). Puedes terminar ahora y guardar lo hecho, o seguir entrenando."');
+    expect(web + app).not.toContain("Te quedan");
     // Esfuerzo: la escala 1–10 y las dos salidas de la web también en la app.
     const rpe = read("src/app/components/dashboard/RPEDialog.tsx");
     for (const text of ["¿Cómo de duro fue?", "Marca tu esfuerzo percibido del 1 al 10. Así ajustamos tu próximo plan.", "Guardar esfuerzo y completar", "Completar sin valorar esfuerzo", "Apunta a un 7 u 8", "Casi al fallo", "Al fallo total"]) {
@@ -970,6 +979,83 @@ describe("paridad web ↔ apps nativas", () => {
     // La foto del visor se recorta a su página: «rellenar» no invade la foto vecina del carrusel.
     const photoPage = app.slice(app.indexOf("private func photoPage"), app.indexOf("private func photoPage") + 1600);
     expect(photoPage).toMatch(/^private func photoPage\(_ item: GymExercise, current: Bool\) -> some View \{[\s\S]*?Palette\.card\s*\.overlay \{[\s\S]*?scaledToFill\(\)[\s\S]*?\n {12}\}[\s\S]*?\.clipped\(\)/);
+  });
+
+  it("Entreno activo profesional (como Hevy y Fitness): un foco por pantalla, tabla Serie · Anterior · kg · Reps · ✓, descanso tranquilo con «Saltar» y lo secundario en «···», igual en la web y en la app", () => {
+    const web = read("src/app/components/dashboard/WorkoutTracker.tsx");
+    const app = read("native/Autopilot/Features/Train/WorkoutView.swift");
+    const model = read("native/Autopilot/Features/Train/ActiveWorkout.swift");
+    // Ejercicio a ejercicio: números arriba (44, aro dorado el que ves y check los hechos), el ejercicio
+    // en una portada de 28 con la ficha a un toque, el nombre en Title 1 y solo su tabla.
+    expect(web).toContain('"flex h-11 w-11 shrink-0 items-center justify-center rounded-full type-headline tabular-nums');
+    expect(web).toContain('isActive ? "bg-card text-primary ring-2 ring-inset ring-primary"');
+    expect(app).toContain(".frame(width: 44, height: 44)\n            .background(done && !active ? Palette.gold.opacity(0.15) : Palette.card, in: Circle())");
+    expect(app).toContain("Circle().strokeBorder(Palette.gold, lineWidth: 2)");
+    expect(web).toMatch(/aspect-\[16\/10\][^"]*rounded-sheet/);
+    expect(app).toContain(".clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))");
+    expect(web).toContain("aria-label={`Ver técnica de ${activeName}`}");
+    expect(app).toContain('.accessibilityLabel("Ver técnica de \\(workout.swaps[ex.name] ?? ex.name)")');
+    expect(web).toContain('focused ? "line-clamp-2 type-title1"');
+    expect(app).toContain(".font(focused ? .apTitle1 : .apHeadline)");
+    // Tabla como Hevy: mismas columnas y mismos anchos (32 · 64 · 1fr · 1fr · 44), celdas de 44 con
+    // radio 14 y la anterior en «62,5 × 10» con espacios finos.
+    for (const column of ["Serie", "Anterior"]) expect(web, column).toContain(`<span className="text-center">${column}</span>`);
+    expect(web).toContain('/km/i.test(config.weightLabel) ? "km" : "kg"');
+    expect(web).toContain(': "Reps",');
+    for (const column of ["Serie", "Anterior", "kg", "Reps"]) expect(app, column).toContain(`Text("${column}")`);
+    expect(web).toContain("{columns.load}");
+    expect(web).toContain('"grid grid-cols-[32px_64px_minmax(0,1fr)_minmax(0,1fr)_44px] items-center gap-2"');
+    expect(app).toContain("static let number: CGFloat = 32");
+    expect(app).toContain("static let previous: CGFloat = 64");
+    expect(app).toContain("static let check: CGFloat = 44");
+    expect(web).toContain("h-11 w-full min-w-0 rounded-chip");
+    expect(app).toContain(".frame(maxWidth: .infinity, minHeight: 44)\n            .background(done && !focused ? Color.clear : (focused ? Palette.accent : Palette.secondary),\n                        in: RoundedRectangle(cornerRadius: 14, style: .continuous))");
+    expect(web).toContain('const TIMES = "\\u202F×\\u202F";');
+    expect(app).toContain('"\\(weight)\\u{202F}×\\u{202F}\\(previous.reps)"');
+    for (const text of ["Sin serie anterior", "Calentamiento: se guarda aparte de tus cifras.", "Calentamiento", "Bajada"]) {
+      expect(web, text).toContain(text);
+      expect(app, text).toContain(text);
+    }
+    // Hecha: la fila entera dorada y la cifra sin caja; la actual, con filo dorado; el calentamiento, «C».
+    expect(web).toContain('const DONE_FIELD = "bg-transparent";');
+    expect(web).toContain('isCurrent ? "ring-1 ring-inset ring-primary/30"');
+    expect(app).toContain("strokeBorder(isCurrent && !set.done ? Palette.gold.opacity(0.3) : .clear, lineWidth: 1)");
+    expect(web).toContain('<span aria-hidden="true">C</span><span className="sr-only">Calentamiento</span>');
+    expect(app).toContain('Text("C")');
+    // Descanso: una barra tranquila (sin anillo) encima de la barra de abajo, con −15 s, +15 s y «Saltar».
+    for (const text of ["−15 s", "+15 s", "Saltar", "Saltar descanso", "Descanso"]) {
+      expect(web, text).toContain(text);
+      expect(app, text).toContain(text);
+    }
+    const restWeb = web.slice(web.indexOf('role="timer"'), web.indexOf('aria-label={paused ? "Reanudar" : "Pausar"}'));
+    expect(restWeb).not.toContain("<circle");
+    expect(restWeb).toContain("skipRest()");
+    const restApp = app.slice(app.indexOf("struct RestTimerRow"), app.indexOf("extension Array {"));
+    expect(restApp).not.toContain(".trim(from:");
+    expect(restApp).toContain("workout.skipRest()");
+    expect(restApp).toContain("Haptics.success(); workout.skipRest()");
+    expect(model).toContain("if left > restTarget { restTarget = left }");
+    // Barra de abajo: Pausar · tiempo · Finalizar (la única dorada) y, bajo el tiempo, «3 de 12 series».
+    expect(web).toContain('const seriesProgress = `${completedSets.toLocaleString("es-ES")} de ${plural(totalSets, "serie", "series")}`;');
+    expect(web).toContain('{paused ? "En pausa" : seriesProgress}');
+    expect(app).toContain('"\\(NumberText.integer(workout.doneSets)) de \\(plural(workout.totalSets, "serie", "series"))"');
+    expect(app).toContain('Text(workout.isPaused ? "En pausa" : seriesProgress)');
+    // Lo secundario, detrás de «···»: el del ejercicio (técnica, cambiar, superserie) y el de la sesión.
+    for (const text of ["Opciones de ", "Ver técnica", "Cambiar ejercicio", "Quitar de la superserie", "Superserie con ", "Añadir ejercicio", "Ver toda la sesión", "Ver ejercicio a ejercicio", "Más opciones por serie", "Descartar entrenamiento"]) {
+      expect(web, text).toContain(text);
+      expect(app, text).toContain(text);
+    }
+    expect(web).toContain("setSupersetLinks((links) => toggleSupersetLink(links, ex.name))");
+    expect(read("src/app/components/dashboard/ExerciseSwap.tsx")).toContain("{trigger && <DialogTrigger asChild>");
+    // Sin ruido: ni «Tiempo transcurrido», ni «Entrenamiento en curso», ni «Previa», ni la cuenta
+    // «2 / 6» sobre la foto, ni el reloj de guardado girando en la barra; la carga, con el AP.
+    for (const text of ["Tiempo transcurrido", "Entrenamiento en curso", "Entrenamiento en pausa", ">Previa<", 'Text("Previa")', "{expandedExercise + 1} / {total}", "ProgressView("]) {
+      expect(web, text).not.toContain(text);
+      expect(app, text).not.toContain(text);
+    }
+    expect(web).not.toContain('<Spinner size="sm" aria-live="polite"');
+    // En el iPhone, mientras escribes, la barra del teclado ocupa el sitio de Pausar · tiempo · Finalizar.
+    expect(app).toContain("if !editingField { controlBar }");
   });
 
   it("Resumen y tarjeta para compartir: mismos textos, solo se destacan las mejoras (nunca «−832 kg») y el AP al pie sin el nombre de la marca, en la web y en la app", () => {

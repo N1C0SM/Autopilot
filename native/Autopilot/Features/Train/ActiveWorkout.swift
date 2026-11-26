@@ -378,6 +378,9 @@ final class ActiveWorkout: ObservableObject {
         guard let end = draft.restEndsAt else { return }
         let newEnd = max(Date(), end.addingTimeInterval(TimeInterval(seconds)))
         draft.restEndsAt = newEnd
+        // Sumar por encima del objetivo agranda la barra del descanso (como `restTarget` en la web).
+        let left = Int(newEnd.timeIntervalSinceNow.rounded(.up))
+        if left > restTarget { restTarget = left }
         persist()
         scheduleRestNotification(at: newEnd)
     }
