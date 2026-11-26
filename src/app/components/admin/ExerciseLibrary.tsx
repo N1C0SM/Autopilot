@@ -38,6 +38,7 @@ import { skipAutoFocusOnTouch } from "@/app/components/admin-library/touchAutoFo
 import { WithImageFallback } from "@/app/components/admin-library/WithImageFallback";
 import CatalogImport from "@/app/components/admin-library/CatalogImport";
 import PlanVideos from "@/app/components/admin-library/PlanVideos";
+import ClipUpload from "@/app/components/admin-library/ClipUpload";
 
 /**
  * Versión del estilo visual actual. Debe coincidir con MEDIA_STYLE_VERSION de la
@@ -1212,6 +1213,9 @@ const ExerciseLibrary = () => {
 
       {/* Vídeos de los ejercicios que usan los planes: cuenta, coste, confirmación y uno a uno. */}
       {fetched && <PlanVideos onChanged={() => void fetchExercises()} />}
+
+      {/* Clips propios: un .zip o una carpeta con un vídeo por ejercicio. */}
+      {fetched && <ClipUpload exercises={exercises} mediaColumns={mediaColumnsReady} onChanged={() => void fetchExercises()} />}
 
       {!mediaColumnsReady && (
         <p role="status" className="type-footnote text-muted-foreground">
