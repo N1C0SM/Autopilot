@@ -86,10 +86,6 @@ struct ProgressScreen: View {
         } else {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    // Subtítulo de la maqueta bajo el título grande; en Mac la barra ya lleva su pista.
-                    if !isWide {
-                        Text("Evolución de tu fuerza, tu físico y tus récords.").font(.apSubhead).foregroundStyle(Palette.muted)
-                    }
                     SegmentedPill(options: ["Fuerza", "Físico", "Récords", "Scan"], selection: $tab, gold: true)
                     switch tab {
                     case 0: strength
@@ -179,11 +175,7 @@ struct ProgressScreen: View {
         if model.detailsLoaded {
             if !model.history.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Tu fuerza").font(.apTitle3).accessibilityAddTraits(.isHeader)
-                        Text("Evolución de tus principales ejercicios.")
-                            .font(.apSubhead).foregroundStyle(Palette.muted)
-                    }
+                    Text("Tu fuerza").font(.apTitle3).accessibilityAddTraits(.isHeader)
                     ExerciseProgressSection(history: model.history, images: model.exerciseImages, names: model.exerciseNames)
                 }
             } else {

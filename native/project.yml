@@ -52,3 +52,21 @@ targets:
         ENABLE_USER_SELECTED_FILES[sdk=macosx*]: readwrite
         CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]: Autopilot/App.entitlements
         CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]: Autopilot/App.entitlements
+
+# Esquema compartido generado por xcodegen: sin él, xcodebuild no encuentra «Autopilot»
+# en una copia recién clonada (Xcode solo crea esquemas al abrir el proyecto a mano).
+schemes:
+  Autopilot:
+    build:
+      targets:
+        Autopilot: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release

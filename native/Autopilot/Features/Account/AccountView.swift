@@ -133,12 +133,12 @@ struct AccountView: View {
     #endif
 
     /// Fila del índice de Ajustes (maqueta de ChatGPT): icono, título, detalle y chevron; abre su pantalla.
-    private func hubRow(_ symbol: String, _ title: String, _ detail: String, to target: SettingsPage) -> some View {
-        hubRow(symbol, title, detail, to: target) { EmptyView() }
+    private func hubRow(_ symbol: String, _ title: String, to target: SettingsPage) -> some View {
+        hubRow(symbol, title, to: target) { EmptyView() }
     }
 
     /// La misma fila con algo antes del chevron (la insignia de «Mi plan»).
-    private func hubRow<Trailing: View>(_ symbol: String, _ title: String, _ detail: String, to target: SettingsPage,
+    private func hubRow<Trailing: View>(_ symbol: String, _ title: String, to target: SettingsPage,
                                         @ViewBuilder trailing: () -> Trailing) -> some View {
         let accessory = trailing()
         return Button {
@@ -151,45 +151,34 @@ struct AccountView: View {
                     .frame(width: 32, height: 32)
                     .background(Palette.secondary, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
                     .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title).font(.apBody).foregroundStyle(Palette.foreground)
-                    Text(detail).font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(2)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                // Solo el título, como Ajustes de iOS.
+                Text(title).font(.apBody).foregroundStyle(Palette.foreground)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 accessory
                 Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Palette.muted.opacity(0.6)).accessibilityHidden(true)
             }
-            .frame(minHeight: 56)
+            .frame(minHeight: 52)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
 
-    /// Índice agrupado de Ajustes, como `SettingsPanel.tsx`: cada fila abre su sección en su pantalla.
-    /// Subtítulo bajo el título grande (en iPad/Mac la barra ya lleva su pista).
-    @ViewBuilder private var hubSubtitle: some View {
-        #if os(iOS)
-        if sizeClassCompact {
-            Text("Gestiona tu cuenta, plan y preferencias.").font(.apSubhead).foregroundStyle(Palette.muted)
-        }
-        #endif
-    }
-
+    /// Índice agrupado de Ajustes, como `SettingsPanel.tsx`: solo títulos; cada fila abre su sección en su pantalla.
     @ViewBuilder private var hub: some View {
         group("Mi cuenta") {
-            hubRow("person", "Perfil", "Nombre, foto y privacidad", to: .perfil)
-            hubRow("target", "Tus datos y objetivo", "Edad, peso, objetivo y disponibilidad", to: .datos)
+            hubRow("person", "Perfil", to: .perfil)
+            hubRow("target", "Tus datos y objetivo", to: .datos)
             // Siempre en su sitio (antes aparecía al llegar la ficha y empujaba las filas de debajo).
             // El plan va en una insignia; hasta saberlo, un hueco del mismo tamaño.
-            hubRow("crown", "Mi plan", "Tu suscripción y lo que incluye", to: .plan) {
+            hubRow("crown", "Mi plan", to: .plan) {
                 SubscriptionBadge(name: planKnown ? planName : nil, paid: paid)
             }
-            hubRow("person.2", "Cuentas en este dispositivo", "Cambia de cuenta sin cerrar sesión", to: .cuentas)
+            hubRow("person.2", "Cuentas en este dispositivo", to: .cuentas)
         }
         group("Preferencias") {
-            hubRow("dumbbell", "Tu forma de entrenar", "Vista del entreno y descanso entre series", to: .entreno)
-            hubRow("key", "Contraseña", "Cambia tu contraseña", to: .contrasena)
+            hubRow("dumbbell", "Tu forma de entrenar", to: .entreno)
+            hubRow("key", "Contraseña", to: .contrasena)
         }
         group("Apariencia") {
             HStack {
@@ -206,8 +195,8 @@ struct AccountView: View {
             .padding(.horizontal, 16).padding(.vertical, 12)
         }
         group("Privacidad y legal") {
-            hubRow("checkmark.shield", "Privacidad y mis datos", "Exporta tus datos y política de privacidad", to: .privacidad)
-            hubRow("doc.text", "Legal", "Términos, cookies y avisos", to: .legal)
+            hubRow("checkmark.shield", "Privacidad y mis datos", to: .privacidad)
+            hubRow("doc.text", "Legal", to: .legal)
         }
     }
 
@@ -533,7 +522,7 @@ struct AccountView: View {
 
     /// Cerrar sesión y eliminar cuenta: al final del índice, como en Ajustes de iOS.
     @ViewBuilder private var sessionSection: some View {
-                group("Sesión", footer: "Cierra tu sesión en este dispositivo.") {
+                group("Sesión") {
                     Button { Task { await session.signOut() } } label: {
                         Label("Cerrar sesión", systemImage: "rectangle.portrait.and.arrow.right").font(.apBody).foregroundStyle(Palette.destructive).frame(maxWidth: .infinity, alignment: .leading)
                     }
@@ -610,7 +599,6 @@ struct AccountView: View {
                 } else {
                     // Solo el índice (perfil arriba y una fila por sección): cada fila abre su
                     // pantalla. Antes debajo del índice seguían todas las secciones de antes.
-                    hubSubtitle
                     header
                     hub
                 }

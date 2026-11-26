@@ -18,14 +18,12 @@ export function PublicProgressScreen() {
   useBrandPhotos(); // repinta las fotos de marca cuando llega su URL actual
   return <div className="pb-4">
     <h2 className="type-large-title leading-tight">Progreso</h2>
-    <p className="mt-1 type-subhead text-muted-foreground">Evolución de tu fuerza, tu físico y tus récords.</p>
     <div aria-hidden="true" className="mt-5 grid grid-cols-4 rounded-full bg-card p-1 type-footnote font-semibold">
       {["Fuerza", "Físico", "Récords", "Scan"].map((tab, i) => (
         <span key={tab} className={cn("flex h-9 items-center justify-center rounded-full", i === 0 ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>{tab}</span>
       ))}
     </div>
     <p className="mt-6 type-title3">Tu fuerza</p>
-    <p className="mt-0.5 type-subhead text-muted-foreground">Evolución de tus principales ejercicios.</p>
     <div className={cn(card, "mt-3 p-4")}>
       <div className="flex items-center gap-3">
         <img src={previewExercises[0].image} alt="" loading="lazy" decoding="async" className="h-14 w-14 shrink-0 rounded-2xl bg-secondary object-cover" />
