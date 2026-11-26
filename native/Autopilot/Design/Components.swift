@@ -2,41 +2,68 @@ import SwiftUI
 import ImageIO
 import os
 
-/// Tarjeta de descanso de la web (`EmptyState rest`): luna dorada con halo, estrellas, título y acción.
+/// Tarjeta tranquila de Hoy (`CalmCard` en `HomeOverview.tsx`): descanso, semana completa, plan sin sesiones
+/// o un entreno hecho fuera del plan. Título grande, una línea y, detrás, la foto de marca muy tenue; sin
+/// antetítulo en mayúsculas ni borde, con la profundidad de las tarjetas y la misma altura que la sesión.
 struct RestCard<Action: View>: View {
-    /// Antetítulo dorado («SEMANA COMPLETA», «TU PLAN»…).
-    var eyebrow = "DÍA DE DESCANSO"
     let title: String
     let message: String
-    /// Foto real de marca, fundida a la derecha como en «Entrenamiento de hoy» (`BRAND_PHOTOS.gym` de la web).
+    /// Hecho: la marca «Hecha» en el sitio del botón.
+    var done = false
+    /// Columna ancha (iPad y Mac): la cifra y los márgenes de la web ancha (`sm:`).
+    var wide = false
+    /// Foto real de marca, fundida a la derecha como en la sesión (`BRAND_PHOTOS.gym` de la web).
     var photo = BrandPhotos.string(.gym)
     @ViewBuilder var action: Action
 
-    /// Semana completa (o descanso): la misma tarjeta que la sesión, con foto real y sin dibujos (la luna y
-    /// las estrellas parecían infantiles). Igual que la tarjeta de `HomeOverview` en la web.
     var body: some View {
+        let shape = RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
         VStack(alignment: .leading, spacing: 0) {
-            Text(eyebrow).font(.apCaption.weight(.semibold)).tracking(1.6).foregroundStyle(Palette.gold)
-            Text(title).font(.inter(size: 22, weight: .bold)).tracking(-0.4)
-                .padding(.top, 6).padding(.trailing, 96)
+            Text(title).font(wide ? .apLargeTitle : .apTitle1)
+                .fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.isHeader)
             Text(message).font(.apSubhead).foregroundStyle(Palette.muted)
-                .padding(.top, 4).padding(.trailing, 96)
                 .fixedSize(horizontal: false, vertical: true)
-            action.padding(.top, 20)
+                .padding(.top, 4)
+            Spacer(minLength: 20)
+            if done { DoneChip() } else { action }
         }
-        .padding(18)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.trailing, wide ? 240 : 128)
+        .padding(wide ? 28 : 20)
+        .frame(maxWidth: .infinity, minHeight: wide ? 248 : 196, alignment: .topLeading)
         .background(alignment: .trailing) {
-            CachedAsyncImage(url: URL(string: photo), maxSide: 210) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
-                .frame(width: 210).frame(maxHeight: .infinity).clipped()
-                .opacity(0.8)
-                .overlay { LinearGradient(colors: [Palette.card, Palette.card.opacity(0.8), Palette.card.opacity(0.1)], startPoint: .leading, endPoint: .trailing) }
+            CachedAsyncImage(url: URL(string: photo), maxSide: MediaSizing.hero) { $0.resizable().scaledToFill() } placeholder: { Color.clear }
+                .frame(width: wide ? 380 : 200).frame(maxHeight: .infinity).clipped()
+                .opacity(0.5)
+                .mask { LinearGradient(colors: [.clear, .black], startPoint: .leading, endPoint: UnitPoint(x: 0.7, y: 0.5)) }
+                .allowsHitTesting(false)
                 .accessibilityHidden(true)
         }
-        .background(Palette.card)
-        .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).strokeBorder(Palette.foreground.opacity(0.08), lineWidth: 1))
+        .clipShape(shape)
+        .background(SurfaceBackground(shape: shape))
+        .accessibilityElement(children: .contain)
+    }
+}
+
+extension RestCard where Action == EmptyView {
+    init(title: String, message: String, done: Bool = false, wide: Bool = false) {
+        self.init(title: title, message: message, done: done, wide: wide) { EmptyView() }
+    }
+}
+
+/// «Hecha»: la marca tranquila de una sesión ya hecha, en el sitio del botón (check dorado, sin relleno dorado).
+struct DoneChip: View {
+    var body: some View {
+        HStack(spacing: 6) {
+            Image("lu-check").renderingMode(.template).resizable().frame(width: 16, height: 16)
+                .foregroundStyle(Palette.gold)
+            Text("Hecha").font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.foreground)
+        }
+        .padding(.horizontal, 16)
+        .frame(height: 44)
+        .background(Palette.secondary, in: Capsule())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Hecha")
     }
 }
 
@@ -84,14 +111,17 @@ struct StarterRoutineCard: View {
     }
 }
 
-/// Cabecera de la web (MobileHeader): campana y avatar en círculos de 30 pt dentro de 44 pt.
+/// Cabecera de la web (MobileHeader): campana y avatar en círculos de 30 pt dentro de 44 pt. En Hoy,
+/// el «+» (`HomeQuickMenu`) va delante de la campana, como el `action` de `MobileHeader`.
 struct HeaderButtons: View {
     let initial: String
     var avatar: String? = nil
+    var quickMenu = false
     var onProfile: () -> Void
 
     var body: some View {
         HStack(spacing: 0) {
+            if quickMenu { HomeQuickMenu() }
             // Campana y avatar, como `MobileHeader` de la web.
             NotificationsBell()
             Button(action: onProfile) {
@@ -109,6 +139,57 @@ struct HeaderButtons: View {
             .accessibilityLabel("Perfil y ajustes")
         }
         .foregroundStyle(Palette.foreground)
+    }
+}
+
+/// Lo que abre el «+» de Hoy. Inicio (`HomeView`) lo recibe y abre la hoja que toca o Entrenar.
+enum HomeQuickAction: String {
+    case emptyWorkout, newRoutine, myRoutines, editPlan
+}
+
+extension Notification.Name {
+    /// Una opción del «+» de Hoy (`HomeQuickAction` en `object`).
+    static let homeQuickAction = Notification.Name("autopilot.homeQuickAction")
+}
+
+/// El «+» redondo de la cabecera de Hoy (junto a la campana): la entrada discreta a Entrenar, que no es
+/// pestaña ni fila de la barra lateral. Mismas cuatro opciones y en el mismo orden que `HomeQuickMenu`
+/// en la web: «Entreno vacío», «Nueva rutina», «Mis rutinas» y «Editar plan». En el iPhone va en la
+/// cabecera (`HeaderButtons`) y en el Mac y el iPad, en la barra de la ventana.
+struct HomeQuickMenu: View {
+    var body: some View {
+        Menu {
+            Section {
+                item("Entreno vacío", symbol: "play.fill", .emptyWorkout)
+                item("Nueva rutina", symbol: "plus", .newRoutine)
+            }
+            Section {
+                item("Mis rutinas", symbol: "dumbbell", .myRoutines)
+                item("Editar plan", symbol: "pencil", .editPlan)
+            }
+        } label: {
+            Image("lu-plus").renderingMode(.template).resizable().frame(width: 17, height: 17)
+                .foregroundStyle(Palette.foreground)
+                .frame(width: 30, height: 30)
+                .background(RaisedFill(shape: Circle()))
+                .frame(width: 44, height: 44)
+                .contentShape(Circle())
+        }
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .accessibilityLabel("Entrenar y rutinas")
+        .accessibilityHint("Entreno vacío, nueva rutina, mis rutinas y editar plan")
+    }
+
+    private func item(_ title: String, symbol: String, _ action: HomeQuickAction) -> some View {
+        Button {
+            Haptics.tap()
+            NotificationCenter.default.post(name: .homeQuickAction, object: action)
+        } label: {
+            Label(title, systemImage: symbol)
+        }
     }
 }
 

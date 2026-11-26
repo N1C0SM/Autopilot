@@ -1,4 +1,4 @@
-import { forwardRef, useState } from "react";
+import { forwardRef, useState, type ReactNode } from "react";
 import { useAccountLongPress } from "@/shared/hooks/useAccountLongPress";
 import { supportsMultipleAccounts } from "@/shared/lib/platform";
 import { BookOpen } from "lucide-react";
@@ -23,6 +23,8 @@ interface Props {
   titleAsHeading?: boolean;
   /** Hoy (diseño de ChatGPT): el AP y AUTOPILOT a la izquierda, sin título pequeño. */
   brand?: boolean;
+  /** Botón propio de la pantalla junto a la campana (el «+» de Hoy, `HomeQuickMenu`). */
+  action?: ReactNode;
 }
 
 /** Firma de la cabecera de Hoy: el AP dorado y AUTOPILOT, como `BrandLockup` en la app. */
@@ -49,7 +51,7 @@ const HeaderAvatar = ({ name, src }: { name?: string; src?: string }) => {
 };
 
 const MobileHeader = forwardRef<HTMLElement, Props>(
-  ({ title, profileName, profileAvatar, userId, onSettings, onResources, titleVisible = true, solid = true, titleAsHeading = true, brand = false }, ref) => {
+  ({ title, profileName, profileAvatar, userId, onSettings, onResources, titleVisible = true, solid = true, titleAsHeading = true, brand = false, action }, ref) => {
     // Mantener pulsado el avatar abre «¿Quién entrena?» (solo apps nativas).
     const longPress = useAccountLongPress();
     return (
@@ -78,6 +80,7 @@ const MobileHeader = forwardRef<HTMLElement, Props>(
                 </span>
               </button>
             )}
+            {action}
             {userId && <NotificationsBell userId={userId} />}
             <button
               type="button"

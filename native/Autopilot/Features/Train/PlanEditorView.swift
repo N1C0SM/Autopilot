@@ -1,4 +1,5 @@
 import SwiftUI
+import Supabase
 
 /// «Editar mi rutina» de la web (`PlanEditor.tsx`): días de la semana, nombre de la sesión,
 /// ejercicios con series/reps/peso/descanso y «Añadir ejercicios». Al guardar, solo los días que
@@ -778,11 +779,18 @@ enum ExerciseCatalogStore {
         }
         guard !skip else { return }
         defer { lock.withLock { warming = false } }
-        if let rows: [ExercisePickerRow] = try? await Backend.client.from("exercises")
-            .select(ExercisePickerRow.columns).order("name").limit(200).execute().value,
-           !rows.isEmpty {
+        if let rows = try? await fetchAll(), !rows.isEmpty {
             store(rows)
             lock.withLock { warmed = true }
+        }
+    }
+
+    /// Toda la biblioteca por páginas de 1.000 (como `fetchAllRows` en `ExercisePicker.tsx`), con un orden
+    /// estable: nombre y después id. `filter` añade la búsqueda, el grupo o la modalidad del buscador.
+    static func fetchAll(_ filter: (PostgrestFilterBuilder) -> PostgrestFilterBuilder = { $0 }) async throws -> [ExercisePickerRow] {
+        try await Backend.allRows { from, to -> [ExercisePickerRow] in
+            try await filter(Backend.client.from("exercises").select(ExercisePickerRow.columns))
+                .order("name").order("id").range(from: from, to: to).execute().value
         }
     }
 }
@@ -815,8 +823,8 @@ struct ExercisePickerView: View {
     @State private var catalog: [Row] = ExerciseCatalogStore.cached
     @State private var offline = false
 
-    /// Se busca en el servidor (no en memoria): la biblioteca es grande y traerla entera dejaba
-    /// la pantalla en blanco. Los resultados llegan por nombre y músculo, con un límite sano.
+    /// La lista se pinta al momento con la copia del teléfono y el servidor la afina: la biblioteca
+    /// entera (por páginas de 1.000, nunca solo las primeras) o lo que encaja con la búsqueda y los filtros.
     private var searchKey: String { "\(query)|#\(group)|\(type)" }
 
     var body: some View {
@@ -980,19 +988,23 @@ struct ExercisePickerView: View {
             }
     }
 
-    /// Petición al servidor con los filtros actuales (nombre/músculo, grupo y modalidad).
+    /// Petición al servidor con los filtros actuales (nombre/músculo, grupo y modalidad), por páginas de
+    /// 1.000 hasta la última: con el catálogo importado ningún ejercicio se queda fuera.
     private func fetch(text: String) async throws -> [Row] {
-        var request = Backend.client.from("exercises").select(Row.columns)
-        if !text.isEmpty {
-            // Búsqueda sin acentos ni mayúsculas: «biceps» encuentra «Bíceps».
-            let clean = text.replacingOccurrences(of: "%", with: "").replacingOccurrences(of: ",", with: " ")
-            request = request.or("name.ilike.%\(clean)%,muscle_group.ilike.%\(clean)%")
+        let group = group, type = type
+        return try await ExerciseCatalogStore.fetchAll { base in
+            var request = base
+            if !text.isEmpty {
+                // Búsqueda sin acentos ni mayúsculas: «biceps» encuentra «Bíceps».
+                let clean = text.replacingOccurrences(of: "%", with: "").replacingOccurrences(of: ",", with: " ")
+                request = request.or("name.ilike.%\(clean)%,muscle_group.ilike.%\(clean)%")
+            }
+            if group != "Todos" { request = request.eq("muscle_group", value: group) }
+            // «Calistenia» incluye lo mixto, como en la web.
+            if type == "Calistenia" { request = request.in("exercise_type", values: ["Calistenia", "Mixto"]) }
+            else if type != "Todo" { request = request.eq("exercise_type", value: type) }
+            return request
         }
-        if group != "Todos" { request = request.eq("muscle_group", value: group) }
-        // «Calistenia» incluye lo mixto, como en la web.
-        if type == "Calistenia" { request = request.in("exercise_type", values: ["Calistenia", "Mixto"]) }
-        else if type != "Todo" { request = request.eq("exercise_type", value: type) }
-        return try await request.order("name").limit(200).execute().value
     }
 
     private func load() async {

@@ -228,7 +228,9 @@ struct MainShell: View {
                                     HStack {
                                         if current == .home { BrandLockup() }
                                         Spacer()
-                                        HeaderButtons(initial: initial, avatar: accounts.accounts.first { $0.id == session.userIdString }?.avatar) { showSettings = true }
+                                        // En Hoy, el «+» junto a la campana: la entrada a Entrenar (no es pestaña).
+                                        HeaderButtons(initial: initial, avatar: accounts.accounts.first { $0.id == session.userIdString }?.avatar,
+                                                      quickMenu: current == .home) { showSettings = true }
                                     }
                                 }
                                 .frame(height: 44)
@@ -444,9 +446,13 @@ struct MainShell: View {
         } detail: {
             NavigationStack {
                 SectionView(section: selection ?? defaultSection, onNavigate: { selection = $0 })
-                    // La campana de la barra superior de la web (`Dashboard.tsx`), a la derecha.
+                    // La campana de la barra superior de la web (`Dashboard.tsx`), a la derecha y, en Hoy,
+                    // el «+» delante (la entrada a Entrenar, que no es fila de la barra lateral).
                     .toolbar {
                         if session.role == .user {
+                            if (selection ?? defaultSection) == .home {
+                                ToolbarItem(placement: .primaryAction) { HomeQuickMenu() }
+                            }
                             ToolbarItem(placement: .primaryAction) { NotificationsBell() }
                         }
                     }

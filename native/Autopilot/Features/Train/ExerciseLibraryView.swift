@@ -221,22 +221,16 @@ final class ExerciseLibraryModel: ObservableObject {
 
     private struct ExerciseRef: Decodable { let exercise_id: String }
 
-    /// Toda la biblioteca publicada, por páginas de 1.000 (el límite de PostgREST).
+    /// Toda la biblioteca publicada, por páginas de 1.000 (el límite de PostgREST), con un orden estable
+    /// (nombre y después id) para que ningún ejercicio se repita ni se pierda entre dos páginas.
     private func fetchAll(_ select: String, published: Bool) async throws -> [Row] {
-        var rows: [Row] = []
-        var from = 0
-        while true {
-            let page: [Row]
+        try await Backend.allRows { from, to -> [Row] in
             if published {
-                page = try await Backend.client.from("exercises").select(select).eq("status", value: "published")
-                    .order("name").range(from: from, to: from + 999).execute().value
-            } else {
-                page = try await Backend.client.from("exercises").select(select)
-                    .order("name").range(from: from, to: from + 999).execute().value
+                return try await Backend.client.from("exercises").select(select).eq("status", value: "published")
+                    .order("name").order("id").range(from: from, to: to).execute().value
             }
-            rows += page
-            if page.count < 1000 { return rows }
-            from += 1000
+            return try await Backend.client.from("exercises").select(select)
+                .order("name").order("id").range(from: from, to: to).execute().value
         }
     }
 

@@ -1,5 +1,6 @@
 import { ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ArrowDown, ChevronLeft, Loader2 } from "lucide-react";
+import { ArrowDown, ChevronLeft } from "lucide-react";
+import { Spinner } from "@/shared/components/ui/spinner";
 import MobileHeader from "@/app/components/mobile/MobileHeader";
 import MobileTabBar, { MobileTab } from "@/app/components/mobile/MobileTabBar";
 import OfflineBanner from "@/app/components/mobile/OfflineBanner";
@@ -45,6 +46,8 @@ interface Props {
   back?: { label: string; onClick: () => void };
   /** Refresco al tirar hacia abajo (UIRefreshControl). */
   onRefresh?: () => Promise<unknown> | unknown;
+  /** Botón de la pantalla en la cabecera, junto a la campana (el «+» de Hoy). */
+  headerAction?: ReactNode;
   children: ReactNode;
 }
 
@@ -66,6 +69,7 @@ const MobileAppShell = ({
   pushedTabs = NO_PUSHED_TABS,
   onRefresh,
   back,
+  headerAction,
   children,
 }: Props) => {
   const scrollRef = useRef<HTMLElement>(null);
@@ -269,6 +273,7 @@ const MobileAppShell = ({
           titleAsHeading={!showLargeTitle}
           solid={showLargeTitle ? collapsed : scrolled}
           brand={active === "home"}
+          action={headerAction}
         />
       )}
 
@@ -284,7 +289,8 @@ const MobileAppShell = ({
             }}
           >
             {pull.refreshing ? (
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              // La carga con la firma de marca (el AP), nunca las aspas.
+              <Spinner size="md" />
             ) : (
               <ArrowDown
                 className="h-4 w-4 text-muted-foreground"

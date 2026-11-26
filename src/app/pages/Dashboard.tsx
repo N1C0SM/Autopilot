@@ -14,7 +14,6 @@ import { readScreen, writeScreen } from "@/shared/lib/screenCache";
 import { hasCoaching, hasNutrition, getConsumerPlan, type ConsumerPlan } from "@/shared/lib/entitlements";
 import { PlanPaywall, CoachPendingAssignment } from "@/app/components/dashboard/PlanPaywall";
 import { parseMacroTargets, resolveNutritionPreview } from "@/shared/lib/nutrition";
-import CoachingOffer from "@/app/components/dashboard/CoachingOffer";
 import { track } from "@/shared/lib/analytics";
 import { SETTINGS_PAGE_TITLES } from "@/shared/lib/settingsPages";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
@@ -32,6 +31,7 @@ import NotificationsBell from "@/app/components/NotificationsBell";
 import { toast } from "sonner";
 import type { DayPlan } from "@/shared/types/training";
 import HomeOverview from "@/app/components/dashboard/HomeOverview";
+import HomeQuickMenu from "@/app/components/dashboard/HomeQuickMenu";
 import RenewalFlow from "@/app/components/dashboard/RenewalFlow";
 import UserSidebar from "@/app/components/UserSidebar";
 import type { UserSection } from "@/app/components/UserSidebar";
@@ -74,16 +74,6 @@ const SectionFallback = () => (
 /** Pantallas que se abren empujando desde una pestaña, no son pestañas. */
 const PUSHED_TABS: MobileTab[] = ["settings", "resources"];
 
-/** Plan que el usuario eligió en la web antes de registrarse (si lo hay). */
-const readLandingPlan = (): "training" | "full" | undefined => {
-  try {
-    const stored = sessionStorage.getItem("autopilot_selected_plan");
-    return stored === "training" || stored === "full" ? stored : undefined;
-  } catch {
-    return undefined;
-  }
-};
-
 export interface Profile {
   user_id: string;
   email: string;
@@ -123,6 +113,7 @@ interface DashboardSnapshot {
   completedTodayDays?: string[];
   completedToday: boolean;
   trainedDates?: string[];
+  doneByDate?: Record<string, string[]>;
   macroEstimate?: Macros | null;
 }
 
@@ -160,13 +151,6 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(!cached);
   const [loadError, setLoadError] = useState(false);
   const lastFetchRef = useRef(0);
-  const [landingPlan] = useState<"training" | "full" | undefined>(readLandingPlan);
-  /**
-   * Lo que contestó en el onboarding: quien quiere entrenador ve el plan con
-   * entrenador preseleccionado, y quien entrena por su cuenta ve el de la app.
-   * Si eligió un plan en la web, ese manda.
-   */
-  const wantsCoach = (user?.user_metadata as { training_style?: string } | undefined)?.training_style === "coach";
   const [searchParams] = useSearchParams();
   const [section, setSectionState] = useState<MobileTab>(() => {
     const fromParam = searchParams.get("section");
@@ -209,6 +193,8 @@ const Dashboard = () => {
   // Días de esta semana con algo hecho (tira de Hoy) y, sin plan de nutrición legible, el objetivo
   // estimado con el onboarding (como `MacroEstimate` en la app).
   const [trainedDates, setTrainedDates] = useState<string[]>(cached?.trainedDates ?? []);
+  // Qué sesiones se hicieron cada día de esta semana: la tarjeta de un día pasado en Hoy.
+  const [doneByDate, setDoneByDate] = useState<Record<string, string[]>>(cached?.doneByDate ?? {});
   const [macroEstimate, setMacroEstimate] = useState<Macros | null>(cached?.macroEstimate ?? null);
   const [workoutMode, setWorkoutMode] = useState(false);
   const [autoStartWorkout, setAutoStartWorkout] = useState(false);
@@ -384,6 +370,11 @@ const Dashboard = () => {
           setCompletedThisWeek(days.size);
           setCompletedDays([...days]);
           setTrainedDates([...new Set((weeklyCompletions.data || []).map((row) => row.completed_at).filter((date): date is string => Boolean(date)))]);
+          const byDate: Record<string, string[]> = {};
+          for (const row of weeklyCompletions.data || []) {
+            if (row.completed_at && row.day_label) byDate[row.completed_at] = [...(byDate[row.completed_at] ?? []), row.day_label];
+          }
+          setDoneByDate(byDate);
         }
         if (np) {
           setMacros(parseMacroTargets(np.macros_json));
@@ -411,12 +402,12 @@ const Dashboard = () => {
     writeScreen<DashboardSnapshot>(user.id, "dashboard", {
       profileName, profileAvatar, planStatus, paymentStatus, coaching, consumerPlan,
       coachAssigned, nutrition, subscriptionTier, dayPlans, macros, meals,
-      completedThisWeek, completedDays, completedTodayDays, completedToday, trainedDates, macroEstimate,
+      completedThisWeek, completedDays, completedTodayDays, completedToday, trainedDates, doneByDate, macroEstimate,
     });
   }, [
     user, loading, loadError, planStatus, paymentStatus, profileName, profileAvatar, coaching,
     consumerPlan, coachAssigned, nutrition, subscriptionTier, dayPlans, macros, meals,
-    completedThisWeek, completedDays, completedTodayDays, completedToday, trainedDates, macroEstimate,
+    completedThisWeek, completedDays, completedTodayDays, completedToday, trainedDates, doneByDate, macroEstimate,
   ]);
 
   useEffect(() => {
@@ -772,6 +763,29 @@ const Dashboard = () => {
     }
   };
 
+  /** Entrenar desde Hoy: la rutina con lo hecho esta semana y, con `routines`, «Mis rutinas» arriba. */
+  const openTraining = (routines = false) => {
+    setAutoStartWorkout(false);
+    setTrainingView("plan");
+    setPlanFocusDay(undefined);
+    setRoutinesFocus(routines);
+    setSection("training");
+  };
+
+  /**
+   * El «+» de la cabecera de Hoy, junto a la campana: Entrenar no es pestaña ni fila de la barra
+   * lateral, así que «Entreno vacío», «Nueva rutina», «Mis rutinas» y «Editar plan» viven aquí
+   * (igual que `HomeQuickMenu` en el iPhone y el Mac).
+   */
+  const homeQuickMenu = (
+    <HomeQuickMenu
+      onEmptyWorkout={() => setFreeOpen(true)}
+      onNewRoutine={() => setRoutineEditor({ day: null })}
+      onOpenRoutines={() => openTraining(true)}
+      onEditPlan={() => setEditorOpen(true)}
+    />
+  );
+
   const renderContent = (section: MobileTab) => (
     <>
       {!coaching && !hasPlan && section === "training" && (
@@ -835,31 +849,12 @@ const Dashboard = () => {
             meals={meals}
             nutrition={nutrition || campaign}
             dayPlans={dayPlans}
-            onNavigate={(s, day) => {
+            onNavigate={(s) => {
               setAutoStartWorkout(false);
-              if (s === "training") {
-                if (day) {
-                  // Día concreto desde la tira semanal: rutina semanal en ese día.
-                  setTrainingView("plan");
-                  setPlanFocusDay(day);
-                } else {
-                  // Sin día (resumen de la sesión hecha): la vista de entreno,
-                  // que muestra el resumen guardado del día.
-                  setTrainingView("tracker");
-                  setPlanFocusDay(undefined);
-                }
-              }
               setSection(s as MobileTab);
             }}
-            onEmptyWorkout={() => setFreeOpen(true)}
-            onNewRoutine={() => setRoutineEditor({ day: null })}
-            onOpenRoutines={() => {
-              setAutoStartWorkout(false);
-              setTrainingView("plan");
-              setPlanFocusDay(undefined);
-              setRoutinesFocus(true);
-              setSection("training");
-            }}
+            // «Ver plan» y la cifra de Sesiones: Entrenar, con la rutina y lo hecho esta semana.
+            onOpenPlan={() => openTraining()}
             onEditRoutine={() => setEditorOpen(true)}
             onStartWorkout={(day) => {
               setResumeWorkout(false);
@@ -905,22 +900,11 @@ const Dashboard = () => {
             completedDays={completedDays}
             completedToday={completedToday}
             trainedDates={trainedDates}
+            doneByDate={doneByDate}
           />
+          {/* Hoy es solo el día: la sesión, sus cifras y nada más (Plus se ofrece en Nutrición y en Ajustes).
+              El ciclo de un plan antiguo con entrenador solo aparece a quien lo tiene. */}
           {!campaign && coaching && user && <RenewalFlow userId={user.id} subscriptionTier={subscriptionTier} />}
-          {/* Modo viaje se gestiona ahora desde Ajustes; en Dashboard solo
-              aparecería como estado activo (próxima iteración). */}
-          {/* La oferta de Plus no espera a que acabe la primera semana: es cuando
-              más intención hay. Se mantiene compacta para no competir con entrenar. */}
-          {!coaching && (
-            <div className="w-full space-y-8 empty:hidden">
-              {!campaign && <CoachingOffer
-                onChoose={handleCompletePayment}
-                compact
-                // Solo «Elegiste Plus en la web» si de verdad lo eligió antes de registrarse.
-                defaultPlan={landingPlan ?? (wantsCoach ? "full" : undefined)}
-              />}
-            </div>
-          )}
         </div>
       )}
 
@@ -1273,6 +1257,7 @@ const Dashboard = () => {
         pushedTabs={PUSHED_TABS}
         onRefresh={() => fetchData()}
         workoutMode={workoutMode}
+        headerAction={section === "home" ? homeQuickMenu : undefined}
         onQuickTrain={section !== "home" && section !== "training" && section !== "settings" ? () => {
           setAutoStartWorkout(false);
           setSection("home");
@@ -1330,6 +1315,7 @@ const Dashboard = () => {
                 {SECTION_HINTS[section]}
               </p>
             </div>
+            {section === "home" && homeQuickMenu}
             {user && <NotificationsBell userId={user.id} />}
           </header>
 

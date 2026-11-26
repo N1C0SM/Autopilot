@@ -257,23 +257,14 @@ struct AdminPlanVideosCard: View {
     private func count() async -> (queue: PlanVideos.Queue, paused: Bool)? {
         failed = false
         do {
-            var plans: [AnyJSON] = []
-            var from = 0
-            while true {
-                let rows: [PlanRow] = try await Backend.client.from("training_plan").select("workouts_json")
-                    .range(from: from, to: from + 999).execute().value
-                plans += rows.compactMap(\.workouts_json)
-                if rows.count < 1000 { break }
-                from += 1000
-            }
-            var library: [PlanVideos.Exercise] = []
-            from = 0
-            while true {
-                let rows: [PlanVideos.Exercise] = try await Backend.client.from("exercises").select("id, name, image_url, video_url")
-                    .order("name").range(from: from, to: from + 999).execute().value
-                library += rows
-                if rows.count < 1000 { break }
-                from += 1000
+            // Por páginas con un orden estable: ninguna fila se repite ni se pierde entre dos páginas.
+            let plans: [AnyJSON] = try await Backend.allRows { from, to -> [PlanRow] in
+                try await Backend.client.from("training_plan").select("workouts_json")
+                    .order("id").range(from: from, to: to).execute().value
+            }.compactMap(\.workouts_json)
+            let library: [PlanVideos.Exercise] = try await Backend.allRows { from, to -> [PlanVideos.Exercise] in
+                try await Backend.client.from("exercises").select("id, name, image_url, video_url")
+                    .order("name").order("id").range(from: from, to: to).execute().value
             }
             // Solo se lee el interruptor de Claves de IA; nunca se cambia desde aquí.
             let secrets: [Secret] = (try? await Backend.client.from("app_secrets").select("value")

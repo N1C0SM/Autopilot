@@ -80,7 +80,8 @@ async function fetchCatalog(): Promise<LibraryExercise[]> {
   const load = async (select: string, published: boolean) => {
     const rows: Row[] = [];
     for (let from = 0; ; from += PAGE) {
-      let query = supabase.from("exercises").select(select).order("name").range(from, from + PAGE - 1);
+      // Orden estable (nombre y después id, como `ExerciseLibraryView.swift`): nada se repite ni se pierde entre páginas.
+      let query = supabase.from("exercises").select(select).order("name").order("id").range(from, from + PAGE - 1);
       if (published) query = query.eq("status", "published");
       const { data, error } = await query;
       if (error) throw error;

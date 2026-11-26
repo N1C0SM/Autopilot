@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import "@/index.css";
 import HomeOverview from "@/app/components/dashboard/HomeOverview";
+import HomeQuickMenu from "@/app/components/dashboard/HomeQuickMenu";
 import { BRAND_PHOTOS } from "@/shared/lib/brandPhotos";
 import type { DayPlan } from "@/shared/types/training";
 
@@ -39,6 +40,13 @@ const dayPlans: DayPlan[] = [
   { day: other, type: "gimnasio", routine_name: "Full Body B", exercises: [] },
 ];
 
+const localDate = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+/** Un día de esta semana anterior a hoy (si lo hay), entrenado con «Full Body B». */
+const now = new Date();
+const mondayOffset = (now.getDay() + 6) % 7;
+const trainedDay = mondayOffset > 0 ? localDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1)) : null;
+
 const App = () => {
   const state = new URLSearchParams(location.search).get("state") ?? "start";
   const done = state === "done";
@@ -58,6 +66,7 @@ const App = () => {
             Tu entreno de hoy y lo que toca comer
           </p>
         </div>
+        <HomeQuickMenu onEmptyWorkout={() => {}} onNewRoutine={() => {}} onOpenRoutines={() => {}} onEditPlan={() => {}} />
       </header>
       <main className="min-w-0 flex-1 overflow-y-auto p-4 md:p-8 lg:p-10 lg:pt-8">
         <div className="flex w-full flex-1 flex-col gap-3">
@@ -67,9 +76,13 @@ const App = () => {
             nutrition
             profileName="Nicolás Pérez"
             macros={{ protein: 180, carbs: 220, fats: 70, calories: 2366 }}
-            completedThisWeek={0}
+            completedThisWeek={trainedDay ? 1 : 0}
+            completedDays={trainedDay ? [other] : []}
             completedToday={done}
+            trainedDates={trainedDay ? [trainedDay] : []}
+            doneByDate={trainedDay ? { [trainedDay]: [other] } : {}}
             onNavigate={() => {}}
+            onOpenPlan={() => {}}
           />
         </div>
       </main>

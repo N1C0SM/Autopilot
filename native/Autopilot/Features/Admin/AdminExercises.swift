@@ -237,9 +237,13 @@ struct AdminExercisesView: View {
 
     private func load() async {
         do {
-            exercises = try await Backend.client.from("exercises")
-                .select("id, name, muscle_group, image_url, video_url, exercise_type, movement_pattern, level, priority, stimulus_type, load_level, fatigue_level, recommended_order, alternative_id, skill_tag, progression_order, is_stable, is_progressable, high_tension, tracking_mode")
-                .order("muscle_group").order("recommended_order").order("name").execute().value
+            // Toda la biblioteca, no solo las primeras 1.000 filas que devuelve cada petición (como la web).
+            exercises = try await Backend.allRows { from, to -> [Exercise] in
+                try await Backend.client.from("exercises")
+                    .select("id, name, muscle_group, image_url, video_url, exercise_type, movement_pattern, level, priority, stimulus_type, load_level, fatigue_level, recommended_order, alternative_id, skill_tag, progression_order, is_stable, is_progressable, high_tension, tracking_mode")
+                    .order("muscle_group").order("recommended_order").order("name").order("id")
+                    .range(from: from, to: to).execute().value
+            }
             failed = false
         } catch {
             failed = true

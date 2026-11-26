@@ -35,6 +35,23 @@ enum Backend {
         options: .init(auth: .init(emitLocalSessionAsInitialSession: true))
     )
 
+    /// Filas por petición: PostgREST corta cada respuesta en 1.000 aunque haya más (`ROWS_PER_PAGE` en la web).
+    static let rowsPerPage = 1000
+
+    /// Lee una tabla entera por páginas (`range`) hasta la última, como `fetchAllRows` en la web: listas como
+    /// la biblioteca de ejercicios no se quedan en las primeras 1.000 filas. La consulta debe tener un orden
+    /// estable (el nombre y después el id), o una fila podría repetirse o perderse entre dos páginas.
+    static func allRows<Row>(_ page: (_ from: Int, _ to: Int) async throws -> [Row]) async throws -> [Row] {
+        var rows: [Row] = []
+        var from = 0
+        while true {
+            let chunk = try await page(from, from + rowsPerPage - 1)
+            rows += chunk
+            if chunk.count < rowsPerPage { return rows }
+            from += rowsPerPage
+        }
+    }
+
     #if DEBUG
     private static func arg(_ name: String) -> String? {
         let prefix = "-\(name)="
