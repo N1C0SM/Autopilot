@@ -67,6 +67,12 @@ struct DayPlan: Codable, Hashable, Identifiable {
     var muscle_focus: String?
     var exercises: [GymExercise]?
     var custom: Bool?
+    /// Título del día dentro de la rutina (ej. «Push», «Pull», «Piernas»). Opcional; si no hay,
+    /// se deriva de los músculos de sus ejercicios.
+    var day_title: String?
+    /// Identificador de la rutina padre: varios días comparten el mismo `routine_id` para formar
+    /// una rutina de varios días (push/pull/pierna). Si es nil, el día es una rutina suelta.
+    var routine_id: String?
     /// Emoji elegido para la sesión (si no hay, se ve su foto). `session_icon` en la web.
     var session_icon: String?
     /// Portada generada con IA (session-cover) para esta sesión, opcional.
@@ -74,11 +80,11 @@ struct DayPlan: Codable, Hashable, Identifiable {
     var id: String { day }
 
     init(day: String, type: String, sport: String? = nil, intensity: String? = nil, duration: String? = nil,
-         routine_name: String? = nil, muscle_focus: String? = nil, exercises: [GymExercise]? = nil,
-         custom: Bool? = nil, session_icon: String? = nil, cover_url: String? = nil) {
+         routine_name: String? = nil, muscle_focus: String? = nil, custom: Bool? = nil, exercises: [GymExercise]? = nil,
+         routine_id: String? = nil, day_title: String? = nil, session_icon: String? = nil, cover_url: String? = nil) {
         self.day = day; self.type = type; self.sport = sport; self.intensity = intensity; self.duration = duration
-        self.routine_name = routine_name; self.muscle_focus = muscle_focus; self.exercises = exercises
-        self.custom = custom; self.session_icon = session_icon; self.cover_url = cover_url
+        self.routine_name = routine_name; self.muscle_focus = muscle_focus; self.custom = custom; self.exercises = exercises
+        self.routine_id = routine_id; self.day_title = day_title; self.session_icon = session_icon; self.cover_url = cover_url
     }
 
     var isGym: Bool { type == "gimnasio" }
@@ -294,7 +300,110 @@ enum SessionIdentity {
 /// igual que `customRoutines.ts` de la web. No hay tabla aparte: cada rutina es una sesión más de
 /// `training_plan.workouts_json`, con la siguiente clave libre del orden y `custom: true`. Solo la
 /// rutina creada o editada por el usuario lleva `custom: true`; las del piloto automático no se tocan.
+/// Una rutina predefinida (plantilla) administrada por el admin.
+struct RoutineTemplate: Codable, Identifiable, Hashable {
+    let id: UUID
+    let name: String
+    let description: String?
+    let days: [DayPlan]
+}
+
+extension Notification.Name {
+    static let routineApplied = Notification.Name("routineApplied")
+}
+
+/// Un día de una rutina (rutina padre): día de la semana + ejercicios de ese día.
+struct RoutineDay: Equatable {
+    var day: String
+    var title: String
+    var exercises: [GymExercise]
+}
+
 enum CustomRoutines {
+    // MARK: - Almacenamiento local de rutinas propias (biblioteca separada del plan)
+    // Las rutinas propias ya no ocupan slots del plan hasta que se aplican: se guardan en
+    // UserDefaults por usuario, así no hay límite de 7.
+
+    private static func storageKey(_ userId: String) -> String { "user_routines_\\(userId)" }
+
+    static func loadRoutines(userId: String) -> [DayPlan] {
+        guard let data = UserDefaults.standard.data(forKey: storageKey(userId)),
+              let days = try? JSONDecoder().decode([DayPlan].self, from: data) else { return [] }
+        return days
+    }
+
+    @discardableResult
+    static func duplicate(userId: String, day: String) -> Bool {
+        let routines = loadRoutines(userId: userId)
+        guard let source = routines.first(where: { $0.day == day }) else { return false }
+        guard let free = nextFreeKey(routines) else { return false }
+        var copy = source
+        copy.day = free
+        copy.routine_name = copyName(source.routine_name)
+        saveRoutines(userId: userId, routines + [copy])
+        return true
+    }
+
+    @discardableResult
+    static func delete(userId: String, day: String) -> Bool {
+        let routines = loadRoutines(userId: userId)
+        // Delete all days sharing the routine_id (or name) of this day.
+        guard let target = routines.first(where: { $0.day == day }) else { return false }
+        let key = target.routine_id ?? clean(target.routine_name)
+        let filtered = routines.filter { (routines.first(where: { $0.day == $0.day }) != nil) && (($0.routine_id ?? clean($0.routine_name)) != key || $0.day == day) ? false : true }
+        // Simpler: remove target and siblings with same key.
+        let toRemove = Set(routines.filter { ($0.routine_id ?? clean($0.routine_name)) == key }.map(\.day))
+        let remaining = routines.filter { !toRemove.contains($0.day) }
+        saveRoutines(userId: userId, remaining)
+        return true
+    }
+
+    @discardableResult
+    static func addRoutine(userId: String, name: String, days: [RoutineDay], routine_id: String?) -> Bool {
+        let current = loadRoutines(userId: userId)
+        let rid = routine_id ?? UUID().uuidString
+        let cleaned = clean(name).isEmpty ? defaultName : clean(name)
+        var newPlans = current
+        for rd in days {
+            var day = rd.day
+            if newPlans.contains(where: { $0.day == day }) {
+                if let free = nextFreeKey(newPlans) { day = free } else { continue }
+            }
+            guard DayNames.all.contains(day) else { continue }
+            newPlans.append(DayPlan(day: day, type: "gimnasio", routine_name: cleaned, muscle_focus: "", custom: true, exercises: rd.exercises, routine_id: rid, day_title: rd.title.isEmpty ? nil : rd.title))
+        }
+        saveRoutines(userId: userId, newPlans)
+        return true
+    }
+
+    @discardableResult
+    static func updateRoutine(userId: String, oldDay: String, name: String, days: [RoutineDay]) -> Bool {
+        let current = loadRoutines(userId: userId)
+        guard let target = current.first(where: { $0.day == oldDay }) else { return false }
+        let oldKey = target.routine_id ?? clean(target.routine_name)
+        let rid = target.routine_id ?? UUID().uuidString
+        let cleaned = clean(name).isEmpty ? target.routine_name ?? defaultName : clean(name)
+        var remaining = current.filter { ($0.routine_id ?? clean($0.routine_name)) != oldKey }
+        for rd in days {
+            var day = rd.day
+            if remaining.contains(where: { $0.day == day }) {
+                if let free = nextFreeKey(remaining) { day = free } else { continue }
+            }
+            guard DayNames.all.contains(day) else { continue }
+            remaining.append(DayPlan(day: day, type: "gimnasio", routine_name: cleaned, muscle_focus: "", custom: true, exercises: rd.exercises, routine_id: rid, day_title: rd.title.isEmpty ? nil : rd.title))
+        }
+        saveRoutines(userId: userId, remaining)
+        return true
+    }
+
+    static func saveRoutines(userId: String, _ routines: [DayPlan]) {
+        if let data = try? JSONEncoder().encode(routines) {
+            UserDefaults.standard.set(data, forKey: storageKey(userId))
+        }
+    }
+
+    /// Rutinas del usuario: las sesiones de gimnasio marcadas `custom`, leídas de la biblioteca local.
+    static func mine(userId: String) -> [DayPlan] { loadRoutines(userId: userId) }
     /// Lo que se dice cuando no cabe otra sesión (nunca se falla en silencio).
     static let limitMessage = "Tienes 7 sesiones: borra o edita una para añadir otra"
     static let defaultName = "Mi rutina"
@@ -310,6 +419,9 @@ enum CustomRoutines {
 
     /// Rutinas del usuario: las sesiones de gimnasio marcadas `custom`, en el orden de la rutina.
     static func mine(_ plans: [DayPlan]) -> [DayPlan] { RoutineOrder.sessions(plans).filter { $0.isGym && $0.custom == true } }
+
+    /// Clave de agrupación de una rutina: su `routine_id` si lo tiene, o su nombre (compatibilidad).
+    static func routineKey(_ plan: DayPlan) -> String { plan.routine_id ?? clean(plan.routine_name) }
     /// Primera clave del orden que no usa ninguna entrada del plan; nil si están las siete.
     static func nextFreeKey(_ plans: [DayPlan]) -> String? { DayNames.all.first { key in !plans.contains { $0.day == key } } }
     static func canAdd(_ plans: [DayPlan]) -> Bool { nextFreeKey(plans) != nil }
@@ -341,12 +453,32 @@ enum CustomRoutines {
         return ["\(count) \(count == 1 ? "ejercicio" : "ejercicios")", muscles(plan)].filter { !$0.isEmpty }.joined(separator: " · ")
     }
 
-    /// Nueva rutina en la siguiente clave libre, marcada como tuya.
+    /// Nueva rutina en la siguiente clave libre, marcada como tuya (un solo día).
     static func add(_ plans: [DayPlan], name: String, exercises: [GymExercise]) -> Change {
-        guard let day = nextFreeKey(plans) else { return .limit }
-        let routine = DayPlan(day: day, type: "gimnasio", routine_name: clean(name).isEmpty ? defaultName : clean(name),
-                              muscle_focus: "", exercises: exercises, custom: true)
-        return .ok(sorted(plans + [routine]), day: day)
+        add(plans, name: name, days: [RoutineDay(day: nextFreeKey(plans) ?? "", title: "", exercises: exercises)], routine_id: nil)
+    }
+
+    /// Nueva rutina con uno o varios días, marcada como tuya. Todos los días comparten el mismo
+    /// `routine_id` (rutina padre) y el mismo nombre, para que «Mis rutinas» los agrupe en una sola
+    /// tarjeta. Si `days` es nil o vacío, se usa la siguiente clave libre (un solo día).
+    static func add(_ plans: [DayPlan], name: String, days: [RoutineDay], routine_id: String? = nil) -> Change {
+        let rid = routine_id ?? UUID().uuidString
+        let cleaned = clean(name).isEmpty ? defaultName : clean(name)
+        var newPlans = plans
+        var firstDay: String?
+        for rd in days {
+            var day = rd.day
+            guard DayNames.all.contains(day) else { continue }
+            if plans.contains(where: { $0.day == day }) || newPlans.contains(where: { $0.day == day }) {
+                if let free = nextFreeKey(newPlans) { day = free } else { continue }
+            }
+            let routine = DayPlan(day: day, type: "gimnasio", routine_name: cleaned, muscle_focus: "",
+                                  custom: true, exercises: rd.exercises, routine_id: rid, day_title: rd.title)
+            newPlans.append(routine)
+            if firstDay == nil { firstDay = day }
+        }
+        guard firstDay != nil else { return .limit }
+        return .ok(sorted(newPlans), day: firstDay!)
     }
 
     /// Cambia nombre y ejercicios de una sesión: solo esa pasa a ser tuya.
@@ -699,6 +831,98 @@ private final class TrainingCache: @unchecked Sendable {
 
 /// Lecturas y escrituras de entrenamiento contra las mismas tablas que la web.
 enum TrainingRepo {
+    /// Rutinas predefinidas (plantillas comunes a todos los usuarios), leídas de `routine_templates`.
+    static func routineTemplates() async -> [RoutineTemplate] {
+        struct Row: Decodable { let id: UUID; let name: String; let description: String?; let days: [DayPlan] }
+        if let rows: [Row] = try? await Backend.client.from("routine_templates")
+            .select("id, name, description, days").eq("is_public", value: true).execute().value, !rows.isEmpty {
+            return rows.map { RoutineTemplate(id: $0.id, name: $0.name, description: $0.description, days: $0.days) }
+        }
+        // Fallback: plantillas hardcoded para que siempre haya algo que aplicar.
+        return Self.builtinTemplates
+    }
+
+    /// Plantillas integradas (fallback si la tabla está vacía o no disponible).
+    static let builtinTemplates: [RoutineTemplate] = [
+        RoutineTemplate(id: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!, name: "PPL (Push/Pull/Legs)", description: "3 días: empuje, tirón y piernas.", days: [
+            DayPlan(day: "Lunes", type: "gimnasio", routine_name: "PPL - Push", muscle_focus: "Pecho, hombros y tríceps", custom: true, exercises: [
+                GymExercise(exercise_id: "press-banca", name: "Press de banca", series: 4, reps: "6-8", weight: "0", rest: "120s", muscle_group: "Pecho"),
+                GymExercise(exercise_id: "press-inclinado", name: "Press inclinado con mancuernas", series: 3, reps: "8-12", weight: "0", rest: "90s", muscle_group: "Pecho"),
+                GymExercise(exercise_id: "elevacion-lateral", name: "Elevación lateral", series: 3, reps: "12-15", weight: "0", rest: "60s", muscle_group: "Hombros"),
+                GymExercise(exercise_id: "extension-triceps", name: "Extensión de tríceps", series: 3, reps: "10-15", weight: "0", rest: "60s", muscle_group: "Tríceps")
+            ]),
+            DayPlan(day: "Miércoles", type: "gimnasio", routine_name: "PPL - Pull", muscle_focus: "Espalda y bíceps", custom: true, exercises: [
+                GymExercise(exercise_id: "dominadas", name: "Dominadas", series: 4, reps: "6-8", weight: "0", rest: "120s", muscle_group: "Espalda"),
+                GymExercise(exercise_id: "remo-barra", name: "Remo con barra", series: 3, reps: "8-12", weight: "0", rest: "90s", muscle_group: "Espalda"),
+                GymExercise(exercise_id: "curl-barra", name: "Curl con barra", series: 3, reps: "8-12", weight: "0", rest: "60s", muscle_group: "Bíceps")
+            ]),
+            DayPlan(day: "Viernes", type: "gimnasio", routine_name: "PPL - Legs", muscle_focus: "Piernas", custom: true, exercises: [
+                GymExercise(exercise_id: "sentadilla", name: "Sentadilla", series: 4, reps: "6-8", weight: "0", rest: "180s", muscle_group: "Piernas"),
+                GymExercise(exercise_id: "prensa", name: "Prensa", series: 3, reps: "10-12", weight: "0", rest: "120s", muscle_group: "Piernas"),
+                GymExercise(exercise_id: "gemelos", name: "Gemelos", series: 4, reps: "12-20", weight: "0", rest: "60s", muscle_group: "Piernas")
+            ])
+        ]),
+        RoutineTemplate(id: UUID(uuidString: "22222222-2222-2222-2222-222222222222")!, name: "Upper/Lower", description: "4 días: tren superior e inferior alternados.", days: [
+            DayPlan(day: "Lunes", type: "gimnasio", routine_name: "Upper", muscle_focus: "Tren superior", custom: true, exercises: [
+                GymExercise(exercise_id: "press-banca", name: "Press de banca", series: 4, reps: "6-8", weight: "0", rest: "120s", muscle_group: "Pecho"),
+                GymExercise(exercise_id: "remo-barra", name: "Remo con barra", series: 4, reps: "6-8", weight: "0", rest: "120s", muscle_group: "Espalda"),
+                GymExercise(exercise_id: "press-militar", name: "Press militar", series: 3, reps: "8-12", weight: "0", rest: "90s", muscle_group: "Hombros")
+            ]),
+            DayPlan(day: "Martes", type: "gimnasio", routine_name: "Lower", muscle_focus: "Tren inferior", custom: true, exercises: [
+                GymExercise(exercise_id: "sentadilla", name: "Sentadilla", series: 4, reps: "6-8", weight: "0", rest: "180s", muscle_group: "Piernas"),
+                GymExercise(exercise_id: "peso-muerto-rumano", name: "Peso muerto rumano", series: 3, reps: "8-12", weight: "0", rest: "120s", muscle_group: "Piernas"),
+                GymExercise(exercise_id: "gemelos", name: "Gemelos", series: 4, reps: "12-20", weight: "0", rest: "60s", muscle_group: "Piernas")
+            ])
+        ]),
+        RoutineTemplate(id: UUID(uuidString: "33333333-3333-3333-3333-333333333333")!, name: "Arnold Split", description: "3 días: pecho/espalda, hombros/brazos, piernas.", days: [
+            DayPlan(day: "Lunes", type: "gimnasio", routine_name: "Arnold - Pecho y espalda", muscle_focus: "Pecho y espalda", custom: true, exercises: [
+                GymExercise(exercise_id: "press-banca", name: "Press de banca", series: 4, reps: "6-8", weight: "0", rest: "120s", muscle_group: "Pecho"),
+                GymExercise(exercise_id: "dominadas", name: "Dominadas", series: 4, reps: "6-8", weight: "0", rest: "120s", muscle_group: "Espalda"),
+                GymExercise(exercise_id: "press-inclinado", name: "Press inclinado con mancuernas", series: 3, reps: "8-12", weight: "0", rest: "90s", muscle_group: "Pecho")
+            ]),
+            DayPlan(day: "Miércoles", type: "gimnasio", routine_name: "Arnold - Hombros y brazos", muscle_focus: "Hombros, bíceps y tríceps", custom: true, exercises: [
+                GymExercise(exercise_id: "press-militar", name: "Press militar", series: 4, reps: "6-8", weight: "0", rest: "120s", muscle_group: "Hombros"),
+                GymExercise(exercise_id: "curl-barra", name: "Curl con barra", series: 3, reps: "8-12", weight: "0", rest: "60s", muscle_group: "Bíceps"),
+                GymExercise(exercise_id: "extension-triceps", name: "Extensión de tríceps", series: 3, reps: "10-12", weight: "0", rest: "60s", muscle_group: "Tríceps")
+            ]),
+            DayPlan(day: "Viernes", type: "gimnasio", routine_name: "Arnold - Piernas", muscle_focus: "Piernas y glúteos", custom: true, exercises: [
+                GymExercise(exercise_id: "sentadilla", name: "Sentadilla", series: 4, reps: "6-8", weight: "0", rest: "180s", muscle_group: "Piernas"),
+                GymExercise(exercise_id: "prensa", name: "Prensa", series: 3, reps: "10-12", weight: "0", rest: "120s", muscle_group: "Piernas"),
+                GymExercise(exercise_id: "gemelos", name: "Gemelos", series: 4, reps: "12-20", weight: "0", rest: "60s", muscle_group: "Piernas")
+            ])
+        ]),
+        RoutineTemplate(id: UUID(uuidString: "44444444-4444-4444-4444-444444444444")!, name: "PPL + Upper/Lower", description: "7 días: PPL + Upper/Lower para volumen alto.", days: [
+            DayPlan(day: "Lunes", type: "gimnasio", routine_name: "PPL+UL - Push", muscle_focus: "Pecho, hombros y tríceps", custom: true, exercises: [
+                GymExercise(exercise_id: "press-banca", name: "Press de banca", series: 4, reps: "6-8", weight: "0", rest: "120s", muscle_group: "Pecho"),
+                GymExercise(exercise_id: "elevacion-lateral", name: "Elevación lateral", series: 3, reps: "12-15", weight: "0", rest: "60s", muscle_group: "Hombros")
+            ]),
+            DayPlan(day: "Martes", type: "gimnasio", routine_name: "PPL+UL - Pull", muscle_focus: "Espalda y bíceps", custom: true, exercises: [
+                GymExercise(exercise_id: "dominadas", name: "Dominadas", series: 4, reps: "6-8", weight: "0", rest: "120s", muscle_group: "Espalda"),
+                GymExercise(exercise_id: "curl-barra", name: "Curl con barra", series: 3, reps: "8-12", weight: "0", rest: "60s", muscle_group: "Bíceps")
+            ]),
+            DayPlan(day: "Miércoles", type: "gimnasio", routine_name: "PPL+UL - Legs", muscle_focus: "Piernas", custom: true, exercises: [
+                GymExercise(exercise_id: "sentadilla", name: "Sentadilla", series: 4, reps: "6-8", weight: "0", rest: "180s", muscle_group: "Piernas"),
+                GymExercise(exercise_id: "gemelos", name: "Gemelos", series: 4, reps: "12-20", weight: "0", rest: "60s", muscle_group: "Piernas")
+            ])
+        ]),
+        RoutineTemplate(id: UUID(uuidString: "55555555-5555-5555-5555-555555555555")!, name: "Método Bilbo", description: "Full body 3x/semana con alta frecuencia.", days: [
+            DayPlan(day: "Lunes", type: "gimnasio", routine_name: "Bilbo - Full A", muscle_focus: "Full body", custom: true, exercises: [
+                GymExercise(exercise_id: "sentadilla", name: "Sentadilla", series: 3, reps: "8-10", weight: "0", rest: "120s", muscle_group: "Piernas"),
+                GymExercise(exercise_id: "press-banca", name: "Press de banca", series: 3, reps: "8-10", weight: "0", rest: "90s", muscle_group: "Pecho"),
+                GymExercise(exercise_id: "remo-barra", name: "Remo con barra", series: 3, reps: "8-10", weight: "0", rest: "90s", muscle_group: "Espalda")
+            ]),
+            DayPlan(day: "Miércoles", type: "gimnasio", routine_name: "Bilbo - Full B", muscle_focus: "Full body", custom: true, exercises: [
+                GymExercise(exercise_id: "peso-muerto-rumano", name: "Peso muerto rumano", series: 3, reps: "8-10", weight: "0", rest: "120s", muscle_group: "Piernas"),
+                GymExercise(exercise_id: "press-inclinado", name: "Press inclinado con mancuernas", series: 3, reps: "8-10", weight: "0", rest: "90s", muscle_group: "Pecho"),
+                GymExercise(exercise_id: "dominadas", name: "Dominadas", series: 3, reps: "8-10", weight: "0", rest: "90s", muscle_group: "Espalda")
+            ]),
+            DayPlan(day: "Viernes", type: "gimnasio", routine_name: "Bilbo - Full C", muscle_focus: "Full body", custom: true, exercises: [
+                GymExercise(exercise_id: "sentadilla", name: "Sentadilla", series: 3, reps: "8-10", weight: "0", rest: "120s", muscle_group: "Piernas"),
+                GymExercise(exercise_id: "press-banca", name: "Press de banca", series: 3, reps: "8-10", weight: "0", rest: "90s", muscle_group: "Pecho"),
+                GymExercise(exercise_id: "remo-pecho-apoyado", name: "Remo con pecho apoyado", series: 3, reps: "8-10", weight: "0", rest: "90s", muscle_group: "Espalda")
+            ])
+        ])
+    ]
     /// «Actualizar» (menú) tira la caché entera para que la siguiente carga vaya a la red.
     private static let refreshObserver: NSObjectProtocol = NotificationCenter.default.addObserver(
         forName: .refreshSection, object: nil, queue: nil) { _ in

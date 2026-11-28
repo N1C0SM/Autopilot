@@ -42,7 +42,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
     var title: String {
         switch self {
         case .home: "Inicio"
-        case .train: "Entrenar"
+        case .train: "Mis rutinas"
         case .library: "Ejercicios"
         case .progress: "Mi progreso"
         case .nutrition: "Nutrición"
@@ -143,6 +143,10 @@ struct RootView: View {
                 #if DEBUG
                 NutritionView()
                 #endif
+            } else if previewingWorkout {
+                #if DEBUG
+                PreviewWorkoutHost()
+                #endif
             } else if !session.ready {
                 // Arranque: el mismo icono y en el mismo sitio que la pantalla de arranque (LaunchLogo,
                 // 110 pt de 240), así no hay salto entre el splash y la app.
@@ -161,6 +165,33 @@ struct RootView: View {
         .animation(.easeOut(duration: 0.2), value: session.session?.user.id)
     }
 }
+
+#if DEBUG
+/// Solo QA: lo que abre `-previewWorkout` cuando todavía no hay cuenta (por eso vive en `RootView`
+/// y no en `MainShell`, que exige sesión). Arma el mismo entreno de muestra que usan las capturas
+/// con cuenta (`MainShell.mockWorkout()`) y pinta `WorkoutView` directamente, sin pasar por el
+/// arranque de sesión ni por Supabase. Atajo de pruebas, nunca se compila en Release.
+private struct PreviewWorkoutHost: View {
+    @State private var workout: ActiveWorkout?
+
+    var body: some View {
+        Group {
+            if let workout {
+                NavigationStack {
+                    WorkoutView(workout: workout, userId: UUID()) { _ in }
+                }
+            } else {
+                // Mismo lugar que el splash real mientras se arma el entreno de muestra.
+                AppIconMark(size: 110)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity).screenBackground()
+            }
+        }
+        .task {
+            if workout == nil { workout = await MainShell.mockWorkout() }
+        }
+    }
+}
+#endif
 
 /// Pestañas en iPhone; barra lateral nativa en Mac y iPad.
 struct MainShell: View {
@@ -323,7 +354,7 @@ struct MainShell: View {
         }
         .buttonStyle(.plain)
         .listRowBackground(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
+            RoundedRectangle(cornerRadius: Radius.chip, style: .continuous)
                 .fill(active ? Palette.gold.opacity(0.15) : Color.clear)
                 .padding(.horizontal, 6)
         )
@@ -386,11 +417,11 @@ struct MainShell: View {
         let day = DayPlan(day: DayNames.today, type: "gimnasio", sport: nil, intensity: nil, duration: nil,
                           routine_name: "Full Body B",
                           muscle_focus: "Hombros, piernas, glúteos, isquiotibiales y core",
-                          exercises: [
+                          custom: nil, exercises: [
                             ex("1", "Press militar con barra de pie estricto", 4, "4-6", "40", "180s", "Hombros"),
                             ex("2", "Press inclinado con barra", 4, "6", "42.5", "180s", "Pecho"),
                             ex("3", "Remo con barra", 3, "10", "60", "90s", "Espalda"),
-                          ], custom: nil)
+                          ])
         // Fotos reales de la biblioteca, como en un entreno de verdad.
         let w = ActiveWorkout(userId: "preview", day: await TrainingRepo.withImages([day]).first ?? day, previous: [:])
         w.draft.startedAt = Date().addingTimeInterval(-42 * 60)

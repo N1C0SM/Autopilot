@@ -140,7 +140,7 @@ struct NutritionView: View {
         HStack(spacing: 14) {
             Image(systemName: "fork.knife").font(.system(size: 15, weight: .medium)).foregroundStyle(Palette.muted)
                 .frame(width: 32, height: 32)
-                .background(Palette.secondary, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                .background(Palette.secondary, in: RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text(Self.plusRowTitle).font(.apHeadline)
@@ -197,11 +197,10 @@ struct NutritionView: View {
                     } else if hasAccess == false {
                         // Como `NutritionPlusSection` de la web; en iOS sin enlace a pagos externos.
                         plusRow
-                    } else if generating {
+                    } else if generating || hasAccess == nil || preparing {
+                        // «Preparando…» cubre tanto la reconfirmación (ya sabíamos que es Plus por
+                        // caché) como la primerísima vez sin caché: nunca una pantalla en blanco.
                         MealsStateCard(title: Self.preparingTitle, message: Self.preparingDetail, loading: true)
-                    } else if hasAccess == nil || preparing {
-                        // Aún no se sabe si hay Plus: nada de «preparando» ni foto de plato (eso es de Plus).
-                        EmptyView()
                     } else {
                         MealsStateCard(title: Self.readyTitle, message: Self.readyDetail, loading: false,
                                        action: (Self.readyAction, { Haptics.tap(); Task { await generateMeals() } }))
@@ -232,7 +231,7 @@ struct NutritionView: View {
         HStack(alignment: .top, spacing: 14) {
             Image(systemName: "person").font(.system(size: 15, weight: .medium)).foregroundStyle(Palette.muted)
                 .frame(width: 32, height: 32)
-                .background(Palette.secondary, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                .background(Palette.secondary, in: RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text(Self.weightTitle).font(.apHeadline)
@@ -494,15 +493,8 @@ struct NutritionView: View {
     private func mealRow(_ meal: Meal, own: MealMacros?, last: Bool) -> some View {
         let name = meal.name ?? "Comida"
         let isDone = done.contains(name)
-        let photoURL = photos[Self.dish(meal)]
         return Button { toggle(name) } label: {
             HStack(spacing: 12) {
-                if let url = photoURL {
-                    MealPhoto(url: url).frame(width: 48, height: 48)
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        .opacity(isDone ? 0.5 : 1)
-                        .accessibilityHidden(true)
-                }
                 VStack(alignment: .leading, spacing: 2) {
                     Text(name).font(.apHeadline).foregroundStyle(isDone ? Palette.muted : Palette.foreground)
                         .fixedSize(horizontal: false, vertical: true)
@@ -539,9 +531,9 @@ struct NutritionView: View {
             .contentShape(Rectangle())
             .overlay(alignment: .bottom) {
                 if !last {
-                    // 16 + 48 (foto) + 12: el separador arranca donde el texto.
+                    // El separador arranca donde el texto.
                     Rectangle().fill(Palette.separator).frame(height: 0.5)
-                        .padding(.leading, photoURL == nil ? 16 : 76)
+                        .padding(.leading, 16)
                 }
             }
         }
@@ -636,12 +628,14 @@ struct NutritionView: View {
     /// gusta comer se le pregunta y, si ya lo dijo, se preparan las comidas.
     private func prepareMeals(_ id: UUID) async {
         struct Prefs: Decodable { let nutrition_preferences: String? }
-        let prefs: Prefs? = try? await Backend.client.from("onboarding").select("nutrition_preferences")
-            .eq("user_id", value: id).single().execute().value
-        let hasPrefs = !(prefs?.nutrition_preferences ?? "").trimmingCharacters(in: .whitespaces).isEmpty
-        // Siempre se confirma antes de generar: quien tuvo Plus y ya no lo tiene no ve «Preparando…».
         struct Result: Decodable { let reason: String? }
-        let result: Result? = try? await Backend.client.functions.invoke("sync-nutrition-macros", options: FunctionInvokeOptions(body: [String: String]()))
+        // Las dos llamadas son independientes (el resultado de `hasPrefs` solo se usa después de
+        // confirmar el acceso): en paralelo se corta a la mitad el tiempo de esta comprobación.
+        async let prefsCall: Prefs? = try? await Backend.client.from("onboarding").select("nutrition_preferences")
+            .eq("user_id", value: id).single().execute().value
+        async let resultCall: Result? = try? await Backend.client.functions.invoke("sync-nutrition-macros", options: FunctionInvokeOptions(body: [String: String]()))
+        let (prefs, result) = await (prefsCall, resultCall)
+        let hasPrefs = !(prefs?.nutrition_preferences ?? "").trimmingCharacters(in: .whitespaces).isEmpty
         // Sin respuesta (red) no se decide nada: nunca se enseña lo de Plus a quien no lo tiene.
         guard let result else { return }
         if result.reason == "no_access" { setAccess(false); return }
@@ -828,7 +822,7 @@ private struct NutritionSkeleton: View {
             VStack(spacing: 0) {
                 ForEach(0..<3, id: \.self) { i in
                     HStack(spacing: 12) {
-                        RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Palette.secondary).frame(width: 48, height: 48)
+                        RoundedRectangle(cornerRadius: Radius.chip, style: .continuous).fill(Palette.secondary).frame(width: 48, height: 48)
                         VStack(alignment: .leading, spacing: 6) {
                             bar(width: 110, height: 12)
                             bar(height: 10)

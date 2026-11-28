@@ -196,12 +196,12 @@ struct ScanView: View {
             }
         }
         .frame(width: 80, height: 112)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
         // La misma profundidad que `bg-card` en la web (luz arriba y sombra difusa), fuera del recorte.
-        .background(SurfaceBackground(shape: RoundedRectangle(cornerRadius: 14, style: .continuous)))
+        .background(SurfaceBackground(shape: RoundedRectangle(cornerRadius: Radius.chip, style: .continuous)))
         .overlay {
             if objectiveImage != nil {
-                RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Palette.gold, lineWidth: 2)
+                RoundedRectangle(cornerRadius: Radius.chip, style: .continuous).strokeBorder(Palette.gold, lineWidth: 2)
             }
         }
     }
@@ -226,9 +226,9 @@ struct ScanView: View {
                     .lineLimit(1).padding(.horizontal, 6).padding(.bottom, 6)
             }
             .frame(width: 80, height: 112)
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
             .overlay {
-                if selected { RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Palette.gold, lineWidth: 2) }
+                if selected { RoundedRectangle(cornerRadius: Radius.chip, style: .continuous).strokeBorder(Palette.gold, lineWidth: 2) }
             }
             .overlay(alignment: .topTrailing) {
                 if selected {
@@ -269,7 +269,7 @@ struct ScanView: View {
                     HStack(spacing: 12) {
                         Image(systemName: tip.0)
                             .font(.inter(size: 16, weight: .semibold))
-                            .foregroundStyle(Palette.gold)
+                            .foregroundStyle(Palette.muted)
                             .frame(width: 20)
                             .accessibilityHidden(true)
                         Text(tip.1).font(.apSubhead)
@@ -316,7 +316,7 @@ struct ScanView: View {
 
     private var privacyNote: some View {
         HStack(spacing: 6) {
-            Image(systemName: "lock.fill").font(.inter(size: 11)).accessibilityHidden(true)
+            Image(systemName: "lock.fill").font(.inter(size: 12)).accessibilityHidden(true)
             Text(ScanFormat.keepTogether("Privado: solo para tu análisis · Menos de 1 minuto"))
         }
         .font(.apFootnote)
@@ -800,7 +800,6 @@ struct ScanAnalyzingView: View {
         VStack(spacing: 0) {
             LinearGradient(colors: [Palette.gold.opacity(0), Palette.gold.opacity(0.2)], startPoint: .top, endPoint: .bottom)
             Rectangle().fill(Palette.gold).frame(height: 2)
-                .shadow(color: Palette.gold.opacity(0.8), radius: 6)
         }
         .frame(height: 64)
         .offset(y: sweep ? 256 : -62)
@@ -1049,7 +1048,7 @@ struct ScanResultView: View {
                 if let photo {
                     Color.clear.frame(width: 99, height: 132)
                         .overlay { Image(platformImage: photo).resizable().scaledToFill() }
-                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: Radius.media, style: .continuous))
                 }
                 VStack(alignment: .leading, spacing: 0) {
                     Text("Tu físico").font(.apTitle3)
@@ -1119,14 +1118,14 @@ struct ScanResultView: View {
         if let objectiveImage {
             Color.clear.frame(width: 66, height: 88)
                 .overlay { Image(platformImage: objectiveImage).resizable().scaledToFill() }
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
                 .accessibilityHidden(true)
         } else if let objectiveURL {
             Color.clear.frame(width: 66, height: 88)
                 .overlay {
                     CachedAsyncImage(url: objectiveURL, maxSide: 112) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
                 }
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
                 .accessibilityHidden(true)
         }
     }

@@ -1,6 +1,7 @@
 import ActivityKit
 import WidgetKit
 import SwiftUI
+import UIKit
 
 // MARK: - Marca (la extensión no puede importar el módulo de la app)
 
@@ -32,6 +33,36 @@ private struct APMark: View {
             BrandShape(part: .p).fill(LA.gold)
         }
         .frame(width: width, height: width * 500 / 916)
+        .accessibilityHidden(true)
+    }
+}
+
+/// Miniatura estática del ejercicio actual, leída del contenedor compartido con una sola llamada
+/// síncrona a disco (nunca `AsyncImage`: no funciona en una extensión de widget). Es un extra: sin
+/// archivo (aún no ha llegado o el App Group no está disponible) se enseña `fallback` y el layout
+/// no se rompe ni el texto se tapa.
+private struct ActivityThumbnail<Fallback: View>: View {
+    let size: CGFloat
+    @ViewBuilder var fallback: () -> Fallback
+
+    private var image: UIImage? {
+        guard let path = WorkoutActivityThumbnail.fileURL?.path else { return nil }
+        return UIImage(contentsOfFile: path)
+    }
+
+    var body: some View {
+        Group {
+            if let image {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: size, height: size)
+                    .clipShape(RoundedRectangle(cornerRadius: size * 0.28, style: .continuous))
+            } else {
+                fallback()
+            }
+        }
+        .frame(width: size, height: size)
         .accessibilityHidden(true)
     }
 }
@@ -85,7 +116,9 @@ struct WorkoutLiveActivity: Widget {
                         .padding(.top, 4)
                 }
             } compactLeading: {
-                APMark(width: 22).padding(.leading, 2)
+                // La miniatura del ejercicio (de un vistazo, sin expandir); sin foto, el AP de siempre.
+                ActivityThumbnail(size: 22) { APMark(width: 22) }
+                    .padding(.leading, 2)
             } compactTrailing: {
                 Group {
                     if display.showsRest, let range = state.restRange {
@@ -124,10 +157,14 @@ private struct Display {
     /// «Serie 2 de 4 · Ejercicio 1 de 6», «En pausa · Serie 2 de 4» o, al terminar, «12 de 12 series».
     /// Al acabar el descanso, «Siguiente serie» sale abajo en dorado, donde estaba la cuenta atrás
     /// (sin repetirlo aquí).
+    var isSuperset: Bool { state.supersetPartner != nil }
+
     var status: String {
         if finished { return WorkoutActivityText.progress(state) }
-        if state.pausedAt != nil { return "\(WorkoutActivityText.paused) · \(WorkoutActivityText.setLine(state))" }
-        return "\(WorkoutActivityText.setLine(state)) · \(WorkoutActivityText.exerciseLine(state))"
+        let base = state.pausedAt != nil
+            ? "\(WorkoutActivityText.paused) · \(WorkoutActivityText.setLine(state))"
+            : "\(WorkoutActivityText.setLine(state)) · \(WorkoutActivityText.exerciseLine(state))"
+        return isSuperset ? "\(base) · Superserie" : base
     }
 
     var statusColor: Color { state.pausedAt != nil ? LA.ink : LA.secondary }
@@ -172,6 +209,8 @@ private struct BottomRow: View {
                         Spacer(minLength: 8)
                         if display.restOver {
                             Text(WorkoutActivityText.nextSet).font(LA.inter(13, .semibold)).foregroundStyle(LA.gold)
+                        } else if let next = state.nextExerciseName {
+                            Text("Siguiente: \(next)").font(LA.inter(12, .medium)).foregroundStyle(LA.secondary).lineLimit(1)
                         }
                     }
                 }
@@ -225,15 +264,30 @@ private struct LockScreenView: View {
                     .foregroundStyle(state.elapsedFrozenAt == nil ? LA.ink : LA.secondary)
                     .frame(maxWidth: 96, alignment: .trailing)
             }
-            // El ejercicio y su serie.
-            VStack(alignment: .leading, spacing: 2) {
-                Text(display.title)
-                    .font(LA.inter(20, .bold, relativeTo: .title3)).foregroundStyle(LA.ink)
-                    .lineLimit(1).minimumScaleFactor(0.8)
-                Text(display.status)
-                    .font(LA.inter(13, display.statusColor == LA.ink ? .semibold : .regular))
-                    .foregroundStyle(display.statusColor)
-                    .lineLimit(1)
+            // El ejercicio y su serie, con su miniatura (más peso visual que el texto solo).
+            HStack(alignment: .center, spacing: 12) {
+                ActivityThumbnail(size: 44) {
+                    RoundedRectangle(cornerRadius: 44 * 0.28, style: .continuous).fill(LA.secondary.opacity(0.18))
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(display.title)
+                        .font(LA.inter(20, .bold, relativeTo: .title3)).foregroundStyle(LA.ink)
+                        .lineLimit(1).minimumScaleFactor(0.8)
+                    Text(display.status)
+                        .font(LA.inter(13, display.statusColor == LA.ink ? .semibold : .regular))
+                        .foregroundStyle(display.statusColor)
+                        .lineLimit(1)
+                    if let next = state.nextExerciseName, !display.finished {
+                        Text("Siguiente: \(next)")
+                            .font(LA.inter(12, .medium)).foregroundStyle(LA.secondary)
+                            .lineLimit(1)
+                    }
+                    if let partner = state.supersetPartner, !display.finished {
+                        Text("Superserie con \(partner)")
+                            .font(LA.inter(12, .semibold)).foregroundStyle(LA.gold)
+                            .lineLimit(1)
+                    }
+                }
             }
             BottomRow(state: state, display: display, figureSize: 30)
         }

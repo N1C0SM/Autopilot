@@ -68,19 +68,39 @@ export const routineMeta = (plan: Pick<DayPlan, "exercises">): string => {
   return [`${count} ${count === 1 ? "ejercicio" : "ejercicios"}`, routineMuscles(plan)].filter(Boolean).join(" · ");
 };
 
+/** Clave de agrupación de una rutina: su `routine_id` si lo tiene, o su nombre (compatibilidad). */
+export const routineKey = (plan: Pick<DayPlan, "routine_name" | "routine_id">): string =>
+  plan.routine_id ?? routineName(plan);
+
 /** Nueva rutina en la siguiente clave libre, marcada como tuya. */
-export function addRoutine(plans: readonly DayPlan[], routine: { name: string; exercises: GymExerciseEntry[] }): RoutineChange {
-  const day = nextFreeKey(plans);
-  if (!day) return { ok: false, reason: "limit" };
-  const next: DayPlan = {
+export function addRoutine(
+  plans: readonly DayPlan[],
+  routine: { name: string; exercises: GymExerciseEntry[]; days?: string[] | null }
+): RoutineChange {
+  const requested = routine.days && routine.days.length ? routine.days : [];
+  let resolved: string[] = [];
+  if (requested.length === 0) {
+    const day = nextFreeKey(plans);
+    if (!day) return { ok: false, reason: "limit" };
+    resolved = [day];
+  } else {
+    for (const day of requested) {
+      if (ROUTINE_KEYS.includes(day) && !plans.some((p) => p.day === day) && !resolved.includes(day)) resolved.push(day);
+    }
+    if (resolved.length === 0) return { ok: false, reason: "limit" };
+  }
+  const rid = (typeof crypto !== "undefined" && crypto.randomUUID) ? crypto.randomUUID() : `r-${Date.now()}-${Math.random()}`;
+  const cleaned = cleanName(routine.name) || DEFAULT_ROUTINE_NAME;
+  const nextPlans: DayPlan[] = resolved.map((day) => ({
     day,
-    type: "gimnasio",
-    routine_name: cleanName(routine.name) || DEFAULT_ROUTINE_NAME,
+    type: "gimnasio" as const,
+    routine_name: cleaned,
     muscle_focus: "",
     exercises: clone(routine.exercises),
     custom: true,
-  };
-  return { ok: true, day, plans: sorted([...plans, next]) };
+    routine_id: rid,
+  }));
+  return { ok: true, day: resolved[0], plans: sorted([...plans, ...nextPlans]) };
 }
 
 /** Cambia nombre y ejercicios de una sesión: solo esa pasa a ser tuya. */

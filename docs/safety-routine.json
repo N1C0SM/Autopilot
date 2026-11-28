@@ -1,0 +1,83 @@
+[
+  {
+    "day": "Lunes",
+    "type": "gimnasio",
+    "routine_name": "Safety",
+    "muscle_focus": "Pecho, hombro lateral y tríceps",
+    "custom": true,
+    "exercises": [
+      {"exercise_id": "press-inclinado-mancuernas", "name": "Press inclinado con mancuernas", "series": 3, "reps": "6-10", "weight": "0", "rest": "90s", "muscle_group": "Pecho"},
+      {"exercise_id": "press-horizontal-mancuernas", "name": "Press horizontal con mancuernas", "series": 3, "reps": "8-12", "weight": "0", "rest": "90s", "muscle_group": "Pecho"},
+      {"exercise_id": "aperturas-polea", "name": "Aperturas en polea", "series": 2, "reps": "12-15", "weight": "0", "rest": "90s", "muscle_group": "Pecho"},
+      {"exercise_id": "elevacion-lateral-polea", "name": "Elevación lateral en polea", "series": 3, "reps": "12-20", "weight": "0", "rest": "90s", "muscle_group": "Hombros"},
+      {"exercise_id": "elevacion-lateral-mancuernas", "name": "Elevación lateral con mancuernas", "series": 2, "reps": "12-20", "weight": "0", "rest": "60s", "muscle_group": "Hombros"},
+      {"exercise_id": "extension-triceps-cuerda", "name": "Extensión de tríceps con cuerda", "series": 2, "reps": "10-15", "weight": "0", "rest": "90s", "muscle_group": "Tríceps"}
+    ]
+  },
+  {
+    "day": "Martes",
+    "type": "gimnasio",
+    "routine_name": "Safety",
+    "muscle_focus": "Piernas A + abdomen",
+    "custom": true,
+    "exercises": [
+      {"exercise_id": "hack-squat", "name": "Hack squat", "series": 3, "reps": "6-10", "weight": "0", "rest": "120s", "muscle_group": "Piernas"},
+      {"exercise_id": "prensa", "name": "Prensa", "series": 2, "reps": "10-15", "weight": "0", "rest": "120s", "muscle_group": "Piernas"},
+      {"exercise_id": "extension-cuadriceps", "name": "Extensión de cuádriceps", "series": 2, "reps": "12-15", "weight": "0", "rest": "90s", "muscle_group": "Piernas"},
+      {"exercise_id": "curl-femoral-sentado", "name": "Curl femoral sentado", "series": 3, "reps": "10-15", "weight": "0", "rest": "90s", "muscle_group": "Piernas"},
+      {"exercise_id": "gemelos", "name": "Gemelos", "series": 3, "reps": "12-20", "weight": "0", "rest": "90s", "muscle_group": "Piernas"},
+      {"exercise_id": "crunch-polea", "name": "Crunch en polea", "series": 3, "reps": "10-15", "weight": "0", "rest": "90s", "muscle_group": "Core"},
+      {"exercise_id": "elevaciones-piernas", "name": "Elevaciones de piernas", "series": 2, "reps": "10-15", "weight": "0", "rest": "90s", "muscle_group": "Core"}
+    ]
+  },
+  {
+    "day": "Miércoles",
+    "type": "gimnasio",
+    "routine_name": "Safety",
+    "muscle_focus": "Espalda, hombro posterior y bíceps",
+    "custom": true,
+    "exercises": [
+      {"exercise_id": "dominadas-lastradas", "name": "Dominadas lastradas", "series": 3, "reps": "6-8", "weight": "0", "rest": "90s", "muscle_group": "Espalda"},
+      {"exercise_id": "remo-pecho-apoyado", "name": "Remo con pecho apoyado", "series": 3, "reps": "8-12", "weight": "0", "rest": "90s", "muscle_group": "Espalda"},
+      {"exercise_id": "jalon-unilateral", "name": "Jalón unilateral", "series": 2, "reps": "10-12", "weight": "0", "rest": "90s", "muscle_group": "Espalda"},
+      {"exercise_id": "pajaros-maquina", "name": "Pájaros en máquina", "series": 3, "reps": "12-20", "weight": "0", "rest": "90s", "muscle_group": "Hombros"},
+      {"exercise_id": "face-pulls", "name": "Face pulls", "series": 2, "reps": "12-20", "weight": "0", "rest": "90s", "muscle_group": "Hombros"},
+      {"exercise_id": "curl-inclinado", "name": "Curl inclinado", "series": 3, "reps": "8-12", "weight": "0", "rest": "90s", "muscle_group": "Bíceps"}
+    ]
+  },
+  {
+    "day": "Jueves",
+    "type": "gimnasio",
+    "routine_name": "Safety",
+    "muscle_focus": "Pecho, hombros y serrato",
+    "custom": true,
+    "exercises": [
+      {"exercise_id": "press-inclinado-maquina", "name": "Press inclinado en máquina", "series": 2, "reps": "8-12", "weight": "0", "rest": "90s", "muscle_group": "Pecho"},
+      {"exercise_id": "press-horizontal-maquina", "name": "Press horizontal en máquina", "series": 2, "reps": "8-12", "weight": "0", "rest": "90s", "muscle_group": "Pecho"},
+      {"exercise_id": "cruces-abajo-arriba", "name": "Cruces abajo-arriba", "series": 2, "reps": "12-15", "weight": "0", "rest": "90s", "muscle_group": "Pecho"},
+      {"exercise_id": "elevacion-lateral-polea-2", "name": "Elevación lateral en polea", "series": 3, "reps": "12-20", "weight": "0", "rest": "90s", "muscle_group": "Hombros"},
+      {"exercise_id": "elevacion-lateral-maquina", "name": "Elevación lateral en máquina", "series": 2, "reps": "12-20", "weight": "0", "rest": "90s", "muscle_group": "Hombros"},
+      {"exercise_id": "aperturas-inversas-maquina", "name": "Aperturas inversas en máquina", "series": 2, "reps": "12-20", "weight": "0", "rest": "90s", "muscle_group": "Hombros"},
+      {"exercise_id": "push-up-plus", "name": "Push-up plus", "series": 2, "reps": "12-15", "weight": "0", "rest": "90s", "muscle_group": "Core"},
+      {"exercise_id": "crunch-maquina", "name": "Crunch en máquina", "series": 3, "reps": "12-15", "weight": "0", "rest": "60s", "muscle_group": "Core"}
+    ]
+  },
+  {
+    "day": "Sábado",
+    "type": "gimnasio",
+    "routine_name": "Safety",
+    "muscle_focus": "Piernas B, abdomen y espalda",
+    "custom": true,
+    "exercises": [
+      {"exercise_id": "peso-muerto-romano", "name": "Peso muerto rumano", "series": 3, "reps": "8-12", "weight": "0", "rest": "120s", "muscle_group": "Piernas"},
+      {"exercise_id": "sentadilla-bulgara", "name": "Sentadilla búlgara", "series": 3, "reps": "8-12", "weight": "0", "rest": "90s", "muscle_group": "Piernas"},
+      {"exercise_id": "curl-femoral", "name": "Curl femoral", "series": 3, "reps": "10-15", "weight": "0", "rest": "90s", "muscle_group": "Piernas"},
+      {"exercise_id": "extension-cuadriceps-2", "name": "Extensión de cuádriceps", "series": 2, "reps": "12-15", "weight": "0", "rest": "90s", "muscle_group": "Piernas"},
+      {"exercise_id": "gemelos-2", "name": "Gemelos", "series": 3, "reps": "12-20", "weight": "0", "rest": "90s", "muscle_group": "Piernas"},
+      {"exercise_id": "remo-polea", "name": "Remo en polea", "series": 2, "reps": "10-12", "weight": "0", "rest": "90s", "muscle_group": "Espalda"},
+      {"exercise_id": "reverse-crunch", "name": "Reverse crunch", "series": 3, "reps": "12-15", "weight": "0", "rest": "90s", "muscle_group": "Core"},
+      {"exercise_id": "ab-wheel", "name": "Ab wheel", "series": 2, "reps": "8-12", "weight": "0", "rest": "90s", "muscle_group": "Core"},
+      {"exercise_id": "serratus-punches", "name": "Serratus punches", "series": 2, "reps": "12-15", "weight": "0", "rest": "60s", "muscle_group": "Core"}
+    ]
+  }
+]

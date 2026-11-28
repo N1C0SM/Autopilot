@@ -727,7 +727,7 @@ const Dashboard = () => {
   // Títulos de la barra en el móvil: cortos, los mismos que en la barra de pestañas.
   const MOBILE_TITLES: Record<MobileTab, string> = {
     home: "Hoy",
-    training: "Entrenar",
+    training: "Mis rutinas",
     library: "Ejercicios",
     nutrition: "Nutrición",
     chat: "Chat",

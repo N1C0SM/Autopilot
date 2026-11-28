@@ -20,6 +20,10 @@ public struct WorkoutActivityAttributes: ActivityAttributes {
         public var exerciseName: String
         public var exerciseNumber: Int
         public var exerciseCount: Int
+        /// Siguiente ejercicio de la sesión (nil si es el último), para planificar el siguiente bloque.
+        public var nextExerciseName: String?
+        /// Si el ejercicio actual forma parte de una superserie, el nombre del par (nil si no).
+        public var supersetPartner: String?
         /// Serie que toca en ese ejercicio (1…) y sus series (sin calentamiento).
         public var setNumber: Int
         public var setCount: Int
@@ -36,12 +40,15 @@ public struct WorkoutActivityAttributes: ActivityAttributes {
         /// Entreno terminado: el tiempo se queda fijo en este instante.
         public var finishedAt: Date?
 
-        public init(exerciseName: String, exerciseNumber: Int, exerciseCount: Int, setNumber: Int, setCount: Int,
+        public init(exerciseName: String, exerciseNumber: Int, exerciseCount: Int, nextExerciseName: String? = nil,
+                    supersetPartner: String? = nil, setNumber: Int, setCount: Int,
                     doneSets: Int, totalSets: Int, restStartedAt: Date?, restEndsAt: Date?, startedAt: Date,
                     pausedAt: Date?, finishedAt: Date?) {
             self.exerciseName = exerciseName
             self.exerciseNumber = exerciseNumber
             self.exerciseCount = exerciseCount
+            self.nextExerciseName = nextExerciseName
+            self.supersetPartner = supersetPartner
             self.setNumber = setNumber
             self.setCount = setCount
             self.doneSets = doneSets
@@ -80,6 +87,26 @@ public enum WorkoutActivityText {
     /// «3 de 12 series» / «1 de 1 serie», como el avance de la barra del entreno.
     public static func progress(_ s: WorkoutActivityAttributes.WorkoutState) -> String {
         "\(s.doneSets) de \(s.totalSets) \(s.totalSets == 1 ? "serie" : "series")"
+    }
+}
+
+/// Contenedor compartido (App Group) entre la app y la extensión de widgets: la foto en miniatura
+/// del ejercicio actual de la Live Activity. La escribe la app (`WorkoutActivityController`, al
+/// cambiar de ejercicio) y la lee la extensión (`WorkoutLiveActivity`) con una lectura síncrona de
+/// disco, nunca con `AsyncImage` (no funciona en una extensión de widget). No va en el `ContentState`
+/// de ActivityKit (el payload tiene un límite de ~4 KB): basta con que el estado cambie (ya cambia
+/// `exerciseName`) para que el widget se repinte y vuelva a leer el archivo. Siempre se sobrescribe
+/// con el mismo nombre: la Live Activity vive como mucho unos minutos, no hace falta versionarla.
+public enum WorkoutActivityThumbnail {
+    public static let appGroupID = "group.app.autopilotplan"
+    public static let fileName = "live-activity-thumb.jpg"
+
+    /// `nil` si el grupo de app no está disponible (falta la capacidad o el perfil de firma):
+    /// en ese caso la Live Activity se queda sin miniatura, nunca rota.
+    public static var fileURL: URL? {
+        FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: appGroupID)?
+            .appendingPathComponent(fileName)
     }
 }
 

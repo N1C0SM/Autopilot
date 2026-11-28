@@ -248,7 +248,7 @@ struct AdminPlanVideosCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 16).padding(.vertical, 12)
-        .background(Palette.secondary, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(Palette.secondary, in: RoundedRectangle(cornerRadius: Radius.media, style: .continuous))
         .accessibilityElement(children: .combine)
     }
 

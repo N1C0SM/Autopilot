@@ -231,7 +231,7 @@ struct AdminTrainersView: View {
                         .accessibilityHint("Promueve esta cuenta a entrenador")
                     }
                 }
-                .background(Palette.background.opacity(0.35), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .background(Palette.background.opacity(0.35), in: RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
             }
         }
     }
@@ -486,7 +486,7 @@ struct TrainerDetail: View {
                 .font(.apBody)
                 .frame(minHeight: 110)
                 .padding(10)
-                .background(Palette.secondary, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .background(Palette.secondary, in: RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
                 .accessibilityLabel("Bio")
         }
         .padding(.horizontal, 16)

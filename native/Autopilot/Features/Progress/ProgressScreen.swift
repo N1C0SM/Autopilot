@@ -17,7 +17,6 @@ import Supabase
 /// - Formateadores `static` compartidos (nunca dentro de bucles), skeletons ligeros y listas perezosas.
 struct ProgressScreen: View {
     @EnvironmentObject private var session: SessionModel
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.horizontalSizeClass) private var sizeClass
     @StateObject private var model = ProgressModel()
     /// Para «Ir a entrenar» desde Récords vacío (como `onNavigate` de Inicio).
@@ -148,24 +147,6 @@ struct ProgressScreen: View {
                 progressLoader("Cargando tu progreso")
             } else {
                 strengthExercises
-                if model.strengthLoaded && !(model.detailsLoaded && model.history.isEmpty) {
-                    // Mismo aire que la web: 32 encima del título y 10 hasta la tarjeta.
-                    Text("Tu constancia").font(.apTitle3).accessibilityAddTraits(.isHeader).padding(.top, 16).padding(.bottom, -6)
-                }
-                strengthHero
-            }
-        }
-    }
-
-    /// Tarjeta de constancia (cifras + barras) o el aviso de error.
-    @ViewBuilder private var strengthHero: some View {
-        if model.strengthLoaded {
-            // Sin ningún entreno no se pinta «0 kg levantados» (desanima): solo la invitación de abajo, como la web.
-            if !(model.detailsLoaded && model.history.isEmpty) { strengthCard }
-        } else if model.strengthError != nil && model.detailsError == nil {
-            // Sin conexión y sin datos previos: se explica en vez de pintar «0 kg», que parecería que no has entrenado.
-            retryState(title: "No hemos podido cargar tu progreso", message: Self.strengthRetryMessage) {
-                Task { await model.load(userId: session.userId, force: true) }
             }
         }
     }
@@ -211,104 +192,6 @@ struct ProgressScreen: View {
     private func progressLoader(_ label: String) -> some View {
         BrandLoader(size: 28).accessibilityLabel(label)
             .frame(maxWidth: .infinity).padding(.vertical, 64)
-    }
-
-    /// Semanas con etiqueta: una sí y otra no, terminando en la actual (a 12 pt no se pisan, como la web).
-    private var shownWeekLabels: Set<String> {
-        Set(model.weekly.enumerated().filter { (model.weekly.count - 1 - $0.offset) % 2 == 0 }.map(\.element.label))
-    }
-
-    private var strengthCard: some View {
-        let hasKg = model.kg4w > 0
-        return VStack(alignment: .leading, spacing: 0) {
-            Text("Últimas 4 semanas").font(.apSubhead).foregroundStyle(Palette.muted)
-
-            // Cifra protagonista en Big Shoulders. Sin series con peso, «0 kg» desanimaba: se cuentan los entrenos.
-            // La unidad baja entera a la línea siguiente si no cabe (como la web).
-            ViewThatFits(in: .horizontal) {
-                HStack(alignment: .firstTextBaseline, spacing: 6) { strengthFigure(hasKg); strengthUnit(hasKg) }
-                VStack(alignment: .leading, spacing: 2) { strengthFigure(hasKg); strengthUnit(hasKg) }
-            }
-            .padding(.top, 8)
-
-            // Cifras pequeñas en tres columnas (valor arriba, etiqueta debajo), como la web.
-            HStack(alignment: .top, spacing: 12) {
-                if hasKg { stat(NumberText.grouped(Double(model.workouts4w)), model.workouts4w == 1 ? "entreno" : "entrenos") }
-                stat(NumberText.grouped(Double(model.streakWeeks)), model.streakWeeks == 1 ? "semana de racha" : "semanas de racha")
-                if hasKg { stat(NumberText.grouped(Double(model.kgThisWeek)), "kg esta semana") }
-                if !hasKg { Color.clear.frame(maxWidth: .infinity, maxHeight: 0); Color.clear.frame(maxWidth: .infinity, maxHeight: 0) }
-            }
-            .padding(.top, 16)
-
-            if !hasKg {
-                Text("Registra series con peso y aquí verás tus kilos de cada semana.")
-                    .font(.apSubhead).foregroundStyle(Palette.muted)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, 16)
-            } else {
-
-            // Gráfica de barras
-            // Barras finas como la web: la semana actual en dorado y el resto en gris.
-            Chart(model.weekly, id: \.label) { w in
-                BarMark(
-                    x: .value("Semana", w.label),
-                    y: .value("kg", max(w.kg, model.maxWeekly * 0.02)),
-                    width: .fixed(14)
-                )
-                .foregroundStyle(w.label == model.weekly.last?.label ? Palette.gold : Color.white.opacity(0.14))
-                .cornerRadius(3)
-            }
-            .chartYAxis(.hidden)
-            .chartXAxis {
-                // Una fecha sí y otra no, terminando en la semana actual: a 12 pt no se pisan (como la web).
-                AxisMarks { value in
-                    if let label = value.as(String.self), shownWeekLabels.contains(label) {
-                        AxisValueLabel { Text(label).font(.apCaption).foregroundStyle(Palette.muted) }
-                    }
-                }
-            }
-            .frame(height: 160)
-            .padding(.top, 20)
-            .accessibilityLabel("Kilos levantados por semana")
-            .accessibilityValue(model.weekly.map { "\($0.label): \(NumberText.grouped($0.kg)) kg" }.joined(separator: ", "))
-            }
-        }
-        .padding(20)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        // Sin borde: se separa del fondo por su luz y su sombra (tokens de profundidad), como la web.
-        .surface(Radius.hero)
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Resumen de tu entrenamiento")
-    }
-
-    private func strengthFigure(_ hasKg: Bool) -> some View {
-        Text(hasKg ? NumberText.grouped(Double(model.kg4w)) : NumberText.grouped(Double(model.workouts4w)))
-            .font(.figure(size: 52))
-            .lineLimit(1).minimumScaleFactor(0.55)
-            .contentTransition(.numericText())
-            .animation(reduceMotion ? nil : .snappy, value: model.kg4w)
-    }
-
-    private func strengthUnit(_ hasKg: Bool) -> some View {
-        Text(hasKg ? "kg levantados" : (model.workouts4w == 1 ? "entreno" : "entrenos"))
-            .font(.apTitle3).foregroundStyle(Palette.muted).lineLimit(1)
-    }
-
-    private func stat(_ value: String, _ label: String) -> some View {
-        VStack(alignment: .leading, spacing: 1) {
-            Text(value)
-                .font(.apTitle3.monospacedDigit())
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-                .contentTransition(.numericText())
-            Text(label)
-                .font(.apFootnote)
-                .foregroundStyle(Palette.muted)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .combine)
     }
 
     // MARK: Físico (ProgressPhotos de la web)
@@ -473,12 +356,12 @@ struct ProgressScreen: View {
                 Button { viewing = latest } label: {
                     Color.clear.frame(width: 112, height: 150)
                         .overlay { RemoteThumb(url: latest.url) { Palette.secondary } }
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: Radius.media, style: .continuous))
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Ver tu último scan, del \(latest.shortDate)")
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("Tu último scan").font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.gold)
+                    Text("Tu último scan").font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.muted)
                     Text(latest.longDate.isEmpty ? "Sin fecha" : latest.longDate).font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted).padding(.top, 4)
                     Text("Compara tu evolución").font(.apHeadline).padding(.top, 12).accessibilityAddTraits(.isHeader)
                     Text("Con otro scan del mismo ángulo verás el antes y el ahora, lado a lado.").font(.apSubhead).foregroundStyle(Palette.muted)
@@ -503,7 +386,7 @@ struct ProgressScreen: View {
             VStack(alignment: .leading, spacing: 0) {
                 Color.clear.aspectRatio(3/4, contentMode: .fit)
                     .overlay { RemoteThumb(url: p.url) { Palette.secondary } }
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: Radius.media, style: .continuous))
                 Text(caption).font(.apHeadline).foregroundStyle(Palette.foreground).padding(.top, 8)
                 if !date.isEmpty {
                     Text(date).font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted)
@@ -518,7 +401,7 @@ struct ProgressScreen: View {
     private func photoTile(_ p: ProgressModel.Photo, label: String) -> some View {
         Color.clear.aspectRatio(3/4, contentMode: .fit)
             .overlay { RemoteThumb(url: p.url) { Palette.secondary } }
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
             .overlay(alignment: .bottomLeading) {
                 // Sin fecha legible no se pinta una píldora vacía.
                 if !label.isEmpty {
@@ -961,7 +844,6 @@ struct PhotoScanInfo {
 /// Estado de la pantalla. Todo lo que se publica ya viene calculado y formateado: la vista no hace trabajo.
 @MainActor
 final class ProgressModel: ObservableObject {
-    struct Week: Codable { let label: String; let kg: Double }
     struct Weight: Codable { let date: Date; let kg: Double }
 
     struct Record: Codable {
@@ -997,19 +879,9 @@ final class ProgressModel: ObservableObject {
         var id: String { month }
     }
 
-    struct ExerciseStat: Codable { let name: String; let sessions: Int; let bestVolume: Double }
-
     /// Todo lo que pinta la pantalla, ya calculado. Un único `@Published` → un solo redibujado por fase
     /// (antes cada propiedad publicaba por su cuenta y la vista se rehacía varias veces por carga).
     struct Snapshot: Codable {
-        var weekly: [Week] = []
-        var maxWeekly: Double = 1
-        var kg4w = 0
-        var kgThisWeek = 0
-        var workouts4w = 0
-        var streakWeeks = 0
-        var byExercise: [ExerciseStat] = []
-
         var history: [String: [ExerciseEntry]] = [:]
         /// Nombres del menú «Por ejercicio» ordenados fuera del hilo principal.
         var exerciseNames: [String] = []
@@ -1025,12 +897,10 @@ final class ProgressModel: ObservableObject {
         var comparison: [Photo] = []
 
         /// Marca de tiempo de cada fase: `nil` = todavía no cargada (se muestra esqueleto).
-        var strengthAt: Date?
         var detailsAt: Date?
         var photosAt: Date?
         /// Fallo de red de cada fase. Sin esto, un `try?` convertía «sin conexión» en «0 kg» o en
         /// un esqueleto que no terminaba nunca; ahora se distingue error de vacío donde importa.
-        var strengthError: String?
         var detailsError: String?
         var recordsError: String?
         var photosError: String?
@@ -1040,13 +910,6 @@ final class ProgressModel: ObservableObject {
 
     // MARK: Accesos de solo lectura que usa la vista
 
-    var weekly: [Week] { snapshot.weekly }
-    var maxWeekly: Double { snapshot.maxWeekly }
-    var kg4w: Int { snapshot.kg4w }
-    var kgThisWeek: Int { snapshot.kgThisWeek }
-    var workouts4w: Int { snapshot.workouts4w }
-    var streakWeeks: Int { snapshot.streakWeeks }
-    var byExercise: [ExerciseStat] { snapshot.byExercise }
     var history: [String: [ExerciseEntry]] { snapshot.history }
     var exerciseNames: [String] { snapshot.exerciseNames }
     var exerciseImages: [String: String] { snapshot.exerciseImages }
@@ -1057,13 +920,11 @@ final class ProgressModel: ObservableObject {
     var photoGroups: [PhotoGroup] { snapshot.photoGroups }
     var comparison: [Photo] { snapshot.comparison }
 
-    var strengthError: String? { snapshot.strengthError }
     var detailsError: String? { snapshot.detailsError }
     var recordsError: String? { snapshot.recordsError }
     var photosError: String? { snapshot.photosError }
 
     /// Fases ya disponibles en pantalla (para elegir entre esqueleto y contenido).
-    var strengthLoaded: Bool { snapshot.strengthAt != nil }
     var detailsLoaded: Bool { snapshot.detailsAt != nil }
     var recordsLoaded: Bool { snapshot.detailsAt != nil }
     var photosLoaded: Bool { snapshot.photosAt != nil }
@@ -1088,7 +949,6 @@ final class ProgressModel: ObservableObject {
     func load(userId: UUID?, force: Bool = false) async {
         guard let userId else {
             apply { shot in
-                shot.strengthError = "Inicia sesión para ver tu progreso."
                 shot.detailsError = "Inicia sesión para ver tu progreso."
                 shot.recordsError = "Inicia sesión para ver tu progreso."
                 shot.photosError = "Inicia sesión para ver tu progreso."
@@ -1107,12 +967,11 @@ final class ProgressModel: ObservableObject {
         }
 
         // Datos recién traídos: volver a la pestaña no vuelve a pedir red.
-        // Solo si también llegaron «Por ejercicio» y Récords: si no, se quedarían en esqueleto.
-        if let at = snapshot.strengthAt, snapshot.detailsAt != nil, Date().timeIntervalSince(at) < 20 { return }
+        if let at = snapshot.detailsAt, Date().timeIntervalSince(at) < 20 { return }
         // Con datos en pantalla el refresco no bloquea la vista ni muestra esqueletos.
         // Si hay un loadTask vivo pero los datos no llegaron todavía, se cancela y relanza:
         // puede que esa tarea quedara colgada por un isStale que no limpió loadTask.
-        if snapshot.strengthAt == nil || snapshot.detailsAt == nil {
+        if snapshot.detailsAt == nil {
             loadTask?.cancel()
             loadTask = nil
         }
@@ -1220,58 +1079,15 @@ final class ProgressModel: ObservableObject {
     // MARK: Fases de carga
 
     private func refresh(userId: UUID, gen: Int) async {
-        let startedAt = Date()
-        let calendar = Calendar(identifier: .iso8601)
-        let thisMonday = calendar.dateInterval(of: .weekOfYear, for: Date())?.start ?? Date()
-        let eightWeeksAgo = calendar.date(byAdding: .weekOfYear, value: -7, to: thisMonday) ?? thisMonday
-
         // Al reintentar se vuelve al esqueleto: el error deja de mostrarse en cuanto hay petición.
-        if snapshot.strengthError != nil || snapshot.detailsError != nil || snapshot.recordsError != nil {
+        if snapshot.detailsError != nil || snapshot.recordsError != nil {
             apply { shot in
-                shot.strengthError = nil
                 shot.detailsError = nil
                 shot.recordsError = nil
             }
         }
 
-        // ── Fase 1 · Fuerza: las dos consultas son independientes y van en paralelo ──
-        async let logsFetch = Self.strengthLogs(userId: userId, since: LocalDate.string(eightWeeksAgo))
-        async let completionsFetch = TrainingRepo.completions(userId: userId, since: LocalDate.daysAgo(27))
-        let (logs, completions) = await (logsFetch, completionsFetch)
-        guard !isStale(gen) else { return }
-
-        guard let logs else {
-            // Sin conexión: no se publican ceros (parecería «no has entrenado»). Si ya había datos
-            // en pantalla se quedan; si no, se explica el fallo con un botón para reintentar.
-            apply { shot in
-                if shot.strengthAt == nil { shot.strengthError = Self.offlineMessage }
-                if shot.detailsAt == nil {
-                    shot.detailsError = Self.offlineMessage
-                    shot.recordsError = Self.offlineMessage
-                }
-            }
-            return
-        }
-
-        // Volumen, semanas, racha y «Por ejercicio»: fuera del MainActor.
-        let strength = await Task.detached(priority: .userInitiated) {
-            ProgressCompute.strength(logs: logs, workouts4w: completions.count, thisMonday: thisMonday)
-        }.value
-        guard !isStale(gen) else { return }
-        apply { shot in
-            shot.weekly = strength.weekly
-            shot.maxWeekly = strength.maxWeekly
-            shot.kg4w = strength.kg4w
-            shot.kgThisWeek = strength.kgThisWeek
-            shot.workouts4w = strength.workouts4w
-            shot.streakWeeks = strength.streakWeeks
-            shot.byExercise = strength.byExercise
-            shot.strengthAt = startedAt
-            shot.strengthError = nil
-        }
-        persist(userId)
-
-        // ── Fase 2 · «Por ejercicio», Récords y peso corporal: también en paralelo ──
+        // «Por ejercicio», Récords y peso corporal: las tres consultas son independientes y van en paralelo.
         async let allFetch = Self.allLogs(userId: userId)
         async let recordsFetch = Self.recordRows(userId: userId)
         async let weightsFetch = Self.weightRows(userId: userId)
@@ -1318,7 +1134,7 @@ final class ProgressModel: ObservableObject {
         }
         persist(userId)
 
-        // Con Fuerza y Récords ya publicados se prepara «Físico» en segundo plano.
+        // Con «Por ejercicio» y Récords ya publicados se prepara «Físico» en segundo plano.
         if snapshot.photosAt == nil { startPhotoPrefetch(userId: userId) }
     }
 
@@ -1365,15 +1181,6 @@ final class ProgressModel: ObservableObject {
     /// Texto común de error de red. Las consultas devuelven `nil` al fallar (no `[]`): así la pantalla
     /// puede distinguir «sin conexión» de «de verdad no hay datos».
     static let offlineMessage = "Revisa tu conexión y vuelve a intentarlo. Tus datos siguen guardados."
-
-    private nonisolated static func strengthLogs(userId: UUID, since: String) async -> [ProgressCompute.StrengthLog]? {
-        let rows: [ProgressCompute.StrengthLog]? = try? await Backend.client.from("workout_logs")
-            .select("exercise_name, sets_completed, logged_at")
-            .eq("user_id", value: userId)
-            .gte("logged_at", value: since)
-            .execute().value
-        return rows
-    }
 
     private nonisolated static func allLogs(userId: UUID) async -> [ProgressCompute.AllLog]? {
         let rows: [ProgressCompute.AllLog]? = try? await Backend.client.from("workout_logs")
@@ -1476,19 +1283,6 @@ private enum ProgressCompute {
     // MARK: Filas de Supabase
 
     /// Las series se decodifican de forma tolerante: una fila con forma rara no invalida todo el lote.
-    struct StrengthLog: Decodable {
-        let exercise_name: String
-        let sets_completed: [SetLog]?
-        let logged_at: String
-        enum CodingKeys: String, CodingKey { case exercise_name, sets_completed, logged_at }
-        init(from decoder: Decoder) throws {
-            let c = try decoder.container(keyedBy: CodingKeys.self)
-            exercise_name = try c.decode(String.self, forKey: .exercise_name)
-            logged_at = try c.decode(String.self, forKey: .logged_at)
-            sets_completed = try? c.decode([SetLog].self, forKey: .sets_completed)
-        }
-    }
-
     struct AllLog: Decodable {
         let exercise_name: String
         let sets_completed: [SetLog]?
@@ -1523,16 +1317,6 @@ private enum ProgressCompute {
     }
 
     // MARK: Resultados
-
-    struct Strength {
-        var weekly: [ProgressModel.Week] = []
-        var maxWeekly: Double = 1
-        var kg4w = 0
-        var kgThisWeek = 0
-        var workouts4w = 0
-        var streakWeeks = 0
-        var byExercise: [ProgressModel.ExerciseStat] = []
-    }
 
     struct Detail {
         var history: [String: [ExerciseEntry]] = [:]
@@ -1579,61 +1363,7 @@ private enum ProgressCompute {
         return recordDateStyle.format(date)
     }
 
-    // MARK: Fase 1 · Fuerza
-
-    static func strength(logs: [StrengthLog], workouts4w: Int, thisMonday: Date) -> Strength {
-        var result = Strength()
-
-        // Se interpreta e suma el volumen una sola vez por registro: antes se hacía una vez por
-        // semana (8 veces) y otra vez para «Por ejercicio».
-        struct Row {
-            let name: String
-            let day: Date
-            let dayKey: String
-            let kg: Double
-        }
-        var rows: [Row] = []
-        rows.reserveCapacity(logs.count)
-        for log in logs {
-            let dayKey = String(log.logged_at.prefix(10))
-            guard let day = ymd.date(from: dayKey) else { continue }
-            rows.append(Row(name: log.exercise_name, day: day, dayKey: dayKey, kg: volume(log.sets_completed)))
-        }
-
-        let calendar = Calendar(identifier: .iso8601)
-        var weekly: [ProgressModel.Week] = []
-        weekly.reserveCapacity(8)
-        for i in 0..<8 {
-            guard let weekStart = calendar.date(byAdding: .weekOfYear, value: i - 7, to: thisMonday),
-                  let weekEnd = calendar.date(byAdding: .day, value: 7, to: weekStart) else { continue }
-            var kg = 0.0
-            for row in rows where row.day >= weekStart && row.day < weekEnd { kg += row.kg }
-            weekly.append(ProgressModel.Week(label: dayLabel(weekStart), kg: kg))
-        }
-        result.weekly = weekly
-        result.maxWeekly = weekly.map(\.kg).max() ?? 1
-        result.kg4w = Int(weekly.suffix(4).reduce(0) { $0 + $1.kg })
-        result.kgThisWeek = Int(weekly.last?.kg ?? 0)
-        var streak = 0
-        for week in weekly.reversed() { if week.kg > 0 { streak += 1 } else { break } }
-        result.streakWeeks = streak
-        result.workouts4w = workouts4w
-
-        // Sesiones y mejor volumen por ejercicio (mismo criterio que la web).
-        var stats: [String: (days: Set<String>, best: Double)] = [:]
-        for row in rows where row.kg > 0 {
-            var entry = stats[row.name] ?? (days: [], best: 0)
-            entry.days.insert(row.dayKey)
-            entry.best = max(entry.best, row.kg)
-            stats[row.name] = entry
-        }
-        result.byExercise = stats
-            .map { ProgressModel.ExerciseStat(name: $0.key, sessions: $0.value.days.count, bestVolume: $0.value.best) }
-            .sorted { $0.bestVolume > $1.bestVolume }
-        return result
-    }
-
-    // MARK: Fase 2 · Historial, récords y peso
+    // MARK: Historial, récords y peso
 
     static func detail(allLogs: [AllLog], recordRows: [RecordRow], weightRows: [WeightRow]) -> Detail {
         var result = Detail()
@@ -1770,10 +1500,9 @@ struct ExerciseProgressSection: View {
     let names: [String]
     @State private var selected = ""
     @State private var metric = 0
-    @State private var showAll = false
 
     private func value(_ e: ExerciseEntry) -> Double? {
-        switch metric { case 1: e.loadedSets > 0 ? e.volumeKg.rounded() : nil; case 2: Double(e.reps); default: e.best1Rm }
+        switch metric { case 1: e.loadedSets > 0 ? e.volumeKg.rounded() : nil; default: Double(e.reps) }
     }
     /// Cifras con coma decimal y punto de miles («82,5», «2.366»), como `fmt` en la web.
     private func r(_ v: Double) -> String {
@@ -1785,10 +1514,10 @@ struct ExerciseProgressSection: View {
         // seleccionado uno que ya no existe: se cae al primero de la lista.
         let name = names.contains(selected) ? selected : (names.first ?? "")
         let entries = history[name] ?? []
-        let others = names.filter { $0 != name }
-        let shownOthers = showAll ? others : Array(others.prefix(3))
         VStack(alignment: .leading, spacing: 12) {
             // Ejercicio principal: foto (o su huella), mejor marca (la serie de más 1RM) y su subida, con la gráfica en la misma tarjeta.
+            // El selector de ejercicio (el `Menu` de la cabecera) es la única forma de cambiar de
+            // ejercicio: sin lista de «otros ejercicios» debajo.
             VStack(alignment: .leading, spacing: 16) {
                 Menu {
                     Picker("Ejercicio", selection: Binding(get: { name }, set: { Haptics.selection(); selected = $0 })) {
@@ -1804,15 +1533,6 @@ struct ExerciseProgressSection: View {
             .padding(16)
             // Sin borde, con la profundidad de las tarjetas (como la web).
             .surface()
-            ForEach(shownOthers, id: \.self) { other in otherRow(other) }
-            if others.count > 3 {
-                // Píldora secundaria: el dorado queda para lo importante (como la web).
-                Button(showAll ? "Ver menos ejercicios" : "Ver todos mis ejercicios") {
-                    Haptics.tap()
-                    withAnimation(reduceMotion ? nil : .snappy) { showAll.toggle() }
-                }
-                .buttonStyle(.pillSecondary)
-            }
         }
     }
 
@@ -1912,48 +1632,6 @@ struct ExerciseProgressSection: View {
             .lineLimit(1).minimumScaleFactor(0.7).fixedSize(horizontal: false, vertical: true)
     }
 
-    private func otherRow(_ name: String) -> some View {
-        let entries = history[name] ?? []
-        let best = Self.record(entries)
-        let card = RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
-        return Button {
-            Haptics.selection()
-            withAnimation(reduceMotion ? nil : .snappy) { selected = name }
-        } label: {
-            HStack(spacing: 14) {
-                photo(name, size: 48)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(name).font(.apHeadline).foregroundStyle(Palette.foreground).lineLimit(1)
-                    // La cifra nunca se parte: si no cabe en una línea, baja entera a la segunda (como la web).
-                    Group {
-                        if let label = best.label {
-                            ViewThatFits(in: .horizontal) {
-                                Text("Mejor marca: \(label)").lineLimit(1)
-                                VStack(alignment: .leading, spacing: 0) {
-                                    Text("Mejor marca:").lineLimit(1)
-                                    Text(label).lineLimit(1)
-                                }
-                            }
-                        } else {
-                            Text("\(entries.count) \(entries.count == 1 ? "sesión" : "sesiones")").lineLimit(1)
-                        }
-                    }
-                    .font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                gainChip(best.gain)
-                Image(systemName: "chevron.right").font(.system(size: 14, weight: .semibold)).foregroundStyle(Palette.muted)
-                    .accessibilityHidden(true)
-            }
-            .padding(.leading, 12).padding(.trailing, 16).padding(.vertical, 12)
-            .frame(maxWidth: .infinity, minHeight: 72)
-            // Sin borde, con la profundidad de las tarjetas (como la web).
-            .surface()
-            .contentShape(card)
-        }
-        .buttonStyle(.plain)
-    }
-
     @ViewBuilder private func chart(_ name: String, _ history: [ExerciseEntry]) -> some View {
         let data = Array(history.suffix(16))
         let values = data.compactMap(value)
@@ -1961,7 +1639,7 @@ struct ExerciseProgressSection: View {
         let first = values.first
         let best = values.max()
         let change = (latest != nil && (first ?? 0) > 0) ? (latest! - first!) / first! * 100 : nil
-        let unit = metric == 2 ? "reps" : "kg"
+        let unit = metric == 0 ? "reps" : "kg"
         let hasLine = values.count > 1
         let sessions = Self.sessions(history.count)
         // El último punto con dato se resalta (halo dorado), como en la web.
@@ -1990,7 +1668,7 @@ struct ExerciseProgressSection: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             // Selector en su propia fila, como la web: «Volumen» ya no se parte en dos líneas.
-            SegmentedPill(options: ["1RM", "Volumen", "Reps"], selection: $metric)
+            SegmentedPill(options: ["Reps", "Volumen"], selection: $metric)
             if hasLine {
                 let lo = values.min() ?? 0, pad = max(1, ((best ?? 0) - lo) * 0.15)
                 // Línea dorada sobre un degradado, rejilla tenue, solo la primera y la última fecha y el
@@ -2031,12 +1709,12 @@ struct ExerciseProgressSection: View {
                 .frame(height: 256)
                 .accessibilityLabel("Gráfica de \(name)")
                 .accessibilityValue(latest.map { "Último: \(r($0)) \(unit) en \(sessions)" } ?? "Sin datos")
-            } else if values.isEmpty && !history.isEmpty && metric != 2 {
+            } else if values.isEmpty && !history.isEmpty && metric != 0 {
                 // Mismo estado que `ProgressInlineState` en la web: icono en su losa, Title 3 y una línea.
                 VStack(spacing: 0) {
                     IconTile(symbol: "dumbbell", size: 40)
                     Text("Añade peso a tus series").font(.apTitle3).padding(.top, 16)
-                    Text("El 1RM y el volumen salen de las series con peso. En Reps ya ves tu evolución.").font(.apSubhead).foregroundStyle(Palette.muted)
+                    Text("El volumen sale de las series con peso. En Reps ya ves tu evolución.").font(.apSubhead).foregroundStyle(Palette.muted)
                         .multilineTextAlignment(.center).padding(.top, 4)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -2088,7 +1766,7 @@ private struct ProgressRecordThumb: View {
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Palette.secondary)
+            RoundedRectangle(cornerRadius: Radius.chip, style: .continuous).fill(Palette.secondary)
             if let u = url.flatMap(URL.init(string:)) {
                 RemoteThumb(url: u, maxSide: MediaSizing.thumbSide(size)) { Color.clear }
             } else {
@@ -2096,6 +1774,6 @@ private struct ProgressRecordThumb: View {
             }
         }
         .frame(width: size, height: size)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
     }
 }

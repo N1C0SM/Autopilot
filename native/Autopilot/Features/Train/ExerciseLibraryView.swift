@@ -568,7 +568,9 @@ struct ExerciseLibraryView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(.bottom, 48)
         return ZStack(alignment: .bottomLeading) {
-            Color.clear
+            // Mismo gris que `ExerciseThumbView.fallback`: sin foto, la tarjeta no se queda
+            // transparente (se nota el fondo de la pantalla detrás, distinto según el grupo).
+            Palette.secondary
             if let photo {
                 CachedAsyncImage(url: photo, maxSide: 210) { $0.resizable().scaledToFill() } placeholder: { Color.clear }
                     .opacity(0.7)
@@ -628,8 +630,10 @@ private struct ExerciseThumbView: View {
     var video: String? = nil
     var width: CGFloat = 48
     var height: CGFloat = 48
+    /// `false` (por defecto) deja la miniatura quieta: son listas/tarjetas, no el foco de la pantalla.
+    var moves: Bool = false
     var body: some View {
-        ExerciseLoopView(url: LoopRules.url(video)) {
+        ExerciseLoopView(url: LoopRules.url(video), paused: !moves) {
             // Igual que `ExerciseThumb` en la web: la foto del ejercicio (192 px, la misma petición en
             // toda la app) y, sin foto, la silueta con su músculo. Mientras carga, el fondo.
             if let url, let u = URL(string: url) {
@@ -639,7 +643,7 @@ private struct ExerciseThumbView: View {
             }
         }
         .frame(width: width, height: height)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
         .accessibilityHidden(true)
     }
 

@@ -5,86 +5,173 @@ import SwiftUI
 /// «Fijo | Rango», descanso rápido u «Otro»). Una sola acción dorada: «Guardar rutina».
 struct RoutineEditorView: View {
     @Environment(\.dismiss) private var dismiss
-    let routine: DayPlan?
+    let routines: [DayPlan]
     var limitReached = false
-    var onSave: (String, [GymExercise]) async -> Bool
+    var existingRoutines: [DayPlan] = []
+    var onSave: (String, [RoutineDay], String?) async -> Bool
+
+    private struct EditableDay: Identifiable, Equatable {
+        let id = UUID()
+        var weekday: String
+        var title: String
+        var exercises: [GymExercise]
+    }
 
     @State private var name: String
-    @State private var list: [GymExercise]
-    @State private var picking = false
+    @State private var days: [EditableDay]
+    @State private var pickingFor: UUID? = nil
     @State private var saving = false
     @State private var failed = false
     @State private var confirmDiscard = false
+    @State private var routineId: String?
 
-    init(routine: DayPlan? = nil, limitReached: Bool = false, onSave: @escaping (String, [GymExercise]) async -> Bool) {
-        self.routine = routine
+    init(routines: [DayPlan] = [], limitReached: Bool = false, existingRoutines: [DayPlan] = [],
+         onSave: @escaping (String, [RoutineDay], String?) async -> Bool) {
+        self.routines = routines
         self.limitReached = limitReached
+        self.existingRoutines = existingRoutines
         self.onSave = onSave
-        _name = State(initialValue: routine?.routine_name ?? "")
-        _list = State(initialValue: routine?.exercises ?? [])
+        let first = routines.first
+        _name = State(initialValue: first?.routine_name ?? "")
+        if !routines.isEmpty {
+            _days = State(initialValue: routines.map { EditableDay(weekday: $0.day, title: $0.day_title ?? "", exercises: $0.exercises ?? []) })
+            _routineId = State(initialValue: first?.routine_id)
+        } else {
+            _days = State(initialValue: [])
+            _routineId = State(initialValue: nil)
+        }
     }
 
-    private var editing: Bool { routine != nil }
-    /// Una rutina nueva no cabe con siete sesiones: se dice arriba y «Guardar» no se activa.
-    private var blocked: Bool { !editing && limitReached }
+    private var editing: Bool { !routines.isEmpty }
     private var trimmedName: String { name.trimmingCharacters(in: .whitespacesAndNewlines) }
     private var dirty: Bool {
-        trimmedName != (routine?.routine_name ?? "").trimmingCharacters(in: .whitespacesAndNewlines) || list != (routine?.exercises ?? [])
+        if editing { return trimmedName != (routines.first?.routine_name ?? "").trimmingCharacters(in: .whitespacesAndNewlines) || days != routines.map { EditableDay(weekday: $0.day, title: $0.day_title ?? "", exercises: $0.exercises ?? []) } }
+        return !trimmedName.isEmpty || !days.isEmpty
     }
-    private var ready: Bool { !trimmedName.isEmpty && !list.isEmpty && dirty && !blocked }
-    private var sets: Int { list.reduce(0) { $0 + $1.series } }
+    private var ready: Bool { !trimmedName.isEmpty && !days.isEmpty && days.allSatisfy { !$0.exercises.isEmpty } && !blocked }
+    private var blocked: Bool { !editing && limitReached && days.count >= 7 }
+    private var totalSets: Int { days.reduce(0) { $0 + $1.exercises.reduce(0) { $0 + $1.series } } }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    Text("Ponle nombre, elige los ejercicios y ajusta series, repeticiones y descanso.")
+                    Text("Ponle nombre, añade los días y los ejercicios de cada uno.")
                         .font(.apSubhead).foregroundStyle(Palette.muted)
                         .fixedSize(horizontal: false, vertical: true)
-                    if blocked { RoutineLimitNote() }
+                    if !editing && limitReached { RoutineLimitNote() }
+                    // Nombre
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Nombre").font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.muted)
                             .padding(.leading, 4).accessibilityHidden(true)
-                        TextField("Ej.: Pierna pesada", text: $name)
+                        TextField("Ej.: Safety", text: $name)
                             .font(.apBody).textFieldStyle(.plain)
                             .padding(.horizontal, 20).frame(minHeight: 52)
                             .background(Palette.secondary, in: Capsule())
                             .accessibilityLabel("Nombre")
                     }
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Ejercicios").font(.apTitle3).accessibilityAddTraits(.isHeader)
-                        if list.isEmpty {
-                            // Sin ejercicios: la misma tarjeta grande que el día vacío de «Editar mi rutina».
-                            Button { Haptics.selection(); picking = true } label: {
-                                VStack(spacing: 8) {
-                                    Image("lu-plus").renderingMode(.template).resizable().frame(width: 24, height: 24).foregroundStyle(Palette.gold)
-                                        .frame(width: 48, height: 48).background(Palette.gold.opacity(0.15), in: Circle())
-                                        .padding(.bottom, 4)
-                                    Text("Añadir ejercicios").font(.apHeadline)
-                                    Text("Busca por nombre o filtra por músculo").font(.apFootnote).foregroundStyle(Palette.muted)
-                                        .multilineTextAlignment(.center)
+                    // Rutina padre (solo al crear)
+                    if !editing {
+                        let groups = Dictionary(grouping: existingRoutines.filter { $0.custom == true }, by: { CustomRoutines.routineKey($0) })
+                            .sorted { $0.key < $1.key }
+                        if !groups.isEmpty {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Añadir a rutina existente").font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.muted)
+                                    .padding(.leading, 4).accessibilityHidden(true)
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 8) {
+                                        Button { Haptics.selection(); routineId = nil } label: {
+                                            Text("Nueva rutina").font(.apSubhead.weight(.semibold))
+                                                .foregroundStyle(routineId == nil ? Palette.background : Palette.foreground)
+                                                .padding(.horizontal, 14).frame(height: 36)
+                                                .background(routineId == nil ? Palette.gold : Palette.secondary, in: Capsule())
+                                        }
+                                        .buttonStyle(.plain)
+                                        ForEach(groups, id: \.key) { g in
+                                            let rid = g.value.first?.routine_id ?? g.key
+                                            let rname = g.value.first.map { CustomRoutines.name($0) } ?? g.key
+                                            Button { Haptics.selection(); routineId = rid } label: {
+                                                Text(rname).font(.apSubhead.weight(.semibold))
+                                                    .foregroundStyle(routineId == rid ? Palette.background : Palette.foreground)
+                                                    .padding(.horizontal, 14).frame(height: 36)
+                                                    .background(routineId == rid ? Palette.gold : Palette.secondary, in: Capsule())
+                                            }
+                                            .buttonStyle(.plain)
+                                        }
+                                    }
                                 }
-                                .padding(.horizontal, 24)
-                                .frame(maxWidth: .infinity, minHeight: 200)
-                                .surface(Radius.hero)
                             }
-                            .buttonStyle(.pressableCard)
-                        } else {
-                            VStack(spacing: 12) {
-                                ForEach(PlanEditorValues.keyed(list)) { row in
-                                    let index = row.index
-                                    PlanExerciseRow(exercise: row.exercise, index: index, total: list.count,
-                                                    onChange: { new in list[index] = new },
-                                                    onMove: { dir in
-                                                        let j = index + dir
-                                                        if list.indices.contains(j) { list.swapAt(index, j) }
-                                                    },
-                                                    onRemove: { list.remove(at: index) })
-                                }
-                            }
-                            Button { Haptics.selection(); picking = true } label: { Label("Añadir ejercicios", systemImage: "plus") }
-                                .buttonStyle(.pillSecondary)
                         }
+                    }
+                    // Días
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Días").font(.apTitle3).accessibilityAddTraits(.isHeader)
+                        if days.isEmpty {
+                            Text("Añade al menos un día con sus ejercicios.").font(.apFootnote).foregroundStyle(Palette.muted)
+                        }
+                        ForEach($days) { $day in
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    // Selector de día de la semana
+                                    Menu {
+                                        ForEach(DayNames.all, id: \.self) { d in
+                                            Button(d) { day.weekday = d }
+                                        }
+                                    } label: {
+                                        Text(day.weekday).font(.apHeadline)
+                                            .padding(.horizontal, 14).frame(height: 40)
+                                            .background(Palette.secondary, in: Capsule())
+                                    }
+                                    Spacer()
+                                    Button(role: .destructive) { days.removeAll { $0.id == day.id } } label: {
+                                        Image(systemName: "trash").foregroundStyle(Palette.destructive)
+                                            .frame(width: 40, height: 40)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                                TextField("Título del día (ej. Push)", text: $day.title)
+                                    .font(.apBody).textFieldStyle(.plain)
+                                    .padding(.horizontal, 14).frame(minHeight: 44)
+                                    .background(Palette.secondary, in: Capsule())
+                                    .accessibilityLabel("Título del día")
+                                if day.exercises.isEmpty {
+                                    Button { Haptics.selection(); pickingFor = day.id } label: {
+                                        VStack(spacing: 6) {
+                                            Image(systemName: "plus").font(.system(size: 20, weight: .bold)).foregroundStyle(Palette.gold)
+                                                .frame(width: 40, height: 40).background(Palette.gold.opacity(0.15), in: Circle())
+                                            Text("Añadir ejercicios").font(.apHeadline)
+                                            Text("Busca por nombre o filtra por músculo").font(.apFootnote).foregroundStyle(Palette.muted)
+                                        }
+                                        .frame(maxWidth: .infinity, minHeight: 120).surface(Radius.hero)
+                                    }
+                                    .buttonStyle(.pressableCard)
+                                } else {
+                                    VStack(spacing: 8) {
+                                        ForEach(Array(day.exercises.enumerated()), id: \.offset) { idx, ex in
+                                            HStack {
+                                                Text(ex.name).font(.apSubhead).lineLimit(1)
+                                                Spacer()
+                                                Text("\(ex.series)×\(ex.reps)").font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted)
+                                                Button { day.exercises.remove(at: idx) } label: {
+                                                    Image(systemName: "xmark").font(.system(size: 12, weight: .bold)).foregroundStyle(Palette.muted)
+                                                        .frame(width: 28, height: 28)
+                                                }
+                                                .buttonStyle(.plain)
+                                            }
+                                            .padding(.horizontal, 12).padding(.vertical, 8)
+                                            .background(Palette.secondary, in: RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
+                                        }
+                                    }
+                                    Button { Haptics.selection(); pickingFor = day.id } label: { Label("Añadir ejercicios", systemImage: "plus") }
+                                        .buttonStyle(.pillSecondary)
+                                }
+                            }
+                            .padding(12).surface()
+                        }
+                        Button { Haptics.tap(); days.append(EditableDay(weekday: "Lunes", title: "", exercises: [])) } label: {
+                            Label("Añadir día", systemImage: "plus")
+                        }
+                        .buttonStyle(.pillSecondary)
                     }
                 }
                 .padding(16)
@@ -100,24 +187,30 @@ struct RoutineEditorView: View {
             #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cerrar") { if dirty && !list.isEmpty { confirmDiscard = true } else { dismiss() } }
+                    Button("Cerrar") { if dirty { confirmDiscard = true } else { dismiss() } }
                 }
             }
-            .confirmationDialog("Tienes cambios sin guardar en esta rutina.", isPresented: $confirmDiscard, titleVisibility: .visible) {
+            .confirmationDialog("Tienes cambios sin guardar.", isPresented: $confirmDiscard, titleVisibility: .visible) {
                 Button("Descartar cambios", role: .destructive) { dismiss() }
                 Button("Seguir editando", role: .cancel) {}
             }
-            .sheet(isPresented: $picking) {
-                ExercisePickerView(existing: Set(list.map(\.name))) { picked in list += picked }
+            .sheet(isPresented: Binding(get: { pickingFor != nil }, set: { if !$0 { pickingFor = nil } })) {
+                if let dayId = pickingFor, let day = days.first(where: { $0.id == dayId }) {
+                    ExercisePickerView(existing: Set(day.exercises.map(\.name))) { picked in
+                        if let idx = days.firstIndex(where: { $0.id == dayId }) {
+                            days[idx].exercises += picked
+                        }
+                    }
+                    .presentationBackground(Palette.background)
+                }
             }
         }
-        .interactiveDismissDisabled(dirty && !list.isEmpty)
+        .interactiveDismissDisabled(dirty)
         #if os(macOS)
         .frame(minWidth: 560, minHeight: 680)
         #endif
     }
 
-    /// La única acción dorada, abajo como en la web, con lo que lleva la rutina debajo.
     private var footer: some View {
         VStack(spacing: 8) {
             if failed {
@@ -127,8 +220,8 @@ struct RoutineEditorView: View {
             Button(saving ? "Guardando…" : "Guardar rutina") { Task { await save() } }
                 .buttonStyle(.pill)
                 .disabled(!ready || saving)
-            if !list.isEmpty {
-                Text("\(ExerciseLibraryCatalog.count(list.count)) · \(sets) \(sets == 1 ? "serie" : "series")")
+            if totalSets > 0 {
+                Text("\(days.count) días · \(totalSets) series")
                     .font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted)
             }
         }
@@ -145,13 +238,13 @@ struct RoutineEditorView: View {
         guard ready, !saving else { return }
         saving = true
         failed = false
-        let ok = await onSave(trimmedName, list)
+        let routineDays = days.map { RoutineDay(day: $0.weekday, title: $0.title, exercises: $0.exercises) }
+        let ok = await onSave(trimmedName, routineDays, routineId)
         saving = false
         if ok { Haptics.success(); dismiss() } else { failed = true; Haptics.error(); A11y.announce("No se pudo guardar la rutina") }
     }
 }
 
-/// «Tienes 7 sesiones: borra o edita una para añadir otra», en una tarjeta dorada tenue.
 struct RoutineLimitNote: View {
     var body: some View {
         Text("\(CustomRoutines.limitMessage).")
@@ -183,6 +276,7 @@ struct MyRoutinesSection: View {
 
     let routines: [DayPlan]
     let limitReached: Bool
+    var userId: String? = nil
     var resumableDay: String? = nil
     var doneToday: Set<String> = []
     /// Fila secundaria bajo tus rutinas; nil si no se ofrece.
@@ -192,18 +286,51 @@ struct MyRoutinesSection: View {
     var onEdit: (String) -> Void
     var onDuplicate: (String) async -> Bool
     var onDelete: (String) async -> Bool
+    var onApply: ((String) -> Void)? = nil
 
     @State private var deleting: DayPlan?
     @State private var busy = false
+    @State private var appliedKey: String? = nil
     /// El plan nuevo ya no pide la fila: el aviso de cómo fue (y la carga) se queda en su sitio.
     @State private var fill: Fill = .idle
     /// Miniaturas que se enseñan por rutina (en la fila de «Empezar»); el resto, «+N».
     private let thumbs = 3
 
+    /// Letra del día de la semana (L, M, X, J, V, S, D), como la tira de Hoy.
+    private func shortDay(_ day: String) -> String {
+        switch day {
+        case "Lunes": return "L"
+        case "Martes": return "M"
+        case "Miércoles": return "X"
+        case "Jueves": return "J"
+        case "Viernes": return "V"
+        case "Sábado": return "S"
+        case "Domingo": return "D"
+        default: return String(day.prefix(1))
+        }
+    }
+
+    /// Rutinas agrupadas por nombre: una rutina (push/pull/pierna…) se divide en varios días,
+    /// y aquí se pintan juntas en una sola tarjeta en vez de N tarjetas iguales.
+    private var grouped: [(name: String, days: [DayPlan])] {
+        var order: [String] = []
+        var dict: [String: [DayPlan]] = [:]
+        for r in routines {
+            let n = CustomRoutines.routineKey(r)
+            if dict[n] == nil { order.append(n) }
+            dict[n, default: []].append(r)
+        }
+        return order.map { key in
+            let days = (dict[key] ?? []).sorted { (DayNames.all.firstIndex(of: $0.day) ?? 7) < (DayNames.all.firstIndex(of: $1.day) ?? 7) }
+            let display = days.first.map { CustomRoutines.name($0) } ?? CustomRoutines.defaultName
+            return (name: display, days: days)
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .center, spacing: 12) {
-                Text("Mis rutinas").font(.apTitle3).accessibilityAddTraits(.isHeader)
+                Text("Rutinas propias").font(.apTitle3).accessibilityAddTraits(.isHeader)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 // Con rutinas, «Nueva rutina» es una píldora tranquila; sin ninguna, la tarjeta de abajo ya la ofrece.
                 if !routines.isEmpty {
@@ -244,11 +371,20 @@ struct MyRoutinesSection: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .surface()
             } else {
-                VStack(spacing: 12) {
-                    ForEach(routines, id: \.day) { card($0) }
+                VStack(spacing: 8) {
+                    ForEach(grouped, id: \.name) { group in card(name: group.name, days: group.days) }
                 }
             }
             if showFill { autopilotCard }
+        }
+        .onAppear {
+            if let uid = userId {
+                appliedKey = UserDefaults.standard.string(forKey: "applied_routine_\\(uid)")
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .routineApplied)) { note in
+            if let rid = note.object as? String { appliedKey = rid }
+            else if let uid = userId { appliedKey = UserDefaults.standard.string(forKey: "applied_routine_\\(uid)") }
         }
         .sheet(item: $deleting) { routine in
             // Borrar: hoja de confirmación, como «¿Descartar entrenamiento?».
@@ -258,9 +394,15 @@ struct MyRoutinesSection: View {
                 guard !busy else { return }
                 Task {
                     busy = true
-                    let ok = await onDelete(routine.day)
+                    let rid = routine.routine_id ?? CustomRoutines.routineKey(routine)
+                    let daysToDelete = routines.filter { ($0.routine_id ?? CustomRoutines.routineKey($0)) == rid }.map(\.day)
+                    var allOk = true
+                    for d in daysToDelete {
+                        let ok = await onDelete(d)
+                        if !ok { allOk = false; break }
+                    }
                     busy = false
-                    if ok { deleting = nil }
+                    if allOk { deleting = nil }
                 }
             } onCancel: { deleting = nil }
         }
@@ -360,71 +502,55 @@ struct MyRoutinesSection: View {
         A11y.announce("\(PlanShield.keptTitle(shown)). \(PlanShield.description)")
     }
 
-    private func card(_ routine: DayPlan) -> some View {
-        let name = CustomRoutines.name(routine)
-        let exercises = routine.exercises ?? []
-        let extra = exercises.count - thumbs
-        let done = doneToday.contains(routine.day)
-        return VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(name).font(.apHeadline).lineLimit(2).fixedSize(horizontal: false, vertical: true)
-                    Text(CustomRoutines.meta(routine)).font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted)
-                        .lineLimit(2).fixedSize(horizontal: false, vertical: true)
+    private func card(name: String, days: [DayPlan]) -> some View {
+        let first = days.first
+        let isApplied = first.map { appliedKey == CustomRoutines.routineKey($0) } ?? false
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .center, spacing: 8) {
+                Text(name).font(.apHeadline).lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                if isApplied {
+                    Text("Predeterminada")
+                        .font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.gold)
+                        .padding(.horizontal, 10).frame(height: 24)
+                        .background(Palette.gold.opacity(0.12), in: Capsule())
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
                 Menu {
-                    Button { Haptics.selection(); onEdit(routine.day) } label: { Label("Editar", systemImage: "pencil") }
-                    Button { Haptics.selection(); Task { _ = await onDuplicate(routine.day) } } label: {
-                        Label("Duplicar", systemImage: "plus.square.on.square")
+                    Button { Haptics.selection(); onEdit(first!.day) } label: { Label("Editar", systemImage: "pencil") }
+                    if let apply = onApply, let rid = first.flatMap({ $0.routine_id ?? CustomRoutines.routineKey($0) }) {
+                        Button {
+                            Haptics.selection()
+                            if let uid = userId { UserDefaults.standard.set(rid, forKey: "applied_routine_\(uid)") }
+                            apply(rid)
+                        } label: { Label("Aplicar al plan", systemImage: "checkmark.circle") }
                     }
-                    .disabled(limitReached)
                     Divider()
-                    Button(role: .destructive) { Haptics.warning(); deleting = routine } label: { Label("Borrar", systemImage: "trash") }
+                    Button(role: .destructive) { Haptics.warning(); deleting = first } label: { Label("Borrar", systemImage: "trash") }
                 } label: {
-                    Image(systemName: "ellipsis").font(.system(size: 17, weight: .semibold)).foregroundStyle(Palette.muted)
-                        .frame(width: 44, height: 44).contentShape(Circle())
+                    Image(systemName: "ellipsis").font(.system(size: 15, weight: .semibold)).foregroundStyle(Palette.muted)
+                        .frame(width: 32, height: 32).contentShape(Circle())
                 }
                 #if os(macOS)
                 .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
                 #endif
-                .padding(.top, -10).padding(.trailing, -10)
-                .accessibilityLabel("Más acciones de \(name)")
             }
-            // Una sola fila: sus miniaturas y la acción. Con letra grande, la miniatura que no cabe entera baja
-            // a una segunda línea oculta (nunca se ve cortada ni aplasta el botón), como `flex-wrap` en la web.
-            HStack(spacing: 12) {
-                FlowRow(spacing: 6) {
-                    ForEach(Array(exercises.prefix(thumbs).enumerated()), id: \.offset) { _, exercise in
-                        ExerciseThumb(url: exercise.image_url, size: 40, name: exercise.name, muscleGroup: exercise.muscle_group, video: exercise.video_url)
-                    }
-                    if extra > 0 {
-                        Text("+\(extra)").font(.apFootnote.weight(.semibold).monospacedDigit()).foregroundStyle(Palette.muted)
-                            .frame(width: 40, height: 40)
-                            .background(Palette.secondary, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            FlowRow(spacing: 6) {
+                ForEach(days, id: \.day) { d in
+                    VStack(spacing: 2) {
+                        Text(shortDay(d.day))
+                            .font(.apFootnote.weight(.semibold))
+                            .foregroundStyle(Palette.foreground)
+                            .frame(width: 28, height: 28)
+                            .background(Palette.secondary, in: Circle())
+                        if let t = d.day_title, !t.isEmpty {
+                            Text(t).font(.apCaption).foregroundStyle(Palette.muted).lineLimit(1)
+                        }
                     }
                 }
-                .frame(height: 40, alignment: .top)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .clipped()
-                .accessibilityHidden(true)
-                if done {
-                    Label("Hecha hoy", systemImage: "checkmark")
-                        .font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.gold)
-                        .padding(.horizontal, 16).frame(height: 44)
-                        .background(Palette.gold.opacity(0.10), in: Capsule())
-                        .fixedSize()
-                        .accessibilityElement(children: .combine)
-                } else {
-                    Button(resumableDay == routine.day ? "Continuar" : "Empezar") { Haptics.tap(); onStart(routine.day) }
-                        .buttonStyle(PillButtonStyle(kind: .secondary, height: 44))
-                        .fixedSize()
-                        .disabled(exercises.isEmpty)
-                        .accessibilityLabel("\(resumableDay == routine.day ? "Continuar" : "Empezar") \(name)")
-                }
             }
+            .accessibilityHidden(true)
         }
-        .padding(16)
+        .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .surface()
     }
@@ -440,7 +566,7 @@ struct RoutinesPreview: View {
         if !routines.isEmpty {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .firstTextBaseline) {
-                    Text("Mis rutinas").font(.apTitle3).accessibilityAddTraits(.isHeader)
+                    Text("Rutinas propias").font(.apTitle3).accessibilityAddTraits(.isHeader)
                     Spacer(minLength: 8)
                     Button("Ver todas") { Haptics.tap(); onOpen() }
                         .font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.gold)

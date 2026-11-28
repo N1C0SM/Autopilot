@@ -710,7 +710,7 @@ extension View {
 struct PlusBadge: View {
     var body: some View {
         HStack(spacing: 4) {
-            Image(systemName: "lock.fill").font(.system(size: 10, weight: .semibold))
+            Image(systemName: "lock.fill").font(.system(size: 12, weight: .semibold))
             Text("Plus").font(.inter(size: 11, weight: .semibold))
         }
         .foregroundStyle(Palette.gold)

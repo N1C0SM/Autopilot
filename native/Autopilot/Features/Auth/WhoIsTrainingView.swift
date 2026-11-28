@@ -227,6 +227,6 @@ private extension View {
         padding(.vertical, 12).padding(.leading, 12).padding(.trailing, 18)
             .frame(maxWidth: .infinity, minHeight: 76, alignment: .leading)
             .surface(22)
-            .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
     }
 }

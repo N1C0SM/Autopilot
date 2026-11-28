@@ -53,9 +53,9 @@ struct RoutineDetailSheet: View {
                         Button { Task { await generateCover() } } label: {
                             cover
                                 .frame(width: 88, height: 88)
-                                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                                .clipShape(RoundedRectangle(cornerRadius: Radius.media, style: .continuous))
                                 .overlay(alignment: .bottomTrailing) {
-                                    Image(systemName: "sparkles").font(.system(size: 11, weight: .bold)).foregroundStyle(Palette.background)
+                                    Image(systemName: "sparkles").font(.system(size: 12, weight: .bold)).foregroundStyle(Palette.background)
                                         .frame(width: 24, height: 24).background(Palette.gold, in: Circle())
                                         .overlay(Circle().strokeBorder(Palette.background, lineWidth: 2))
                                         .offset(x: 6, y: 6)
@@ -94,7 +94,7 @@ struct RoutineDetailSheet: View {
                             HStack {
                                 Text(selectedDay).font(.apBody.weight(.semibold))
                                 Spacer()
-                                Image(systemName: "chevron.up.chevron.down").font(.system(size: 12, weight: .semibold)).foregroundStyle(Palette.muted)
+                                Image(systemName: "chevron.up.chevron.down").font(.system(size: 13, weight: .semibold)).foregroundStyle(Palette.muted)
                             }
                             .padding(.horizontal, 18).frame(height: 52)
                             .background(Palette.secondary, in: Capsule())
@@ -118,7 +118,7 @@ struct RoutineDetailSheet: View {
                                         .frame(width: 44, height: 44)
                                         .foregroundStyle(icon == symbol ? Palette.gold : Palette.foreground)
                                         .background(icon == symbol ? Palette.gold.opacity(0.15) : Palette.secondary,
-                                                    in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                                    in: RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
                                 }
                                 .buttonStyle(.plain)
                                 .accessibilityAddTraits(icon == symbol ? .isSelected : [])

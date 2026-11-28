@@ -39,7 +39,7 @@ struct AdminPhysiquesView: View {
                                                  detail: it.visible ? "Visible en el AI Scan" : "Oculto para los usuarios") {
                                         PhysiqueImage(url: it.image_url)
                                             .frame(width: 56, height: 56)
-                                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                            .clipShape(RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
                                     } trailing: {
                                         HStack(spacing: 6) {
                                             AdminStatusPill(text: it.visible ? "Visible" : "Oculto",

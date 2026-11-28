@@ -577,14 +577,14 @@ struct ChatView: View {
                                     if let u = m.media_url, let url = URL(string: u) {
                                         CachedAsyncImage(url: url) { $0.resizable().scaledToFit() } placeholder: { BrandLoader() }
                                             .frame(maxWidth: 240)
-                                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                            .clipShape(RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
                                     }
                                     Text(m.content).font(.apBody)
                                 }
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 10)
                                 .foregroundStyle(mine ? Color.black : Palette.foreground)
-                                .background(mine ? Palette.gold : Palette.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                                .background(mine ? Palette.gold : Palette.card, in: RoundedRectangle(cornerRadius: Radius.media, style: .continuous))
                                 if !mine { Spacer(minLength: 40) }
                             }
                             .id(m.id)
@@ -606,7 +606,7 @@ struct ChatView: View {
                 HStack(spacing: 10) {
                     Image(platformImage: img).resizable().scaledToFill()
                         .frame(width: 64, height: 64)
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
                         .accessibilityHidden(true)
                     Button {
                         self.pending = nil
@@ -648,7 +648,7 @@ struct ChatView: View {
                     .lineLimit(1...5)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
-                    .background(Palette.secondary, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                    .background(Palette.secondary, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                     .accessibilityLabel("Mensaje")
                 Button {
                     Task { await send() }

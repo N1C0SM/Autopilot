@@ -112,7 +112,7 @@ struct WelcomeView: View {
                         .buttonStyle(.pill)
                     Button("Ya tengo cuenta") { Haptics.tap(); onLogin() }
                         .font(.apSubhead.weight(.semibold))
-                        .foregroundStyle(Palette.gold)
+                        .foregroundStyle(Palette.foreground)
                         .frame(maxWidth: .infinity, minHeight: 44)
                         .background(.black.opacity(0.0))
                 }
@@ -142,7 +142,7 @@ struct WelcomeView: View {
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(Palette.gold)
                 .frame(width: 28, height: 28)
-                .background(Palette.gold.opacity(0.12), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .background(Palette.gold.opacity(0.12), in: RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
                 .accessibilityHidden(true)
             Text(text)
                 .font(.apSubhead)
@@ -524,7 +524,7 @@ struct OnboardingQuizView: View {
         ZStack {
             if on {
                 Circle().fill(Palette.gold)
-                Image(systemName: "checkmark").font(.system(size: 11, weight: .heavy)).foregroundStyle(Palette.background)
+                Image(systemName: "checkmark").font(.system(size: 12, weight: .heavy)).foregroundStyle(Palette.background)
             } else {
                 Circle().strokeBorder(Palette.foreground.opacity(0.25), lineWidth: 2)
             }
@@ -535,7 +535,7 @@ struct OnboardingQuizView: View {
 
     /// Cada opción en su tarjeta (maqueta de ChatGPT): icono, texto y círculo; la elegida con borde dorado.
     private func choices(_ header: String?, _ options: [Quiz.Option], _ value: String, columns: Bool = false, iconTiles: Bool = false, _ set: @escaping (String) -> Void) -> some View {
-        let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: Radius.chip, style: .continuous)
         let cards = ForEach(options) { o in
             let on = o.v == value
             Button { Haptics.selection(); set(o.v) } label: {
@@ -545,7 +545,7 @@ struct OnboardingQuizView: View {
                             Image(systemName: icon).font(.system(size: 21, weight: .semibold))
                                 .foregroundStyle(on ? Palette.gold : Palette.muted)
                                 .frame(width: 44, height: 44)
-                                .background(on ? Palette.gold.opacity(0.15) : Palette.secondary, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                .background(on ? Palette.gold.opacity(0.15) : Palette.secondary, in: RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
                                 .accessibilityHidden(true)
                         } else {
                             Image(systemName: icon).font(.system(size: 18)).foregroundStyle(on ? Palette.gold : Palette.muted)

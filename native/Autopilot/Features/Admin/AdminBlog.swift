@@ -178,9 +178,9 @@ struct AdminBlogView: View {
         let c = p.cover_url ?? ""
         if !c.isEmpty, let u = URL(string: c) {
             CachedAsyncImage(url: u) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
-                .frame(width: 64, height: 48).clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .frame(width: 64, height: 48).clipShape(RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
         } else {
-            RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Palette.secondary)
+            RoundedRectangle(cornerRadius: Radius.chip, style: .continuous).fill(Palette.secondary)
                 .frame(width: 64, height: 48)
                 .overlay { Image(systemName: "doc.text").foregroundStyle(Palette.muted) }
                 .accessibilityHidden(true)

@@ -93,7 +93,7 @@ struct AdminSidebarView: View {
                 .font(.inter(size: 15, weight: .semibold))
                 .foregroundStyle(Palette.gold)
                 .frame(width: 32, height: 32)
-                .background(Palette.gold.opacity(0.15), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                .background(Palette.gold.opacity(0.15), in: RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 0) {
                 Text("Autopilot").font(.apHeadline).lineLimit(1)
@@ -196,9 +196,9 @@ struct AdminSidebarView: View {
             .frame(minHeight: 46)
             .background(
                 active ? Palette.gold.opacity(0.14) : Color.clear,
-                in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                in: RoundedRectangle(cornerRadius: Radius.chip, style: .continuous)
             )
-            .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
         }
         .buttonStyle(.plain)
         .accessibilityLabel(item.title)

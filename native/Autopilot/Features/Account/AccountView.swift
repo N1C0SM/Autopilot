@@ -149,7 +149,7 @@ struct AccountView: View {
                 // Icono en una losa redondeada, como las filas de Plus en Nutrición y la web.
                 Image(systemName: symbol).font(.system(size: 15)).foregroundStyle(Palette.muted)
                     .frame(width: 32, height: 32)
-                    .background(Palette.secondary, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                    .background(Palette.secondary, in: RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
                     .accessibilityHidden(true)
                 // Solo el título, como Ajustes de iOS.
                 Text(title).font(.apBody).foregroundStyle(Palette.foreground)

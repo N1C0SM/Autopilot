@@ -24,10 +24,13 @@ export interface DayPlan {
   duration?: string;
   // gimnasio
   routine_name?: string;
+  day_title?: string;
   muscle_focus?: string;
   exercises?: GymExerciseEntry[];
   /** Día creado o editado a mano: el piloto automático no lo sustituye sin permiso. */
   custom?: boolean;
+  /** Identificador de la rutina padre: varios días comparten el mismo `routine_id` para formar una rutina de varios días. */
+  routine_id?: string;
   /** Emoji que el usuario eligió para la sesión (si no hay, se ve su foto). */
   session_icon?: string;
   cover_url?: string;

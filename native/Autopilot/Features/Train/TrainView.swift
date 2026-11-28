@@ -11,6 +11,7 @@ struct TrainView: View {
     static var pendingStart = false
     /// «Ver todas» en «Mis rutinas» de Hoy: Entrenar se abre con «Mis rutinas» arriba.
     static var focusRoutines = false
+    static var routinesOnly = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @EnvironmentObject private var session: SessionModel
     #if !os(macOS)
@@ -29,6 +30,7 @@ struct TrainView: View {
     /// Tus días de entreno, contados como generate-plan; nil hasta leerlos (sin ellos no se ofrece
     /// «Completar con el autopiloto»).
     @State private var trainingDays: Int?
+    @State private var templates: [RoutineTemplate] = []
     var onNavigate: (AppSection) -> Void = { _ in }
 
     struct RoutineEditorTarget: Identifiable { let day: String?; var id: String { day ?? "nueva" } }
@@ -58,7 +60,7 @@ struct TrainView: View {
         self.onNavigate = onNavigate
     }
 
-    private var routines: [DayPlan] { CustomRoutines.mine(model.days) }
+    @State private var routines: [DayPlan] = []
     private var limitReached: Bool { !CustomRoutines.canAdd(model.days) }
 
     var body: some View {
@@ -103,9 +105,64 @@ struct TrainView: View {
                         Task { await open(day) }
                     }
                 }
+                if !templates.isEmpty {
+                    VStack(alignment: .leading, spacing: 12) {
+                    Text("Rutinas de la comunidad").font(.apTitle3).accessibilityAddTraits(.isHeader)
+                    ForEach(templates) { t in
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack(alignment: .center, spacing: 8) {
+                                Text(t.name).font(.apHeadline).lineLimit(1)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                Menu {
+                                    Button {
+                                        Haptics.selection()
+                                        Task { await applyTemplate(t) }
+                                    } label: { Label("Aplicar al plan", systemImage: "checkmark.circle") }
+                                    Button {
+                                        Haptics.selection()
+                                        Task { await addToOwnRoutines(t) }
+                                    } label: { Label("Marcar como propia", systemImage: "plus.circle") }
+                                    Button { Haptics.selection(); routineEditor = RoutineEditorTarget(day: nil) } label: { Label("Editar", systemImage: "pencil") }
+                                    Divider()
+                                    Button(role: .destructive) {
+                                        Haptics.warning()
+                                        var hidden = UserDefaults.standard.stringArray(forKey: "hidden_templates") ?? []
+                                        hidden.append(t.id.uuidString)
+                                        UserDefaults.standard.set(hidden, forKey: "hidden_templates")
+                                        templates.removeAll { $0.id == t.id }
+                                    } label: { Label("Borrar", systemImage: "trash") }
+                                } label: {
+                                    Image(systemName: "ellipsis").font(.system(size: 15, weight: .semibold)).foregroundStyle(Palette.muted)
+                                        .frame(width: 32, height: 32).contentShape(Circle())
+                                }
+                                #if os(macOS)
+                                .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+                                #endif
+                            }
+                            if let d = t.description {
+                                Text(d).font(.apFootnote).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
+                            }
+                            FlowRow(spacing: 6) {
+                                ForEach(t.days, id: \.day) { d in
+                                    VStack(spacing: 2) {
+                                        Text(String(d.day.prefix(1)))
+                                            .font(.apFootnote.weight(.semibold))
+                                            .foregroundStyle(Palette.foreground)
+                                            .frame(width: 28, height: 28)
+                                            .background(Palette.secondary, in: Circle())
+                                        if let title = d.day_title, !title.isEmpty {
+                                            Text(title).font(.apCaption).foregroundStyle(Palette.muted).lineLimit(1)
+                                        }
+                                    }
+                                }
+                            }
+                            .accessibilityHidden(true)
+                        }
+                        .padding(12).surface()
+                    }
+                }
             }
-            .frame(maxWidth: 680, alignment: .leading)
-            .padding(.horizontal, pagePadding)
+            }
             .padding(.top, wideLayout ? 24 : 8)
             .frame(maxWidth: .infinity)
             .padding(.bottom, 40)
@@ -148,12 +205,28 @@ struct TrainView: View {
                 .presentationBackground(Palette.background)
         }
         .sheet(item: $routineEditor) { target in
-            RoutineEditorView(routine: target.day.flatMap { day in model.days.first { $0.day == day } },
-                              limitReached: limitReached) { name, exercises in
-                if let day = target.day {
-                    return await commit("Rutina guardada") { CustomRoutines.update($0, day: day, name: name, exercises: exercises) }
+            RoutineEditorView(routines: {
+                guard let day = target.day, let uid = session.userIdString else { return [] }
+                let all = CustomRoutines.mine(userId: uid)
+                let base = all.first(where: { $0.day == day })
+                let rid = base?.routine_id ?? base.map { CustomRoutines.routineKey($0) }
+                return rid.map { r in all.filter { ($0.routine_id ?? CustomRoutines.routineKey($0)) == r } } ?? []
+            }(),
+                              limitReached: false,
+                              existingRoutines: session.userIdString.map { CustomRoutines.mine(userId: $0) } ?? []) { name, routineDays, rid in
+                guard let uid = session.userIdString else { return false }
+                if target.day != nil {
+                    let base = CustomRoutines.mine(userId: uid).first(where: { $0.day == target.day! })
+                    let oldDay = base?.day ?? target.day!
+                    _ = CustomRoutines.updateRoutine(userId: uid, oldDay: oldDay, name: name, days: routineDays)
+                    routines = CustomRoutines.mine(userId: uid)
+                    Haptics.success(); A11y.announce("Rutina guardada")
+                    return true
                 }
-                return await commit("Rutina creada en Mis rutinas") { CustomRoutines.add($0, name: name, exercises: exercises) }
+                _ = CustomRoutines.addRoutine(userId: uid, name: name, days: routineDays, routine_id: rid)
+                routines = CustomRoutines.mine(userId: uid)
+                Haptics.success(); A11y.announce("Rutina creada en Mis rutinas")
+                return true
             }
             .presentationBackground(Palette.background)
         }
@@ -173,11 +246,6 @@ struct TrainView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text(CustomRoutines.modeLine(model.days)).font(.apSubhead).foregroundStyle(Palette.muted)
                 .fixedSize(horizontal: false, vertical: true)
-            // Lado a lado si caben enteros; si no (letra grande), uno bajo otro, sin cortar.
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 8) { emptyBarButton; libraryBarButton }
-                VStack(alignment: .leading, spacing: 8) { emptyBarButton; libraryBarButton }
-            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -225,13 +293,24 @@ struct TrainView: View {
     }
 
     private var routinesSection: some View {
-        MyRoutinesSection(routines: routines, limitReached: limitReached, resumableDay: resumableDay,
+        MyRoutinesSection(routines: routines, limitReached: limitReached, userId: session.userIdString, resumableDay: resumableDay,
                           doneToday: model.doneTodayKeys, autopilot: autopilotOffer,
                           onNew: { routineEditor = RoutineEditorTarget(day: nil) },
                           onStart: { day in Task { await open(day) } },
                           onEdit: { day in routineEditor = RoutineEditorTarget(day: day) },
-                          onDuplicate: { day in await commit("Rutina duplicada") { CustomRoutines.duplicate($0, day: day) } },
-                          onDelete: { day in await commit("Rutina borrada") { CustomRoutines.delete($0, day: day) } })
+                          onDuplicate: { day in
+                              guard let uid = session.userIdString else { return false }
+                              let ok = CustomRoutines.duplicate(userId: uid, day: day)
+                              if ok { routines = CustomRoutines.mine(userId: uid); Haptics.success(); A11y.announce("Rutina duplicada") }
+                              return ok
+                          },
+                          onDelete: { day in
+                              guard let uid = session.userIdString else { return false }
+                              let ok = CustomRoutines.delete(userId: uid, day: day)
+                              if ok { routines = CustomRoutines.mine(userId: uid); Haptics.success(); A11y.announce("Rutina borrada") }
+                              return ok
+                          },
+                          onApply: { rid in Task { await applyRoutine(rid) } })
             .id("mis-rutinas")
     }
 
@@ -242,6 +321,9 @@ struct TrainView: View {
         // Entreno a medias guardado: la rutina lo ofrece como «Continuar entreno».
         resumableDay = session.userIdString.flatMap { ActiveWorkout.restore(userId: $0)?.day.day }
         await loadTrainingDays()
+        let hidden = UserDefaults.standard.stringArray(forKey: "hidden_templates") ?? []
+        templates = await TrainingRepo.routineTemplates().filter { !hidden.contains($0.id.uuidString) }
+        if let uid = session.userIdString { routines = CustomRoutines.mine(userId: uid) }
         // Entrenar y Mis rutinas: las miniaturas de todas las sesiones, por detrás (al abrir una ya están).
         let urls = model.days.flatMap { ($0.exercises ?? []).compactMap(\.image_url) }.compactMap(URL.init(string:))
         MediaPrefetch.thumbnails(urls)
@@ -250,11 +332,72 @@ struct TrainView: View {
     /// Tus días de entreno (`trainingDays`) mientras el plan no tenga sesiones del piloto automático
     /// (vacío o todo tuyo): así, al crear tu primera rutina o al dejar el plan todo tuyo en el editor,
     /// «Completar con el autopiloto» ya sabe si ofrecerse, como en la web.
+    /// Copia una plantilla a las rutinas propias (añade sus días a los días libres, sin reemplazar el plan).
+    private func addToOwnRoutines(_ t: RoutineTemplate) async {
+        guard let uid = session.userIdString else { return }
+        Haptics.tap()
+        let rid = UUID().uuidString
+        let days = t.days.map { RoutineDay(day: $0.day, title: $0.day_title ?? "", exercises: $0.exercises ?? []) }
+        _ = CustomRoutines.addRoutine(userId: uid, name: t.name, days: days, routine_id: rid)
+        routines = CustomRoutines.mine(userId: uid)
+        A11y.announce("Rutina \(t.name) añadida a tus rutinas")
+        Haptics.success()
+    }
+
+    private func applyTemplate(_ t: RoutineTemplate) async {
+        guard let userId = session.userId else { return }
+        Haptics.tap()
+        do {
+            let rid = UUID().uuidString
+            let current = model.days
+            // Eliminar rutinas custom existentes y añadir las del template.
+            var plans = current.filter { $0.custom != true }
+            for d in t.days {
+                var day = d.day
+                if plans.contains(where: { $0.day == day }) {
+                    if let free = CustomRoutines.nextFreeKey(plans) { day = free } else { continue }
+                }
+                var copy = d
+                copy.day = day
+                copy.custom = true
+                copy.routine_id = rid
+                copy.routine_name = copy.routine_name ?? t.name
+                plans.append(copy)
+            }
+            struct Row: Encodable { let user_id: UUID; let workouts_json: [DayPlan]; let updated_at: String }
+            try await Backend.client.from("training_plan")
+                .upsert(Row(user_id: userId, workouts_json: plans, updated_at: ISO8601DateFormatter().string(from: Date())), onConflict: "user_id")
+                .execute()
+            let withPhotos = await TrainingRepo.withImages(plans)
+            TrainingRepo.storePlanLocally(userId: userId, withPhotos)
+            await load()
+            if let uid = session.userIdString { UserDefaults.standard.set(rid, forKey: "applied_routine_\\(uid)") }
+            NotificationCenter.default.post(name: .routineApplied, object: rid)
+            A11y.announce("Rutina \\(t.name) aplicada: \\(plans.count) sesiones")
+            Haptics.success()
+        } catch {
+            A11y.announce("Error: \\(error.localizedDescription)")
+            Haptics.error()
+        }
+    }
+
     private func loadTrainingDays() async {
         guard let userId = session.userId, model.sessions.allSatisfy({ $0.custom == true }) else { return }
         trainingDays = await TrainingRepo.trainingFrequency(userId: userId)
     }
 
+    /// Aplica una rutina (por `routine_id`) al plan: copia sus días al plan activo (añadiendo los que
+    /// falten con claves libres) y persiste. Así «Aplicar al plan» hace algo real, no solo anuncia.
+    private func applyRoutine(_ rid: String) async {
+        // Aplicar = marcar esta rutina como la activa (no modifica el plan: las rutinas siguen siendo
+        // una biblioteca; el plan mantiene todas). El efecto visible es el badge "Predeterminada" y el
+        // selector de Inicio.
+        Haptics.tap()
+        if let uid = session.userIdString { UserDefaults.standard.set(rid, forKey: "applied_routine_\(uid)") }
+        NotificationCenter.default.post(name: .routineApplied, object: rid)
+        A11y.announce("Rutina aplicada")
+        Haptics.success()
+    }
     /// «Completar con el autopiloto» (web `Dashboard.tsx`, `generatePlanGuarded`): generate-plan prepara
     /// las sesiones que faltan alrededor de tus rutinas (nunca las toca) y el plan se vuelve a leer.
     /// Devuelve cuántas rutinas respetó, o nil si no se pudo.
@@ -422,7 +565,7 @@ struct ExerciseThumb: View {
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Palette.secondary)
+            RoundedRectangle(cornerRadius: Radius.chip, style: .continuous).fill(Palette.secondary)
             ExerciseLoopView(url: clip, paused: completed) {
                 if let photo, !photo.isEmpty, let u = URL(string: photo) {
                     CachedAsyncImage(url: u, maxSide: MediaSizing.thumbSide(size)) { $0.resizable().scaledToFill() } placeholder: { Color.clear }
@@ -436,7 +579,7 @@ struct ExerciseThumb: View {
             }
         }
         .frame(width: size, height: size)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
         .accessibilityHidden(true)
         .task(id: name) { if moves, !fresh { loops.want(name) } }
     }
@@ -473,6 +616,7 @@ struct FlowRow: Layout {
 }
 
 
+@MainActor
 final class PlanModel: ObservableObject {
     @Published var days: [DayPlan] = []
     @Published var completions: [(day: String, date: String)] = []
@@ -563,50 +707,7 @@ struct RoutineListView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 32) {
-            if let header { header }
-            if sessions.isEmpty {
-                emptyCard(icon: "lu-calendar", title: "Tu plan aún no tiene sesiones",
-                          message: "Edita tu rutina para añadir tus sesiones.")
-            } else {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack(alignment: .firstTextBaseline, spacing: 12) {
-                        Text("Esta semana").font(.apTitle3).accessibilityAddTraits(.isHeader)
-                        Spacer(minLength: 8)
-                        if let onEditPlan {
-                            // Zona táctil de 44 dentro de la etiqueta (con `.plain` solo se pulsa lo que dibuja).
-                            Button { Haptics.tap(); onEditPlan() } label: {
-                                Text("Editar").font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.gold)
-                                    .frame(minHeight: 44).padding(.horizontal, 4).contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain).padding(.vertical, -12)
-                            .accessibilityLabel("Editar plan")
-                        }
-                    }
-                    weekProgress
-                    // Una sola lista: la sesión elegida se abre debajo de su fila, en la misma tarjeta.
-                    let shape = RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
-                    VStack(spacing: 0) {
-                        ForEach(Array(sessions.enumerated()), id: \.element.day) { index, plan in
-                            sessionRow(index + 1, plan)
-                                .overlay(alignment: .top) {
-                                    // El separador nace donde empieza el texto (16 + 56 + 14).
-                                    if index > 0 {
-                                        Rectangle().fill(Palette.separator).frame(height: 0.5)
-                                            .padding(.leading, 86).padding(.trailing, 16)
-                                    }
-                                }
-                            if openKey == plan.day { session(plan) }
-                        }
-                    }
-                    .clipShape(shape)
-                    .background(SurfaceBackground(shape: shape))
-                }
-            }
             if let routines { routines }
-            (Text("Análisis asistido por IA · tu plan se adapta a ti · ") + Text("[no sustituye consejo médico](https://autopilotplan.com/legal/disclaimer-medico)"))
-                .tint(Palette.gold)
-                .font(.apFootnote).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
-                .frame(maxWidth: .infinity).padding(.horizontal, 16)
         }
         .sheet(item: $detail) { ex in
             // Sin foto, la ficha abre con la silueta de su músculo (nunca un hueco).
@@ -619,6 +720,7 @@ struct RoutineListView: View {
             }
             .presentationBackground(Palette.card)
         }
+        .onDisappear { TrainView.routinesOnly = false }
     }
 
     /// Lo hecho esta semana: un tramo por sesión, dorado si ya está hecha, y la cuenta corta al lado (como la web).
@@ -701,7 +803,7 @@ struct RoutineListView: View {
         case .done:
             // El entrenamiento no usa verde: su estado «hecho» es dorado (tokens.md).
             HStack(spacing: 4) {
-                Image(systemName: "checkmark").font(.system(size: 11, weight: .bold))
+                Image(systemName: "checkmark").font(.system(size: 12, weight: .bold))
                 Text("Hecha")
             }
             .font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.gold)
@@ -724,7 +826,7 @@ struct RoutineListView: View {
 
     /// Foto de la fila: su icono, su portada, la del primer ejercicio o la de marca; la actividad, su llama.
     @ViewBuilder private func rowThumb(_ plan: DayPlan) -> some View {
-        let shape = RoundedRectangle(cornerRadius: 14, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: Radius.chip, style: .continuous)
         if let emoji = SessionIdentity.clean(plan.session_icon) {
             Text(emoji).font(.system(size: 28))
                 .frame(width: 56, height: 56)
@@ -1013,7 +1115,7 @@ struct SessionIdentitySheet: View {
                     PhotosPicker(selection: $photoItem, matching: .images) {
                         HStack {
                             if let customImage, let url = URL(string: customImage), url.isFileURL, let img = PlatformImage(contentsOfFile: url.path) {
-                                Image(platformImage: img).resizable().scaledToFill().frame(width: 48, height: 48).clipShape(RoundedRectangle(cornerRadius: 12))
+                                Image(platformImage: img).resizable().scaledToFill().frame(width: 48, height: 48).clipShape(RoundedRectangle(cornerRadius: Radius.chip))
                             } else if let customImage, !customImage.isEmpty {
                                 Text("Imagen elegida").font(.apBody)
                             } else {
@@ -1066,7 +1168,7 @@ struct SessionIdentitySheet: View {
     /// Una opción del icono: `nil` es la foto de la sesión (o la llama de la actividad).
     private func iconOption(_ value: String?) -> some View {
         let selected = icon == value
-        let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: Radius.chip, style: .continuous)
         return Button { Haptics.selection(); icon = value } label: {
             Group {
                 if let value {

@@ -27,26 +27,27 @@ enum Palette {
         #endif
     }
 
-    /// --background
-    static let background = dynamic(dark: (0.042, 0.040, 0.038), light: (0.98, 0.98, 0.99))
-    /// --foreground
-    static let foreground = dynamic(dark: (1, 1, 1), light: (0.06, 0.06, 0.07))
-    /// --card
-    static let card = dynamic(dark: (0.067, 0.067, 0.074), light: (1, 1, 1))
-    /// --secondary
-    static let secondary = dynamic(dark: (0.152, 0.152, 0.168), light: (0.93, 0.93, 0.95))
-    /// --muted-foreground
-    static let muted = dynamic(dark: (0.657, 0.657, 0.683), light: (0.42, 0.42, 0.46))
-    /// Dorado de marca
-    static let gold = dynamic(dark: (0.847, 0.698, 0.369), light: (0.72, 0.56, 0.22))
+    /// --background (#090909)
+    static let background = dynamic(dark: (0.035, 0.035, 0.035), light: (0.97, 0.97, 0.97))
+    /// --foreground (#F2F2F2)
+    static let foreground = dynamic(dark: (0.949, 0.949, 0.949), light: (0.06, 0.06, 0.07))
+    /// --card (#191919)
+    static let card = dynamic(dark: (0.098, 0.098, 0.098), light: (1, 1, 1))
+    /// --secondary (#141414)
+    static let secondary = dynamic(dark: (0.078, 0.078, 0.078), light: (0.93, 0.93, 0.95))
+    /// --muted-foreground (#858585)
+    static let muted = dynamic(dark: (0.522, 0.522, 0.522), light: (0.42, 0.42, 0.46))
+    /// Dorado de marca (#C6A15B)
+    static let gold = dynamic(dark: (0.776, 0.631, 0.357), light: (0.65, 0.50, 0.22))
     static let destructive = Color(red: 1.0, green: 0.271, blue: 0.227)
     /// --success
     static let success = Color(red: 0.18, green: 0.82, blue: 0.34)
-    static let separator = dynamic(dark: (0.144, 0.144, 0.156), light: (0.88, 0.88, 0.90))
+    /// --border (#292929)
+    static let separator = dynamic(dark: (0.161, 0.161, 0.161), light: (0.88, 0.88, 0.90))
     /// --accent
-    static let accent = dynamic(dark: (0.199, 0.199, 0.221), light: (0.88, 0.88, 0.90))
-    /// --border
-    static let border = dynamic(dark: (0.144, 0.144, 0.156), light: (0.88, 0.88, 0.90))
+    static let accent = dynamic(dark: (0.161, 0.161, 0.161), light: (0.88, 0.88, 0.90))
+    /// --border (#292929)
+    static let border = dynamic(dark: (0.161, 0.161, 0.161), light: (0.88, 0.88, 0.90))
 
     // Profundidad (tokens `--surface-*`, `--gold-sheen` y `--chrome-*` de la web).
     /// Luz que baja desde arriba en tarjetas y controles.
@@ -56,11 +57,11 @@ enum Palette {
     /// Sombra difusa bajo las superficies.
     static let shadow = dynamic(dark: (0, 0, 0, 0.55), light: (0.06, 0.06, 0.08, 0.10))
     /// Extremos del degradado dorado (`--gold-sheen`), con `gold` en el centro.
-    static let goldLight = dynamic(dark: (0.930, 0.806, 0.490), light: (0.704, 0.537, 0.176))
-    static let goldDeep = dynamic(dark: (0.770, 0.572, 0.230), light: (0.482, 0.334, 0.078))
+    static let goldLight = dynamic(dark: (0.831, 0.722, 0.478), light: (0.704, 0.537, 0.176))
+    static let goldDeep = dynamic(dark: (0.659, 0.529, 0.290), light: (0.482, 0.334, 0.078))
     /// Barra de pestañas flotante (`--chrome-sheen`).
     static let chromeTop = dynamic(dark: (0.123, 0.123, 0.137, 0.92), light: (1, 1, 1, 0.94))
-    static let chromeBottom = dynamic(dark: (0.067, 0.067, 0.074, 0.92), light: (0.958, 0.958, 0.962, 0.94))
+    static let chromeBottom = dynamic(dark: (0.078, 0.078, 0.078, 0.92), light: (0.958, 0.958, 0.962, 0.94))
 }
 
 /// Fondo de tarjeta con profundidad, como `.bg-card` en la web: luz arriba que se apaga en
@@ -116,6 +117,8 @@ extension View {
 }
 
 enum Radius {
+    static let chip: CGFloat = 14
+    static let media: CGFloat = 18
     static let card: CGFloat = 22
     static let hero: CGFloat = 28
 }

@@ -226,7 +226,7 @@ struct AdminDriveView: View {
                         DriveVideoThumb(url: videoURL)
                     } else {
                         ZStack {
-                            RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Palette.secondary)
+                            RoundedRectangle(cornerRadius: Radius.chip, style: .continuous).fill(Palette.secondary)
                             if let t = thumb, let u = URL(string: t) {
                                 CachedAsyncImage(url: u) { $0.resizable().scaledToFill() } placeholder: { Color.clear }
                             } else {
@@ -234,7 +234,7 @@ struct AdminDriveView: View {
                             }
                         }
                         .frame(width: 44, height: 60)
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
                         .accessibilityHidden(true)
                     }
                 } trailing: {
@@ -378,12 +378,12 @@ struct DriveItemEditor: View {
                 Section {
                     HStack(alignment: .top, spacing: 16) {
                         ZStack {
-                            RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Palette.secondary)
+                            RoundedRectangle(cornerRadius: Radius.chip, style: .continuous).fill(Palette.secondary)
                             if let c = cover, let u = URL(string: c) { CachedAsyncImage(url: u) { $0.resizable().scaledToFill() } placeholder: { BrandLoader() } }
                             else { Image(systemName: AdminDriveView.kindSymbol[kind] ?? "doc").font(.inter(.title)).foregroundStyle(Palette.muted) }
                         }
                         .frame(width: kind == "video" ? 132 : 96, height: kind == "video" ? 74 : 132)
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
                         VStack(alignment: .leading, spacing: 8) {
                             Text(AdminDriveView.kindLabel[kind] ?? "").font(.apSubhead).foregroundStyle(Palette.muted)
                             if kind != "file" {
@@ -569,7 +569,7 @@ struct DriveVideoThumb: View {
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Palette.secondary)
+            RoundedRectangle(cornerRadius: Radius.chip, style: .continuous).fill(Palette.secondary)
             if let image {
                 Image(platformImage: image).resizable().scaledToFill()
             } else {
@@ -577,7 +577,7 @@ struct DriveVideoThumb: View {
             }
         }
         .frame(width: min(max(60 * ratio, 34), 107), height: 60)
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
         .task(id: url.absoluteString) { await load() }
         .accessibilityHidden(true)
     }

@@ -122,7 +122,7 @@ struct PlanEditorView: View {
                     }
                     .frame(maxWidth: .infinity, minHeight: 44).padding(.vertical, 4)
                     .foregroundStyle(day == d ? Palette.foreground : Palette.muted)
-                    .background(day == d ? Palette.gold.opacity(0.15) : Palette.secondary, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .background(day == d ? Palette.gold.opacity(0.15) : Palette.secondary, in: RoundedRectangle(cornerRadius: Radius.media, style: .continuous))
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(has ? "\(d): \(Self.daySummary(p))" : "\(d), sin sesión")

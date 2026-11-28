@@ -218,28 +218,28 @@ body.keyboard-open main {
          accent      = #333338   (21 %) pulsado / fila resaltada
          border      = #262629   (15 %) separador, nunca borde de tarjeta
          muted-fg    = #A8A8AE   67 %, AA sobre las tres superficies */
-    --background: 30 6% 4%;
-    --foreground: 0 0% 100%;
+    --background: 0 0% 3.5%;
+    --foreground: 0 0% 95%;
 
-    /* Sistema de superficies — negro puro + 4 pasos grises fríos, igual que la landing */
-    --card: 240 5% 7%;
-    --card-foreground: 0 0% 100%;
+    /* Sistema de superficies — #090909 / #141414 / #191919 */
+    --card: 0 0% 9.8%;
+    --card-foreground: 0 0% 95%;
 
-    --popover: 240 5% 7%;
-    --popover-foreground: 0 0% 100%;
+    --popover: 0 0% 9.8%;
+    --popover-foreground: 0 0% 95%;
 
-    /* Dorado de marca — igual que pillGold de la landing (#D8B25E / hsl(41 61% 61%)) */
-    --primary: 41 61% 61%;
+    /* Dorado de marca — #C6A15B */
+    --primary: 38 40% 57%;
     --primary-foreground: 0 0% 0%;
 
-    --secondary: 240 5% 16%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 0 0% 7.8%;
+    --secondary-foreground: 0 0% 95%;
 
-    --muted: 240 5% 16%;
-    --muted-foreground: 240 4% 67%;
+    --muted: 0 0% 7.8%;
+    --muted-foreground: 0 0% 52%;
 
-    --accent: 240 5% 21%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 0 0% 16%;
+    --accent-foreground: 0 0% 95%;
 
     --destructive: 3 100% 61%;
     --destructive-foreground: 0 0% 100%;
@@ -247,9 +247,9 @@ body.keyboard-open main {
     --success: 135 64% 50%;
     --success-foreground: 0 0% 100%;
 
-    --border: 240 4% 15%;
-    --input: 240 4% 15%;
-    --ring: 41 61% 61%;
+    --border: 0 0% 16%;
+    --input: 0 0% 16%;
+    --ring: 38 40% 57%;
 
     /* Radios semánticos: úsalos en pantallas nuevas en vez de md/lg/xl/3xl. */
     --radius: 0.75rem;
